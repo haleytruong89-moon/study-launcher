@@ -83,12 +83,21 @@ jobs:
       - name: Build
         run: npm run build
       - name: Run end-to-end tests
-        run: npm run e2e
-      - name: Diagnostics on failure
+        run: |
+          set -o pipefail
+          npm run e2e 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      - name: Diagnostics on failure (shown as annotations on the check)
         if: failure()
         run: |
-          supabase status || true
-          docker ps -a || true
+          annotate() { # title, file, lines
+            body="$(tail -n "$3" "$2" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | sed 's/%/%25/g' | tr -d '\r' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            echo "::error title=$1::${body}"
+          }
+          annotate "e2e output" "$RUNNER_TEMP/e2e.log" 70
+          for c in $(docker ps -a --format '{{.Names}}' | grep -E 'auth|storage' | head -2); do
+            docker logs --tail 25 "$c" > "$RUNNER_TEMP/$c.log" 2>&1 || true
+            annotate "log $c" "$RUNNER_TEMP/$c.log" 25
+          done
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
