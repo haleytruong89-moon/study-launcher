@@ -13,9 +13,22 @@ insert into auth.users (id) values
   ('00000000-0000-0000-0000-0000000000d1')   -- child of family B
 on conflict do nothing;
 
-insert into public.families (id, name) values
-  ('10000000-0000-0000-0000-00000000000a', 'Family A'),
-  ('10000000-0000-0000-0000-00000000000b', 'Family B')
+insert into public.families (id, name) values ('10000000-0000-0000-0000-00000000000a', 'Family A')
+on conflict do nothing;
+
+-- v1 allows only one family: a second one must be rejected ...
+do $$
+begin
+  begin
+    insert into public.families (id, name) values ('10000000-0000-0000-0000-00000000000b', 'Family B');
+    raise exception 'FAIL: second family accepted';
+  exception when unique_violation then raise notice 'ok: only one family allowed';
+  end;
+end $$;
+
+-- ... but the cross-family tests below need two, so lift the singleton rule for this throwaway DB only.
+drop index public.families_singleton_idx;
+insert into public.families (id, name) values ('10000000-0000-0000-0000-00000000000b', 'Family B')
 on conflict do nothing;
 
 insert into public.profiles (id, family_id, role, display_name, pin_hash) values
@@ -203,6 +216,23 @@ begin
     perform public.seed_family_defaults('10000000-0000-0000-0000-00000000000a', 'x.example.com');
     raise exception 'FAIL: parent called seed_family_defaults';
   exception when insufficient_privilege then raise notice 'ok: parent cannot call seed_family_defaults';
+  end;
+end $$;
+
+-- Cross-family integrity: parent A must not be able to write rows for a child of family B
+do $$
+begin
+  begin
+    insert into public.overrides (family_id, child_id, local_date, kind, until)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000d1', current_date, 'open_until', now() + interval '5 hours');
+    raise exception 'FAIL: row for another family child accepted';
+  exception when foreign_key_violation then raise notice 'ok: parent cannot write overrides for another family child';
+  end;
+  begin
+    insert into public.trust_state (child_id, family_id, mode)
+    values ('00000000-0000-0000-0000-0000000000d1', '10000000-0000-0000-0000-00000000000a', 'trust');
+    raise exception 'FAIL: trust_state for another family child accepted';
+  exception when foreign_key_violation then raise notice 'ok: parent cannot write trust_state for another family child';
   end;
 end $$;
 

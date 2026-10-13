@@ -36,8 +36,9 @@ export async function POST(request: Request) {
     user_metadata: { role: "child" },
   });
   if (createError || !created.user) {
+    console.error("child.create: auth user failed", createError?.message);
     return NextResponse.json(
-      { error: "Không tạo được tài khoản đăng nhập cho con. Hãy báo Claude kèm nội dung này: " + (createError?.message ?? "unknown") },
+      { error: "Không tạo được tài khoản đăng nhập cho con. Hãy báo Claude; chi tiết lỗi nằm trong log của Vercel." },
       { status: 500 },
     );
   }
@@ -53,12 +54,18 @@ export async function POST(request: Request) {
     grade: parsed.data.grade,
     color: parsed.data.color,
   });
-  if (profileError) {
-    await admin.auth.admin.deleteUser(childId); // roll back so no orphan login remains
+  const { error: trustError } = profileError
+    ? { error: null }
+    : await admin.from("trust_state").insert({ child_id: childId, family_id: familyId, mode: "lock", updated_by: me.userId });
+
+  if (profileError || trustError) {
+    console.error("child.create: rollback", profileError?.message ?? trustError?.message);
+    // Deleting the auth user also removes the profile (on delete cascade), so no orphan remains.
+    const { error: rollbackError } = await admin.auth.admin.deleteUser(childId);
+    if (rollbackError) console.error("child.create: rollback failed", rollbackError.message);
     return NextResponse.json({ error: "Không tạo được hồ sơ cho con." }, { status: 500 });
   }
 
-  await admin.from("trust_state").insert({ child_id: childId, family_id: familyId, mode: "lock", updated_by: me.userId });
   await admin.from("audit_log").insert({
     family_id: familyId,
     actor_id: me.userId,

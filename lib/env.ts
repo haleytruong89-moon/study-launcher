@@ -10,6 +10,8 @@ const serverSchema = publicSchema.extend({
   NEXT_PUBLIC_APP_URL: z.string().url(),
   // Domain used for the internal e-mail of child accounts (never receives mail).
   CHILD_EMAIL_DOMAIN: z.string().min(3).default("study-launcher.local"),
+  // Only this e-mail may run the first-run setup (blocks strangers who sign up before the parent does).
+  FIRST_PARENT_EMAIL: z.string().email().optional(),
 });
 
 /** Browser-safe settings. NEXT_PUBLIC_* must be referenced literally so Next.js can inline them. */
@@ -28,5 +30,6 @@ export function serverEnv() {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     CHILD_EMAIL_DOMAIN: process.env.CHILD_EMAIL_DOMAIN || undefined,
+    FIRST_PARENT_EMAIL: process.env.FIRST_PARENT_EMAIL || undefined,
   });
 }

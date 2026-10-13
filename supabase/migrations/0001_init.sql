@@ -217,6 +217,36 @@ create table if not exists public.audit_log (
 );
 create index if not exists audit_log_family_idx on public.audit_log (family_id, created_at desc);
 
+-- Integrity: a row's child_id must belong to the SAME family as the row's family_id.
+-- Without this a parent could write rows (overrides, trust_state, ...) for another family's child.
+create unique index if not exists profiles_id_family_uidx on public.profiles (id, family_id);
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'app_slots', 'task_templates', 'homework_items', 'task_runs', 'day_sessions', 'overrides',
+    'allowlist_entries', 'unlock_requests', 'extension_devices', 'trust_state'
+  ]
+  loop
+    if not exists (
+      select 1 from pg_constraint
+      where conname = t || '_child_family_fk' and conrelid = ('public.' || t)::regclass
+    ) then
+      execute format(
+        'alter table public.%I add constraint %I foreign key (child_id, family_id)
+           references public.profiles (id, family_id) on delete cascade',
+        t, t || '_child_family_fk'
+      );
+    end if;
+  end loop;
+end
+$$;
+
+-- v1 is a single-family app: at most one row in `families` (also makes first-run setup race-proof).
+create unique index if not exists families_singleton_idx on public.families ((true));
+
 -- ---------------------------------------------------------------------------
 -- 2. Helper functions (security definer so policies on `profiles` do not recurse)
 -- ---------------------------------------------------------------------------
@@ -443,9 +473,14 @@ create policy parent_select on public.audit_log
 --    proofs/{family_id}/{child_id}/{local_date}/{uuid}.jpg   child writes own folder, parent reads
 -- ---------------------------------------------------------------------------
 
-insert into storage.buckets (id, name, public)
-values ('homework', 'homework', false), ('proofs', 'proofs', false)
-on conflict (id) do update set public = false;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  ('homework', 'homework', false, 5242880, array['image/jpeg', 'image/png', 'image/webp']),
+  ('proofs',   'proofs',   false, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+  set public = false,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
 
 -- homework
 drop policy if exists homework_parent_all on storage.objects;
