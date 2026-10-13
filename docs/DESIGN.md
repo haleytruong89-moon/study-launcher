@@ -117,7 +117,7 @@ Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đún
 
 | # | Điều kiện | Status | open |
 |---|---|---|---|
-| 1–2 | Có override còn hiệu lực → lấy **bản mới nhất**: `lock_until` → LOCK_OVERRIDE; `open_until` → OPEN_OVERRIDE | LOCK_OVERRIDE / OPEN_OVERRIDE | ✗ / ✓ đến `until` |
+| 1–2 | Override **mới nhất** của hôm nay còn hiệu lực (chốt 14/10/2026: bản mới nhất thay hẳn bản cũ; hết hạn → về luồng thường): `lock_until` → LOCK_OVERRIDE; `open_until` → OPEN_OVERRIDE | LOCK_OVERRIDE / OPEN_OVERRIDE | ✗ / ✓ đến `until` |
 | 3 | `trust_state.mode = trust` | OPEN_TRUST | ✓ (vẫn hiện việc + nhắc) |
 | 4 | `day_type = sick` | OPEN_SICK | ✓ cả ngày |
 | 5 | `free_started_at` có và `now ≥ free_started_at + free_minutes` | LOCK_END | ✗ |
@@ -130,12 +130,13 @@ Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đún
 Quy tắc phụ:
 - **Mọi `openUntil` bị cắt ở 00:00** giờ VN của ngày hiện tại (nghỉ, giờ tự do, override).
 - **Phần không có việc nào** (vd ngày thi tắt hết mẫu việc, ngày không có kỹ năng) = coi như đã xong; mốc `part1_done_at` / `part2_done_at` + `free_started_at` được ghi lười ở lần đọc đầu tiên thấy điều kiện đúng (trong transaction).
+  - *Chốt 14/10/2026:* **Phần 1 rỗng** cho ngày đi tiếp nhưng **chưa ghi** `part1_done_at` cho đến khi con đã bắt đầu / bỏ qua nghỉ (hoặc xong Phần 2); bài giao trước thời điểm đó vẫn đưa về LOCK_P1.
 - **`part2.locked` tính từ dữ liệu, không từ status web**: khóa khi chưa có `part1_done_at` hoặc (chưa nghỉ xong và chưa bỏ qua nghỉ). Nhờ vậy ở OPEN_TRUST / OPEN_SICK / override, thứ tự Phần 1 → Phần 2 vẫn giữ.
 - Phút tối thiểu của một việc = `task_templates.min_minutes` nếu có, nếu không lấy `extra_min_minutes` / `skill_min_minutes` trong `family_settings`.
 - **Phần 1** = `homework_items` chưa `done_at`, chưa `archived_at`, `due_date ≤ localDate + homework_lookahead_days` + `task_templates` part `extra` có `weekday` hôm nay, không nằm trong `disabled_template_ids`. Slot `placeholder` **vẫn hiện** thành dòng "đang xây" (trả trong `items` với cờ `placeholder: true`) nhưng **không tính** vào total/done.
 - **Phần 2** = `task_templates` part `skill` của thứ hôm nay. Khóa khi status ∈ {LOCK_P1, BREAK_OFFER, BREAK}.
 - Phần 1 xong lần đầu → ghi `part1_done_at`. Phụ huynh giao thêm bài **sau** mốc này → bài hiện trong danh sách nhưng **không khóa lại** ngày đó.
-- Phần 2 xong → ghi `part2_done_at` và `free_started_at = now` (cùng một transaction).
+- Phần 2 xong → ghi `part2_done_at` và `free_started_at = now` (cùng một transaction). *Chốt 14/10/2026:* nếu lúc đó đang có override **khóa**, `free_started_at` được hoãn đến lần đọc đầu tiên sau khi hết khóa.
 - Thẻ miễn: còn thẻ khi số `pass_used_at` trong tuần (T2–CN) < `passes_per_week` **và hôm nay chưa có `free_started_at`** (không cho dùng thẻ để có giờ tự do lần 2). Dùng → `pass_used_at = now`, `free_started_at = now`.
 - "Ngày đạt" (cho thống kê tuần và chế độ Tin tưởng): có `part2_done_at` trước `bedtime`, **hoặc** dùng thẻ, **hoặc** `day_type ∈ {sick, holiday}`. Ngày thi (`exam`) **không** tự tính đạt. Tính lười khi đọc, không cần cron.
 - Tiến độ Tin tưởng: đếm số tuần **liên tiếp gần nhất** có tỷ lệ ngày đạt ≥ `trust_up_pct`. Đủ `trust_up_weeks` → hiện gợi ý cho phụ huynh xác nhận. **Không tự chuyển chế độ.** Đang Tin tưởng mà 1 tuần < `trust_down_pct` → gợi ý quay lại Khóa.

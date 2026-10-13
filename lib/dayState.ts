@@ -17,7 +17,7 @@
  * Interpretations (confirm with parent)
  * ---------------------------------------------------------------------------
  * Where DESIGN/SPEC is silent or ambiguous, the stricter (fail-closed) reading
- * was chosen. The priority order of DESIGN section 5 is never changed.
+ * was chosen; items 4, 9 and 15 were decided by the parent on 14/10/2026. The priority order of DESIGN section 5 is never changed.
  *
  *  1. Empty Part 2 counts as done only once Part 2 is UNLOCKED (Part 1 done AND
  *     break used/skipped/expired). The web is never opened earlier than the normal
@@ -29,11 +29,10 @@
  *     break_minutes = 0 the offer is still shown (the child starts or skips it).
  *  3. OPEN_TRUST and OPEN_SICK: openUntil = next 00:00. Every locked status
  *     (LOCK_*): openUntil = null.
- *  4. Overrides: only rows for today's local_date with `until` > now are in effect;
- *     among those the newest by created_at wins, even if it is a lock and an older
- *     one is an open. On an exact created_at tie, the lock wins. `until` is clipped
- *     at 00:00. Consequence to confirm: when the newest override expires, an OLDER
- *     override that is still within its `until` takes effect again.
+ *  4. Overrides (parent decision 14/10/2026): the NEWEST override of today (by
+ *     created_at; on an exact tie the lock wins) supersedes all older ones. It is in
+ *     effect while `until` > now; when it expires the normal flow applies, an older
+ *     override never comes back. `until` is clipped at 00:00.
  *  5. Trust progress counts only COMPLETE weeks (Mon-Sun) before the current week,
  *     walking back from the most recent one; days without data count as not OK;
  *     the denominator is always 7 days. weeksMet is capped at weeksNeeded.
@@ -47,12 +46,13 @@
  *     Exam days only via part2_done_at (or a pass).
  *  8. Lazily written milestones use `now` (the read time), as DESIGN says, not the
  *     last task's done_at. If free time already started today (pass), finishing
- *     Part 2 writes only part2_done_at (free time is once per day). If the stored
- *     row has part2_done_at but no free_started_at (inconsistent data), free time is
- *     NOT created: the day stays locked until a parent override.
+ *     Part 2 writes only part2_done_at (free time is once per day). Whenever
+ *     part2_done_at is set and free_started_at is not, free time starts at the read
+ *     (unless a parent lock is in effect, see 9).
  *  9. Milestones are computed from data in every status, including OPEN_TRUST,
- *     OPEN_SICK and overrides. Under LOCK_OVERRIDE, free time that starts still
- *     runs down while the override keeps the web locked.
+ *     OPEN_SICK and overrides. Parent decision 14/10/2026: while a LOCK override is
+ *     in effect, free time does NOT start; it starts at the first read after the
+ *     lock ends (full free_minutes, still clipped at 00:00).
  * 10. Homework done state comes only from homework_items.done_at (set by the finish
  *     route after >= 1 proof photo). Homework done on an EARLIER day is not listed;
  *     homework done today stays listed as done. Template done state = a task_run of
@@ -71,9 +71,10 @@
  * 14. Pass availability follows DESIGN exactly: passes used in this Monday-week
  *     (by day_sessions.local_date) < passes_per_week AND no free_started_at today.
  *     No extra restriction is added for sick / trust / override days.
- * 15. Spec consequence to be aware of: an EMPTY Part 1 is marked done at the first
- *     read of the day (e.g. 06:00, before the parent assigns homework); homework
- *     assigned later that day will then not re-lock the day.
+ * 15. Empty Part 1 (parent decision 14/10/2026): it lets the day move on (break
+ *     offer, then Part 2) but is NOT frozen as part1_done_at until the child moves
+ *     past it (break started or skipped, or Part 2 done). Homework assigned before
+ *     that (e.g. 06:00 nothing yet, homework at 17:00) brings back LOCK_P1.
  * 16. Any malformed instant in the input throws; the caller should then answer with
  *     an error so the extension stays fail-closed.
  */
@@ -474,19 +475,25 @@ function weekResult(s: DaySessionInput | undefined, bedtime: string, isToday: bo
   return isToday ? "today" : "miss";
 }
 
+/**
+ * The newest override of today (by created_at; on a tie the lock wins) SUPERSEDES all
+ * older ones (parent decision 14/10/2026). It is in effect only while `until` > now;
+ * once it expires the day returns to the normal flow, never to an older override.
+ */
 function pickOverride(overrides: OverrideInput[], today: string, nowMs: number): OverrideInput | null {
-  let best: OverrideInput | null = null;
-  let bestCreated = -Infinity;
+  let newest: OverrideInput | null = null;
+  let newestCreated = -Infinity;
   for (const o of overrides) {
     if (o.localDate !== today) continue;
-    if (!(toMs(o.until, "overrides.until") > nowMs)) continue;
     const created = toMs(o.createdAt, "overrides.created_at");
-    if (best === null || created > bestCreated || (created === bestCreated && o.kind === "lock_until")) {
-      best = o;
-      bestCreated = created;
+    toMs(o.until, "overrides.until"); // validate every row (malformed input throws)
+    if (newest === null || created > newestCreated || (created === newestCreated && o.kind === "lock_until")) {
+      newest = o;
+      newestCreated = created;
     }
   }
-  return best;
+  if (newest === null) return null;
+  return toMs(newest.until, "overrides.until") > nowMs ? newest : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -515,11 +522,22 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     ...templateViews(input, "extra", weekday, disabled, runsToday),
   ];
   const part1Count = countPart(part1Items);
-  if (session.part1DoneAt === null && part1Count.done === part1Count.total) {
+  const part1Empty = part1Count.total === 0;
+  // Parent decision 14/10/2026: an EMPTY Part 1 is not final. It lets the day move on
+  // (break offer, Part 2) but is only frozen as part1_done_at once the child has moved
+  // past it (break started/skipped, or Part 2 done), so homework assigned later still locks.
+  if (session.part1DoneAt === null && !part1Empty && part1Count.done === part1Count.total) {
     session.part1DoneAt = nowIso;
     milestones.part1DoneAt = nowIso;
   }
-  const part1Done = session.part1DoneAt !== null;
+  const freezeEmptyPart1 = () => {
+    if (session.part1DoneAt === null && part1Empty) {
+      session.part1DoneAt = nowIso;
+      milestones.part1DoneAt = nowIso;
+    }
+  };
+  if (session.breakStartedAt !== null || session.breakSkipped || session.part2DoneAt !== null) freezeEmptyPart1();
+  const part1Done = session.part1DoneAt !== null || part1Empty;
   const part1DoneMs = toMsOrNull(session.part1DoneAt, "day_sessions.part1_done_at");
   if (part1DoneMs !== null) {
     const created = new Map(input.homework.map((h) => [h.id, h.createdAt]));
@@ -547,10 +565,18 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   if (!part2Locked && session.part2DoneAt === null && part2Count.done === part2Count.total) {
     session.part2DoneAt = nowIso;
     milestones.part2DoneAt = nowIso;
-    if (session.freeStartedAt === null) {
-      session.freeStartedAt = nowIso;
-      milestones.freeStartedAt = nowIso;
-    }
+    freezeEmptyPart1();
+  }
+
+  // --- Overrides: the NEWEST override of today supersedes all older ones ---
+  const override = pickOverride(input.overrides, today, nowMs);
+
+  // Free time starts once Part 2 is done (once per day). Parent decision 14/10/2026:
+  // while a parent LOCK override is in effect, free time is deferred and starts at the
+  // first read after the lock ends (still clipped at 00:00).
+  if (session.part2DoneAt !== null && session.freeStartedAt === null && override?.kind !== "lock_until") {
+    session.freeStartedAt = nowIso;
+    milestones.freeStartedAt = nowIso;
   }
 
   // --- Free time ---
@@ -560,7 +586,6 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   // --- Status: DESIGN section 5 priority table, top-down, first match wins ---
   let status: Status;
   let openUntilMs: number | null = null;
-  const override = pickOverride(input.overrides, today, nowMs);
   if (override !== null) {
     if (override.kind === "lock_until") {
       status = "LOCK_OVERRIDE"; // rows 1-2

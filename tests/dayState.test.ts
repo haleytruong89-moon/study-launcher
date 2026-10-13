@@ -355,7 +355,8 @@ describe("overrides", () => {
     expect(s.openUntil).toBe(iso(`${TODAY} 19:30`));
   });
 
-  it("an expired newer override lets an older, still-valid one apply (interpretation 4)", () => {
+  it("the newest override supersedes older ones: once it expires, the normal flow applies (decision 14/10)", () => {
+    // 18:00 open until 22:00, 18:10 lock until 18:30 → at 19:00 the old open does NOT come back.
     const s = computeDayState(
       normalDay({
         overrides: [
@@ -365,8 +366,22 @@ describe("overrides", () => {
       }),
       vn(`${TODAY} 19:00`),
     );
-    expect(s.status).toBe("OPEN_OVERRIDE");
-    expect(s.openUntil).toBe(iso(`${TODAY} 22:00`));
+    expect(s.status).toBe("LOCK_P1");
+    expect(s.open).toBe(false);
+    expect(s.openUntil).toBeNull();
+  });
+
+  it("while the newest (lock) is in effect, an older open is ignored", () => {
+    const s = computeDayState(
+      normalDay({
+        overrides: [
+          ov("open_until", `${TODAY} 22:00`, `${TODAY} 18:00`),
+          ov("lock_until", `${TODAY} 18:30`, `${TODAY} 18:10`),
+        ],
+      }),
+      vn(`${TODAY} 18:29:59`),
+    );
+    expect(s.status).toBe("LOCK_OVERRIDE");
   });
 
   it("same created_at: lock wins", () => {
@@ -586,7 +601,8 @@ describe("Part 1 composition", () => {
     );
     expect(s.part1.total).toBe(0);
     expect(s.part1.items).toHaveLength(1);
-    expect(s.milestones.part1DoneAt).toBe(NOW.toISOString());
+    expect(s.part1.complete).toBe(true);
+    expect(s.milestones).toEqual({}); // empty Part 1 is not frozen until the child moves on
     expect(s.status).toBe("BREAK_OFFER");
   });
 
@@ -618,13 +634,58 @@ describe("Part 1 composition", () => {
 // ---------------------------------------------------------------------------
 
 describe("empty parts and milestones", () => {
-  it("empty Part 1 → part1DoneAt = now is returned and applied", () => {
+  it("empty Part 1 lets the day move on but is NOT frozen (decision 14/10)", () => {
     const now = vn(`${TODAY} 07:00`);
     const s = computeDayState(input({ templates: [tpl("s1", "skill")] }), now);
-    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString() });
+    expect(s.milestones).toEqual({});
     expect(s.part1.complete).toBe(true);
-    expect(s.part1.doneAt).toBe(now.toISOString());
+    expect(s.part1.doneAt).toBeNull();
     expect(s.status).toBe("BREAK_OFFER");
+    expect(s.part2.locked).toBe(true);
+  });
+
+  it("empty Part 1 at 06:00, homework assigned at 17:00 before the child moved on → locks again (LOCK_P1)", () => {
+    const early = computeDayState(input({ templates: [tpl("s1", "skill")] }), vn(`${TODAY} 06:00`));
+    expect(early.status).toBe("BREAK_OFFER");
+    const later = computeDayState(
+      input({ templates: [tpl("s1", "skill")], homework: [hw("late", { createdAt: iso(`${TODAY} 17:00`) })] }),
+      vn(`${TODAY} 17:05`),
+    );
+    expect(later.status).toBe("LOCK_P1");
+    expect(later.part1.complete).toBe(false);
+    expect(later.milestones).toEqual({});
+  });
+
+  it("empty Part 1 is frozen once the child skips the break; later homework is listed but does not re-lock", () => {
+    const now = vn(`${TODAY} 07:00`);
+    const s = computeDayState(input({ templates: [tpl("s1", "skill")], sessions: [session(TODAY, { breakSkipped: true })] }), now);
+    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString() });
+    expect(s.status).toBe("LOCK_P2");
+
+    const later = computeDayState(
+      input({
+        templates: [tpl("s1", "skill")],
+        homework: [hw("late", { createdAt: iso(`${TODAY} 17:00`) })],
+        sessions: [session(TODAY, { breakSkipped: true, part1DoneAt: now.toISOString() })],
+      }),
+      vn(`${TODAY} 17:05`),
+    );
+    expect(later.status).toBe("LOCK_P2");
+    expect(later.part1.items.find((x) => x.id === "late")?.addedAfterPart1Done).toBe(true);
+  });
+
+  it("empty Part 1 is frozen once the child starts the break", () => {
+    const now = vn(`${TODAY} 07:02`);
+    const s = computeDayState(input({ sessions: [session(TODAY, { breakStartedAt: iso(`${TODAY} 07:00`) })] }), now);
+    expect(s.milestones.part1DoneAt).toBe(now.toISOString());
+    expect(s.status).toBe("BREAK");
+  });
+
+  it("an entirely empty day: skipping the break freezes Part 1 and starts free time in one read", () => {
+    const now = vn(`${TODAY} 07:00`);
+    const s = computeDayState(input({ sessions: [session(TODAY, { breakSkipped: true })] }), now);
+    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString(), part2DoneAt: now.toISOString(), freeStartedAt: now.toISOString() });
+    expect(s.status).toBe("FREE");
   });
 
   it("Part 1 finished by tasks → part1DoneAt milestone", () => {
@@ -728,14 +789,63 @@ describe("empty parts and milestones", () => {
     expect(s.status).toBe("FREE");
   });
 
-  it("part2_done_at without free_started_at (inconsistent) does not open the web", () => {
+  it("part2_done_at without free_started_at (no lock in effect) → free time starts now", () => {
+    const now = vn(`${TODAY} 17:10`);
     const s = computeDayState(
       input({ sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true, part2DoneAt: iso(`${TODAY} 17:00`) })] }),
-      vn(`${TODAY} 17:10`),
+      now,
     );
+    expect(s.milestones).toEqual({ freeStartedAt: now.toISOString() });
+    expect(s.status).toBe("FREE");
+    expect(s.openUntil).toBe(iso(`${TODAY} 17:55`));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Parent decision 14/10/2026: free time is deferred while a parent lock is in effect
+// ---------------------------------------------------------------------------
+
+describe("free time during a parent lock override", () => {
+  const finishedSkill = run({ templateId: "s1", startedAt: iso(`${TODAY} 17:30`), doneAt: iso(`${TODAY} 17:55`) });
+  const day = (sessionPatch: Partial<DaySessionInput>) =>
+    normalDay({
+      sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true, ...sessionPatch })],
+      runs: [finishedSkill],
+      overrides: [ov("lock_until", `${TODAY} 18:30`, `${TODAY} 17:50`)],
+    });
+
+  it("Part 2 done during the lock → part2DoneAt only, free time NOT started", () => {
+    const now = vn(`${TODAY} 18:00`);
+    const s = computeDayState(day({}), now);
+    expect(s.milestones).toEqual({ part2DoneAt: now.toISOString() });
+    expect(s.status).toBe("LOCK_OVERRIDE");
+    expect(s.free.startedAt).toBeNull();
+    expect(s.passAvailable).toBe(true); // nothing was used yet
+  });
+
+  it("still locked one second before the lock ends, no free time yet", () => {
+    const s = computeDayState(day({ part2DoneAt: iso(`${TODAY} 18:00`) }), vn(`${TODAY} 18:29:59`));
+    expect(s.status).toBe("LOCK_OVERRIDE");
     expect(s.milestones).toEqual({});
-    expect(s.status).toBe("LOCK_P2");
-    expect(s.open).toBe(false);
+  });
+
+  it("first read after the lock ends → free time starts then, full 45 minutes", () => {
+    const now = vn(`${TODAY} 18:30`);
+    const s = computeDayState(day({ part2DoneAt: iso(`${TODAY} 18:00`) }), now);
+    expect(s.milestones).toEqual({ freeStartedAt: now.toISOString() });
+    expect(s.status).toBe("FREE");
+    expect(s.openUntil).toBe(iso(`${TODAY} 19:15`));
+  });
+
+  it("deferred free time is still clipped at 00:00", () => {
+    const lateDay = normalDay({
+      sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true, part2DoneAt: iso(`${TODAY} 23:00`) })],
+      runs: [finishedSkill],
+      overrides: [ov("lock_until", `${TODAY} 23:40`, `${TODAY} 22:50`)],
+    });
+    const s = computeDayState(lateDay, vn(`${TODAY} 23:40`));
+    expect(s.status).toBe("FREE");
+    expect(s.openUntil).toBe(MIDNIGHT);
   });
 });
 
