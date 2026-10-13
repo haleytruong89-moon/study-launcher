@@ -22,6 +22,12 @@ Dùng lại các tài khoản GitHub / Supabase / Vercel đang dùng cho App To�
 
 ---
 
+## A+. Kiểm tra nhanh sau khi cấu hình (1 link)
+
+Mở `https://<link-vercel-của-bạn>/api/health/ready`. Kết quả `"ok": true` nghĩa là: biến môi trường đủ, nối được database, đủ 15 bảng + 2 kho ảnh, đã tắt đăng ký tự do. Mục nào `false` kèm gợi ý (tiếng Việt) cần làm gì. Dòng `family_created` chỉ là cảnh báo cho tới khi bạn làm "Thiết lập lần đầu". Bạn có thể gửi link này cho Claude để Claude đọc giúp.
+
+---
+
 ## B. Thử chính sách khóa extension trên Windows (~45 phút, không cần code) ⚠️ làm sớm
 
 **Mục đích:** xác nhận laptop của con **ép cài được một extension mà con không gỡ/tắt được**, và chặn được tab ẩn danh. Nếu không làm được, cả cơ chế khóa phải thiết kế lại — nên kiểm tra trước khi đầu tư code.
