@@ -1,0 +1,12 @@
+# Used ONLY for the local Supabase stack that CI starts for end-to-end tests (`supabase start`).
+# The production project ignores API/Auth/seed settings in this file (Supabase GitHub integration docs).
+# Do NOT declare [storage.buckets.*] or [functions.*] here: those WOULD be deployed to production.
+project_id = "study-launcher"
+
+[db]
+major_version = 17
+
+[auth]
+# Mirrors production (SETUP step A7): nobody can sign up on their own.
+enable_signup = false
+site_url = "http://localhost:3100"

@@ -72,6 +72,7 @@ npm run dev            # chạy local
 npm run typecheck      # tsc --noEmit
 npm run lint
 npm test               # vitest
+npm run e2e            # Playwright; cần Supabase local (CI tự dựng, xem .github/workflows/ci.yml)
 npx supabase migration new <name>
 npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 ```
@@ -82,7 +83,7 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 ## Current status
 
-- Phase: 3 — Implementation, **S0 đang chờ phụ huynh duyệt PR** (`feature/s0-khung`)
+- Phase: 3 — Implementation, **S0 đã merge (PR #1)**; PR #2 thêm bài thử tự động đầy đủ + `/api/health/ready`
 - Last updated: 13/10/2026
-- Tiếp theo: **S1 — Phụ huynh: cài đặt, app slots, mẫu việc, giao bài có ảnh** (DESIGN §13), sau khi S0 được merge
+- Tiếp theo: **S1 — Phụ huynh: cài đặt, app slots, mẫu việc, giao bài có ảnh** (DESIGN §13), sau khi phụ huynh xác nhận S0 chạy (mở `/api/health/ready` thấy `ok: true`)
 - Việc phụ huynh song song: thử chính sách extension trên 1 laptop (`docs/SETUP.md` phần B); họp gia đình để chốt tham số (không chặn code).
