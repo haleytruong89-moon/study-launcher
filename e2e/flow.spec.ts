@@ -10,6 +10,8 @@ async function login(page: Page, email: string, password: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Mật khẩu").fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
+  // Wait until the session cookie is set and the app has redirected away from /login.
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
 
 // Shared across the ordered tests below.

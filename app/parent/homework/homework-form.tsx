@@ -23,6 +23,13 @@ interface Photo {
 type Due = "today" | "tomorrow" | "pick";
 const OTHER = "Khác";
 
+/** Best effort: the parent's storage policy allows deleting files in the family folder. */
+async function removeUploaded(supabase: ReturnType<typeof createClient>, paths: string[]) {
+  if (paths.length === 0) return;
+  const { error } = await supabase.storage.from("homework").remove(paths);
+  if (error) console.error("homework cleanup failed", error.message);
+}
+
 function chipClass(on: boolean) {
   return on ? "border-ink bg-ink text-white" : "border-ink/30 bg-white text-ink";
 }
@@ -100,6 +107,7 @@ export function HomeworkForm({ familyId, today, tomorrow, kids }: { familyId: st
       }
     } catch (e) {
       console.error("homework upload failed", e);
+      await removeUploaded(supabase, paths);
       setBusy(null);
       return setError("Không tải được ảnh lên. Kiểm tra mạng rồi thử lại.");
     }
@@ -112,8 +120,13 @@ export function HomeworkForm({ familyId, today, tomorrow, kids }: { familyId: st
       note: note.trim() || null,
       photoPaths: paths,
     });
+    if (err) {
+      // Not assigned: do not leave orphan photos in storage (a retry uploads them again).
+      await removeUploaded(supabase, paths);
+      setBusy(null);
+      return setError(err);
+    }
     setBusy(null);
-    if (err) return setError(err);
 
     setDone(`Đã giao ${subjectName} cho ${kid.name} · nộp ${dueDate === today ? "hôm nay" : shortDate(dueDate)}${paths.length ? ` (${paths.length} ảnh)` : ""}`);
     photos.forEach((p) => URL.revokeObjectURL(p.preview));

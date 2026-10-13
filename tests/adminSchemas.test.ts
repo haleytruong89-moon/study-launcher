@@ -81,6 +81,20 @@ describe("slotSchema", () => {
     ).toBe(false);
   });
 
+  it.each([
+    ["a shared-hosting suffix", { allowDomains: ["vercel.app"] }],
+    ["a wildcard shared suffix", { allowDomains: ["*.github.io"] }],
+    ["Google Search", { allowDomains: ["https://www.google.com/search?q=x"] }],
+    ["YouTube via the app URL", { url: "https://www.youtube.com/watch?v=x" }],
+    ["Google Translate proxies", { allowDomains: ["abc.translate.goog"] }],
+  ])("refuses %s (would open too much while locked)", (_, patch) => {
+    expect(slotSchema.safeParse({ subject: "x", kind: "external", label: "x", url: "https://app.example.com", ...patch }).success).toBe(false);
+  });
+
+  it("still allows a specific subdomain such as classroom.google.com", () => {
+    expect(slotSchema.safeParse({ subject: "x", kind: "external", label: "x", url: "https://classroom.google.com" }).success).toBe(true);
+  });
+
   it("adds the URL host to the allowed domains, normalized and de-duplicated", () => {
     const s = slotSchema.parse({
       subject: "Toán",

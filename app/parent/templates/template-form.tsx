@@ -66,7 +66,7 @@ export function TemplateForm({
       part: v.part,
       title: v.title,
       subject: v.subject.trim() || null,
-      appSlotId: usableSlots.some((s) => s.id === v.appSlotId) ? v.appSlotId : null,
+      appSlotId: v.appSlotId,
       weekdays: v.weekdays,
       minMinutes: v.minMinutes.trim() === "" ? null : Number(v.minMinutes),
       deepLink: v.deepLink.trim() || null,
@@ -88,7 +88,17 @@ export function TemplateForm({
     <form onSubmit={submit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm font-semibold">
         Cho con
-        <select value={v.childId} onChange={(e) => setV({ ...v, childId: e.target.value })} className={input}>
+        <select
+          value={v.childId}
+          onChange={(e) => {
+            const childId = e.target.value;
+            const slot = slots.find((s) => s.id === v.appSlotId);
+            // A slot reserved for another child cannot stay linked: clear it visibly, not silently on save.
+            const keepSlot = !slot || slot.childId === null || slot.childId === childId;
+            setV({ ...v, childId, appSlotId: keepSlot ? v.appSlotId : null });
+          }}
+          className={input}
+        >
           {kids.map((k) => (
             <option key={k.id} value={k.id}>
               {k.name}

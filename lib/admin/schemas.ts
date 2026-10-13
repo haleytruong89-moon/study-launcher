@@ -23,6 +23,29 @@ export function normalizeDomain(input: string): string | null {
   return HOSTNAME_RE.test(s) ? s : null;
 }
 
+/**
+ * Domains a slot must never add to the allowlist:
+ * - bare shared-hosting / registry suffixes: allowing them would open EVERY site under them
+ *   (anyone's vercel.app or github.io page, including web proxies);
+ * - Google Search and YouTube (CLAUDE.md: never open while locked). Specific subdomains such as
+ *   classroom.google.com stay allowed.
+ */
+const FORBIDDEN_SLOT_DOMAINS = new Set([
+  "vercel.app", "netlify.app", "github.io", "pages.dev", "web.app", "firebaseapp.com", "herokuapp.com",
+  "blogspot.com", "glitch.me", "onrender.com", "fly.dev", "workers.dev", "repl.co", "translate.goog",
+  "com.vn", "edu.vn", "net.vn", "org.vn", "gov.vn", "co.uk", "com.au",
+  "google.com", "www.google.com", "google.com.vn", "www.google.com.vn",
+  "youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be",
+]);
+
+/** Null when the domain may be added by a slot, otherwise a Vietnamese reason. */
+export function slotDomainProblem(domain: string): string | null {
+  if (FORBIDDEN_SLOT_DOMAINS.has(domain) || domain.endsWith(".translate.goog")) {
+    return `Không thêm được “${domain}”: tên miền này sẽ mở quá nhiều trang (hoặc là Google Search / YouTube). Hãy nhập tên miền cụ thể của app.`;
+  }
+  return null;
+}
+
 /** Hostname of an http(s) URL, normalized, or null. */
 export function hostnameOf(url: string): string | null {
   try {
@@ -135,6 +158,10 @@ export const slotSchema = z
       if (normalizeDomain(d) === null) {
         ctx.addIssue({ code: "custom", path: ["allowDomains"], message: `Tên miền không hợp lệ: ${d}` });
       }
+    }
+    for (const d of slotDomains(s)) {
+      const problem = slotDomainProblem(d);
+      if (problem) ctx.addIssue({ code: "custom", path: ["allowDomains"], message: problem });
     }
   });
 export type SlotInput = z.infer<typeof slotSchema>;
