@@ -64,7 +64,7 @@ test("first parent: first-run setup creates the family", async ({ page }) => {
   await page.getByLabel("Tên hiển thị của bạn").fill("Phụ huynh");
   await page.getByRole("button", { name: "Tạo gia đình" }).click();
   await expect(page).toHaveURL(/\/parent$/);
-  await expect(page.getByText("Xin chào Phụ huynh")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Xin chào Phụ huynh" })).toBeVisible();
 });
 
 test("setup cannot run a second time for someone else", async ({ page }) => {
@@ -96,13 +96,13 @@ test("parent creates a child account and sees the credentials once", async ({ pa
   expect(childPassword.length).toBeGreaterThanOrEqual(24);
 
   await page.reload();
-  await expect(page.getByText("Hạnh Nguyên")).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "Hạnh Nguyên" })).toHaveCount(1);
   await expect(page.getByText(childPassword)).toHaveCount(0); // never shown again
 });
 
 test("the child can log in, sees their name, and cannot reach the parent page", async ({ page }) => {
   await login(page, childEmail, childPassword);
-  await expect(page.getByText("Chào Hạnh Nguyên")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Chào Hạnh Nguyên" })).toBeVisible();
   await page.goto("/parent");
   await expect(page).toHaveURL(/\/today$/);
 
