@@ -1,6 +1,6 @@
 # Study Launcher — Hướng dẫn chuẩn bị (cho phụ huynh)
 
-Cập nhật: 05/10/2026. Làm theo thứ tự A → D. Phần B làm được ngay, **không cần code**, và nên làm sớm nhất vì nó kiểm tra giả định rủi ro nhất của dự án.
+Cập nhật: 13/10/2026. Làm theo thứ tự A → D. Phần B làm được ngay, **không cần code**, và nên làm sớm nhất vì nó kiểm tra giả định rủi ro nhất của dự án.
 
 ---
 
@@ -13,8 +13,12 @@ Dùng lại các tài khoản GitHub / Supabase / Vercel đang dùng cho App To�
 | A1 | **GitHub**: tạo repo **private** tên `study-launcher`, để trống (không tick README) | Cùng tài khoản với repo `Math-app` |
 | A2 | **Supabase**: tạo **project mới** tên `study-launcher`, region Southeast Asia (Singapore). Lưu mật khẩu DB vào nơi an toàn | **Không** dùng chung project của App Toán. Gói free thường cho 2 project đang chạy — App Toán dùng 1, còn 1 (kiểm tra lại trên trang Supabase) |
 | A3 | Ghi lại 3 giá trị trong phần cài đặt API của project mới: Project URL, `anon` key, `service_role` key | `service_role` là khóa quản trị — **chỉ** dán vào Vercel, không gửi qua chat |
-| A4 | **Vercel**: Import repo `study-launcher` → thêm biến môi trường theo `.env.example` | Làm sau khi lát S0 có code (Claude sẽ nhắc) |
+| A4 | **Vercel**: Import repo `study-launcher` → thêm biến môi trường theo `.env.example` (4 biến bắt buộc cho S0: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`) | Làm sau khi PR S0 mở. `NEXT_PUBLIC_APP_URL` = địa chỉ Vercel của project (vd `https://study-launcher.vercel.app`) |
 | A5 | Báo Claude: "repo đã tạo" | Claude đẩy 4 file tài liệu lên repo giúp |
+| A6 | **Supabase ↔ GitHub**: Project Settings → Integrations → GitHub → chọn repo `haleytruong89-moon/study-launcher`, Working directory `.`, Production branch `main`, **Deploy to production = Bật**. Automatic branching để nguyên (gói Free không có; bật khi nâng Pro sẽ tính tiền theo giờ) | Từ lúc này, SQL trong `supabase/migrations/` **tự chạy khi bạn merge PR vào `main`**. **Không sửa tay trong SQL Editor** (sẽ lệch với repo). Mỗi PR sẽ nói rõ có đụng database hay không |
+| A7 | **Supabase → Authentication → Sign In / Providers**: tắt "Allow new users to sign up" (chỉ tài khoản bạn tạo mới đăng nhập được) | Làm trước khi cho con dùng |
+| A8 | **Supabase → Authentication → Users → Add user**: tạo tài khoản **phụ huynh** (email thật + mật khẩu mạnh, tick "Auto Confirm User") | Sau khi S0 chạy, đăng nhập bằng tài khoản này ở trang `/login`, màn "Thiết lập lần đầu" sẽ hiện ra |
+| A9 | **GitHub → repo → Settings → Secrets and variables → Actions**, thêm: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (giữ project không bị ngủ, chạy hằng ngày) và `SUPABASE_DB_URL` (sao lưu hằng tuần: lấy ở nút **Connect** của Supabase, chọn **Session pooler**, thay `[YOUR-PASSWORD]` bằng mật khẩu DB) | Workflow tự bỏ qua nếu chưa có secret. `SUPABASE_DB_URL` chứa mật khẩu DB: **chỉ** dán vào GitHub Secrets, không gửi qua chat. Bản sao lưu gồm dữ liệu bảng, **không** gồm tài khoản đăng nhập và ảnh |
 
 ---
 
@@ -80,8 +84,8 @@ Extension sẽ đăng ở chế độ **unlisted** (không ai tìm thấy, chỉ
 2. Prompt kiểm tra đầu tiên:
    > Đọc CLAUDE.md và các file trong docs/. Tóm tắt bằng tiếng Việt: project này build gì, tech stack, 5 quyết định quan trọng nhất, và lát S0 gồm những gì.
 3. Nếu tóm tắt đúng → prompt tiếp:
-   > Làm lát S0 theo docs/DESIGN.md §13. Tạo nhánh và PR, không merge, không áp migration lên production. Cập nhật docs/PROGRESS.md.
-4. Thử link preview của PR theo hướng dẫn trong mô tả PR → áp SQL (nếu có) → merge.
+   > Làm lát S0 theo docs/DESIGN.md §13. Tạo nhánh và PR, không merge. Cập nhật docs/PROGRESS.md.
+4. Thử link preview của PR theo hướng dẫn trong mô tả PR → merge. Nếu PR có SQL, SQL tự chạy lên Supabase thật ngay khi merge (đã nối ở A6), nên đọc kỹ phần "Có đụng database không" trong mô tả PR trước khi bấm.
 
 ### Nhịp làm việc đề xuất
 
@@ -89,4 +93,4 @@ App Toán đang cần ~30 phút mỗi sáng. Để không vượt 1–2 giờ/ng
 - Launcher chạy **2–3 lát/tuần** xen kẽ với App Toán, hoặc
 - Bắt đầu Launcher sau khi App Toán xong S3 và vào pilot.
 
-Mỗi lát Launcher cần phụ huynh ~20–30 phút: đọc PR, thử preview, áp SQL, merge.
+Mỗi lát Launcher cần phụ huynh ~20–30 phút: đọc PR, thử preview, merge (SQL tự chạy lúc merge).

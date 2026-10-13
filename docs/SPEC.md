@@ -300,6 +300,7 @@ Quy tắc:
 | 05/10/2026 | Chọn phương án B: **20' tối thiểu chỉ cho bài bổ sung + kỹ năng**; bài trên lớp không có tối thiểu — độ dài do cô giáo quyết định, ảnh bài đã làm là bằng chứng. Tổng tối thiểu ngày điển hình: 80' (thay vì 160') |
 | 05/10/2026 | Rà soát chéo bridge files (19 điểm) → chốt mặc định: phần không có việc = đã xong; mọi khoảng mở dừng ở 00:00; override mới nhất thắng; thẻ miễn không dùng được khi đã có giờ tự do; "Học tiếp" kết thúc nghỉ sớm; ngày thi không tự tính đạt; về lại Khóa cần phụ huynh xác nhận; extension mở Launcher ở tab mới thay cho chính sách trang chủ |
 | 05/10/2026 | Chốt 4 điểm trước khi code: **Supabase project riêng**, **repo riêng `study-launcher`**, **bài bổ sung bắt buộc**, **kỹ năng v1 = danh sách cố định theo thứ**. Thêm user stories + tiêu chí nghiệm thu (§2.5–2.6) → v0.2; tạo bridge files `CLAUDE.md`, `docs/SPEC.md`, `docs/DESIGN.md`, `docs/SETUP.md` |
+| 13/10/2026 | Nối Supabase ↔ GitHub, chỉ bật **Deploy to production** (SQL trong `supabase/migrations/` tự chạy khi phụ huynh merge vào `main`); **Automatic branching tắt** (gói Free không có, và tính tiền theo giờ khi nâng cấp). Thay cho quy ước cũ "phụ huynh dán SQL". Cấm sửa tay trong SQL Editor. Project tắt "Automatically expose new tables" nên mọi bảng phải `grant` rõ ràng |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 
