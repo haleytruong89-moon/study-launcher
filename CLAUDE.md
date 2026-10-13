@@ -25,7 +25,7 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
 - camelCase cho biến/hàm TS; snake_case cho cột DB.
 - Conventional commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`).
 - Mỗi lát = 1 nhánh `feature/sN-<ten-ngan>` = 1 PR nhỏ. Không gộp nhiều lát vào 1 PR.
-- Mô tả PR (tiếng Việt) gồm: làm gì · cách thử trên link preview (từng bước bấm) · **SQL cần phụ huynh áp** (nếu có) · tiêu chí nghiệm thu nào đã đạt.
+- Mô tả PR (tiếng Việt) gồm: làm gì · cách thử trên link preview (từng bước bấm) · **Có đụng database không** (nếu có: liệt kê file SQL sẽ tự chạy khi merge, nói rõ nó thêm/sửa gì) · tiêu chí nghiệm thu nào đã đạt.
 - Giao diện bám mockup: https://claude.ai/artifact/LmjBU4kbFczUKae43NvFNT (5 màn). Màu: nền `#F4F5F0`, chữ `#1C1F1D`, nhấn `#2B5D4F`; Nguyên `#2F5D9E`, An `#B85A1C`; font Be Vietnam Pro. Nút cao ≥ 44px.
 
 ## Key decisions (đã chốt — xem SPEC §18 log)
@@ -45,7 +45,12 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
 ## Warnings — KHÔNG được làm
 
 - Không dùng `service_role` ở client hoặc extension. Extension chỉ cầm token thiết bị.
-- Không áp migration lên Supabase production. Viết file `supabase/migrations/NNNN_*.sql` (idempotent: `if not exists`, `create or replace`, `drop policy if exists`) → phụ huynh áp. **Không sửa** migration đã áp; tạo file mới.
+- **SQL tự chạy lên production khi phụ huynh merge PR vào `main`** (Supabase GitHub integration, chỉ bật "Deploy to production"; quyết định 13/10/2026). Vì vậy: Claude **không** tự chạy SQL lên Supabase thật và **không** merge; phụ huynh bấm merge = duyệt SQL.
+  - Viết `supabase/migrations/NNNN_*.sql` idempotent (`if not exists`, `create or replace`, `drop policy if exists`), chỉ **thêm** (additive). **Không sửa** migration đã merge; tạo file mới.
+  - Mỗi file chạy trong 1 transaction: không dùng `create index concurrently` hay câu lệnh không chạy được trong transaction.
+  - Không `drop`/`truncate`/`delete` dữ liệu thật trong migration. Muốn xóa cột/bảng → dừng lại, ghi vào PR, hỏi phụ huynh.
+  - Project tắt "Automatically expose new tables": mọi bảng mới phải `grant` rõ ràng và bật RLS + policy trong cùng file.
+  - Mô tả PR phải nói rõ PR có đụng database hay không. Không sửa tay trong SQL Editor (làm lệch với repo).
 - Không chạy `supabase db reset --linked`. Không xóa dữ liệu thật.
 - Không đổi hành vi khóa/mở, thứ tự ưu tiên trạng thái (DESIGN §5), allowlist mặc định, hay quyền ghi của con. Thấy spec thiếu hoặc mâu thuẫn → **dừng lại, ghi vào PR / PROGRESS.md, hỏi phụ huynh** (DESIGN §15).
 - Không thêm streak, bảng xếp hạng, điểm đổi giờ chơi (SPEC §15).
@@ -55,10 +60,10 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
 ## Quy trình mỗi lát
 
 1. Đọc SPEC §2.6 + DESIGN §13 cho lát đó → viết kế hoạch ngắn vào đầu PR.
-2. Code → `npm run typecheck && npm run lint && npm test` phải xanh.
+2. Code → `npm run typecheck && npm run lint && npm test` phải xanh. Có SQL mới → thử bằng `bash scripts/test-db.sh` (Postgres tạm; CI cũng chạy) và thêm test RLS vào `supabase/tests/`.
 3. Tự kiểm theo tiêu chí nghiệm thu của lát; ghi cái nào đạt / chưa.
-4. Mở PR (preview Vercel tự tạo) → cập nhật `docs/PROGRESS.md` (ngày, lát, trạng thái, việc còn mở, SQL cần áp).
-5. Không merge — phụ huynh thử preview, áp SQL, rồi merge.
+4. Mở PR (preview Vercel tự tạo) → cập nhật `docs/PROGRESS.md` (ngày, lát, trạng thái, việc còn mở, SQL sẽ tự chạy khi merge).
+5. Không merge — phụ huynh thử preview, rồi merge (SQL tự chạy lúc merge).
 
 ## Lệnh thường dùng
 
@@ -73,11 +78,11 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 ## Biến môi trường (`.env.example`)
 
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, `NEXT_PUBLIC_EXTENSION_ID_CHROME`, `NEXT_PUBLIC_EXTENSION_ID_EDGE`, `NEXT_PUBLIC_APP_URL`
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, `NEXT_PUBLIC_EXTENSION_ID_CHROME`, `NEXT_PUBLIC_EXTENSION_ID_EDGE`, `NEXT_PUBLIC_APP_URL`, `CHILD_EMAIL_DOMAIN` (tùy chọn, mặc định `study-launcher.local`)
 
 ## Current status
 
-- Phase: 3 — Implementation, **chưa bắt đầu**
-- Last updated: 05/10/2026
-- Tiếp theo: **S0 — Khung** (DESIGN §13)
+- Phase: 3 — Implementation, **S0 đang chờ phụ huynh duyệt PR** (`feature/s0-khung`)
+- Last updated: 13/10/2026
+- Tiếp theo: **S1 — Phụ huynh: cài đặt, app slots, mẫu việc, giao bài có ảnh** (DESIGN §13), sau khi S0 được merge
 - Việc phụ huynh song song: thử chính sách extension trên 1 laptop (`docs/SETUP.md` phần B); họp gia đình để chốt tham số (không chặn code).
