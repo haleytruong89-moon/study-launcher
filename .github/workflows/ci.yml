@@ -53,3 +53,46 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply migrations twice and run RLS smoke test
         run: bash scripts/test-db.sh
+
+  e2e:
+    name: end-to-end (real local Supabase + browser)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Start local Supabase (applies supabase/migrations on the real Supabase stack)
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,mailpit,postgres-meta,supavisor,realtime
+      - name: Export local connection values
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/sb.env"
+          get() { grep "^$1=" "$RUNNER_TEMP/sb.env" | head -1 | cut -d= -f2- | tr -d '"'; }
+          echo "NEXT_PUBLIC_SUPABASE_URL=$(get API_URL)" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(get ANON_KEY)" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(get SERVICE_ROLE_KEY)" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_APP_URL=http://localhost:3100" >> "$GITHUB_ENV"
+          echo "FIRST_PARENT_EMAIL=parent@example.com" >> "$GITHUB_ENV"
+      - run: npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Run end-to-end tests
+        run: npm run e2e
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          supabase status || true
+          docker ps -a || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
