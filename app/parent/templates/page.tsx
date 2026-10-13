@@ -1,7 +1,8 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { formatWeekdays } from "@/lib/subjects";
 import { ParentHeader } from "../parent-header";
-import { emptyTemplate, TemplateForm, type SlotOption } from "./template-form";
+import { TemplateForm } from "./template-form";
+import { emptyTemplate, type SlotOption } from "./values";
 
 export const dynamic = "force-dynamic";
 

@@ -5,29 +5,7 @@ import { useId, useState } from "react";
 import { sendJson } from "@/lib/api-client";
 import { WEEKDAY_LABELS } from "@/lib/subjects";
 
-export interface TemplateValues {
-  id?: string;
-  childId: string;
-  part: "extra" | "skill";
-  title: string;
-  subject: string;
-  appSlotId: string | null;
-  weekdays: number[];
-  minMinutes: string; // "" = family default
-  deepLink: string;
-  sort: number;
-  active: boolean;
-}
-
-export interface SlotOption {
-  id: string;
-  childId: string | null;
-  label: string;
-}
-
-export function emptyTemplate(childId: string, part: TemplateValues["part"] = "extra"): TemplateValues {
-  return { childId, part, title: "", subject: "", appSlotId: null, weekdays: [], minMinutes: "", deepLink: "", sort: 0, active: true };
-}
+import { emptyTemplate, type SlotOption, type TemplateValues } from "./values";
 
 export function TemplateForm({
   initial,

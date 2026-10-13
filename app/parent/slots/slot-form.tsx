@@ -3,17 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { sendJson } from "@/lib/api-client";
-
-export interface SlotValues {
-  id?: string;
-  childId: string | null;
-  subject: string;
-  kind: "internal" | "external" | "placeholder";
-  label: string;
-  url: string;
-  allowDomains: string[];
-  active: boolean;
-}
+import { EMPTY_SLOT, type SlotValues } from "./values";
 
 const KINDS: { value: SlotValues["kind"]; label: string; hint: string }[] = [
   { value: "internal", label: "App nhà mình", hint: "Vd App Toán" },
@@ -21,7 +11,6 @@ const KINDS: { value: SlotValues["kind"]; label: string; hint: string }[] = [
   { value: "placeholder", label: "Đang xây", hint: "Hiện cho con biết, không tính vào việc" },
 ];
 
-export const EMPTY_SLOT: SlotValues = { childId: null, subject: "", kind: "external", label: "", url: "", allowDomains: [], active: true };
 
 export function SlotForm({ initial, kids, submitLabel }: { initial: SlotValues; kids: { id: string; name: string }[]; submitLabel: string }) {
   const router = useRouter();

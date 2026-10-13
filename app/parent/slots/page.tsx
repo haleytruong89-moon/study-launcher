@@ -1,6 +1,7 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { ParentHeader } from "../parent-header";
-import { EMPTY_SLOT, SlotForm, type SlotValues } from "./slot-form";
+import { SlotForm } from "./slot-form";
+import { EMPTY_SLOT, type SlotValues } from "./values";
 
 export const dynamic = "force-dynamic";
 
