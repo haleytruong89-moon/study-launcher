@@ -18,7 +18,7 @@ Dùng lại các tài khoản GitHub / Supabase / Vercel đang dùng cho App To�
 | A6 | **Supabase ↔ GitHub**: Project Settings → Integrations → GitHub → chọn repo `haleytruong89-moon/study-launcher`, Working directory `.`, Production branch `main`, **Deploy to production = Bật**. Automatic branching để nguyên (gói Free không có; bật khi nâng Pro sẽ tính tiền theo giờ) | Từ lúc này, SQL trong `supabase/migrations/` **tự chạy khi bạn merge PR vào `main`**. **Không sửa tay trong SQL Editor** (sẽ lệch với repo). Mỗi PR sẽ nói rõ có đụng database hay không |
 | A7 | **Supabase → Authentication → Sign In / Providers**: tắt "Allow new users to sign up" (chỉ tài khoản bạn tạo mới đăng nhập được) | Làm **trước khi mở link Vercel lần đầu** (không chờ đến khi cho con dùng) |
 | A8 | **Supabase → Authentication → Users → Add user**: tạo tài khoản **phụ huynh** (email thật + mật khẩu mạnh, tick "Auto Confirm User") | Sau khi S0 chạy, đăng nhập bằng tài khoản này ở trang `/login`, màn "Thiết lập lần đầu" sẽ hiện ra |
-| A9 | **GitHub → repo → Settings → Secrets and variables → Actions**, thêm: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (giữ project không bị ngủ, chạy hằng ngày) và `SUPABASE_DB_URL` (sao lưu hằng tuần: lấy ở nút **Connect** của Supabase, chọn **Session pooler**, thay `[YOUR-PASSWORD]` bằng mật khẩu DB) | Workflow tự bỏ qua nếu chưa có secret. `SUPABASE_DB_URL` chứa mật khẩu DB: **chỉ** dán vào GitHub Secrets, không gửi qua chat. Bản sao lưu gồm dữ liệu bảng, **không** gồm tài khoản đăng nhập và ảnh, nên khôi phục cần tạo lại tài khoản. **Bạn quyết định trước khi thêm `SUPABASE_DB_URL`**: file sao lưu nằm trong GitHub Actions (repo private), trong khi DESIGN §11 nói dữ liệu của con không ra khỏi Supabase/Vercel. Chưa thêm secret này thì sao lưu tự bỏ qua |
+| A9 | **GitHub → repo → Settings → Secrets and variables → Actions**, thêm 5 secret: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (giữ project không bị ngủ, chạy hằng ngày); `SUPABASE_DB_URL` (lấy ở nút **Connect** của Supabase, chọn **Session pooler**, thay `[YOUR-PASSWORD]` bằng mật khẩu DB); `BACKUP_PASSPHRASE` (một cụm mật khẩu dài bạn tự đặt, ≥ 20 ký tự) | Hai secret sau dùng cho **sao lưu hằng tuần, được mã hóa** (quyết định 13/10). **Lưu `BACKUP_PASSPHRASE` vào quản lý mật khẩu của bạn: mất nó thì bản sao lưu vô dụng**. `SUPABASE_DB_URL` chứa mật khẩu DB: chỉ dán vào GitHub Secrets, không gửi qua chat. Thiếu 1 trong 2 secret thì sao lưu tự bỏ qua (không bao giờ đẩy file chưa mã hóa). Bản sao lưu gồm dữ liệu bảng + tài khoản đăng nhập, **không** gồm ảnh |
 
 ---
 
@@ -94,3 +94,27 @@ App Toán đang cần ~30 phút mỗi sáng. Để không vượt 1–2 giờ/ng
 - Bắt đầu Launcher sau khi App Toán xong S3 và vào pilot.
 
 Mỗi lát Launcher cần phụ huynh ~20–30 phút: đọc PR, thử preview, merge (SQL tự chạy lúc merge).
+
+---
+
+## E. Khôi phục từ bản sao lưu (khi cần)
+
+Bản sao lưu nằm ở GitHub → tab **Actions** → workflow *Weekly database backup* → lần chạy gần nhất → mục **Artifacts** → `db-backup-encrypted` (giữ 30 ngày). Ảnh trong kho ảnh **không** có trong bản này.
+
+> Đã diễn tập trên Postgres tạm trong máy; **chưa thử trên Supabase thật**. Đầu pilot, nhờ Claude làm một buổi diễn tập khôi phục trên một project Supabase thử trước khi cần dùng thật.
+
+Cách khôi phục (Claude làm giúp, cần máy có `psql` + `pg_restore` bản 17):
+
+1. Tạo project Supabase mới (hoặc dùng project hiện tại nếu chỉ hỏng dữ liệu), để migration chạy cho đủ bảng (merge `main` là tự chạy).
+2. Giải mã: `gpg --decrypt --output backup.tar study-launcher-YYYYMMDD.tar.gpg` (hỏi `BACKUP_PASSPHRASE`), rồi `tar -xf backup.tar` → ra `auth.dump` và `public.dump`.
+3. Nạp **theo đúng thứ tự** (tài khoản trước, rồi hồ sơ, rồi phần còn lại):
+   ```bash
+   pg_restore --no-owner --data-only -d "$DB_URL" auth.dump
+   pg_restore --no-owner --data-only -t families -t profiles -d "$DB_URL" public.dump
+   pg_restore --no-owner --data-only -d "$DB_URL" \
+     -t family_settings -t app_slots -t task_templates -t homework_items -t task_runs -t day_sessions \
+     -t overrides -t allowlist_entries -t unlock_requests -t extension_devices -t push_subscriptions \
+     -t trust_state -t audit_log public.dump
+   ```
+4. Đăng nhập lại bằng tài khoản phụ huynh để kiểm tra.
+

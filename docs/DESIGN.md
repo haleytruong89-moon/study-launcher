@@ -205,7 +205,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | Việc | Cách | Tần suất |
 |---|---|---|
 | Giữ Supabase free không tự dừng | GitHub Actions gọi 1 query nhẹ | Hằng ngày (như App Toán) |
-| Sao lưu DB | GitHub Actions `pg_dump` schema `public` → artifact riêng tư (không gồm tài khoản đăng nhập `auth` và file ảnh trong Storage) | Hằng tuần |
+| Sao lưu DB | GitHub Actions `pg_dump` (schema `public` + `auth.users`/`auth.identities`) → **mã hóa bằng `BACKUP_PASSPHRASE`** → artifact riêng tư 30 ngày. Không gồm file ảnh trong Storage. GitHub chỉ giữ file đã mã hóa nên không trái §11. Quy trình khôi phục: `docs/SETUP.md` phần E | Hằng tuần |
 | Xóa ảnh quá hạn | GitHub Actions gọi `/api/cron/cleanup` (có secret) | Hằng tuần |
 | Nhắc xem gộp | Vercel Cron → `/api/cron/evening` | Hằng ngày (Hobby: giờ chạy có thể lệch trong khung 1 giờ) |
 | Migration | Claude viết file `supabase/migrations/NNNN_*.sql` (idempotent, additive) → **tự chạy lên production khi phụ huynh merge PR vào `main`** (Supabase GitHub integration, chỉ "Deploy to production"; CI chạy thử trên Postgres tạm trước đó) | Theo PR |

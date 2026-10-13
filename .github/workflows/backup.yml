@@ -1,7 +1,8 @@
 name: Weekly database backup
 
-# Dumps the database to a private workflow artifact (kept 30 days). Only people with access to
-# this private repository can download it. The dump contains the children's data: treat it accordingly.
+# Dumps the database, ENCRYPTS it, and stores only the encrypted file as a private workflow artifact
+# (kept 30 days). GitHub never sees readable data. Without the BACKUP_PASSPHRASE secret the job does
+# nothing: a plain-text dump is never uploaded.
 on:
   schedule:
     - cron: "43 20 * * 0"   # Sunday 20:43 UTC = Monday 03:43 Vietnam time
@@ -14,29 +15,52 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Dump database
+      - name: Check secrets
+        id: check
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::warning::SUPABASE_DB_URL secret is not set yet; skipping backup."
-            echo "skip=true" >> "$GITHUB_ENV"
-            exit 0
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::SUPABASE_DB_URL and/or BACKUP_PASSPHRASE secret is not set yet; skipping backup."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Install PostgreSQL 17 client
+        if: steps.check.outputs.run == 'true'
+        run: |
           # Match the server's major version (Supabase currently runs PostgreSQL 17).
           sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
-          mkdir -p backup
-          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --schema=public --format=custom \
-            --file "backup/study-launcher-$(date -u +%Y%m%d).dump"
+
+      - name: Dump and encrypt
+        if: steps.check.outputs.run == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%d)"
+          mkdir -p work backup
+          # App data (public schema) and the login accounts (auth.users / auth.identities) so a restore keeps the same user ids.
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --schema=public --format=custom --file work/public.dump
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --data-only --format=custom \
+            --table=auth.users --table=auth.identities --file work/auth.dump
+          tar -C work -cf "work/study-launcher-${stamp}.tar" public.dump auth.dump
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 --output "backup/study-launcher-${stamp}.tar.gpg" "work/study-launcher-${stamp}.tar"
+          rm -rf work
           ls -la backup
-      - name: Upload artifact
-        if: env.skip != 'true'
+
+      - name: Upload encrypted artifact
+        if: steps.check.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: db-backup
-          path: backup/
+          name: db-backup-encrypted
+          path: backup/*.tar.gpg
           retention-days: 30
           if-no-files-found: error
