@@ -20,3 +20,6 @@ next-env.d.ts
 *.tsbuildinfo
 test-results/
 playwright-report/
+
+# Claude Code agent worktrees
+/.claude/worktrees/
