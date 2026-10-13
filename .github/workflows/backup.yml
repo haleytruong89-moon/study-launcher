@@ -1,0 +1,42 @@
+name: Weekly database backup
+
+# Dumps the database to a private workflow artifact (kept 30 days). Only people with access to
+# this private repository can download it. The dump contains the children's data: treat it accordingly.
+on:
+  schedule:
+    - cron: "43 20 * * 0"   # Sunday 20:43 UTC = Monday 03:43 Vietnam time
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::warning::SUPABASE_DB_URL secret is not set yet; skipping backup."
+            echo "skip=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          # Match the server's major version (Supabase currently runs PostgreSQL 17).
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          mkdir -p backup
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --schema=public --format=custom \
+            --file "backup/study-launcher-$(date -u +%Y%m%d).dump"
+          ls -la backup
+      - name: Upload artifact
+        if: env.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup
+          path: backup/
+          retention-days: 30
+          if-no-files-found: error
