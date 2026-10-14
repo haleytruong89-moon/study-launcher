@@ -267,3 +267,14 @@ export function isHomeworkPhotoPath(path: string, familyId: string, childId: str
 }
 
 export const homeworkPatchSchema = z.object({ archived: z.boolean() });
+
+// ---------------------------------------------------------------------------
+// Child profile edits (name, grade, colour)
+// ---------------------------------------------------------------------------
+
+export const childProfileSchema = z.object({
+  displayName: z.string().trim().min(1, "Nhập tên hiển thị").max(80),
+  grade: int(1, 12),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Màu không hợp lệ"),
+});
+export type ChildProfileInput = z.infer<typeof childProfileSchema>;

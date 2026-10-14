@@ -350,6 +350,53 @@ test("S1 homework: parent removes an item; it is archived, not deleted", async (
   expect(hw?.archived_at).toBeTruthy();
 });
 
+test("S1 children: parent renames a child and resets the password; the old password stops working", async ({ page }) => {
+  await login(page, env.parentEmail, env.parentPassword);
+  await expect(page).toHaveURL(/\/parent$/);
+  const item = page.getByRole("listitem").filter({ hasText: "Hạnh Nguyên" });
+  await item.getByText("Sửa").click();
+  await item.getByLabel("Tên của con").fill("Hạnh Nguyên A");
+  await item.getByRole("button", { name: "Lưu thông tin" }).click();
+  await expect(item.getByRole("status")).toHaveText("Đã lưu.");
+  await page.reload();
+  await expect(page.getByRole("listitem").filter({ hasText: "Hạnh Nguyên A" })).toHaveCount(1);
+
+  const renamed = page.getByRole("listitem").filter({ hasText: "Hạnh Nguyên A" });
+  await renamed.getByText("Sửa").click();
+  page.on("dialog", (d) => void d.accept());
+  await renamed.getByRole("button", { name: "Đặt lại mật khẩu" }).click();
+  const creds = renamed.getByRole("status");
+  await expect(creds).toContainText("Mật khẩu mới");
+  const newPassword = (await creds.locator("dd").nth(1).innerText()).trim();
+  expect((await creds.locator("dd").nth(0).innerText()).trim()).toBe(childEmail);
+  expect(newPassword).not.toBe(childPassword);
+
+  const anon = () => createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  expect((await anon().auth.signInWithPassword({ email: childEmail, password: childPassword })).error).not.toBeNull();
+  expect((await anon().auth.signInWithPassword({ email: childEmail, password: newPassword })).error).toBeNull();
+  childPassword = newPassword;
+
+  // Another family's id / a non-child id is refused.
+  const { data: parent } = await admin().from("profiles").select("id").eq("role", "parent").single();
+  const status = await page.evaluate(async (id) => (await fetch(`/api/admin/children/${id}/password`, { method: "POST" })).status, parent?.id ?? "");
+  expect(status).toBe(404);
+});
+
+test("S1 children: a child cannot rename itself or reset any password", async ({ page }) => {
+  await login(page, childEmail, childPassword);
+  const { data: kid } = await admin().from("profiles").select("id").eq("role", "child").single();
+  const statuses = await page.evaluate(async (id) => {
+    const patch = await fetch(`/api/admin/children/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: "Hacker", grade: 9, color: "#2F5D9E" }),
+    });
+    const reset = await fetch(`/api/admin/children/${id}/password`, { method: "POST" });
+    return [patch.status, reset.status];
+  }, kid?.id ?? "");
+  expect(statuses).toEqual([403, 403]);
+});
+
 test("readiness now also reports the family as created", async ({ request }) => {
   const body = (await (await request.get("/api/health/ready")).json()) as {
     ok: boolean;

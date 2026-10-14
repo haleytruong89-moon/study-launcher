@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { AddChildForm } from "./add-child-form";
+import { ChildEdit } from "./child-edit";
 import { ParentHeader } from "./parent-header";
 
 export const dynamic = "force-dynamic";
@@ -18,10 +19,16 @@ export default async function ParentPage() {
           {children.length > 0 ? (
             <ul className="flex flex-col gap-2">
               {children.map((c) => (
-                <li key={c.id} className="flex items-center gap-3 rounded-xl border border-ink/10 bg-white px-4 py-3">
-                  <span aria-hidden className="size-3 rounded-full" style={{ background: c.color ?? "#999" }} />
-                  <span className="font-medium">{c.display_name}</span>
-                  {c.grade ? <span className="text-sm text-ink/60">lớp {c.grade}</span> : null}
+                <li key={c.id} className="rounded-xl border border-ink/10 bg-white px-4 py-2">
+                  <details>
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3">
+                      <span aria-hidden className="size-3 rounded-full" style={{ background: c.color ?? "#999" }} />
+                      <span className="font-medium">{c.display_name}</span>
+                      {c.grade ? <span className="text-sm text-ink/60">lớp {c.grade}</span> : null}
+                      <span className="ml-auto text-sm font-semibold text-accent">Sửa</span>
+                    </summary>
+                    <ChildEdit child={{ id: c.id, displayName: c.display_name, grade: c.grade, color: c.color }} />
+                  </details>
                 </li>
               ))}
             </ul>

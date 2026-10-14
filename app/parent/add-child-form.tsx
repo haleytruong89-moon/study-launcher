@@ -2,13 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CHILD_COLORS } from "@/lib/childColors";
 
-const COLORS = [
-  { value: "#2F5D9E", label: "Xanh dương (Nguyên)" },
-  { value: "#B85A1C", label: "Cam nâu (An)" },
-  { value: "#2B5D4F", label: "Xanh lá" },
-  { value: "#7A4B9E", label: "Tím" },
-];
+const COLORS = CHILD_COLORS;
 
 interface Created {
   email: string;
