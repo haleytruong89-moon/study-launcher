@@ -302,6 +302,7 @@ Quy tắc:
 | 05/10/2026 | Chốt 4 điểm trước khi code: **Supabase project riêng**, **repo riêng `study-launcher`**, **bài bổ sung bắt buộc**, **kỹ năng v1 = danh sách cố định theo thứ**. Thêm user stories + tiêu chí nghiệm thu (§2.5–2.6) → v0.2; tạo bridge files `CLAUDE.md`, `docs/SPEC.md`, `docs/DESIGN.md`, `docs/SETUP.md` |
 | 13/10/2026 | Nối Supabase ↔ GitHub, chỉ bật **Deploy to production** (SQL trong `supabase/migrations/` tự chạy khi phụ huynh merge vào `main`); **Automatic branching tắt** (gói Free không có, và tính tiền theo giờ khi nâng cấp). Thay cho quy ước cũ "phụ huynh dán SQL". Cấm sửa tay trong SQL Editor. Project tắt "Automatically expose new tables" nên mọi bảng phải `grant` rõ ràng |
 | 13/10/2026 | Sao lưu hằng tuần: gói Free của Supabase không có sao lưu tự động → dùng GitHub Actions, **mã hóa bằng mật khẩu riêng trước khi lưu** (GitHub chỉ giữ file đã mã hóa). Ảnh không được sao lưu |
+| 14/10/2026 | Chốt 3 điểm khóa/mở (PR #4): (1) **Phần 1 rỗng chưa phải "xong hẳn"** — ngày vẫn đi tiếp (mời nghỉ → Phần 2) nhưng bài bố mẹ giao trước khi con bấm nghỉ/bỏ qua nghỉ vẫn **khóa lại**; (2) **override mới nhất thay hẳn các override cũ** trong ngày — hết hạn thì về luồng thường, không bật lại override cũ; (3) xong Phần 2 lúc **bố mẹ đang khóa tay** → giờ tự do **hoãn**, bắt đầu khi hết khóa (vẫn dừng ở 00:00). Thêm nút sửa tên/lớp/màu + đặt lại mật khẩu tài khoản con (PR #5) |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 

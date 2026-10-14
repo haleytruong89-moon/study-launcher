@@ -1,5 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { isoWeekday, localDate, nextMidnight, startOfLocalDay, weekStart } from "@/lib/time";
+import {
+  addDays,
+  atLocalTime,
+  isoWeekday,
+  localDate,
+  nextMidnight,
+  startOfLocalDay,
+  weekStart,
+} from "@/lib/time";
+
+describe("addDays", () => {
+  it("moves across month and year boundaries", () => {
+    expect(addDays("2026-10-13", 1)).toBe("2026-10-14");
+    expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2026-10-01", -1)).toBe("2026-09-30");
+    expect(addDays("2026-10-13", 0)).toBe("2026-10-13");
+    expect(addDays("2026-10-19", -7)).toBe("2026-10-12");
+  });
+});
+
+describe("atLocalTime", () => {
+  it("returns the VN wall-clock instant on that date", () => {
+    expect(atLocalTime("2026-10-13", "21:30").toISOString()).toBe("2026-10-13T14:30:00.000Z");
+    expect(atLocalTime("2026-10-13", "21:30:15").toISOString()).toBe("2026-10-13T14:30:15.000Z");
+    expect(atLocalTime("2026-10-13", "00:00").toISOString()).toBe("2026-10-12T17:00:00.000Z");
+  });
+
+  it("rejects malformed times", () => {
+    expect(() => atLocalTime("2026-10-13", "9pm")).toThrow();
+    expect(() => atLocalTime("2026-10-13", "24:00")).toThrow();
+  });
+});
 
 describe("localDate (Asia/Ho_Chi_Minh)", () => {
   it("rolls to the next day at 17:00 UTC (= 00:00 VN)", () => {
