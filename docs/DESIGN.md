@@ -245,7 +245,7 @@ study-launcher/
 | **S0** | Khung: Next.js + TS + Tailwind, Supabase client, `0001_init.sql` (schema + RLS + seed), đăng nhập phụ huynh, trang tạo tài khoản con, PWA manifest + SW rỗng, CI (lint, typecheck, test), **GitHub Actions giữ Supabase không ngủ + backup tuần** | RLS checklist §11 | M1 |
 | **S1** | Phụ huynh: cài đặt gia đình, app slots, mẫu việc theo thứ, **giao bài có ảnh** (mobile) | "Giao bài" | M1 |
 | **S2** | Con: `computeDayState` + **test đầy đủ**, màn Hôm nay, bắt đầu/xong + tối thiểu 20', ảnh bằng chứng, nghỉ, thẻ miễn, 7 ngày qua | "Hôm nay" | M1 |
-| **S3** | Phụ huynh: xem gộp + Đạt/Chưa đạt, ngày đặc biệt, override bằng PIN trên máy con, gợi ý & xác nhận chế độ Tin tưởng, audit log, **job xóa ảnh quá hạn** (`/api/cron/cleanup`) | "Xem gộp", "Override & cấu hình" | M1 |
+| **S3** | *(Chia nhỏ 15/10/2026: S3a xem gộp · S3b PIN phụ huynh 6 số · S3c override từ máy con + iPhone · S3d ngày đặc biệt, Tin tưởng, allowlist, nhật ký · S3e xóa ảnh quá hạn. Màn chọn hồ sơ + PIN con: sau v1.)* Phụ huynh: xem gộp + Đạt/Chưa đạt, ngày đặc biệt, override bằng PIN trên máy con, gợi ý & xác nhận chế độ Tin tưởng, audit log, **job xóa ảnh quá hạn** (`/api/cron/cleanup`) | "Xem gộp", "Override & cấu hình" | M1 |
 | **S4** | Extension: ghép đôi, `/api/ext/state`, luật chặn, quét tab, fail-closed, trang `/blocked`, **tab mới / khởi động → Launcher** | "Khóa web" | M2 |
 | **S5** | Xin mở trang + Web Push (thử trên iPhone thật) + **nhắc xem gộp buổi tối** (`/api/cron/evening`) | "Xin mở trang" | M2 |
 | **S6** | Cảnh báo extension mất kết nối; đóng gói đăng store (unlisted) | — | M2 |

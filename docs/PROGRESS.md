@@ -12,3 +12,6 @@
 | 14/10/2026 | S0 | Phụ huynh làm A8: tạo tài khoản, tạo gia đình và 2 tài khoản con trên production | Còn A7 (tắt sign-up), A9 | — |
 | 15/10/2026 | S1, S2a | **PR #4, #5 đã merge** (09:57). Production có trang phụ huynh mới | — | Không đụng database |
 | 15/10/2026 | S2b | **PR #6 mở** (`feature/s2b-hom-nay`): màn Hôm nay của con + 6 route (`/api/today`, start/finish/proof, break, pass) | Chưa làm: màn chọn profile + PIN (DESIGN §2), trang khóa, extension (S4). Thẻ miễn bị từ chối khi bố mẹ đang khóa tay | Không đụng database |
+| 15/10/2026 | S2b | **PR #6 đã merge.** Production có màn Hôm nay của con | Tối 15/10: cả nhà thử luồng việc (chưa có extension nên web chưa bị khóa thật) | Không đụng database |
+| 15/10/2026 | S4a | **PR #7 mở** (`feature/s4a-extension-core`): lõi extension (luật chặn, fail-closed, quét tab) + 53 test | 4 lựa chọn chặt hơn chờ phụ huynh xác nhận khi duyệt S4b | Không đụng database |
+| 15/10/2026 | S3a | **PR #8 mở** (`feature/s3a-xem-gop`): trang Xem gộp buổi tối + Đạt/Chưa đạt | Phần còn lại của S3 chờ duyệt kế hoạch | Không đụng database |
