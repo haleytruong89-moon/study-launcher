@@ -30,6 +30,17 @@ export async function POST(request: Request) {
     if (!(objects ?? []).some((o) => `${folder}/${o.name}` === parsed.data.path)) return jsonError("Ảnh chưa tải lên xong, thử lại.", 400);
 
     const admin = createAdminClient();
+    // One photo proves ONE piece of homework: refuse a path already used by another run.
+    const { data: reused, error: reuseError } = await admin
+      .from("task_runs")
+      .select("id")
+      .eq("child_id", ctx.childId)
+      .contains("proof_paths", [parsed.data.path])
+      .neq("id", parsed.data.runId)
+      .limit(1);
+    if (reuseError) throw new Error(reuseError.message);
+    if ((reused ?? []).length > 0) return jsonError("Ảnh này đã dùng cho bài khác. Chụp ảnh riêng cho bài này.", 409);
+
     const { data: run, error: readError } = await admin
       .from("task_runs")
       .select("proof_paths")

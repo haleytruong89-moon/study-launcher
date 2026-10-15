@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
-import { decideBreak, decideFinish, decidePass, decideProof, decideStart, isProofPath } from "@/lib/today/rules";
+import { decideBreak, decideFinish, decidePass, decideProof, decideStart, isProofPath, passOffered, runningTimedTask } from "@/lib/today/rules";
 import { bannerFor, clock, dayLabel, longDate, stepIndex, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
 
 // Wednesday 2026-10-14, Vietnam time.
@@ -101,6 +101,40 @@ describe("decideStart", () => {
   });
 });
 
+describe("one timed task at a time (decision 15/10/2026)", () => {
+  const EXTRA2 = "99999999-9999-4999-8999-999999999990";
+  const twoExtras = (runs: ReturnType<typeof run>[]) =>
+    day({
+      templates: [
+        ...day().templates,
+        { id: EXTRA2, part: "extra", title: "Anh bổ sung", subject: "Anh", appSlotId: null, weekdays: [3], minMinutes: null, deepLink: null, sort: 1, active: true },
+      ],
+      runs,
+    });
+
+  it("a second timed task cannot start while one is running", () => {
+    const s = computeDayState(twoExtras([run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00") })]), vn("15:05"));
+    expect(runningTimedTask(s)?.id).toBe(EXTRA);
+    const d = decideStart(s, "template", EXTRA2);
+    expect(d).toMatchObject({ ok: false, status: 409 });
+    if (!d.ok) expect(d.error).toContain("Toán bổ sung");
+  });
+
+  it("homework (no minimum) can still be started meanwhile", () => {
+    const s = computeDayState(twoExtras([run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00") })]), vn("15:05"));
+    expect(decideStart(s, "homework", HW)).toMatchObject({ ok: true });
+  });
+
+  it("once the first is finished the next one may start", () => {
+    const s = computeDayState(
+      twoExtras([run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00"), doneAt: at("15:21") })]),
+      vn("15:22"),
+    );
+    expect(runningTimedTask(s)).toBeNull();
+    expect(decideStart(s, "template", EXTRA2)).toMatchObject({ ok: true });
+  });
+});
+
 describe("decideFinish (server clock decides)", () => {
   const started = day({ runs: [run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00:00") })] });
 
@@ -173,9 +207,12 @@ describe("decidePass", () => {
     expect(decidePass(computeDayState(usedMonday, vn("15:00")))).toMatchObject({ ok: false, status: 409 });
   });
 
-  it("refused while a parent lock is in effect", () => {
+  it("refused and not offered while a parent lock is in effect (decision 15/10/2026)", () => {
     const locked = day({ overrides: [{ id: "o", localDate: TODAY, kind: "lock_until", until: at("18:00"), createdAt: at("14:00") }] });
-    expect(decidePass(computeDayState(locked, vn("15:00")))).toMatchObject({ ok: false, status: 409 });
+    const s = computeDayState(locked, vn("15:00"));
+    expect(decidePass(s)).toMatchObject({ ok: false, status: 409 });
+    expect(passOffered(s)).toBe(false);
+    expect(passOffered(computeDayState(day(), vn("15:00")))).toBe(true);
   });
 });
 

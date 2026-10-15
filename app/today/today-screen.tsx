@@ -6,6 +6,7 @@ import type { TaskView } from "@/lib/dayState";
 import { compressImage } from "@/lib/images";
 import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
+import { passOffered, runningTimedTask } from "@/lib/today/rules";
 import { bannerFor, clock, dayLabel, isOkResult, longDate, stepIndex, taskMeta, taskProgress, weekSummary } from "@/lib/today/view";
 import { SignOutButton } from "../sign-out-button";
 
@@ -160,6 +161,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const idx = stepIndex(s, nowMs);
   const homework = s.part1.items.filter((i) => i.source === "homework");
   const extras = s.part1.items.filter((i) => i.source === "template");
+  const runningTimed = runningTimedTask(s);
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
   const bannerClass =
     banner.tone === "open" ? "bg-[#FBE9D3] text-[#5E3108]" : banner.tone === "dark" ? "bg-ink text-white" : "bg-[#E3ECE7] text-[#1C3F35]";
@@ -267,12 +269,12 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
 
             <TaskGroup title="Bài trên lớp · ảnh bố mẹ gửi" empty="Hôm nay không có bài trên lớp.">
               {homework.map((item) => (
-                <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={view.homeworkPhotos[item.id] ?? []} onAct={act} onProof={proofAndFinish} />
+                <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={view.homeworkPhotos[item.id] ?? []} blockedBy={null} onAct={act} onProof={proofAndFinish} />
               ))}
             </TaskGroup>
             <TaskGroup title="Bài bổ sung · từ app môn học" empty="Hôm nay không có bài bổ sung.">
               {extras.map((item) => (
-                <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={[]} onAct={act} onProof={proofAndFinish} />
+                <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={[]} blockedBy={runningTimed} onAct={act} onProof={proofAndFinish} />
               ))}
             </TaskGroup>
           </section>
@@ -347,7 +349,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
                     {s.passesLeft > 0 ? `Còn ${s.passesLeft} thẻ · dùng khi thật cần, hôm nay vẫn tính là ngày đạt` : "Đã dùng hết — tuần sau có thẻ mới"}
                   </span>
                 </div>
-                {s.passAvailable && (
+                {passOffered(s) && (
                   <button
                     type="button"
                     disabled={!!busy}
@@ -377,7 +379,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
               ) : (
                 <ul className="flex flex-col gap-2.5">
                   {s.part2.items.map((item) => (
-                    <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={[]} locked={s.part2.locked} onAct={act} onProof={proofAndFinish} />
+                    <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={[]} locked={s.part2.locked} blockedBy={runningTimed} onAct={act} onProof={proofAndFinish} />
                   ))}
                 </ul>
               )}
@@ -404,6 +406,7 @@ function TaskRow({
   busy,
   photos,
   locked = false,
+  blockedBy,
   onAct,
   onProof,
 }: {
@@ -412,13 +415,16 @@ function TaskRow({
   busy: string | null;
   photos: string[];
   locked?: boolean;
+  /** A timed task already running: other timed tasks wait (one at a time). */
+  blockedBy: TaskView | null;
   onAct: (a: Act) => Promise<void>;
   onProof: (item: TaskView, file: File) => Promise<void>;
 }) {
   const running = item.state === "running";
   const ready = running && !item.requiresProof && item.canFinishAt !== null && nowMs >= new Date(item.canFinishAt).getTime();
   const pct = taskProgress(item, nowMs);
-  const name = item.subject && item.subject !== item.title ? `${item.title}` : item.title;
+  const name = item.title;
+  const waiting = item.state === "todo" && blockedBy !== null && blockedBy.key !== item.key && item.source === "template" && item.minMinutes > 0;
 
   return (
     <li
@@ -437,7 +443,7 @@ function TaskRow({
           {item.placeholder && <span className="ml-2 rounded-full bg-[#ECEDE8] px-2 py-0.5 text-xs font-bold text-ink/70">Đang xây</span>}
         </span>
         {item.note && <span className="text-sm">{item.note}</span>}
-        <span className="text-[13px] text-ink/70">{taskMeta(item, nowMs)}</span>
+        <span className="text-[13px] text-ink/70">{waiting ? `Làm xong “${blockedBy?.title}” rồi bắt đầu việc này` : taskMeta(item, nowMs)}</span>
         {running && !item.requiresProof && item.minMinutes > 0 && (
           <div className="h-1.5 overflow-hidden rounded-full bg-ink/10" role="progressbar" aria-label="Thời gian đã học" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <div className="h-1.5 bg-accent" style={{ width: `${pct}%` }} />
@@ -453,7 +459,7 @@ function TaskRow({
         {item.state === "todo" && (
           <button
             type="button"
-            disabled={!!busy || locked}
+            disabled={!!busy || locked || waiting}
             onClick={() => void onAct({ url: "/api/tasks/start", body: { source: item.source, id: item.id } })}
             className="btn bg-accent text-white disabled:opacity-50"
           >

@@ -466,7 +466,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await skill.getByRole("button", { name: "Xong" }).click();
 
   // Free time (40 minutes: the parent changed it in the S1 settings test).
-  await expect(banner).toContainText("giờ tự do");
+  await expect(banner).toContainText("Xong cả hai phần");
   await expect(page.getByText("Đang mở mọi trang")).toBeVisible();
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
 

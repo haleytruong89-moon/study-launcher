@@ -303,6 +303,7 @@ Quy tắc:
 | 13/10/2026 | Nối Supabase ↔ GitHub, chỉ bật **Deploy to production** (SQL trong `supabase/migrations/` tự chạy khi phụ huynh merge vào `main`); **Automatic branching tắt** (gói Free không có, và tính tiền theo giờ khi nâng cấp). Thay cho quy ước cũ "phụ huynh dán SQL". Cấm sửa tay trong SQL Editor. Project tắt "Automatically expose new tables" nên mọi bảng phải `grant` rõ ràng |
 | 13/10/2026 | Sao lưu hằng tuần: gói Free của Supabase không có sao lưu tự động → dùng GitHub Actions, **mã hóa bằng mật khẩu riêng trước khi lưu** (GitHub chỉ giữ file đã mã hóa). Ảnh không được sao lưu |
 | 14/10/2026 | Chốt 3 điểm khóa/mở (PR #4): (1) **Phần 1 rỗng chưa phải "xong hẳn"** — ngày vẫn đi tiếp (mời nghỉ → Phần 2) nhưng bài bố mẹ giao trước khi con bấm nghỉ/bỏ qua nghỉ vẫn **khóa lại**; (2) **override mới nhất thay hẳn các override cũ** trong ngày — hết hạn thì về luồng thường, không bật lại override cũ; (3) xong Phần 2 lúc **bố mẹ đang khóa tay** → giờ tự do **hoãn**, bắt đầu khi hết khóa (vẫn dừng ở 00:00). Thêm nút sửa tên/lớp/màu + đặt lại mật khẩu tài khoản con (PR #5) |
+| 15/10/2026 | Chốt 2 điểm (PR #6): **mỗi lúc chỉ 1 việc có giờ tối thiểu** (bài bổ sung / kỹ năng) được chạy — xong việc này mới bắt đầu việc khác, để 1 lần chờ 20' không tính cho 2 việc; bài trên lớp không giới hạn. **Không dùng thẻ miễn khi bố mẹ đang khóa tay** (ẩn nút). Mỗi ảnh bằng chứng chỉ dùng cho 1 bài |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 

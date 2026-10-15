@@ -13,6 +13,21 @@ export function allItems(state: DayState): TaskView[] {
   return [...state.part1.items, ...state.part2.items];
 }
 
+/** A task with a minimum time (supplementary work or skill). Homework has none. */
+export function isTimed(item: TaskView): boolean {
+  return item.source === "template" && item.minMinutes > 0;
+}
+
+/** The timed task currently running, if any (at most one at a time). */
+export function runningTimedTask(state: DayState): TaskView | null {
+  return allItems(state).find((i) => i.state === "running" && isTimed(i)) ?? null;
+}
+
+/** Whether the pass button should be offered (refused while a parent lock is in effect). */
+export function passOffered(state: DayState): boolean {
+  return state.passAvailable && state.status !== "LOCK_OVERRIDE";
+}
+
 /** Start a task: it must be today's, countable, not done, and (Part 2) unlocked. */
 export function decideStart(
   state: DayState,
@@ -24,6 +39,11 @@ export function decideStart(
   if (item.state === "placeholder") return deny(409, "App này đang xây, chưa làm được.");
   if (item.state === "done") return deny(409, "Việc này đã xong rồi.");
   if (item.part === 2 && state.part2.locked) return deny(409, "Phần 2 mở sau khi xong Phần 1 và giờ nghỉ.");
+  if (item.state !== "running" && isTimed(item)) {
+    // Parent decision 15/10/2026: one timed task at a time, so one wait cannot count twice.
+    const other = runningTimedTask(state);
+    if (other) return deny(409, `Đang làm “${other.title}” — bấm Xong việc đó trước.`);
+  }
   return { ok: true, value: { item, alreadyRunning: item.state === "running" } };
 }
 
@@ -70,8 +90,8 @@ export function decideBreak(state: DayState, action: BreakAction): Decision<null
 
 /**
  * Pass: only when one is left this week and today has no free time yet (DESIGN section 5).
- * While a parent LOCK override is in effect the pass is refused, so free time is never
- * spent behind a lock (same spirit as the 14/10/2026 decision on deferred free time).
+ * Parent decision 15/10/2026: refused (and the button hidden) while a parent LOCK override
+ * is in effect, so free time is never spent behind a lock.
  */
 export function decidePass(state: DayState): Decision<null> {
   if (state.status === "LOCK_OVERRIDE") return deny(409, "Bố mẹ đang khóa máy, chưa dùng thẻ được.");
