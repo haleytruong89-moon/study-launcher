@@ -91,3 +91,11 @@ body {
   padding: 0 1.25rem;
   font-weight: 600;
 }
+
+/* Horizontal pill menus scroll on small screens without showing a scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
 import { makePng } from "./png";
+import { addDays, localDate } from "../lib/time";
 
 const env = e2eEnv();
 
@@ -395,6 +396,105 @@ test("S1 children: a child cannot rename itself or reset any password", async ({
     return [patch.status, reset.status];
   }, kid?.id ?? "");
   expect(statuses).toEqual([403, 403]);
+});
+
+// ---------------------------------------------------------------------------
+// S2b — child: the "Hôm nay" screen, start / finish with the server clock, proof photo,
+// break, free time
+// ---------------------------------------------------------------------------
+
+test("S2b today: a full day from Part 1 to free time, with the server enforcing every rule", async ({ page }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
+  const childId = kid?.id ?? "";
+  const familyId = kid?.family_id ?? "";
+  const today = localDate(new Date());
+  const all = [1, 2, 3, 4, 5, 6, 7];
+  await db.from("task_templates").insert([
+    { family_id: familyId, child_id: childId, part: "extra", title: "Luyện đề e2e", subject: "Toán", weekdays: all, min_minutes: 20 },
+    { family_id: familyId, child_id: childId, part: "skill", title: "Đọc sách e2e", weekdays: all, min_minutes: 0 },
+  ]);
+  await db.from("homework_items").insert({ family_id: familyId, child_id: childId, subject: "Ngữ văn", due_date: addDays(today, 1), note: "Bài 2 trang 30" });
+
+  await login(page, childEmail, childPassword);
+  await expect(page).toHaveURL(/\/today$/);
+  const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
+  await expect(banner).toContainText("Còn 2 việc ở Phần 1");
+  await expect(page.getByText("Đang khóa · chỉ mở trang học")).toBeVisible();
+
+  const skill = page.getByRole("listitem", { name: "Đọc sách e2e" });
+  await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
+
+  // The server refuses Part 2 and an early finish, whatever the browser does.
+  const today1 = await page.evaluate(async () => (await (await fetch("/api/today")).json()) as { state: { part1: { items: { id: string; title: string }[] }; part2: { items: { id: string; title: string }[] } } });
+  const skillId = today1.state.part2.items.find((i) => i.title === "Đọc sách e2e")?.id;
+  const extraId = today1.state.part1.items.find((i) => i.title === "Luyện đề e2e")?.id;
+  const early = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
+  expect(early).toBe(409);
+
+  // Homework: start, then the proof photo finishes it.
+  const homework = page.getByRole("listitem", { name: "Ngữ văn" });
+  await homework.getByRole("button", { name: "Bắt đầu" }).click();
+  await homework.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1800, 2400) });
+  await expect(homework.getByText("✓ Xong")).toBeVisible();
+
+  // Supplementary task: 20 minutes minimum on the SERVER clock.
+  const extra = page.getByRole("listitem", { name: "Luyện đề e2e" });
+  await extra.getByRole("button", { name: "Bắt đầu" }).click();
+  await expect(extra.getByRole("button", { name: "Xong" })).toBeDisabled();
+  const { data: run } = await db.from("task_runs").select("id").eq("template_id", extraId).single();
+  const tooEarly = await page.evaluate(async (runId) => {
+    const r = await fetch("/api/tasks/finish", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ runId }) });
+    return { status: r.status, body: (await r.json()) as { error?: string } };
+  }, run?.id);
+  expect(tooEarly.status).toBe(409);
+  expect(tooEarly.body.error).toContain("Chưa đủ thời gian tối thiểu");
+  const { data: stillOpen } = await db.from("task_runs").select("done_at").eq("id", run?.id ?? "").single();
+  expect(stillOpen?.done_at).toBeNull(); // refused = nothing recorded
+
+  // Pretend 21 minutes have passed (server data), then the button works.
+  await db.from("task_runs").update({ started_at: new Date(Date.now() - 21 * 60_000).toISOString() }).eq("id", run?.id ?? "");
+  await page.reload();
+  await page.getByRole("listitem", { name: "Luyện đề e2e" }).getByRole("button", { name: "Xong" }).click();
+  await expect(page.getByRole("listitem", { name: "Luyện đề e2e" }).getByText("✓ Xong")).toBeVisible();
+
+  // Part 1 done -> break offer -> skip -> Part 2.
+  await expect(banner).toContainText("Xong Phần 1");
+  await banner.getByRole("button", { name: "Học tiếp luôn" }).click();
+  await expect(banner).toContainText("Còn 1 việc ở Phần 2");
+  await skill.getByRole("button", { name: "Bắt đầu" }).click();
+  await skill.getByRole("button", { name: "Xong" }).click();
+
+  // Free time (40 minutes: the parent changed it in the S1 settings test).
+  await expect(banner).toContainText("Xong cả hai phần");
+  await expect(page.getByText("Đang mở mọi trang")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
+
+  const { data: day } = await db.from("day_sessions").select("part1_done_at, part2_done_at, free_started_at, break_skipped").eq("child_id", childId).eq("local_date", today).single();
+  expect(day?.part1_done_at).toBeTruthy();
+  expect(day?.part2_done_at).toBeTruthy();
+  expect(day?.free_started_at).toBe(day?.part2_done_at);
+  expect(day?.break_skipped).toBe(true);
+  const { data: hwRow } = await db.from("homework_items").select("done_at").eq("subject", "Ngữ văn").single();
+  expect(hwRow?.done_at).toBeTruthy();
+  const { data: proofRun } = await db.from("task_runs").select("proof_paths").eq("source", "homework").not("done_at", "is", null).single();
+  expect(proofRun?.proof_paths[0]).toMatch(new RegExp(`^${familyId}/${childId}/${today}/[0-9a-f-]{36}\\.jpg$`));
+  expect(skillId).toBeTruthy();
+});
+
+test("S2b today: the child cannot change the day directly, and parents have no /today", async ({ page }) => {
+  const child = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await child.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  const write = await child.from("day_sessions").update({ free_started_at: null }).not("child_id", "is", null).select("child_id");
+  expect(write.data ?? []).toHaveLength(0);
+  const run = await child.from("task_runs").update({ done_at: null }).not("id", "is", null).select("id");
+  expect(run.data ?? []).toHaveLength(0);
+
+  await login(page, env.parentEmail, env.parentPassword);
+  const status = await page.evaluate(async () => (await fetch("/api/today")).status);
+  expect(status).toBe(403);
+  await page.goto("/today");
+  await expect(page).toHaveURL(/\/parent$/);
 });
 
 test("readiness now also reports the family as created", async ({ request }) => {
