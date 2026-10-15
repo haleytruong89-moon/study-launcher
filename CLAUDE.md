@@ -83,8 +83,8 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 ## Current status
 
-- Phase: 3 — Implementation. S0 đã merge (PR #1–#3), production chạy (`/api/health/ready`: env/DB/bảng/bucket xanh; còn A7 tắt đăng ký)
-- Last updated: 14/10/2026
-- Đang mở: PR #4 (S2a `computeDayState`, không DB), PR #5 (S1 trang phụ huynh, không DB)
-- Tiếp theo: S2b — route của con (`/api/today`, start/finish/proof/break/pass) + màn Hôm nay, sau khi PR #4 và #5 được merge
-- Việc phụ huynh: A7 (tắt sign-up), A8 (tạo tài khoản phụ huynh), A9 (secrets backup, tùy chọn); thử chính sách extension (SETUP B); họp gia đình chốt tham số.
+- Phase: 3 — Implementation. Đã merge: S0 (PR #1–#3), S2a `computeDayState` (PR #4), S1 trang phụ huynh (PR #5). Production: phụ huynh + gia đình + 2 tài khoản con đã tạo (A8 xong)
+- Last updated: 15/10/2026
+- Đang mở: PR #6 (S2b màn Hôm nay của con, không DB)
+- Tiếp theo: S3 — xem gộp buổi tối + Đạt/Chưa đạt, ngày đặc biệt, override bằng PIN, chế độ Tin tưởng, allowlist, audit log, job xóa ảnh
+- Việc phụ huynh: A7 (tắt sign-up — trước khi con dùng thật), A9 (secrets backup, tùy chọn); thử chính sách extension (SETUP B); họp gia đình chốt tham số.

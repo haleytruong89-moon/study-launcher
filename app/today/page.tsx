@@ -1,22 +1,31 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { SignOutButton } from "../sign-out-button";
+import { requireChild, todayView } from "@/lib/today/service";
+import { TodayScreen } from "./today-screen";
 
 export const dynamic = "force-dynamic";
 
-/** Placeholder: the real "Hôm nay" screen arrives in slice S2. */
+/** The child's "Hôm nay" (mockup Main.dc.html). All state comes from the server. */
 export default async function TodayPage() {
   const me = await getCurrentUser();
   if (!me?.profile) redirect("/login");
   if (me.profile.role === "parent") redirect("/parent");
 
+  const guard = await requireChild();
+  if (!guard.ok) redirect("/login");
+  const { ctx } = guard;
+
+  let initial = null;
+  try {
+    initial = await todayView(ctx);
+  } catch (e) {
+    console.error("today page failed", e instanceof Error ? e.message : e);
+  }
+
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4 py-10">
-      <h1 className="text-2xl font-bold" style={{ color: me.profile.color ?? undefined }}>
-        Chào {me.profile.display_name}
-      </h1>
-      <p className="text-ink/70">Màn “Hôm nay” sẽ có ở bước sau.</p>
-      <SignOutButton />
-    </main>
+    <TodayScreen
+      child={{ id: ctx.childId, familyId: ctx.familyId, name: ctx.displayName, grade: ctx.grade, color: ctx.color }}
+      initial={initial}
+    />
   );
 }

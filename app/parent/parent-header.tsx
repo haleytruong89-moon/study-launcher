@@ -20,7 +20,7 @@ export function ParentHeader({ title, current }: { title: string; current: (type
         </div>
         <SignOutButton />
       </div>
-      <nav aria-label="Trang phụ huynh" className="mx-auto max-w-lg overflow-x-auto px-4 pb-3">
+      <nav aria-label="Trang phụ huynh" className="no-scrollbar mx-auto max-w-lg overflow-x-auto px-4 pb-3">
         <ul className="flex gap-2">
           {LINKS.map((l) => (
             <li key={l.href}>
