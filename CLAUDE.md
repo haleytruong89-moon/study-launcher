@@ -83,7 +83,8 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 ## Current status
 
-- Phase: 3 — Implementation, **S0 đã merge (PR #1)**; PR #2 thêm bài thử tự động đầy đủ + `/api/health/ready`
-- Last updated: 13/10/2026
-- Tiếp theo: **S1 — Phụ huynh: cài đặt, app slots, mẫu việc, giao bài có ảnh** (DESIGN §13), sau khi phụ huynh xác nhận S0 chạy (mở `/api/health/ready` thấy `ok: true`)
-- Việc phụ huynh song song: thử chính sách extension trên 1 laptop (`docs/SETUP.md` phần B); họp gia đình để chốt tham số (không chặn code).
+- Phase: 3 — Implementation. S0 đã merge (PR #1–#3), production chạy (`/api/health/ready`: env/DB/bảng/bucket xanh; còn A7 tắt đăng ký)
+- Last updated: 14/10/2026
+- Đang mở: PR #4 (S2a `computeDayState`, không DB), PR #5 (S1 trang phụ huynh, không DB)
+- Tiếp theo: S2b — route của con (`/api/today`, start/finish/proof/break/pass) + màn Hôm nay, sau khi PR #4 và #5 được merge
+- Việc phụ huynh: A7 (tắt sign-up), A8 (tạo tài khoản phụ huynh), A9 (secrets backup, tùy chọn); thử chính sách extension (SETUP B); họp gia đình chốt tham số.
