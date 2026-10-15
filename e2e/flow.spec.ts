@@ -497,6 +497,56 @@ test("S2b today: the child cannot change the day directly, and parents have no /
   await expect(page).toHaveURL(/\/parent$/);
 });
 
+// ---------------------------------------------------------------------------
+// S3a — parent: evening review (finished work, minutes, proof photos, Đạt / Chưa đạt)
+// ---------------------------------------------------------------------------
+
+test("S3a review: parent sees today's finished work with photos and minutes, and marks it", async ({ page }) => {
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/review");
+  const kid = page.getByRole("region", { name: "Xem gộp · Hạnh Nguyên A" });
+  await expect(kid).toContainText("3 việc xong");
+  // (No assertion on "ngày đạt": it depends on the bedtime vs the CI clock.)
+
+  const homework = kid.getByRole("listitem", { name: "Ngữ văn · bài trên lớp" });
+  await expect(homework.getByRole("img", { name: "Ảnh bài Ngữ văn · bài trên lớp" })).toBeVisible();
+  await expect(kid.getByRole("listitem", { name: "Luyện đề e2e" })).toContainText("bài bổ sung");
+  await expect(kid.getByRole("listitem", { name: "Đọc sách e2e" })).toContainText("kỹ năng");
+
+  const notOk = homework.getByRole("button", { name: "Chưa đạt" });
+  await notOk.click();
+  await expect(notOk).toHaveAttribute("aria-pressed", "true");
+  await kid.getByRole("listitem", { name: "Luyện đề e2e" }).getByRole("button", { name: "Đạt", exact: true }).click();
+
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Xem gộp · Hạnh Nguyên A" }).getByRole("listitem", { name: "Ngữ văn · bài trên lớp" }).getByRole("button", { name: "Chưa đạt" })).toHaveAttribute("aria-pressed", "true");
+
+  const { data: verdicts } = await admin().from("task_runs").select("parent_verdict, verdict_at").not("parent_verdict", "is", null);
+  expect(verdicts?.map((v) => v.parent_verdict).sort()).toEqual(["not_ok", "ok"]);
+  expect(verdicts?.every((v) => !!v.verdict_at)).toBe(true);
+
+  // "Chưa đạt" is only a note: free time and the day's result are untouched.
+  const { data: day } = await admin().from("day_sessions").select("free_started_at").not("free_started_at", "is", null);
+  expect(day?.length).toBe(1);
+});
+
+test("S3a review: a child cannot mark verdicts", async ({ page }) => {
+  const { data: run } = await admin().from("task_runs").select("id").eq("parent_verdict", "not_ok").single();
+  const child = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await child.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  const direct = await child.from("task_runs").update({ parent_verdict: "ok" }).eq("id", run?.id ?? "").select("id");
+  expect(direct.data ?? []).toHaveLength(0);
+
+  await login(page, childEmail, childPassword);
+  const status = await page.evaluate(
+    async (id) => (await fetch(`/api/admin/runs/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ verdict: "ok" }) })).status,
+    run?.id ?? "",
+  );
+  expect(status).toBe(403);
+  await page.goto("/parent/review");
+  await expect(page).toHaveURL(/\/today$/);
+});
+
 test("readiness now also reports the family as created", async ({ request }) => {
   const body = (await (await request.get("/api/health/ready")).json()) as {
     ok: boolean;
