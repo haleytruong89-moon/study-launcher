@@ -24,6 +24,8 @@ export interface TodayView {
   state: DayState;
   /** homework id -> attachments, opened via /api/files/homework (child session, RLS-checked). */
   homeworkFiles: Record<string, AttachmentView[]>;
+  /** First local date this child has a day row (week strip shows earlier days as "—"). */
+  firstDay: string;
   /** Family rules the screen needs for its wording (minutes, thresholds). */
   rules: TodayRules;
 }
@@ -125,7 +127,9 @@ export async function todayView(ctx: ChildContext, now = new Date()): Promise<To
   const { state, homeworkPhotos, rules } = await readToday(ctx, now);
   const files: Record<string, AttachmentView[]> = {};
   for (const i of state.part1.items) if (i.source === "homework") files[i.id] = attachmentViews(homeworkPhotos[i.id] ?? []);
-  return { state, homeworkFiles: files, rules };
+  const first = await ctx.db.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date").limit(1).maybeSingle();
+  const firstDay = (first.data?.local_date as string | undefined) ?? state.localDate;
+  return { state, homeworkFiles: files, rules, firstDay };
 }
 
 /** Standard error handling for the child routes: never leak details, stay fail-closed. */

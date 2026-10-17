@@ -420,7 +420,9 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(page).toHaveURL(/\/today$/);
   const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
   await expect(banner).toContainText("Còn 2 việc ở Phần 1");
-  await expect(page.getByText("Đang khóa · chỉ mở trang học")).toBeVisible();
+  await expect(page.getByText("Giờ học · máy chỉ mở trang học")).toBeVisible();
+  // New screen (S2d): one "Việc tiếp theo" card suggests the overdue/near homework first.
+  await expect(banner.getByText("Việc tiếp theo")).toBeVisible();
 
   const skill = page.getByRole("listitem", { name: "Đọc sách e2e" });
   await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
@@ -432,16 +434,24 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const early = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
   expect(early).toBe(409);
 
-  // Homework: start, then the proof photo finishes it.
+  // Homework: start (focus mode opens), then the proof photo finishes it.
   const homework = page.getByRole("listitem", { name: "Ngữ văn" });
+  const focus = page.getByRole("dialog", { name: "Đang tập trung" });
   await homework.getByRole("button", { name: "Bắt đầu" }).click();
-  await homework.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1800, 2400) });
+  await expect(focus).toBeVisible();
+  await focus.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1800, 2400) });
   await expect(homework.getByText("✓ Xong")).toBeVisible();
+  await expect(focus).toHaveCount(0);
 
   // Supplementary task: 20 minutes minimum on the SERVER clock.
   const extra = page.getByRole("listitem", { name: "Luyện đề e2e" });
   await extra.getByRole("button", { name: "Bắt đầu" }).click();
-  await expect(extra.getByRole("button", { name: "Xong" })).toBeDisabled();
+  await expect(focus.getByRole("button", { name: /^Xong/ })).toBeDisabled();
+  // "Thu nhỏ" hides focus mode; the row reopens it.
+  await focus.getByRole("button", { name: "Thu nhỏ" }).click();
+  await expect(focus).toHaveCount(0);
+  await extra.getByRole("button", { name: "Đang làm · mở" }).click();
+  await expect(focus).toBeVisible();
   const { data: run } = await db.from("task_runs").select("id").eq("template_id", extraId).single();
   const tooEarly = await page.evaluate(async (runId) => {
     const r = await fetch("/api/tasks/finish", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ runId }) });
@@ -455,7 +465,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   // Pretend 21 minutes have passed (server data), then the button works.
   await db.from("task_runs").update({ started_at: new Date(Date.now() - 21 * 60_000).toISOString() }).eq("id", run?.id ?? "");
   await page.reload();
-  await page.getByRole("listitem", { name: "Luyện đề e2e" }).getByRole("button", { name: "Xong" }).click();
+  await focus.getByRole("button", { name: "Xong", exact: true }).click();
   await expect(page.getByRole("listitem", { name: "Luyện đề e2e" }).getByText("✓ Xong")).toBeVisible();
 
   // Part 1 done -> break offer -> skip -> Part 2.
@@ -463,11 +473,11 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await banner.getByRole("button", { name: "Học tiếp luôn" }).click();
   await expect(banner).toContainText("Còn 1 việc ở Phần 2");
   await skill.getByRole("button", { name: "Bắt đầu" }).click();
-  await skill.getByRole("button", { name: "Xong" }).click();
+  await focus.getByRole("button", { name: "Xong", exact: true }).click();
 
   // Free time (40 minutes: the parent changed it in the S1 settings test).
   await expect(banner).toContainText("Xong cả hai phần");
-  await expect(page.getByText("Đang mở mọi trang")).toBeVisible();
+  await expect(page.getByText(/Giờ tự do · còn \d\d:\d\d/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
 
   const { data: day } = await db.from("day_sessions").select("part1_done_at, part2_done_at, free_started_at, break_skipped").eq("child_id", childId).eq("local_date", today).single();
@@ -640,8 +650,9 @@ test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, an
   const foreign = href.replace(/path=[^%]+/, "path=00000000-0000-4000-8000-000000000000");
   expect((await page.request.get(foreign)).status()).toBe(404);
 
-  await item.getByRole("button", { name: "Bắt đầu" }).click();
-  await item.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
+  await expect(item.getByText(/★ nếu xong đến hết/)).toBeVisible();
+  await item.getByRole("button", { name: "Làm trước" }).click();
+  await page.getByRole("dialog", { name: "Đang tập trung" }).locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
   await expect(item.getByText("✓ Xong · ★ sớm")).toBeVisible();
-  await expect(page.getByText("★ Tuần này làm sớm 1 bài")).toBeVisible();
+  await expect(page.getByText("Tuần này làm sớm 1 bài")).toBeVisible();
 });

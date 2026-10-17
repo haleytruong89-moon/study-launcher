@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
 import { decideBreak, decideFinish, decidePass, decideProof, decideStart, isProofPath, passOffered, runningTimedTask } from "@/lib/today/rules";
-import { bannerFor, clock, dayLabel, longDate, stepIndex, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
+import { bannerFor, clock, dayLabel, dayProgress, dueTone, earlyUntil, longDate, nextTask, shade, statusPill, stepIndex, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
 
 // Wednesday 2026-10-14, Vietnam time.
 const TODAY = "2026-10-14";
@@ -253,3 +253,40 @@ describe("screen wording", () => {
     expect(weekSummary(s.week)).toBe("0/6 ngày đạt");
   });
 });
+
+describe("S2d screen helpers", () => {
+  it("next task: due homework, then extras, then Part 2 once unlocked; a running task wins", () => {
+    const s0 = computeDayState(day(), vn("15:00"));
+    expect(nextTask(s0)?.id).toBe(HW);
+    const hwDone = computeDayState(day({ homework: [{ id: HW, subject: "Toán", dueDate: "2026-10-15", note: null, doneAt: at("14:00"), archivedAt: null, createdAt: at("06:00") }] }), vn("15:00"));
+    expect(nextTask(hwDone)?.id).toBe(EXTRA);
+    const running = computeDayState(day({ runs: [run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("14:50") })] }), vn("15:00"));
+    expect(nextTask(running)?.id).toBe(EXTRA);
+    const offer = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00") })] }), vn("16:05"));
+    expect(nextTask(offer)).toBeNull(); // Part 2 still locked during the break offer
+    const p2 = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00"), breakSkipped: true })] }), vn("16:05"));
+    expect(nextTask(p2)?.id).toBe(SKILL);
+  });
+
+  it("next task on an empty day is an upcoming item to pick", () => {
+    const s = computeDayState(day({ homework: [{ id: HW, subject: "Toán", dueDate: "2026-10-20", note: null, doneAt: null, archivedAt: null, createdAt: at("06:00") }], templates: [] }), vn("15:00"));
+    expect(nextTask(s)?.id).toBe(HW);
+  });
+
+  it("progress, tones, ★ deadline, pill wording, shade", () => {
+    const s = computeDayState(day(), vn("15:00"));
+    expect(dayProgress(s)).toEqual({ done: 0, total: 3 });
+    expect(dueTone("2026-10-13", TODAY)).toBe("urgent");
+    expect(dueTone(TODAY, TODAY)).toBe("urgent");
+    expect(dueTone("2026-10-15", TODAY)).toBe("soon");
+    expect(dueTone("2026-10-16", TODAY)).toBe("later");
+    expect(earlyUntil("2026-10-16", TODAY)).toBe(TODAY);
+    expect(earlyUntil("2026-10-15", TODAY)).toBeNull();
+    expect(statusPill(s, vn("15:00").getTime())).toEqual({ label: "Giờ học · máy chỉ mở trang học", open: false });
+    const free = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00"), passUsedAt: at("16:10"), freeStartedAt: at("16:10") })] }), vn("16:20"));
+    expect(statusPill(free, vn("16:20").getTime())).toEqual({ label: "Giờ tự do · còn 35:00", open: true });
+    expect(shade("#2F5D9E")).toMatch(/^#[0-9a-f]{6}$/);
+    expect(shade("bad")).toBe("#16243a");
+  });
+});
+

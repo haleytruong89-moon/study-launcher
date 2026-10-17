@@ -85,7 +85,8 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 - Phase: 3 — Implementation. Đã merge: S0 (PR #1–#3), S2a (PR #4), S1 (PR #5), S2b màn Hôm nay (PR #6), S3a Xem gộp (PR #8). Production: phụ huynh + gia đình + 2 tài khoản con đã tạo (A8 xong)
 - Last updated: 17/10/2026
-- Đang mở: PR #7 (S4a lõi extension, không DB), PR #9 (S2c bài trên lớp kiểu C + Sửa + tệp, **có SQL 0002**)
-- Tiếp theo: S2d màn Hôm nay mới (mockup https://claude.ai/artifact/2DvaSkgPVLEEVC1bntW8MX, tài liệu https://claude.ai/artifact/C9A8ab2fpX1Mo5tjhFnRU2); S3b–S3e (PIN 6 số, override, ngày đặc biệt/Tin tưởng/allowlist/nhật ký, xóa ảnh); S4b nối extension
+- Đã merge thêm: S2c (PR #9, SQL 0002 đã chạy), S4a lõi extension (PR #7). A7 xong (sign-up tắt)
+- Đang mở: PR #10 (S2d màn Hôm nay mới, không DB)
+- Tiếp theo: S2e (lập kế hoạch + biểu tượng 24 cái có sẵn + Tổng kết tuần CN 17:00→hết T2, bố mẹ xem câu trả lời; có SQL); màn Hôm nay mới (mockup https://claude.ai/artifact/2DvaSkgPVLEEVC1bntW8MX, tài liệu https://claude.ai/artifact/C9A8ab2fpX1Mo5tjhFnRU2); S3b–S3e (PIN 6 số, override, ngày đặc biệt/Tin tưởng/allowlist/nhật ký, xóa ảnh); S4b nối extension
 - Động lực (chốt 17/10): không điểm/streak; ★ sớm chỉ ghi nhận; lập kế hoạch tùy chọn; con chọn biểu tượng, màu do bố mẹ đặt; tổng kết tuần tối CN
-- Việc phụ huynh: A7 (tắt sign-up — trước khi con dùng thật), A9 (secrets backup, tùy chọn); thử chính sách extension (SETUP B); họp gia đình chốt tham số.
+- Việc phụ huynh: A9 (secrets backup, tùy chọn); thử chính sách extension (SETUP B); họp gia đình chốt tham số.
