@@ -505,7 +505,7 @@ function pickQuota(items: TaskView[], minUpcoming: number): PickView {
 }
 
 /** "Ngày đạt" for a day_sessions row (DESIGN section 5). */
-function isDayOk(s: DaySessionInput, bedtime: string): boolean {
+export function isDayOk(s: DaySessionInput, bedtime: string): boolean {
   if (s.dayType === "sick" || s.dayType === "holiday") return true;
   if (s.passUsedAt !== null) return true;
   if (s.part2DoneAt === null) return false;

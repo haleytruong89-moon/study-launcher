@@ -73,6 +73,16 @@ insert into storage.objects (bucket_id, name) values
   ('proofs',   '10000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-0000000000c1/2026-10-14/p.jpg'),
   ('homework', '10000000-0000-0000-0000-00000000000b/00000000-0000-0000-0000-0000000000d1/2026-10-14/c.jpg');
 
+-- 0003 fixtures: plans + weekly reviews for child 1, child 2 and family B
+insert into public.day_plans (child_id, family_id, local_date, item_keys) values
+  ('00000000-0000-0000-0000-0000000000c1', '10000000-0000-0000-0000-00000000000a', '2026-10-17', '{homework:a}'),
+  ('00000000-0000-0000-0000-0000000000c2', '10000000-0000-0000-0000-00000000000a', '2026-10-17', '{homework:b}'),
+  ('00000000-0000-0000-0000-0000000000d1', '10000000-0000-0000-0000-00000000000b', '2026-10-17', '{homework:c}');
+insert into public.weekly_reviews (child_id, family_id, week_start, went_well) values
+  ('00000000-0000-0000-0000-0000000000c1', '10000000-0000-0000-0000-00000000000a', '2026-10-12', 'làm sớm'),
+  ('00000000-0000-0000-0000-0000000000c2', '10000000-0000-0000-0000-00000000000a', '2026-10-12', 'đọc sách'),
+  ('00000000-0000-0000-0000-0000000000d1', '10000000-0000-0000-0000-00000000000b', '2026-10-12', 'x');
+
 -- Test helpers ---------------------------------------------------------------
 create schema if not exists test_helpers;
 grant usage on schema test_helpers to public;
@@ -237,6 +247,57 @@ begin
     values ('00000000-0000-0000-0000-0000000000d1', '10000000-0000-0000-0000-00000000000a', 'trust');
     raise exception 'FAIL: trust_state for another family child accepted';
   exception when foreign_key_violation then raise notice 'ok: parent cannot write trust_state for another family child';
+  end;
+end $$;
+
+-- 0003 (S2e): plans, weekly reviews, icon ------------------------------------------
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees only own day plan',      (select count(*) from public.day_plans), 1);
+select test_helpers.expect_count('child1 sees only own weekly review', (select count(*) from public.weekly_reviews), 1);
+do $$
+begin
+  begin
+    insert into public.day_plans (child_id, family_id, local_date) values ('00000000-0000-0000-0000-0000000000c1', '10000000-0000-0000-0000-00000000000a', '2026-10-18');
+    raise exception 'FAIL: child inserted a day plan';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write day_plans';
+  end;
+  begin
+    update public.weekly_reviews set went_well = 'x';
+    raise exception 'FAIL: child updated weekly_reviews';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write weekly_reviews';
+  end;
+  begin
+    update public.profiles set icon = 'x' where id = auth.uid();
+    raise exception 'FAIL: child updated own icon directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write profiles.icon';
+  end;
+end $$;
+select test_helpers.expect_count('child1 can read own icon column', (select count(*) from public.profiles where icon is null), 1);
+
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees family day plans (2)',      (select count(*) from public.day_plans), 2);
+select test_helpers.expect_count('parentA sees family weekly reviews (2)', (select count(*) from public.weekly_reviews), 2);
+do $$
+begin
+  begin
+    delete from public.weekly_reviews;
+    raise exception 'FAIL: parent deleted weekly_reviews';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot delete weekly_reviews (read only)';
+  end;
+end $$;
+reset role;
+do $$
+begin
+  begin
+    insert into public.weekly_reviews (child_id, family_id, week_start) values ('00000000-0000-0000-0000-0000000000c1', '10000000-0000-0000-0000-00000000000a', '2026-10-14');
+    raise exception 'FAIL: week_start on a Wednesday accepted';
+  exception when check_violation then raise notice 'ok: week_start must be a Monday';
+  end;
+  begin
+    insert into public.day_plans (child_id, family_id, local_date) values ('00000000-0000-0000-0000-0000000000d1', '10000000-0000-0000-0000-00000000000a', '2026-10-19');
+    raise exception 'FAIL: plan for another family child accepted';
+  exception when foreign_key_violation then raise notice 'ok: plan child must be in the same family';
   end;
 end $$;
 

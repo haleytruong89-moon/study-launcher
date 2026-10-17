@@ -178,3 +178,84 @@ export function taskProgress(item: TaskView, nowMs: number): number {
   const pct = ((nowMs - new Date(item.startedAt).getTime()) / (item.minMinutes * 60_000)) * 100;
   return Math.max(0, Math.min(100, Math.round(pct)));
 }
+
+// ---------------------------------------------------------------------------
+// S2d — new "Hôm nay" layout helpers (display only)
+// ---------------------------------------------------------------------------
+
+/**
+ * The one task the screen suggests next: a running task first; then due homework
+ * (overdue first), extras, and (on an empty day) an upcoming item to pick; then Part 2
+ * once it is unlocked. Display only: the server still decides what may start.
+ */
+export function nextTask(state: DayState): TaskView | null {
+  const all = [...state.part1.items, ...state.part2.items];
+  const running = all.find((i) => i.state === "running");
+  if (running) return running;
+  const todo = (i: TaskView) => i.state === "todo";
+  if (!state.part1.complete) {
+    const due = state.part1.items.find((i) => i.group === "due" && todo(i));
+    if (due) return due;
+    const extra = state.part1.items.find((i) => i.source === "template" && todo(i));
+    if (extra) return extra;
+    if (state.part1.pick.done < state.part1.pick.needed) return state.part1.items.find((i) => i.group === "upcoming" && todo(i)) ?? null;
+    return null;
+  }
+  if (!state.part2.locked) return state.part2.items.find(todo) ?? null;
+  return null;
+}
+
+/** Required tasks of the day (both parts) for the header ring. */
+export function dayProgress(state: DayState): { done: number; total: number } {
+  return { done: state.part1.done + state.part2.done, total: state.part1.total + state.part2.total };
+}
+
+/** How urgent a deadline is: drives the dot / chip colour. */
+export function dueTone(dueDate: string, today: string): "urgent" | "soon" | "later" {
+  if (dueDate <= today) return "urgent";
+  if (dueDate === addDays(today, 1)) return "soon";
+  return "later";
+}
+
+/** Last local date on which finishing still earns ★ sớm (interpretation 18), or null if too late. */
+export function earlyUntil(dueDate: string, today: string): string | null {
+  const last = addDays(dueDate, -2);
+  return today <= last ? last : null;
+}
+
+/** Header pill: what the laptop does right now, in the child's words (never "Khóa"). */
+export function statusPill(state: DayState, nowMs: number): { label: string; open: boolean } {
+  const left = state.openUntil ? clock(new Date(state.openUntil).getTime() - nowMs) : "";
+  switch (state.status) {
+    case "BREAK":
+      return { label: `Giờ nghỉ · còn ${left}`, open: true };
+    case "FREE":
+      return { label: `Giờ tự do · còn ${left}`, open: true };
+    case "OPEN_OVERRIDE":
+      return { label: `Bố mẹ mở máy · còn ${left}`, open: true };
+    case "OPEN_SICK":
+      return { label: "Ngày ốm · mở mọi trang", open: true };
+    case "OPEN_TRUST":
+      return { label: "Tin tưởng · mở mọi trang", open: true };
+    case "LOCK_END":
+      return { label: "Hết giờ tự do · mai gặp lại", open: false };
+    case "LOCK_OVERRIDE":
+      return { label: "Bố mẹ tạm khóa · chỉ mở trang học", open: false };
+    default:
+      return { label: "Giờ học · máy chỉ mở trang học", open: false };
+  }
+}
+
+/** A darker shade of the child's colour for the focus screen (keeps white text readable). */
+export function shade(hex: string, factor = 0.45): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m?.[1]) return "#16243a";
+  const n = parseInt(m[1], 16);
+  const ch = (v: number) => Math.round(v * factor).toString(16).padStart(2, "0");
+  return `#${ch((n >> 16) & 255)}${ch((n >> 8) & 255)}${ch(n & 255)}`;
+}
+
+/** "Thứ Bảy 17/10" style date for deadlines further out. */
+export function dayMonth(date: string): string {
+  return `${WEEKDAY_LONG[isoWeekday(date)]} ${date.slice(8, 10)}/${date.slice(5, 7)}`;
+}

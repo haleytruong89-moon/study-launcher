@@ -8,6 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { localDate } from "@/lib/time";
 import { loadDay } from "./load";
+import { reviewWeek, type WeekStats } from "./week";
+import { loadWeekStats, loadWeeklyReview, type WeeklyReview } from "./week-load";
 
 export interface ChildContext {
   childId: string;
@@ -24,6 +26,14 @@ export interface TodayView {
   state: DayState;
   /** homework id -> attachments, opened via /api/files/homework (child session, RLS-checked). */
   homeworkFiles: Record<string, AttachmentView[]>;
+  /** First local date this child has a day row (week strip shows earlier days as "—"). */
+  firstDay: string;
+  /** S2e: today's plan (task keys in the child's order), or null. Display only. */
+  plan: string[] | null;
+  /** S2e: the icon the child picked, or null. */
+  icon: string | null;
+  /** S2e: the weekly review while it is open (Sunday 17:00 -> end of Monday), else null. */
+  weekly: { stats: WeekStats; review: WeeklyReview | null } | null;
   /** Family rules the screen needs for its wording (minutes, thresholds). */
   rules: TodayRules;
 }
@@ -107,7 +117,7 @@ async function persistMilestones(ctx: ChildContext, date: string, m: DayMileston
 export async function readToday(
   ctx: ChildContext,
   now = new Date(),
-): Promise<{ state: DayState; homeworkPhotos: Record<string, string[]>; rules: TodayRules }> {
+): Promise<{ state: DayState; homeworkPhotos: Record<string, string[]>; rules: TodayRules; bedtime: string }> {
   const today = localDate(now);
   let loaded = await loadDay(ctx.db, ctx.childId, ctx.familyId, today);
   let state = computeDayState(loaded.input, now);
@@ -117,15 +127,45 @@ export async function readToday(
     state = computeDayState(loaded.input, now);
   }
   const { breakMinutes, freeMinutes, trustUpPct } = loaded.input.settings;
-  return { state, homeworkPhotos: loaded.homeworkPhotos, rules: { breakMinutes, freeMinutes, trustUpPct } };
+  return { state, homeworkPhotos: loaded.homeworkPhotos, rules: { breakMinutes, freeMinutes, trustUpPct }, bedtime: loaded.input.bedtime };
 }
 
 /** Day state + attachments of the homework that is on today's list. */
 export async function todayView(ctx: ChildContext, now = new Date()): Promise<TodayView> {
-  const { state, homeworkPhotos, rules } = await readToday(ctx, now);
+  const { state, homeworkPhotos, rules, bedtime } = await readToday(ctx, now);
   const files: Record<string, AttachmentView[]> = {};
   for (const i of state.part1.items) if (i.source === "homework") files[i.id] = attachmentViews(homeworkPhotos[i.id] ?? []);
-  return { state, homeworkFiles: files, rules };
+  const first = await ctx.db.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date").limit(1).maybeSingle();
+  const firstDay = (first.data?.local_date as string | undefined) ?? state.localDate;
+  const [plan, icon, weekly] = await Promise.all([readPlan(ctx, state.localDate), readIcon(ctx), readWeekly(ctx, now, bedtime)]);
+  return { state, homeworkFiles: files, rules, firstDay, plan, icon, weekly };
+}
+
+// S2e extras are display only: if one cannot be read (e.g. a preview before migration
+// 0003), the screen simply goes without it. The lock state above never depends on them.
+
+async function readPlan(ctx: ChildContext, date: string): Promise<string[] | null> {
+  const { data, error } = await ctx.db.from("day_plans").select("item_keys").eq("child_id", ctx.childId).eq("local_date", date).maybeSingle();
+  if (error || !data) return null;
+  return (data.item_keys as string[] | null)?.length ? (data.item_keys as string[]) : null;
+}
+
+async function readIcon(ctx: ChildContext): Promise<string | null> {
+  const { data, error } = await ctx.db.from("profiles").select("icon").eq("id", ctx.childId).maybeSingle();
+  if (error || !data) return null;
+  return (data.icon as string | null) ?? null;
+}
+
+async function readWeekly(ctx: ChildContext, now: Date, bedtime: string): Promise<TodayView["weekly"]> {
+  const week = reviewWeek(now);
+  if (!week) return null;
+  try {
+    const [stats, review] = await Promise.all([loadWeekStats(ctx.db, ctx.childId, week, bedtime), loadWeeklyReview(ctx.db, ctx.childId, week)]);
+    return { stats, review };
+  } catch (e) {
+    console.error("weekly review read failed", e instanceof Error ? e.message : e);
+    return null;
+  }
 }
 
 /** Standard error handling for the child routes: never leak details, stay fail-closed. */

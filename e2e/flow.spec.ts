@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
 import { makePng } from "./png";
-import { addDays, localDate } from "../lib/time";
+import { addDays, localDate, weekStart } from "../lib/time";
 
 const env = e2eEnv();
 
@@ -420,7 +420,9 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(page).toHaveURL(/\/today$/);
   const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
   await expect(banner).toContainText("Còn 2 việc ở Phần 1");
-  await expect(page.getByText("Đang khóa · chỉ mở trang học")).toBeVisible();
+  await expect(page.getByText("Giờ học · máy chỉ mở trang học")).toBeVisible();
+  // New screen (S2d): one "Việc tiếp theo" card suggests the overdue/near homework first.
+  await expect(banner.getByText("Việc tiếp theo")).toBeVisible();
 
   const skill = page.getByRole("listitem", { name: "Đọc sách e2e" });
   await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
@@ -432,16 +434,24 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const early = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
   expect(early).toBe(409);
 
-  // Homework: start, then the proof photo finishes it.
+  // Homework: start (focus mode opens), then the proof photo finishes it.
   const homework = page.getByRole("listitem", { name: "Ngữ văn" });
+  const focus = page.getByRole("dialog", { name: "Đang tập trung" });
   await homework.getByRole("button", { name: "Bắt đầu" }).click();
-  await homework.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1800, 2400) });
+  await expect(focus).toBeVisible();
+  await focus.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1800, 2400) });
   await expect(homework.getByText("✓ Xong")).toBeVisible();
+  await expect(focus).toHaveCount(0);
 
   // Supplementary task: 20 minutes minimum on the SERVER clock.
   const extra = page.getByRole("listitem", { name: "Luyện đề e2e" });
   await extra.getByRole("button", { name: "Bắt đầu" }).click();
-  await expect(extra.getByRole("button", { name: "Xong" })).toBeDisabled();
+  await expect(focus.getByRole("button", { name: /^Xong/ })).toBeDisabled();
+  // "Thu nhỏ" hides focus mode; the row reopens it.
+  await focus.getByRole("button", { name: "Thu nhỏ" }).click();
+  await expect(focus).toHaveCount(0);
+  await extra.getByRole("button", { name: "Đang làm · mở" }).click();
+  await expect(focus).toBeVisible();
   const { data: run } = await db.from("task_runs").select("id").eq("template_id", extraId).single();
   const tooEarly = await page.evaluate(async (runId) => {
     const r = await fetch("/api/tasks/finish", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ runId }) });
@@ -455,7 +465,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   // Pretend 21 minutes have passed (server data), then the button works.
   await db.from("task_runs").update({ started_at: new Date(Date.now() - 21 * 60_000).toISOString() }).eq("id", run?.id ?? "");
   await page.reload();
-  await page.getByRole("listitem", { name: "Luyện đề e2e" }).getByRole("button", { name: "Xong" }).click();
+  await focus.getByRole("button", { name: "Xong", exact: true }).click();
   await expect(page.getByRole("listitem", { name: "Luyện đề e2e" }).getByText("✓ Xong")).toBeVisible();
 
   // Part 1 done -> break offer -> skip -> Part 2.
@@ -463,11 +473,11 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await banner.getByRole("button", { name: "Học tiếp luôn" }).click();
   await expect(banner).toContainText("Còn 1 việc ở Phần 2");
   await skill.getByRole("button", { name: "Bắt đầu" }).click();
-  await skill.getByRole("button", { name: "Xong" }).click();
+  await focus.getByRole("button", { name: "Xong", exact: true }).click();
 
   // Free time (40 minutes: the parent changed it in the S1 settings test).
   await expect(banner).toContainText("Xong cả hai phần");
-  await expect(page.getByText("Đang mở mọi trang")).toBeVisible();
+  await expect(page.getByText(/Giờ tự do · còn \d\d:\d\d/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
 
   const { data: day } = await db.from("day_sessions").select("part1_done_at, part2_done_at, free_started_at, break_skipped").eq("child_id", childId).eq("local_date", today).single();
@@ -640,8 +650,97 @@ test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, an
   const foreign = href.replace(/path=[^%]+/, "path=00000000-0000-4000-8000-000000000000");
   expect((await page.request.get(foreign)).status()).toBe(404);
 
-  await item.getByRole("button", { name: "Bắt đầu" }).click();
-  await item.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
+  await expect(item.getByText(/★ nếu xong đến hết/)).toBeVisible();
+  await item.getByRole("button", { name: "Làm trước" }).click();
+  await page.getByRole("dialog", { name: "Đang tập trung" }).locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
   await expect(item.getByText("✓ Xong · ★ sớm")).toBeVisible();
-  await expect(page.getByText("★ Tuần này làm sớm 1 bài")).toBeVisible();
+  await expect(page.getByText("Tuần này làm sớm 1 bài")).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// S2e — the child's icon, "Kế hoạch hôm nay", "Tổng kết tuần"
+// ---------------------------------------------------------------------------
+
+test("S2e: the child picks an icon and plans today; the plan only reorders 'Việc tiếp theo'", async ({ page }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
+  const today = localDate(new Date());
+  await db.from("homework_items").insert([
+    { family_id: kid?.family_id, child_id: kid?.id, subject: "Vật lí", due_date: addDays(today, 1), note: "Bài 5" },
+    { family_id: kid?.family_id, child_id: kid?.id, subject: "Hóa học", due_date: addDays(today, 1), note: "Bài 6" },
+  ]);
+
+  await login(page, childEmail, childPassword);
+  await page.getByRole("button", { name: "Đổi biểu tượng" }).click();
+  await page.getByRole("dialog", { name: "Chọn biểu tượng của con" }).getByRole("button", { name: "Biểu tượng 🦊" }).click();
+  await expect(page.getByRole("button", { name: "Đổi biểu tượng" })).toHaveText("🦊");
+  const { data: me } = await db.from("profiles").select("icon").eq("id", kid?.id ?? "").single();
+  expect(me?.icon).toBe("🦊");
+
+  // Part 1 was finished earlier today (S2b), so the nudge is gone; plan through the API,
+  // then change it in the planner.
+  const keys = await page.evaluate(async () => {
+    const v = (await (await fetch("/api/today")).json()) as { state: { part1: { items: { key: string; title: string }[] } } };
+    const k = (t: string) => v.state.part1.items.find((i) => i.title === t)?.key ?? "";
+    return [k("Hóa học"), k("Vật lí")];
+  });
+  const saved = await page.evaluate(
+    async (k) => (await fetch("/api/day/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: k }) })).status,
+    keys,
+  );
+  expect(saved).toBe(200);
+  await page.reload();
+  const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
+  await expect(banner.getByText("Hóa học", { exact: true })).toBeVisible();
+  await expect(banner.getByText("Theo kế hoạch của con · 0/2 xong")).toBeVisible();
+  await banner.getByRole("button", { name: "Sửa kế hoạch" }).click();
+  const planner = page.getByRole("dialog", { name: "Kế hoạch hôm nay" });
+  await planner.getByRole("button", { name: "Đưa Vật lí lên" }).click();
+  await planner.getByRole("button", { name: /^Lưu kế hoạch/ }).click();
+  await expect(planner).toHaveCount(0);
+  await expect(banner.getByText("Vật lí", { exact: true })).toBeVisible();
+  const { data: plan } = await db.from("day_plans").select("item_keys").eq("child_id", kid?.id ?? "").eq("local_date", today).single();
+  expect(plan?.item_keys).toEqual([keys[1], keys[0]]);
+
+  // Keys that are not today's tasks are refused; the plan never touches the lock state.
+  const bad = await page.evaluate(async () => (await fetch("/api/day/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: ["homework:00000000-0000-4000-8000-000000000000"] }) })).status);
+  expect(bad).toBe(400);
+  const icon = await page.evaluate(async () => (await fetch("/api/profile/icon", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icon: "💩" }) })).status);
+  expect(icon).toBe(400);
+});
+
+test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Monday; parents read it", async ({ page }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
+  await login(page, childEmail, childPassword);
+  const res = await page.evaluate(async () => {
+    const r = await fetch("/api/week/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wentWell: "Làm sớm 2 bài", changeNext: "Đọc sách sớm hơn" }) });
+    return r.status;
+  });
+  // Server window, Vietnam time: Sunday from 17:00, all of Monday.
+  const vn = new Date(Date.now() + 7 * 3600_000);
+  const open = vn.getUTCDay() === 1 || (vn.getUTCDay() === 0 && vn.getUTCHours() >= 17);
+  expect(res).toBe(open ? 200 : 409);
+
+  // Outside the window, seed last week's answers so the parent view is always checked.
+  const today = localDate(new Date());
+  if (!open) {
+    await db.from("weekly_reviews").upsert({
+      child_id: kid?.id,
+      family_id: kid?.family_id,
+      week_start: addDays(weekStart(today), -7),
+      went_well: "Làm sớm 2 bài",
+      change_next: "Đọc sách sớm hơn",
+    });
+  } else {
+    await page.reload();
+    await expect(page.getByText("✓ Đã gửi cho bố mẹ")).toBeVisible();
+  }
+
+  await page.context().clearCookies(); // switch user: /login sends a signed-in user away
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/review");
+  const block = page.getByLabel("Tổng kết tuần").first();
+  await expect(block).toContainText("Làm sớm 2 bài");
+  await expect(block).toContainText("Đọc sách sớm hơn");
 });

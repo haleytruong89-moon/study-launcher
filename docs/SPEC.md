@@ -65,6 +65,9 @@ Vai trò trong hub:
 - Thẻ miễn chỉ dùng được khi còn thẻ trong tuần (tuần bắt đầu thứ Hai); dùng → giờ tự do bắt đầu ngay, ngày tính "đạt".
 - 00:00 giờ Việt Nam: trạng thái về KHÓA_BÀI_TẬP; nghỉ/giờ tự do không cộng dồn sang ngày sau.
 - Không hiển thị streak hay bảng xếp hạng; chỉ "7 ngày qua" + tiến độ Tin tưởng.
+- *(S2e)* **Kế hoạch hôm nay** (tùy chọn): con đánh dấu + xếp thứ tự việc; thẻ "Việc tiếp theo" đi theo kế hoạch. Kế hoạch **chỉ để hiển thị** — không đổi khóa/mở, không bắt buộc việc nào. Nhắc nhẹ "Xếp bài hôm nay?" khi Phần 1 chưa xong và có ≥ 2 việc; "Để sau" ẩn đến hết ngày trên máy đó.
+- *(S2e)* Con chọn **biểu tượng** trong bộ 24 biểu tượng có sẵn (server kiểm tra); màu vẫn do bố mẹ đặt.
+- *(S2e)* **Tổng kết tuần**: mở từ **17:00 Chủ nhật đến hết Thứ Hai** (giờ server). Hiện: số ngày đạt /7, bài ★ sớm, thời gian học, số ngày theo đúng kế hoạch; con trả lời 2 câu (≤ 500 chữ mỗi câu). Bố mẹ đọc ở Xem gộp. Ngoài giờ mở, server từ chối.
 
 **Khóa web (extension, laptop)**
 - Đang khóa: điều hướng trang chính tới domain ngoài allowlist → chuyển sang trang khóa của Launcher, giữ URL gốc. Ảnh/script/CDN của trang được phép không bị chặn.
@@ -310,6 +313,7 @@ Quy tắc:
 | 15/10/2026 | Chốt 2 điểm (PR #6): **mỗi lúc chỉ 1 việc có giờ tối thiểu** (bài bổ sung / kỹ năng) được chạy — xong việc này mới bắt đầu việc khác, để 1 lần chờ 20' không tính cho 2 việc; bài trên lớp không giới hạn. **Không dùng thẻ miễn khi bố mẹ đang khóa tay** (ẩn nút). Mỗi ảnh bằng chứng chỉ dùng cho 1 bài |
 | 17/10/2026 | Chốt S2c — **quản lý bài trên lớp kiểu C**: bố mẹ chỉ nhập hạn chót; con thấy mọi bài chưa xong trong 2 nhóm "Phải xong hôm nay" / "Sắp tới"; ngày không có bài đến hạn phải tự chọn ≥ 1 bài sắp tới (số này sửa ở Cài đặt). **★ sớm** = xong khi còn ≥ 2 ngày tới hạn. Đính kèm ảnh + PDF + Word/Excel, **5 MB/tệp, tối đa 6 tệp**; chỉ bố mẹ tải đề, con vẫn nộp ảnh. Có nút Sửa bài |
 | 17/10/2026 | Động lực: **không dùng điểm** (giữ §15). Thay bằng con tự lập kế hoạch (tùy chọn, có nhắc nhẹ), ghi nhận ★ sớm (bố mẹ xem, **không tự tính** vào Tin tưởng), phần thưởng thật = quyền tự quản. Con được **chọn biểu tượng**, màu giữ như bố mẹ đặt. **Tổng kết tuần tối Chủ nhật** (số liệu + 2 câu con tự trả lời). Màn mới + lập kế hoạch + tổng kết tuần làm ở S2d (tài liệu "Động lực & UI màn Hôm nay", mockup https://claude.ai/artifact/2DvaSkgPVLEEVC1bntW8MX) |
+| 17/10/2026 | Chốt S2d/S2e: chia 2 PR — **S2d** màn Hôm nay mới (đầu trang theo màu của con + vòng tiến độ, thẻ "Việc tiếp theo", **chế độ tập trung** đồng hồ lớn, chữ "Giờ học" thay "Khóa", ngày trước khi dùng app hiện "–") **không đụng DB**; **S2e** lập kế hoạch + biểu tượng con chọn (**bộ ~24 biểu tượng có sẵn**, không tải ảnh) + **Tổng kết tuần** (2 câu: "Tuần này con làm tốt điều gì?" / "Tuần sau con muốn đổi 1 điều gì?", **bố mẹ xem được** ở Xem gộp; hiện **CN 17:00 → hết Thứ Hai**) — có SQL |
 | 15/10/2026 | Chốt kế hoạch S3: chia S3a (xem gộp) → S3b (PIN phụ huynh **6 số**) → S3c (mở/khóa/cộng phút bằng tay **từ cả máy con bằng PIN lẫn iPhone phụ huynh**) → S3d (ngày đặc biệt, gợi ý Tin tưởng, sửa allowlist, nhật ký) → S3e (**tự xóa ảnh** quá `photo_retention_days`, phụ huynh đồng ý). **Màn chọn hồ sơ + PIN 4 số của con để sau v1** (mỗi laptop đăng nhập sẵn tài khoản của 1 con) |
 
 ## Nguồn tham khảo (tra 05/10/2026)
