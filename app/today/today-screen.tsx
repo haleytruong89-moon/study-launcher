@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TaskView } from "@/lib/dayState";
 import { compressImage } from "@/lib/images";
 import { createClient } from "@/lib/supabase/client";
@@ -10,6 +10,8 @@ import { passOffered, runningTimedTask } from "@/lib/today/rules";
 import { bannerFor, clock, dayProgress, longDate, nextTask, shade, statusPill, stepIndex, upcomingHint, weekSummary } from "@/lib/today/view";
 import { SignOutButton } from "../sign-out-button";
 import { FocusView, NextTask, ProgressRing, TaskRow, WeekStrip, type Act, type TaskCtx } from "./today-parts";
+import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
+import { nextFromPlan, plannable, planProgress } from "@/lib/today/week";
 
 interface Child {
   id: string;
@@ -22,12 +24,30 @@ interface Child {
 const POLL_MS = 30_000;
 const STEPS = ["Phần 1", "Nghỉ", "Phần 2", "Giờ tự do"];
 
+function subscribeStorage(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+function readPlanLater(): string | null {
+  try {
+    return window.localStorage.getItem("plan-later");
+  } catch {
+    return null; // storage blocked: the nudge just shows again
+  }
+}
+
 export function TodayScreen({ child, initial }: { child: Child; initial: TodayView | null }) {
   const [view, setView] = useState<TodayView | null>(initial);
   const [error, setError] = useState<string | null>(initial ? null : "Chưa tải được việc hôm nay. Đang thử lại…");
   const [busy, setBusy] = useState<string | null>(null);
   // Focus mode opens for a running task unless the child minimised THAT task.
   const [minimized, setMinimized] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<"plan" | "icon" | null>(null);
+  // "Để sau" on the plan nudge: remembered for today on this laptop only (a convenience).
+  const storedLater = useSyncExternalStore(subscribeStorage, readPlanLater, () => null);
+  const [laterNow, setPlanLater] = useState<string | null>(null);
+  const planLater = laterNow ?? storedLater;
   // Server clock offset: countdowns use server time, never the laptop clock alone.
   const router = useRouter();
   const offsetRef = useRef(0);
@@ -86,8 +106,9 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
     return () => window.clearInterval(id);
   }, [view, refresh]);
 
-  async function act({ url, body, confirm }: Act) {
-    if (confirm && !window.confirm(confirm)) return;
+  /** POSTs a child action; true when the server accepted it (the new view is shown). */
+  async function act({ url, body, confirm }: Act): Promise<boolean> {
+    if (confirm && !window.confirm(confirm)) return false;
     setBusy(url);
     setError(null);
     try {
@@ -97,10 +118,15 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
         body: JSON.stringify(body ?? {}),
       });
       const data = (await res.json().catch(() => null)) as (TodayView & { error?: string }) | null;
-      if (!res.ok || !data?.state) setError(data?.error ?? "Có lỗi, thử lại sau.");
-      else accept(data);
+      if (!res.ok || !data?.state) {
+        setError(data?.error ?? "Có lỗi, thử lại sau.");
+        return false;
+      }
+      accept(data);
+      return true;
     } catch {
       setError("Mất kết nối mạng, thử lại sau.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -157,7 +183,10 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const idx = stepIndex(s, nowMs);
   const pill = statusPill(s, nowMs);
   const progress = dayProgress(s);
-  const next = nextTask(s);
+  const next = nextFromPlan(s, view.plan) ?? nextTask(s);
+  const planItems = plannable(s).filter((i) => i.state !== "done");
+  const showNudge = !view.plan && !s.part1.complete && planItems.length >= 2 && planLater !== s.localDate;
+  const planDone = view.plan ? planProgress(s, view.plan) : null;
   const mustToday = s.part1.items.filter((i) => i.group !== "upcoming");
   const upcoming = s.part1.items.filter((i) => i.group === "upcoming");
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
@@ -177,14 +206,36 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
 
   return (
     <div className="min-h-dvh">
+      {dialog === "plan" && (
+        <Planner
+          items={planItems}
+          plan={view.plan}
+          color={color}
+          busy={!!busy}
+          error={error}
+          onSave={(keys) => act({ url: "/api/day/plan", body: { keys } })}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog === "icon" && (
+        <IconPicker current={view.icon} color={color} busy={!!busy} error={error} onPick={(icon) => act({ url: "/api/profile/icon", body: { icon } })} onClose={() => setDialog(null)} />
+      )}
       {focusItem && <FocusView item={focusItem} ctx={ctx} dark={shade(color)} onClose={() => setMinimized(focusItem.key)} />}
 
       <header className="text-white" style={{ background: color }}>
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 pt-5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-white/55 bg-white/15 text-lg font-bold" aria-hidden>
-              {firstName[0]?.toUpperCase() ?? "?"}
-            </div>
+            <button
+              type="button"
+              aria-label="Đổi biểu tượng"
+              onClick={() => {
+                setError(null);
+                setDialog("icon");
+              }}
+              className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-white/55 bg-white/15 text-2xl font-bold"
+            >
+              {view.icon ?? firstName[0]?.toUpperCase() ?? "?"}
+            </button>
             <div className="flex min-w-0 grow flex-col">
               <h1 className="text-[21px] font-bold">Chào {child.name}</h1>
               <span className="text-sm opacity-90">
@@ -219,10 +270,39 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
 
       <main className="mx-auto grid max-w-5xl gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="flex min-w-0 flex-col gap-5">
-          {error && (
+          {error && !dialog && (
             <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
               {error}
             </p>
+          )}
+
+          {view.weekly && (
+            <WeeklyReviewCard
+              key={view.weekly.stats.weekStart}
+              stats={view.weekly.stats}
+              review={view.weekly.review}
+              color={color}
+              busy={!!busy}
+              onSave={(answers) => act({ url: "/api/week/review", body: answers })}
+            />
+          )}
+
+          {showNudge && (
+            <PlanNudge
+              color={color}
+              onPlan={() => {
+                setError(null);
+                setDialog("plan");
+              }}
+              onLater={() => {
+                setPlanLater(s.localDate);
+                try {
+                  window.localStorage.setItem("plan-later", s.localDate);
+                } catch {
+                  /* not remembered: fine */
+                }
+              }}
+            />
           )}
 
           <section
@@ -262,6 +342,24 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
             {next && s.break.state !== "offer" && s.break.state !== "running" && (
               <div className="border-t border-ink/10 pt-4">
                 <NextTask item={next} ctx={ctx} />
+              </div>
+            )}
+            {planDone && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 pt-3 text-sm">
+                <span className="font-semibold">
+                  Theo kế hoạch của con · {planDone.done}/{planDone.total} xong
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setDialog("plan");
+                  }}
+                  className="ml-auto min-h-11 px-2 font-semibold underline"
+                  style={{ color }}
+                >
+                  Sửa kế hoạch
+                </button>
               </div>
             )}
           </section>

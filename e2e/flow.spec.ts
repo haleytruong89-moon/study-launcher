@@ -656,3 +656,74 @@ test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, an
   await expect(item.getByText("✓ Xong · ★ sớm")).toBeVisible();
   await expect(page.getByText("Tuần này làm sớm 1 bài")).toBeVisible();
 });
+
+// ---------------------------------------------------------------------------
+// S2e — the child's icon, "Kế hoạch hôm nay", "Tổng kết tuần"
+// ---------------------------------------------------------------------------
+
+test("S2e: the child picks an icon and plans today; the plan only reorders 'Việc tiếp theo'", async ({ page }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
+  const today = localDate(new Date());
+  await db.from("homework_items").insert([
+    { family_id: kid?.family_id, child_id: kid?.id, subject: "Vật lí", due_date: addDays(today, 1), note: "Bài 5" },
+    { family_id: kid?.family_id, child_id: kid?.id, subject: "Hóa học", due_date: addDays(today, 1), note: "Bài 6" },
+  ]);
+
+  await login(page, childEmail, childPassword);
+  await page.getByRole("button", { name: "Đổi biểu tượng" }).click();
+  await page.getByRole("dialog", { name: "Chọn biểu tượng của con" }).getByRole("button", { name: "Biểu tượng 🦊" }).click();
+  await expect(page.getByRole("button", { name: "Đổi biểu tượng" })).toHaveText("🦊");
+  const { data: me } = await db.from("profiles").select("icon").eq("id", kid?.id ?? "").single();
+  expect(me?.icon).toBe("🦊");
+
+  // Part 1 was finished earlier today (S2b), so the nudge is gone; plan through the API,
+  // then change it in the planner.
+  const keys = await page.evaluate(async () => {
+    const v = (await (await fetch("/api/today")).json()) as { state: { part1: { items: { key: string; title: string }[] } } };
+    const k = (t: string) => v.state.part1.items.find((i) => i.title === t)?.key ?? "";
+    return [k("Hóa học"), k("Vật lí")];
+  });
+  const saved = await page.evaluate(
+    async (k) => (await fetch("/api/day/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: k }) })).status,
+    keys,
+  );
+  expect(saved).toBe(200);
+  await page.reload();
+  const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
+  await expect(banner.getByText("Hóa học", { exact: true })).toBeVisible();
+  await expect(banner.getByText("Theo kế hoạch của con · 0/2 xong")).toBeVisible();
+  await banner.getByRole("button", { name: "Sửa kế hoạch" }).click();
+  const planner = page.getByRole("dialog", { name: "Kế hoạch hôm nay" });
+  await planner.getByRole("button", { name: "Đưa Vật lí lên" }).click();
+  await planner.getByRole("button", { name: /^Lưu kế hoạch/ }).click();
+  await expect(planner).toHaveCount(0);
+  await expect(banner.getByText("Vật lí", { exact: true })).toBeVisible();
+  const { data: plan } = await db.from("day_plans").select("item_keys").eq("child_id", kid?.id ?? "").eq("local_date", today).single();
+  expect(plan?.item_keys).toEqual([keys[1], keys[0]]);
+
+  // Keys that are not today's tasks are refused; the plan never touches the lock state.
+  const bad = await page.evaluate(async () => (await fetch("/api/day/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: ["homework:00000000-0000-4000-8000-000000000000"] }) })).status);
+  expect(bad).toBe(400);
+  const icon = await page.evaluate(async () => (await fetch("/api/profile/icon", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ icon: "💩" }) })).status);
+  expect(icon).toBe(400);
+});
+
+test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Monday", async ({ page }) => {
+  await login(page, childEmail, childPassword);
+  const res = await page.evaluate(async () => {
+    const r = await fetch("/api/week/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wentWell: "Làm sớm 2 bài", changeNext: "Đọc sách sớm hơn" }) });
+    return r.status;
+  });
+  const now = new Date();
+  const vn = new Date(now.getTime() + 7 * 3600_000);
+  const open = vn.getUTCDay() === 1 || (vn.getUTCDay() === 0 && vn.getUTCHours() >= 17);
+  expect(res).toBe(open ? 200 : 409);
+  if (open) {
+    await page.reload();
+    await expect(page.getByText("✓ Đã gửi cho bố mẹ")).toBeVisible();
+    await login(page, env.parentEmail, env.parentPassword);
+    await page.goto("/parent/review");
+    await expect(page.getByText("Làm sớm 2 bài").first()).toBeVisible();
+  }
+});

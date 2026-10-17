@@ -65,6 +65,9 @@ Vai trò trong hub:
 - Thẻ miễn chỉ dùng được khi còn thẻ trong tuần (tuần bắt đầu thứ Hai); dùng → giờ tự do bắt đầu ngay, ngày tính "đạt".
 - 00:00 giờ Việt Nam: trạng thái về KHÓA_BÀI_TẬP; nghỉ/giờ tự do không cộng dồn sang ngày sau.
 - Không hiển thị streak hay bảng xếp hạng; chỉ "7 ngày qua" + tiến độ Tin tưởng.
+- *(S2e)* **Kế hoạch hôm nay** (tùy chọn): con đánh dấu + xếp thứ tự việc; thẻ "Việc tiếp theo" đi theo kế hoạch. Kế hoạch **chỉ để hiển thị** — không đổi khóa/mở, không bắt buộc việc nào. Nhắc nhẹ "Xếp bài hôm nay?" khi Phần 1 chưa xong và có ≥ 2 việc; "Để sau" ẩn đến hết ngày trên máy đó.
+- *(S2e)* Con chọn **biểu tượng** trong bộ 24 biểu tượng có sẵn (server kiểm tra); màu vẫn do bố mẹ đặt.
+- *(S2e)* **Tổng kết tuần**: mở từ **17:00 Chủ nhật đến hết Thứ Hai** (giờ server). Hiện: số ngày đạt /7, bài ★ sớm, thời gian học, số ngày theo đúng kế hoạch; con trả lời 2 câu (≤ 500 chữ mỗi câu). Bố mẹ đọc ở Xem gộp. Ngoài giờ mở, server từ chối.
 
 **Khóa web (extension, laptop)**
 - Đang khóa: điều hướng trang chính tới domain ngoài allowlist → chuyển sang trang khóa của Launcher, giữ URL gốc. Ảnh/script/CDN của trang được phép không bị chặn.

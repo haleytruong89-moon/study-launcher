@@ -5,7 +5,9 @@ import { computeDayState, type Status } from "@/lib/dayState";
 import { shortDate } from "@/lib/subjects";
 import { loadDay } from "@/lib/today/load";
 import { vnTime } from "@/lib/today/view";
-import { localDate } from "@/lib/time";
+import { localDate, weekStart } from "@/lib/time";
+import { hoursMinutes, REVIEW_QUESTIONS, reviewWeek, type WeekStats } from "@/lib/today/week";
+import { loadWeekStats, loadWeeklyReview, type WeeklyReview } from "@/lib/today/week-load";
 import { ParentHeader } from "../parent-header";
 import { VerdictButtons } from "./verdict-buttons";
 
@@ -80,6 +82,18 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
     }
   }
 
+  // S2e: the weekly review of the week under review (or last week), with the child's answers.
+  const week = reviewWeek(new Date()) ?? addDays(weekStart(today), -7);
+  const weekly = new Map<string, { stats: WeekStats; review: WeeklyReview | null }>();
+  for (const c of children) {
+    try {
+      const [stats, review] = await Promise.all([loadWeekStats(db, c.id, week, c.bedtime), loadWeeklyReview(db, c.id, week)]);
+      weekly.set(c.id, { stats, review });
+    } catch (e) {
+      console.error("review weekly failed", e instanceof Error ? e.message : e);
+    }
+  }
+
   return (
     <>
       <ParentHeader title="Xem gộp buổi tối" current="/parent/review" />
@@ -121,6 +135,7 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
                   {st && st.early > 0 ? ` · ★ tuần này làm sớm ${st.early} bài` : ""}
                 </span>
               </div>
+              {weekly.get(c.id) && <WeeklyBlock {...(weekly.get(c.id) as { stats: WeekStats; review: WeeklyReview | null })} />}
               {mine.length === 0 ? (
                 <p className="text-sm text-ink/60">Chưa có việc nào xong.</p>
               ) : (
@@ -156,6 +171,32 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
         })}
       </main>
     </>
+  );
+}
+
+function WeeklyBlock({ stats, review }: { stats: WeekStats; review: WeeklyReview | null }) {
+  const end = addDays(stats.weekStart, 6);
+  return (
+    <div className="flex flex-col gap-1.5 rounded-xl bg-bg p-3 text-sm" aria-label="Tổng kết tuần">
+      <strong>
+        Tổng kết tuần {shortDate(stats.weekStart)} – {shortDate(end)}
+      </strong>
+      <span className="text-ink/75">
+        {stats.okDays}/7 ngày đạt · ★ {stats.early} bài sớm · {hoursMinutes(stats.minutes)} học · theo kế hoạch {stats.planKeptDays}/{stats.planDays} ngày
+      </span>
+      {review ? (
+        <>
+          <span>
+            <strong>{REVIEW_QUESTIONS.wentWell}</strong> {review.wentWell ?? "—"}
+          </span>
+          <span>
+            <strong>{REVIEW_QUESTIONS.changeNext}</strong> {review.changeNext ?? "—"}
+          </span>
+        </>
+      ) : (
+        <span className="text-ink/60">Con chưa viết tổng kết (mở từ 17:00 Chủ nhật đến hết Thứ Hai).</span>
+      )}
+    </div>
   );
 }
 

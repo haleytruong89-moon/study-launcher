@@ -16,7 +16,7 @@ export interface TaskCtx {
   files: (item: TaskView) => AttachmentView[];
   /** A timed task already running: other timed tasks wait (one at a time). */
   runningTimed: TaskView | null;
-  onAct: (a: Act) => Promise<void>;
+  onAct: (a: Act) => Promise<unknown>;
   onProof: (item: TaskView, file: File) => Promise<void>;
   onFocus: () => void;
 }
