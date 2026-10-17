@@ -744,3 +744,35 @@ test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Mo
   await expect(block).toContainText("Làm sớm 2 bài");
   await expect(block).toContainText("Đọc sách sớm hơn");
 });
+
+// ---------------------------------------------------------------------------
+// S3c — parent opens / locks / clears from their own phone
+// ---------------------------------------------------------------------------
+
+test("S3c: the parent locks, then clears; the child's day follows (server clock, logged)", async ({ page, browser }) => {
+  page.on("dialog", (d) => void d.accept());
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/control");
+  const card = page.getByRole("region", { name: /^Hạnh Nguyên/ });
+  await card.getByRole("button", { name: "Khóa 30 phút" }).click();
+  await expect(card.getByRole("status")).toContainText("Đã gửi");
+  await expect(card.getByLabel(/^Trạng thái của/)).toContainText("Bố mẹ đang khóa máy");
+
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  const status = async () => child.evaluate(async () => ((await (await fetch("/api/today")).json()) as { state: { status: string } }).state.status);
+  expect(await status()).toBe("LOCK_OVERRIDE");
+
+  await card.getByRole("button", { name: "Về bình thường" }).click();
+  await expect(card.getByLabel(/^Trạng thái của/)).not.toContainText("Bố mẹ đang khóa máy");
+  expect(await status()).not.toMatch(/OVERRIDE/);
+
+  // A child cannot create overrides, neither through the API nor directly.
+  const viaApi = await child.evaluate(async () => (await fetch("/api/admin/overrides", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId: "00000000-0000-4000-8000-000000000000", action: "open", minutes: 60 }) })).status);
+  expect(viaApi).toBe(403);
+  await childCtx.close();
+
+  const { data: logs } = await admin().from("audit_log").select("action").in("action", ["override.lock", "override.clear"]);
+  expect(logs?.length).toBe(2);
+});

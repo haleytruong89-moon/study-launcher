@@ -3,6 +3,7 @@ import { SignOutButton } from "../sign-out-button";
 
 const LINKS = [
   { href: "/parent", label: "Tổng quan" },
+  { href: "/parent/control", label: "Mở/khóa" },
   { href: "/parent/review", label: "Xem gộp" },
   { href: "/parent/homework", label: "Giao bài" },
   { href: "/parent/templates", label: "Mẫu việc" },
