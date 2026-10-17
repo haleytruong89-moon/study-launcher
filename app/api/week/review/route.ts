@@ -5,7 +5,7 @@ import { jsonError, requireChild, serverError, todayView } from "@/lib/today/ser
 import { reviewWeek } from "@/lib/today/week";
 
 const answer = z
-  .string()
+  .string({ error: "Thiếu câu trả lời." })
   .trim()
   .max(500, "Mỗi câu tối đa 500 chữ.")
   .transform((v) => (v === "" ? null : v));

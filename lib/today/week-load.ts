@@ -42,7 +42,7 @@ export async function loadWeekStats(db: SupabaseClient, childId: string, weekSta
   const known = new Set(homework.map((h) => h.id));
   const planned = [...new Set(planRows.flatMap((p) => p.item_keys).filter((k) => k.startsWith("homework:")).map((k) => k.slice(9)))].filter((id) => !known.has(id));
   if (planned.length > 0) {
-    const extra = check(await db.from("homework_items").select("id, due_date, done_at").in("id", planned), "planned homework") as Hw[];
+    const extra = check(await db.from("homework_items").select("id, due_date, done_at").in("id", planned).is("archived_at", null), "planned homework") as Hw[];
     homework.push(...extra);
   }
 
@@ -76,9 +76,14 @@ export async function loadWeekStats(db: SupabaseClient, childId: string, weekSta
   });
 }
 
-/** The child's answers for that week, or null. Missing table (before 0003) reads as null. */
+/**
+ * The child's answers for that week, or null when there are none yet. A read ERROR throws
+ * (callers hide the card), so a failed read never shows empty boxes that would overwrite
+ * answers already saved.
+ */
 export async function loadWeeklyReview(db: SupabaseClient, childId: string, weekStart: string): Promise<WeeklyReview | null> {
   const { data, error } = await db.from("weekly_reviews").select("went_well, change_next, updated_at").eq("child_id", childId).eq("week_start", weekStart).maybeSingle();
-  if (error || !data) return null;
+  if (error) throw new Error(`loadWeeklyReview: ${error.message}`);
+  if (!data) return null;
   return { wentWell: data.went_well, changeNext: data.change_next, updatedAt: data.updated_at };
 }

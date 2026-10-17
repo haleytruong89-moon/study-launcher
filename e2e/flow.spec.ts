@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
 import { makePng } from "./png";
-import { addDays, localDate } from "../lib/time";
+import { addDays, localDate, weekStart } from "../lib/time";
 
 const env = e2eEnv();
 
@@ -709,21 +709,38 @@ test("S2e: the child picks an icon and plans today; the plan only reorders 'Vi�
   expect(icon).toBe(400);
 });
 
-test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Monday", async ({ page }) => {
+test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Monday; parents read it", async ({ page }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
   await login(page, childEmail, childPassword);
   const res = await page.evaluate(async () => {
     const r = await fetch("/api/week/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wentWell: "Làm sớm 2 bài", changeNext: "Đọc sách sớm hơn" }) });
     return r.status;
   });
-  const now = new Date();
-  const vn = new Date(now.getTime() + 7 * 3600_000);
+  // Server window, Vietnam time: Sunday from 17:00, all of Monday.
+  const vn = new Date(Date.now() + 7 * 3600_000);
   const open = vn.getUTCDay() === 1 || (vn.getUTCDay() === 0 && vn.getUTCHours() >= 17);
   expect(res).toBe(open ? 200 : 409);
-  if (open) {
+
+  // Outside the window, seed last week's answers so the parent view is always checked.
+  const today = localDate(new Date());
+  if (!open) {
+    await db.from("weekly_reviews").upsert({
+      child_id: kid?.id,
+      family_id: kid?.family_id,
+      week_start: addDays(weekStart(today), -7),
+      went_well: "Làm sớm 2 bài",
+      change_next: "Đọc sách sớm hơn",
+    });
+  } else {
     await page.reload();
     await expect(page.getByText("✓ Đã gửi cho bố mẹ")).toBeVisible();
-    await login(page, env.parentEmail, env.parentPassword);
-    await page.goto("/parent/review");
-    await expect(page.getByText("Làm sớm 2 bài").first()).toBeVisible();
   }
+
+  await page.context().clearCookies(); // switch user: /login sends a signed-in user away
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/review");
+  const block = page.getByLabel("Tổng kết tuần").first();
+  await expect(block).toContainText("Làm sớm 2 bài");
+  await expect(block).toContainText("Đọc sách sớm hơn");
 });

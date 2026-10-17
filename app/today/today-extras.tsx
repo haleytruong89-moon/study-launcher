@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TaskView } from "@/lib/dayState";
 import type { WeekStats } from "@/lib/today/week";
 import { hoursMinutes, ICONS, REVIEW_QUESTIONS } from "@/lib/today/week";
@@ -8,6 +8,9 @@ import type { WeeklyReview } from "@/lib/today/week-load";
 
 /** Small modal shell (real dialog semantics, Esc / backdrop close, 44px controls). */
 function Modal({ title, error, onClose, children }: { title: string; error?: string | null; onClose: () => void; children: React.ReactNode }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  // Focus starts inside the dialog, so Esc and keyboard users work right away.
+  useEffect(() => closeRef.current?.focus(), []);
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 sm:items-center" onClick={onClose}>
       <section
@@ -22,7 +25,7 @@ function Modal({ title, error, onClose, children }: { title: string; error?: str
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Đóng" className="flex size-11 items-center justify-center rounded-full text-xl font-bold hover:bg-bg">
+          <button ref={closeRef} type="button" onClick={onClose} aria-label="Đóng" className="flex size-11 items-center justify-center rounded-full text-xl font-bold hover:bg-bg">
             ×
           </button>
         </div>
@@ -141,7 +144,11 @@ export function Planner({
           type="button"
           disabled={busy || chosen.length === 0}
           onClick={async () => {
-            if (await onSave(chosen)) onClose();
+            // Planned tasks already done today stay in the plan (in front), so editing later
+            // in the day keeps "x/y xong" and the weekly "theo kế hoạch" count honest.
+            const open = new Set(items.map((i) => i.key));
+            const doneKept = (plan ?? []).filter((k) => !open.has(k));
+            if (await onSave([...doneKept, ...chosen])) onClose();
           }}
           className="min-h-12 grow rounded-2xl text-base font-bold text-white disabled:opacity-50"
           style={{ background: color }}
