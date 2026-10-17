@@ -115,6 +115,10 @@ begin
   if found then raise exception 'FAIL: child updated homework_items'; end if;
   raise notice 'ok: child cannot update homework_items (0 rows)';
 
+  update public.family_settings set homework_min_upcoming = 0;
+  if found then raise exception 'FAIL: child updated family_settings'; end if;
+  raise notice 'ok: child cannot update family_settings (0 rows)';
+
   delete from public.allowlist_entries;
   if found then raise exception 'FAIL: child deleted allowlist_entries'; end if;
   raise notice 'ok: child cannot delete allowlist_entries (0 rows)';
@@ -235,6 +239,28 @@ begin
   exception when foreign_key_violation then raise notice 'ok: parent cannot write trust_state for another family child';
   end;
 end $$;
+
+-- 0002 (S2c): new setting + homework bucket file types --------------------------
+reset role;
+select test_helpers.expect_count('homework_min_upcoming defaults to 1',
+  (select homework_min_upcoming from public.family_settings where family_id = '10000000-0000-0000-0000-00000000000a'), 1);
+do $$
+begin
+  begin
+    update public.family_settings set homework_min_upcoming = 9;
+    raise exception 'FAIL: homework_min_upcoming = 9 accepted';
+  exception when check_violation then raise notice 'ok: homework_min_upcoming limited to 0..5';
+  end;
+end $$;
+select test_helpers.expect_count('homework bucket accepts PDF/Word/Excel',
+  (select count(*) from storage.buckets
+   where id = 'homework'
+     and 'application/pdf' = any(allowed_mime_types)
+     and 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' = any(allowed_mime_types)
+     and 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' = any(allowed_mime_types)
+     and file_size_limit = 5242880), 1);
+select test_helpers.expect_count('proofs bucket stays photos only',
+  (select count(*) from storage.buckets where id = 'proofs' and 'application/pdf' = any(allowed_mime_types)), 0);
 
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;

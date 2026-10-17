@@ -3,11 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TaskView } from "@/lib/dayState";
+import { KIND_LABEL, type AttachmentView } from "@/lib/files";
 import { compressImage } from "@/lib/images";
 import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
 import { passOffered, runningTimedTask } from "@/lib/today/rules";
-import { bannerFor, clock, dayLabel, isOkResult, longDate, stepIndex, taskMeta, taskProgress, weekSummary } from "@/lib/today/view";
+import { bannerFor, clock, dayLabel, isOkResult, longDate, stepIndex, taskMeta, taskProgress, upcomingHint, weekSummary } from "@/lib/today/view";
 import { SignOutButton } from "../sign-out-button";
 
 interface Child {
@@ -159,7 +160,8 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const s = view.state;
   const banner = bannerFor(s, view.rules);
   const idx = stepIndex(s, nowMs);
-  const homework = s.part1.items.filter((i) => i.source === "homework");
+  const dueHomework = s.part1.items.filter((i) => i.group === "due");
+  const upcoming = s.part1.items.filter((i) => i.group === "upcoming");
   const extras = s.part1.items.filter((i) => i.source === "template");
   const runningTimed = runningTimedTask(s);
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
@@ -267,14 +269,19 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
               <strong>Xong</strong> mở khi đủ thời gian tối thiểu.
             </p>
 
-            <TaskGroup title="Bài trên lớp · ảnh bố mẹ gửi" empty="Hôm nay không có bài trên lớp.">
-              {homework.map((item) => (
-                <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={view.homeworkPhotos[item.id] ?? []} blockedBy={null} onAct={act} onProof={proofAndFinish} />
+            <TaskGroup title="Phải xong hôm nay · bài trên lớp" empty="Không có bài đến hạn hôm nay.">
+              {dueHomework.map((item) => (
+                <TaskRow key={item.key} item={item} today={s.localDate} nowMs={nowMs} busy={busy} files={view.homeworkFiles[item.id] ?? []} blockedBy={null} onAct={act} onProof={proofAndFinish} />
               ))}
             </TaskGroup>
             <TaskGroup title="Bài bổ sung · từ app môn học" empty="Hôm nay không có bài bổ sung.">
               {extras.map((item) => (
-                <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={[]} blockedBy={runningTimed} onAct={act} onProof={proofAndFinish} />
+                <TaskRow key={item.key} item={item} today={s.localDate} nowMs={nowMs} busy={busy} files={[]} blockedBy={runningTimed} onAct={act} onProof={proofAndFinish} />
+              ))}
+            </TaskGroup>
+            <TaskGroup title="Sắp tới — làm trước được" hint={upcoming.length > 0 ? upcomingHint(s) : undefined} empty="Chưa có bài nào sắp tới.">
+              {upcoming.map((item) => (
+                <TaskRow key={item.key} item={item} today={s.localDate} nowMs={nowMs} busy={busy} files={view.homeworkFiles[item.id] ?? []} blockedBy={null} onAct={act} onProof={proofAndFinish} />
               ))}
             </TaskGroup>
           </section>
@@ -313,6 +320,16 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
                   );
                 })}
               </ul>
+
+              <p className="text-sm">
+                {s.earlyThisWeek > 0 ? (
+                  <>
+                    <strong>★ Tuần này làm sớm {s.earlyThisWeek} bài</strong> — xong trước hạn ít nhất 2 ngày.
+                  </>
+                ) : (
+                  <span className="text-ink/70">Làm xong bài trước hạn ít nhất 2 ngày để được ★ sớm.</span>
+                )}
+              </p>
 
               <div className="flex flex-col gap-2 border-t border-ink/10 pt-4">
                 <div className="flex flex-wrap justify-between gap-2">
@@ -379,7 +396,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
               ) : (
                 <ul className="flex flex-col gap-2.5">
                   {s.part2.items.map((item) => (
-                    <TaskRow key={item.key} item={item} nowMs={nowMs} busy={busy} photos={[]} locked={s.part2.locked} blockedBy={runningTimed} onAct={act} onProof={proofAndFinish} />
+                    <TaskRow key={item.key} item={item} today={s.localDate} nowMs={nowMs} busy={busy} files={[]} locked={s.part2.locked} blockedBy={runningTimed} onAct={act} onProof={proofAndFinish} />
                   ))}
                 </ul>
               )}
@@ -391,10 +408,11 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   );
 }
 
-function TaskGroup({ title, empty, children }: { title: string; empty: string; children: React.ReactNode[] }) {
+function TaskGroup({ title, hint, empty, children }: { title: string; hint?: string; empty: string; children: React.ReactNode[] }) {
   return (
     <div className="flex flex-col gap-2.5">
       <h3 className="text-xs font-bold tracking-wider text-ink/70 uppercase">{title}</h3>
+      {hint && <p className="text-sm font-semibold text-accent">{hint}</p>}
       {children.length === 0 ? <p className="text-sm text-ink/60">{empty}</p> : <ul className="flex flex-col gap-2.5">{children}</ul>}
     </div>
   );
@@ -402,18 +420,20 @@ function TaskGroup({ title, empty, children }: { title: string; empty: string; c
 
 function TaskRow({
   item,
+  today,
   nowMs,
   busy,
-  photos,
+  files,
   locked = false,
   blockedBy,
   onAct,
   onProof,
 }: {
   item: TaskView;
+  today: string;
   nowMs: number;
   busy: string | null;
-  photos: string[];
+  files: AttachmentView[];
   locked?: boolean;
   /** A timed task already running: other timed tasks wait (one at a time). */
   blockedBy: TaskView | null;
@@ -424,6 +444,8 @@ function TaskRow({
   const ready = running && !item.requiresProof && item.canFinishAt !== null && nowMs >= new Date(item.canFinishAt).getTime();
   const pct = taskProgress(item, nowMs);
   const name = item.title;
+  const firstImage = files.find((f) => f.kind === "image");
+  const otherFiles = files.filter((f) => f !== firstImage);
   const waiting = item.state === "todo" && blockedBy !== null && blockedBy.key !== item.key && item.source === "template" && item.minMinutes > 0;
 
   return (
@@ -431,10 +453,10 @@ function TaskRow({
       aria-label={name}
       className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${item.state === "done" ? "border-ink/10 bg-[#F3F8F5]" : running ? "border-accent bg-white" : "border-ink/10 bg-white"} ${locked && item.state === "todo" ? "opacity-60" : ""}`}
     >
-      {item.source === "homework" && photos.length > 0 && (
-        <a href={photos[0]} target="_blank" rel="noreferrer" className="shrink-0" aria-label={`Xem ${photos.length} ảnh bài ${item.title}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL */}
-          <img src={photos[0]} alt="" className="size-14 rounded-lg object-cover" />
+      {firstImage && (
+        <a href={firstImage.url} target="_blank" rel="noreferrer" className="shrink-0" aria-label={`Xem ảnh bài ${item.title}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- private file streamed by our own route */}
+          <img src={firstImage.url} alt="" className="size-14 rounded-lg object-cover" />
         </a>
       )}
       <div className="flex min-w-0 grow basis-56 flex-col gap-1.5">
@@ -443,7 +465,22 @@ function TaskRow({
           {item.placeholder && <span className="ml-2 rounded-full bg-[#ECEDE8] px-2 py-0.5 text-xs font-bold text-ink/70">Đang xây</span>}
         </span>
         {item.note && <span className="text-sm">{item.note}</span>}
-        <span className="text-[13px] text-ink/70">{waiting ? `Làm xong “${blockedBy?.title}” rồi bắt đầu việc này` : taskMeta(item, nowMs)}</span>
+        {otherFiles.length > 0 && (
+          <span className="flex flex-wrap gap-1.5">
+            {otherFiles.map((f, n) => (
+              <a
+                key={f.path}
+                href={f.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-9 items-center rounded-full border border-accent/50 px-3 text-xs font-bold text-accent"
+              >
+                {KIND_LABEL[f.kind]} {n + 1} ↗
+              </a>
+            ))}
+          </span>
+        )}
+        <span className="text-[13px] text-ink/70">{waiting ? `Làm xong “${blockedBy?.title}” rồi bắt đầu việc này` : taskMeta(item, nowMs, today)}</span>
         {running && !item.requiresProof && item.minMinutes > 0 && (
           <div className="h-1.5 overflow-hidden rounded-full bg-ink/10" role="progressbar" aria-label="Thời gian đã học" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <div className="h-1.5 bg-accent" style={{ width: `${pct}%` }} />
@@ -492,7 +529,9 @@ function TaskRow({
             />
           </label>
         )}
-        {item.state === "done" && <span className="rounded-full bg-[#DCEAE4] px-3 py-2 text-[13px] font-bold text-[#1C3F35]">✓ Xong</span>}
+        {item.state === "done" && (
+          <span className="rounded-full bg-[#DCEAE4] px-3 py-2 text-[13px] font-bold text-[#1C3F35]">{item.early ? "✓ Xong · ★ sớm" : "✓ Xong"}</span>
+        )}
       </div>
     </li>
   );

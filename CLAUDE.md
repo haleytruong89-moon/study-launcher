@@ -83,8 +83,9 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 ## Current status
 
-- Phase: 3 — Implementation. Đã merge: S0 (PR #1–#3), S2a `computeDayState` (PR #4), S1 trang phụ huynh (PR #5). Production: phụ huynh + gia đình + 2 tài khoản con đã tạo (A8 xong)
-- Last updated: 15/10/2026
-- Đang mở: PR #6 (S2b màn Hôm nay của con, không DB)
-- Tiếp theo: S3 — xem gộp buổi tối + Đạt/Chưa đạt, ngày đặc biệt, override bằng PIN, chế độ Tin tưởng, allowlist, audit log, job xóa ảnh
+- Phase: 3 — Implementation. Đã merge: S0 (PR #1–#3), S2a (PR #4), S1 (PR #5), S2b màn Hôm nay (PR #6), S3a Xem gộp (PR #8). Production: phụ huynh + gia đình + 2 tài khoản con đã tạo (A8 xong)
+- Last updated: 17/10/2026
+- Đang mở: PR #7 (S4a lõi extension, không DB), PR #9 (S2c bài trên lớp kiểu C + Sửa + tệp, **có SQL 0002**)
+- Tiếp theo: S2d màn Hôm nay mới (mockup https://claude.ai/artifact/2DvaSkgPVLEEVC1bntW8MX, tài liệu https://claude.ai/artifact/C9A8ab2fpX1Mo5tjhFnRU2); S3b–S3e (PIN 6 số, override, ngày đặc biệt/Tin tưởng/allowlist/nhật ký, xóa ảnh); S4b nối extension
+- Động lực (chốt 17/10): không điểm/streak; ★ sớm chỉ ghi nhận; lập kế hoạch tùy chọn; con chọn biểu tượng, màu do bố mẹ đặt; tổng kết tuần tối CN
 - Việc phụ huynh: A7 (tắt sign-up — trước khi con dùng thật), A9 (secrets backup, tùy chọn); thử chính sách extension (SETUP B); họp gia đình chốt tham số.

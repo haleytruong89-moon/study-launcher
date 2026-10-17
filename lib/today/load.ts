@@ -29,7 +29,12 @@ interface SettingsRow {
   trust_up_weeks: number;
   trust_down_pct: number;
   homework_lookahead_days: number;
+  /** Added by 0002; absent until that migration runs (e.g. on a preview before merge). */
+  homework_min_upcoming?: number;
 }
+
+/** Default of family_settings.homework_min_upcoming (0002). */
+export const DEFAULT_MIN_UPCOMING = 1;
 
 function must<T>(res: { data: T | null; error: { message: string } | null }, what: string): NonNullable<T> {
   if (res.error) throw new Error(`loadDay: ${what}: ${res.error.message}`);
@@ -44,7 +49,9 @@ function must<T>(res: { data: T | null; error: { message: string } | null }, wha
  * error and the extension stays fail-closed.
  */
 export async function loadDay(db: SupabaseClient, childId: string, familyId: string, today: string): Promise<LoadedDay> {
-  const startOfToday = startOfLocalDay(today).toISOString();
+  // Homework done since Monday is loaded for the "★ sớm" weekly count (interpretation 18);
+  // computeDayState still lists only homework done today.
+  const startOfWeek = startOfLocalDay(weekStart(today)).toISOString();
 
   type Res<T> = { data: T | null; error: { message: string } | null };
   const settingsRow = must(
@@ -55,6 +62,13 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
       .single()) as Res<SettingsRow>,
     "family_settings",
   );
+  // Separate read so the screen keeps working before migration 0002 adds the column
+  // (e.g. a preview before merge): missing -> the column's default.
+  const minUpcoming = (await db.from("family_settings").select("homework_min_upcoming").eq("family_id", familyId).maybeSingle()) as Res<{
+    homework_min_upcoming: number;
+  }>;
+  if (minUpcoming.error) settingsRow.homework_min_upcoming = DEFAULT_MIN_UPCOMING;
+  else settingsRow.homework_min_upcoming = minUpcoming.data?.homework_min_upcoming ?? DEFAULT_MIN_UPCOMING;
   const settings: FamilySettingsInput = {
     breakMinutes: settingsRow.break_minutes,
     freeMinutes: settingsRow.free_minutes,
@@ -65,6 +79,7 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
     trustUpWeeks: settingsRow.trust_up_weeks,
     trustDownPct: settingsRow.trust_down_pct,
     homeworkLookaheadDays: settingsRow.homework_lookahead_days,
+    homeworkMinUpcoming: settingsRow.homework_min_upcoming ?? DEFAULT_MIN_UPCOMING,
   };
   const historyFrom = addDays(weekStart(today), -7 * settings.trustUpWeeks);
 
@@ -82,7 +97,7 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
       .select("id, subject, due_date, note, photo_paths, done_at, archived_at, created_at")
       .eq("child_id", childId)
       .is("archived_at", null)
-      .or(`done_at.is.null,done_at.gte.${startOfToday}`),
+      .or(`done_at.is.null,done_at.gte.${startOfWeek}`),
     db
       .from("task_templates")
       .select("id, part, title, subject, app_slot_id, weekdays, min_minutes, deep_link, sort, active")

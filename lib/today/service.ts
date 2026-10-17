@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getCurrentUser } from "@/lib/auth";
 import { computeDayState, type DayMilestones, type DayState } from "@/lib/dayState";
+import { attachmentViews, type AttachmentView } from "@/lib/files";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { localDate } from "@/lib/time";
@@ -18,11 +19,11 @@ export interface ChildContext {
   db: SupabaseClient;
 }
 
-/** What the Launcher receives: the day state + signed URLs of the parent's homework photos. */
+/** What the Launcher receives: the day state + the parent's homework attachments. */
 export interface TodayView {
   state: DayState;
-  /** homework id -> short-lived signed URLs (signed with the CHILD's session, RLS-checked). */
-  homeworkPhotos: Record<string, string[]>;
+  /** homework id -> attachments, opened via /api/files/homework (child session, RLS-checked). */
+  homeworkFiles: Record<string, AttachmentView[]>;
   /** Family rules the screen needs for its wording (minutes, thresholds). */
   rules: TodayRules;
 }
@@ -119,19 +120,12 @@ export async function readToday(
   return { state, homeworkPhotos: loaded.homeworkPhotos, rules: { breakMinutes, freeMinutes, trustUpPct } };
 }
 
-/** Day state + signed URLs for the homework photos that are on today's list. */
+/** Day state + attachments of the homework that is on today's list. */
 export async function todayView(ctx: ChildContext, now = new Date()): Promise<TodayView> {
   const { state, homeworkPhotos, rules } = await readToday(ctx, now);
-  const ids = state.part1.items.filter((i) => i.source === "homework").map((i) => i.id);
-  const paths = ids.flatMap((id) => homeworkPhotos[id] ?? []);
-  const signed = new Map<string, string>();
-  if (paths.length > 0) {
-    const { data } = await ctx.db.storage.from("homework").createSignedUrls(paths, 60 * 60);
-    for (const u of data ?? []) if (u.path && u.signedUrl) signed.set(u.path, u.signedUrl);
-  }
-  const photos: Record<string, string[]> = {};
-  for (const id of ids) photos[id] = (homeworkPhotos[id] ?? []).map((p) => signed.get(p)).filter((u): u is string => !!u);
-  return { state, homeworkPhotos: photos, rules };
+  const files: Record<string, AttachmentView[]> = {};
+  for (const i of state.part1.items) if (i.source === "homework") files[i.id] = attachmentViews(homeworkPhotos[i.id] ?? []);
+  return { state, homeworkFiles: files, rules };
 }
 
 /** Standard error handling for the child routes: never leak details, stay fail-closed. */

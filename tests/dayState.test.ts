@@ -40,6 +40,7 @@ const SETTINGS: FamilySettingsInput = {
   trustUpWeeks: 3,
   trustDownPct: 70,
   homeworkLookaheadDays: 1,
+    homeworkMinUpcoming: 1,
 };
 
 function session(localDate: string, patch: Partial<DaySessionInput> = {}): DaySessionInput {
@@ -510,7 +511,7 @@ describe("Part 1 composition", () => {
   const NOW = vn(`${TODAY} 15:00`);
   const keys = (i: DayInput) => computeDayState(i, NOW).part1.items.map((x) => x.key);
 
-  it("homework: due today/tomorrow and overdue included; day-after, archived, done earlier excluded", () => {
+  it("homework: every unfinished item listed (due first, then upcoming); archived and done earlier excluded", () => {
     const i = input({
       homework: [
         hw("due-today", { dueDate: TODAY }),
@@ -523,20 +524,27 @@ describe("Part 1 composition", () => {
       ],
     });
     const s = computeDayState(i, NOW);
-    expect(s.part1.items.map((x) => x.id)).toEqual(["overdue", "due-today", "due-tomorrow", "done-today"]);
+    expect(s.part1.items.map((x) => x.id)).toEqual(["overdue", "due-today", "due-tomorrow", "done-today", "day-after"]);
     expect(s.part1.items.find((x) => x.id === "overdue")?.overdue).toBe(true);
     expect(s.part1.items.find((x) => x.id === "due-today")?.overdue).toBe(false);
+    expect(s.part1.items.find((x) => x.id === "day-after")?.group).toBe("upcoming");
+    expect(s.part1.items.find((x) => x.id === "due-today")?.group).toBe("due");
+    // the upcoming item is listed but not required (there is due homework today)
+    expect(s.part1.pick).toEqual({ needed: 0, done: 0 });
     expect(s.part1.total).toBe(4);
     expect(s.part1.done).toBe(1);
     expect(s.part1.items.find((x) => x.id === "done-today")?.state).toBe("done");
   });
 
-  it("homework_lookahead_days = 0 excludes tomorrow", () => {
+  it("homework_lookahead_days = 0 makes tomorrow 'upcoming' (listed, not required)", () => {
     const i = input({
       settings: { ...SETTINGS, homeworkLookaheadDays: 0 },
       homework: [hw("t", { dueDate: TODAY }), hw("tm", { dueDate: TOMORROW })],
     });
-    expect(keys(i)).toEqual(["homework:t"]);
+    expect(keys(i)).toEqual(["homework:t", "homework:tm"]);
+    const s = computeDayState(i, NOW);
+    expect(s.part1.items.map((x) => x.group)).toEqual(["due", "upcoming"]);
+    expect(s.part1.total).toBe(1);
   });
 
   it("extra templates: weekday filter, inactive and disabled_template_ids excluded, sorted", () => {
@@ -1181,5 +1189,147 @@ describe("purity", () => {
       computeDayState(input({ sessions: [session(TODAY, { freeStartedAt: "not-a-date" })] }), vn(`${TODAY} 07:00`)),
     ).toThrow(/invalid instant/);
     expect(() => computeDayState(input(), new Date(Number.NaN))).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S2c (parent decisions 17/10/2026): homework groups, empty-day quota, ★ sớm
+// ---------------------------------------------------------------------------
+
+describe("homework groups and the empty-day quota (interpretation 17)", () => {
+  const NOW = vn(`${TODAY} 15:00`);
+  const LATER = "2026-10-20";
+  const LATER2 = "2026-10-22";
+
+  it("no due homework: one upcoming item is required (default 1), the child picks which", () => {
+    const s = computeDayState(input({ homework: [hw("a", { dueDate: LATER }), hw("b", { dueDate: LATER2 })] }), NOW);
+    expect(s.part1.pick).toEqual({ needed: 1, done: 0 });
+    expect(s.part1.total).toBe(1);
+    expect(s.part1.done).toBe(0);
+    expect(s.status).toBe("LOCK_P1");
+  });
+
+  it("finishing any one upcoming item completes Part 1 on an empty day", () => {
+    const s = computeDayState(
+      input({
+        homework: [hw("a", { dueDate: LATER }), hw("b", { dueDate: LATER2, doneAt: iso(`${TODAY} 14:30`) })],
+      }),
+      NOW,
+    );
+    expect(s.part1.pick).toEqual({ needed: 1, done: 1 });
+    expect(s.part1.done).toBe(1);
+    expect(s.part1.complete).toBe(true);
+    expect(s.milestones.part1DoneAt).toBe(NOW.toISOString());
+    expect(s.status).toBe("BREAK_OFFER");
+  });
+
+  it("quota never exceeds the upcoming items that exist", () => {
+    const s = computeDayState(
+      input({ settings: { ...SETTINGS, homeworkMinUpcoming: 3 }, homework: [hw("a", { dueDate: LATER })] }),
+      NOW,
+    );
+    expect(s.part1.pick.needed).toBe(1);
+  });
+
+  it("homework_min_upcoming = 0 turns the rule off (empty Part 1 as before)", () => {
+    const s = computeDayState(
+      input({ settings: { ...SETTINGS, homeworkMinUpcoming: 0 }, homework: [hw("a", { dueDate: LATER })] }),
+      NOW,
+    );
+    expect(s.part1.pick.needed).toBe(0);
+    expect(s.part1.total).toBe(0);
+    expect(s.status).toBe("BREAK_OFFER");
+    expect(s.milestones.part1DoneAt).toBeUndefined(); // still not frozen (interpretation 15)
+  });
+
+  it("due homework present: upcoming items are optional, extra upcoming done does not count", () => {
+    const s = computeDayState(
+      input({
+        homework: [hw("due", { dueDate: TODAY }), hw("up", { dueDate: LATER, doneAt: iso(`${TODAY} 10:00`) })],
+      }),
+      NOW,
+    );
+    expect(s.part1.pick).toEqual({ needed: 0, done: 1 });
+    expect(s.part1.total).toBe(1);
+    expect(s.part1.done).toBe(0);
+    expect(s.status).toBe("LOCK_P1");
+  });
+
+  it("due homework finished today still counts as a due day (no extra quota)", () => {
+    const s = computeDayState(
+      input({ homework: [hw("due", { dueDate: TODAY, doneAt: iso(`${TODAY} 09:00`) }), hw("up", { dueDate: LATER })] }),
+      NOW,
+    );
+    expect(s.part1.pick.needed).toBe(0);
+    expect(s.part1.complete).toBe(true);
+  });
+
+  it("extra templates stay required alongside the quota", () => {
+    const s = computeDayState(
+      input({ homework: [hw("up", { dueDate: LATER, doneAt: iso(`${TODAY} 10:00`) })], templates: [tpl("x", "extra")] }),
+      NOW,
+    );
+    expect(s.part1.total).toBe(2);
+    expect(s.part1.done).toBe(1);
+    expect(s.status).toBe("LOCK_P1");
+  });
+
+  it("frozen Part 1 is not re-locked when the quota changes later (interpretation 13)", () => {
+    const s = computeDayState(
+      input({
+        sessions: [session(TODAY, P1_DONE)],
+        homework: [hw("new-up", { dueDate: LATER, createdAt: iso(`${TODAY} 17:00`) })],
+      }),
+      vn(`${TODAY} 18:00`),
+    );
+    expect(s.part1.complete).toBe(true);
+    expect(s.status).toBe("BREAK_OFFER");
+  });
+
+  it("templates carry group null", () => {
+    const s = computeDayState(input({ templates: [tpl("x", "extra")] }), NOW);
+    expect(s.part1.items[0]?.group).toBeNull();
+  });
+});
+
+describe("★ sớm (interpretation 18)", () => {
+  const NOW = vn(`${TODAY} 15:00`);
+
+  it("early = finished on a date at least 2 days before the due date", () => {
+    const s = computeDayState(
+      input({
+        homework: [
+          hw("two-days", { dueDate: "2026-10-16", doneAt: iso(`${TODAY} 10:00`) }),
+          hw("one-day", { dueDate: TOMORROW, doneAt: iso(`${TODAY} 11:00`) }),
+          hw("late-night", { dueDate: "2026-10-16", doneAt: iso(`${TODAY} 23:30`) }),
+        ],
+      }),
+      NOW,
+    );
+    const early = Object.fromEntries(s.part1.items.map((x) => [x.id, x.early]));
+    expect(early).toEqual({ "two-days": true, "one-day": false, "late-night": true });
+  });
+
+  it("earlyThisWeek counts early homework done since Monday, even if not listed today", () => {
+    const s = computeDayState(
+      input({
+        homework: [
+          hw("mon", { dueDate: "2026-10-15", doneAt: iso("2026-10-12 19:00") }),
+          hw("tue", { dueDate: "2026-10-20", doneAt: iso(`${YESTERDAY} 19:00`) }),
+          hw("tue-not-early", { dueDate: TODAY, doneAt: iso(`${YESTERDAY} 19:00`) }),
+          hw("last-week", { dueDate: "2026-10-15", doneAt: iso("2026-10-11 19:00") }),
+          hw("archived", { dueDate: "2026-10-20", doneAt: iso(`${YESTERDAY} 19:00`), archivedAt: iso(`${TODAY} 08:00`) }),
+        ],
+      }),
+      NOW,
+    );
+    expect(s.earlyThisWeek).toBe(2);
+    expect(s.part1.items).toHaveLength(0); // none done today, none unfinished
+  });
+
+  it("★ never changes status or counts", () => {
+    const a = computeDayState(input({ homework: [hw("x", { dueDate: TODAY })] }), NOW);
+    expect(a.earlyThisWeek).toBe(0);
+    expect(a.status).toBe("LOCK_P1");
   });
 });
