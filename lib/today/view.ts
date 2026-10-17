@@ -56,8 +56,8 @@ function remaining(part: { total: number; done: number }): number {
 export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMinutes: number }): Banner {
   switch (state.status) {
     case "LOCK_P1":
-      if (state.part1.pick.needed > 0 && !state.part1.items.some((i) => i.group === "due")) {
-        const left = Math.max(0, state.part1.pick.needed - state.part1.pick.done);
+      if (state.part1.pick.done < state.part1.pick.needed && !state.part1.items.some((i) => i.group === "due")) {
+        const left = state.part1.pick.needed - state.part1.pick.done;
         return {
           title: "Hôm nay không có bài đến hạn",
           sub: `Tự chọn ${left} bài ở “Sắp tới” để làm trước${state.part1.total > state.part1.pick.needed ? ", rồi làm bài bổ sung" : ""}. Làm sớm là được ★.`,

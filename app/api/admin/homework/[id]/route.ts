@@ -3,7 +3,7 @@ import { z } from "zod";
 import { homeworkPatchSchema } from "@/lib/admin/schemas";
 import { firstIssue, jsonError, readJson, requireParent, writeAudit } from "@/lib/admin/guard";
 import { addDays } from "@/lib/admin/dates";
-import { missingHomeworkFiles, removeHomeworkFiles } from "@/lib/admin/homework-files";
+import { missingHomeworkFiles, pathsUsedElsewhere, removeHomeworkFiles } from "@/lib/admin/homework-files";
 import { isHomeworkFilePath } from "@/lib/files";
 import { localDate } from "@/lib/time";
 
@@ -62,6 +62,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const added = paths.filter((p) => !before.has(p));
   const missing = added.length > 0 ? await missingHomeworkFiles(ctx.db, added) : null;
   if (missing) return jsonError(missing, 400);
+  const used = await pathsUsedElsewhere(ctx.db, added, id.data);
+  if (used === null) return jsonError("Không kiểm tra được tệp, thử lại.", 500);
+  if (used.size > 0) return jsonError("Tệp này đang thuộc bài khác.", 400);
 
   const { data, error } = await ctx.db
     .from("homework_items")
@@ -75,7 +78,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!data || data.length === 0) return jsonError("Không tìm thấy bài.", 404);
 
   const removed = [...before].filter((p) => !paths.includes(p));
-  await removeHomeworkFiles(ctx.db, removed);
+  await removeHomeworkFiles(ctx.db, removed, id.data);
   await writeAudit(ctx, "homework.edit", {
     id: id.data,
     subject: body.subject,

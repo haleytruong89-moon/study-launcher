@@ -57,12 +57,18 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
   const settingsRow = must(
     (await db
       .from("family_settings")
-      // "*" so the screen keeps working before migration 0002 adds homework_min_upcoming.
-      .select("*")
+      .select("break_minutes, free_minutes, extra_min_minutes, skill_min_minutes, passes_per_week, trust_up_pct, trust_up_weeks, trust_down_pct, homework_lookahead_days")
       .eq("family_id", familyId)
       .single()) as Res<SettingsRow>,
     "family_settings",
   );
+  // Separate read so the screen keeps working before migration 0002 adds the column
+  // (e.g. a preview before merge): missing -> the column's default.
+  const minUpcoming = (await db.from("family_settings").select("homework_min_upcoming").eq("family_id", familyId).maybeSingle()) as Res<{
+    homework_min_upcoming: number;
+  }>;
+  if (minUpcoming.error) settingsRow.homework_min_upcoming = DEFAULT_MIN_UPCOMING;
+  else settingsRow.homework_min_upcoming = minUpcoming.data?.homework_min_upcoming ?? DEFAULT_MIN_UPCOMING;
   const settings: FamilySettingsInput = {
     breakMinutes: settingsRow.break_minutes,
     freeMinutes: settingsRow.free_minutes,

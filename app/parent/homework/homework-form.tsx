@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { sendJson } from "@/lib/api-client";
+import { NETWORK_ERROR, sendJson } from "@/lib/api-client";
 import { HOMEWORK_ACCEPT, KIND_LABEL, MAX_FILE_BYTES, MAX_HOMEWORK_FILES, fileKind, homeworkFileUrl, mimeOf, storedExt, type FileKind } from "@/lib/files";
 import { compressImage } from "@/lib/images";
 import { SUBJECTS, shortDate } from "@/lib/subjects";
@@ -189,8 +189,9 @@ export function HomeworkForm({
       ? await sendJson("PATCH", `/api/admin/homework/${edit.id}`, { subject: subjectName, dueDate, note: note.trim() || null, photoPaths })
       : await sendJson("POST", "/api/admin/homework", { childId: kid.id, subject: subjectName, dueDate, note: note.trim() || null, photoPaths });
     if (err) {
-      // Not saved: do not leave orphan files in storage (a retry uploads them again).
-      await removeUploaded(supabase, uploaded);
+      // Refused by the server: do not leave orphan files (a retry uploads them again). On a
+      // lost connection the server may have saved the item, so its files are kept.
+      if (err !== NETWORK_ERROR) await removeUploaded(supabase, uploaded);
       setBusy(null);
       return setError(err);
     }

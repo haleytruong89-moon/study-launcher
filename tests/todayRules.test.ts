@@ -45,7 +45,7 @@ function day(patch: Partial<DayInput> = {}): DayInput {
       trustUpWeeks: 3,
       trustDownPct: 70,
       homeworkLookaheadDays: 1,
-    homeworkMinUpcoming: 1,
+      homeworkMinUpcoming: 1,
     },
     bedtime: "21:30",
     trustMode: "lock",
@@ -226,6 +226,15 @@ describe("screen wording", () => {
     expect(bannerFor(free, RULES).tone).toBe("open");
     expect(stepIndex(free, vn("16:20").getTime())).toBe(3);
     expect(stepIndex(free, vn("17:00").getTime())).toBe(4);
+  });
+
+  it("empty-day banner asks to pick upcoming work, then falls back to the normal count", () => {
+    const upcoming = { id: HW, subject: "Toán", dueDate: "2026-10-20", note: null, doneAt: null, archivedAt: null, createdAt: at("06:00") };
+    const pick = computeDayState(day({ homework: [upcoming] }), vn("15:00"));
+    expect(bannerFor(pick, RULES)).toMatchObject({ title: "Hôm nay không có bài đến hạn" });
+    expect(bannerFor(pick, RULES).sub).toContain("Tự chọn 1 bài");
+    const picked = computeDayState(day({ homework: [{ ...upcoming, doneAt: at("14:00") }] }), vn("15:00"));
+    expect(bannerFor(picked, RULES).title).toBe("Còn 1 việc ở Phần 1");
   });
 
   it("dates, clocks and task lines", () => {

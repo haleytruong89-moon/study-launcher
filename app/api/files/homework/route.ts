@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
-import { fileKind, mimeOf } from "@/lib/files";
+import { fileKind, isHomeworkFilePath, mimeOf } from "@/lib/files";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,8 @@ export async function GET(request: Request) {
     !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
     !name ||
     !kind ||
-    !mime
+    !mime ||
+    !isHomeworkFilePath(path, family, child)
   ) {
     return new Response("Không tìm thấy tệp.", { status: 404 });
   }

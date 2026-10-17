@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { homeworkSchema } from "@/lib/admin/schemas";
-import { missingHomeworkFiles } from "@/lib/admin/homework-files";
+import { missingHomeworkFiles, pathsUsedElsewhere } from "@/lib/admin/homework-files";
 import { isHomeworkFilePath } from "@/lib/files";
 import { firstIssue, isFamilyChild, jsonError, readJson, requireParent, writeAudit } from "@/lib/admin/guard";
 import { addDays } from "@/lib/admin/dates";
@@ -36,6 +36,9 @@ export async function POST(request: Request) {
   }
   const missing = paths.length > 0 ? await missingHomeworkFiles(ctx.db, paths) : null;
   if (missing) return jsonError(missing, 400);
+  const used = await pathsUsedElsewhere(ctx.db, paths);
+  if (used === null) return jsonError("Không kiểm tra được tệp, thử lại.", 500);
+  if (used.size > 0) return jsonError("Tệp này đang thuộc bài khác.", 400);
 
   const row = {
     family_id: ctx.familyId,
