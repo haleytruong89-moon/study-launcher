@@ -2,13 +2,19 @@
   "manifest_version": 3,
   "name": "Study Launcher",
   "description": "Mở trang học trước, web sau: khóa web theo trạng thái của Study Launcher.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minimum_chrome_version": "120",
-  "permissions": ["declarativeNetRequestWithHostAccess", "storage", "alarms", "tabs"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "declarativeNetRequestWithHostAccess",
+    "storage",
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "chrome_url_overrides": {
     "newtab": "newtab.html"
@@ -17,7 +23,15 @@
     "default_title": "Study Launcher",
     "default_popup": "popup.html"
   },
-  "externally_connectable": {
-    "matches": ["https://launcher.invalid/*"]
-  }
+  "content_scripts": [
+    {
+      "matches": [
+        "https://launcher.invalid/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
 }

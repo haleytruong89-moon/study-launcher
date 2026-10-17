@@ -776,3 +776,63 @@ test("S3c: the parent locks, then clears; the child's day follows (server clock,
   const { data: logs } = await admin().from("audit_log").select("action").in("action", ["override.lock", "override.clear"]);
   expect(logs?.length).toBe(2);
 });
+
+// ---------------------------------------------------------------------------
+// S4b — pairing a laptop with the parent's 6-digit code; the extension's state API
+// ---------------------------------------------------------------------------
+
+test("S4b: parent code -> child pairs -> device token reads the state; revoke stops it", async ({ page, browser }) => {
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/devices");
+  const { data: kid } = await admin().from("profiles").select("id").eq("role", "child").single();
+  const card = page.getByRole("region", { name: /^Hạnh Nguyên/ });
+  await card.getByRole("button", { name: "Tạo mã ghép máy" }).click();
+  const code = ((await card.getByLabel(/^Mã \d/).textContent()) ?? "").trim();
+  expect(code).toMatch(/^\d{6}$/);
+  const { data: stored } = await admin().from("device_pair_codes").select("code_hash").eq("child_id", kid?.id ?? "").is("used_at", null).single();
+  expect(stored?.code_hash).not.toContain(code); // only a hash is stored
+
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  await child.goto("/ghep-may");
+  await expect(child.getByText("Chưa thấy extension Study Launcher")).toBeVisible(); // no extension in CI
+  const pair = (c: string) =>
+    child.evaluate(async (body) => {
+      const r = await fetch("/api/ext/pair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      return { status: r.status, body: (await r.json()) as { token?: string; error?: string } };
+    }, { code: c, label: "Laptop e2e" });
+  const wrong = await pair(code === "000000" ? "111111" : "000000");
+  expect(wrong.status).toBe(400);
+  const ok = await pair(code);
+  expect(ok.status).toBe(200);
+  const token = ok.body.token ?? "";
+  expect(token.length).toBeGreaterThan(20);
+  expect((await pair(code)).status).toBe(400); // a code works once
+
+  const state = await page.request.get("/api/ext/state", { headers: { Authorization: `Bearer ${token}` } });
+  expect(state.status()).toBe(200);
+  const body = (await state.json()) as { open: boolean; allow: string[]; blockAlways: string[]; pollSeconds: number; launcherUrl: string };
+  expect(typeof body.open).toBe("boolean");
+  expect(body.blockAlways).toContain("translate.goog");
+  expect(body.allow).toContain("translate.google.com");
+  expect(body.allow).not.toContain("www.youtube.com");
+  expect(body.pollSeconds).toBe(30);
+  expect((await page.request.get("/api/ext/state", { headers: { Authorization: "Bearer not-a-real-token-xxxxxxxxxxxx" } })).status()).toBe(401);
+
+  // The parent sees the laptop and removes it -> the token stops working.
+  await page.reload();
+  const laptop = card.getByRole("listitem").filter({ hasText: "Laptop e2e" });
+  await expect(laptop).toContainText("vừa xong");
+  page.on("dialog", (d) => void d.accept());
+  await laptop.getByRole("button", { name: "Gỡ máy Laptop e2e" }).click();
+  await expect(card.getByText("Laptop e2e")).toHaveCount(0);
+  expect((await page.request.get("/api/ext/state", { headers: { Authorization: `Bearer ${token}` } })).status()).toBe(401);
+
+  // A child cannot create codes; the lock page shows only the blocked host, as text.
+  const childCode = await child.evaluate(async (id) => (await fetch("/api/admin/devices/code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId: id }) })).status, kid?.id ?? "");
+  expect(childCode).toBe(403);
+  await child.goto("/blocked?u=https://www.youtube.com/watch?v=1&list=2");
+  await expect(child.getByText("www.youtube.com")).toBeVisible();
+  await childCtx.close();
+});

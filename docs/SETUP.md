@@ -73,6 +73,23 @@ reg delete "HKLM\SOFTWARE\Policies\Google\Chrome" /f
 
 ---
 
+## B+. Cài extension bản chạy thử lên laptop con (S4b, ~10 phút/máy)
+
+Bản chạy thử cài tay (chế độ nhà phát triển). Con **có thể tắt** nếu biết cách. Chạy thử vài ngày ổn rồi mới đăng cửa hàng (mục C) để cài kiểu không tắt được.
+
+1. Trên laptop con, mở **https://study-launcher-nine.vercel.app/downloads/study-launcher-extension.zip** → tải về → chuột phải → **Extract All** (giải nén). Để thư mục ở chỗ cố định, ví dụ `C:\StudyLauncher`. **Đừng xóa thư mục này**: extension chạy từ đó.
+2. Mở **edge://extensions** (Edge) hoặc **chrome://extensions** (Chrome) → bật **Developer mode / Chế độ nhà phát triển** → **Load unpacked / Tải tiện ích đã giải nén** → chọn thư mục `study-launcher-extension`.
+3. Extension tự mở trang **Ghép máy**. Đăng nhập **tài khoản của con** nếu được hỏi.
+4. Trên iPhone: trang phụ huynh → **Thiết bị** → ở tên con bấm **Tạo mã ghép máy** → đọc 6 số cho con nhập → **Ghép máy**. Thấy "Xong! Máy này đã ghép" là được.
+5. Thử: mở youtube.com → phải chuyển sang trang "Đang giờ học". Ở trang phụ huynh → **Mở/khóa** → **Mở 15 phút** → trong ≤ 30 giây youtube vào được; **Về bình thường** → tab youtube tự chuyển lại trang chặn.
+6. Dùng cả Edge và Chrome trên cùng máy → làm bước 2–4 cho **từng** trình duyệt (mỗi trình duyệt một mã).
+
+Gỡ một máy: trang phụ huynh → **Thiết bị** → **Gỡ máy** (extension trên máy đó khóa web cho tới khi ghép lại).
+
+Khi có bản mới của extension: tải zip mới, giải nén **đè** lên thư mục cũ, vào trang extensions bấm **Reload / Tải lại**.
+
+---
+
 ## C. Tài khoản phát hành extension (làm sớm vì có thể phải chờ duyệt)
 
 | # | Việc | Chi phí |

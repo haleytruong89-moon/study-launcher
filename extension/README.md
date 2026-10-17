@@ -19,20 +19,26 @@ Pure TypeScript logic in `src/core/` — no `chrome.*` calls, no clock — teste
 do not exist yet (`background.js`, `newtab.html`, `popup.html`), so the extension
 cannot be loaded yet.
 
-## Missing (S4b and later)
+## Wired in S4b
 
-- Background service worker wiring: alarms (poll every `pollSeconds`, alarm at
-  `openUntil` using `planAlarms`), `fetch` of `GET /api/ext/state` with the device
-  token, `chrome.storage.local` persistence, `updateDynamicRules`, tab sweep,
-  `runtime.onStartup` → open a Launcher tab, `tabs.onUpdated` check for `file:` tabs.
-- Pairing via `externally_connectable` (`{type:'pair', token, apiBase}`); the
-  `matches` entry is a placeholder (`https://launcher.invalid/*`) to be filled from
-  `NEXT_PUBLIC_APP_URL` by the build.
-- New-tab page (redirects to the Launcher), popup (status + "Mở Launcher").
-- Build (esbuild/Vite → `extension/dist/`), store packaging (unlisted, S6).
-- Server side: `/api/ext/pair`, `/api/ext/state`, the `/blocked` page.
+- `src/background.ts`: alarms (poll every 30 s, one-shot at `openUntil`), `GET /api/ext/state`
+  with the device token, `chrome.storage.local`, `updateDynamicRules`, tab sweep on every
+  locked state, `onStartup` → "startup" event + a Launcher tab, `tabs.onUpdated` for `file:`.
+- `src/content.ts`: only on the Launcher domain (fixed at build); relays `/ghep-may`'s
+  `window.postMessage({source:'study-launcher-page', type:'ping'|'pair'})` to the worker.
+- `src/newtab.ts` (new tab → `/today`), `src/popup.ts` (status + "Mở việc hôm nay").
+- Build: `npm run ext:build` (also runs before `npm run build`) → `extension/dist/` and
+  `public/downloads/study-launcher-extension.zip`. The Launcher URL comes from
+  `NEXT_PUBLIC_APP_URL` (fallback: production).
+- Still later: store packaging (unlisted) + force-install policy (S6), icons.
 
-## To verify in a real browser (S4b)
+## Checked in a real browser (S4b, Chromium + mock server)
+
+- Not paired → locked, only the Launcher; pairing via `/ghep-may` works; locked navigation
+  goes to `/blocked?u=…` **with** the `#fragment`; allowlisted hosts are not redirected;
+  `translate.goog` is blocked; open → nothing redirected; locking again sweeps open tabs.
+
+## Still to verify on the children's laptops
 
 - Whether the DNR redirect URL still contains the `#fragment` of the original URL
   (the network request URL may drop it; the tab sweep always keeps it).

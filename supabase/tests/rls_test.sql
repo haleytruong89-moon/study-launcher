@@ -250,6 +250,40 @@ begin
   end;
 end $$;
 
+-- 0004 (S4b): pairing codes are server-only ------------------------------------------
+reset role;
+insert into public.device_pair_codes (family_id, child_id, code_hash, expires_at)
+values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'h', now() + interval '10 minutes');
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+do $$
+begin
+  begin
+    perform 1 from public.device_pair_codes;
+    raise exception 'FAIL: parent read device_pair_codes';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot read device_pair_codes';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  begin
+    insert into public.device_pair_codes (family_id, child_id, code_hash, expires_at)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'x', now());
+    raise exception 'FAIL: child wrote device_pair_codes';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write device_pair_codes';
+  end;
+  begin
+    perform token_hash from public.extension_devices;
+    raise exception 'FAIL: child read token_hash';
+  exception when insufficient_privilege then raise notice 'ok: child cannot read device token hashes';
+  end;
+end $$;
+reset role;
+set role service_role;
+select test_helpers.expect_count('service_role sees pairing codes', (select count(*) from public.device_pair_codes), 1);
+reset role;
+
 -- 0003 (S2e): plans, weekly reviews, icon ------------------------------------------
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
