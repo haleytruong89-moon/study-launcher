@@ -55,6 +55,8 @@ Vai trò trong hub:
 
 **Con — màn Hôm nay**
 - Phần 1 gồm: bài trên lớp **chưa xong có hạn ≤ ngày mai** (kể cả quá hạn) + bài bổ sung theo lịch thứ trong tuần. Slot "đang xây" hiện nhưng không tính.
+- *(S2c, chốt 17/10/2026)* Con thấy **mọi** bài trên lớp chưa xong, chia 2 nhóm: **"Phải xong hôm nay"** (quá hạn + hạn ≤ hôm nay + `homework_lookahead_days`, bắt buộc từng bài) và **"Sắp tới — làm trước được"** (không bắt buộc từng bài). Ngày **không có bài đến hạn** → con phải tự chọn xong ít nhất `homework_min_upcoming` bài (mặc định 1, sửa ở Cài đặt; 0 = tắt) trong "Sắp tới".
+- *(S2c)* Bài xong khi còn **≥ 2 ngày** tới hạn được dấu **★ sớm**; màn con hiện "Tuần này làm sớm N bài", Xem gộp của bố mẹ cũng hiện. Chỉ để ghi nhận — **không** đổi trạng thái khóa/mở, không cộng điểm, không tự tính vào Tin tưởng.
 - Bài bổ sung / kỹ năng: nút Xong bị khóa cho đến khi *giờ server − lúc bắt đầu ≥ số phút tối thiểu*. Gọi API Xong sớm hơn → bị từ chối, không ghi nhận.
 - Bài trên lớp: bấm Xong bắt buộc tải ≥ 1 ảnh bài đã làm thì việc mới thành "xong".
 - Phần 2 không bấm Bắt đầu được cho đến khi Phần 1 xong **và** giờ nghỉ đã dùng hoặc bỏ qua.
@@ -79,6 +81,8 @@ Vai trò trong hub:
 
 **Phụ huynh — Giao bài**
 - Chụp ảnh trên iPhone → ảnh được nén (cạnh dài ≤ 1600px) trước khi tải lên; 1 môn/ngày có thể nhiều ảnh.
+- *(S2c)* Phụ huynh chỉ cần nhập **hạn chót**. Đính kèm được **ảnh, PDF, Word, Excel** — tối đa **6 tệp/bài, mỗi tệp ≤ 5 MB**. Con mở tệp qua chính trang Launcher (máy đang khóa vẫn mở được). Ảnh bằng chứng của con vẫn là ảnh.
+- *(S2c)* Nút **Sửa** trên từng bài đã giao: đổi môn, hạn chót (hạn mới phải từ hôm nay; giữ nguyên hạn cũ được), ghi chú, thêm/bớt tệp. Tệp bị bỏ ra thì xóa khỏi kho.
 - Giao xong → bài hiện trên máy con ở lần tải trang hoặc lần đồng bộ kế tiếp (≤ 1 phút).
 
 **Phụ huynh — Xem gộp buổi tối**
@@ -304,6 +308,8 @@ Quy tắc:
 | 13/10/2026 | Sao lưu hằng tuần: gói Free của Supabase không có sao lưu tự động → dùng GitHub Actions, **mã hóa bằng mật khẩu riêng trước khi lưu** (GitHub chỉ giữ file đã mã hóa). Ảnh không được sao lưu |
 | 14/10/2026 | Chốt 3 điểm khóa/mở (PR #4): (1) **Phần 1 rỗng chưa phải "xong hẳn"** — ngày vẫn đi tiếp (mời nghỉ → Phần 2) nhưng bài bố mẹ giao trước khi con bấm nghỉ/bỏ qua nghỉ vẫn **khóa lại**; (2) **override mới nhất thay hẳn các override cũ** trong ngày — hết hạn thì về luồng thường, không bật lại override cũ; (3) xong Phần 2 lúc **bố mẹ đang khóa tay** → giờ tự do **hoãn**, bắt đầu khi hết khóa (vẫn dừng ở 00:00). Thêm nút sửa tên/lớp/màu + đặt lại mật khẩu tài khoản con (PR #5) |
 | 15/10/2026 | Chốt 2 điểm (PR #6): **mỗi lúc chỉ 1 việc có giờ tối thiểu** (bài bổ sung / kỹ năng) được chạy — xong việc này mới bắt đầu việc khác, để 1 lần chờ 20' không tính cho 2 việc; bài trên lớp không giới hạn. **Không dùng thẻ miễn khi bố mẹ đang khóa tay** (ẩn nút). Mỗi ảnh bằng chứng chỉ dùng cho 1 bài |
+| 17/10/2026 | Chốt S2c — **quản lý bài trên lớp kiểu C**: bố mẹ chỉ nhập hạn chót; con thấy mọi bài chưa xong trong 2 nhóm "Phải xong hôm nay" / "Sắp tới"; ngày không có bài đến hạn phải tự chọn ≥ 1 bài sắp tới (số này sửa ở Cài đặt). **★ sớm** = xong khi còn ≥ 2 ngày tới hạn. Đính kèm ảnh + PDF + Word/Excel, **5 MB/tệp, tối đa 6 tệp**; chỉ bố mẹ tải đề, con vẫn nộp ảnh. Có nút Sửa bài |
+| 17/10/2026 | Động lực: **không dùng điểm** (giữ §15). Thay bằng con tự lập kế hoạch (tùy chọn, có nhắc nhẹ), ghi nhận ★ sớm (bố mẹ xem, **không tự tính** vào Tin tưởng), phần thưởng thật = quyền tự quản. Con được **chọn biểu tượng**, màu giữ như bố mẹ đặt. **Tổng kết tuần tối Chủ nhật** (số liệu + 2 câu con tự trả lời). Màn mới + lập kế hoạch + tổng kết tuần làm ở S2d (tài liệu "Động lực & UI màn Hôm nay", mockup https://claude.ai/artifact/2DvaSkgPVLEEVC1bntW8MX) |
 | 15/10/2026 | Chốt kế hoạch S3: chia S3a (xem gộp) → S3b (PIN phụ huynh **6 số**) → S3c (mở/khóa/cộng phút bằng tay **từ cả máy con bằng PIN lẫn iPhone phụ huynh**) → S3d (ngày đặc biệt, gợi ý Tin tưởng, sửa allowlist, nhật ký) → S3e (**tự xóa ảnh** quá `photo_retention_days`, phụ huynh đồng ý). **Màn chọn hồ sơ + PIN 4 số của con để sau v1** (mỗi laptop đăng nhập sẵn tài khoản của 1 con) |
 
 ## Nguồn tham khảo (tra 05/10/2026)
@@ -319,4 +325,6 @@ Quy tắc:
 |---|---|---|
 | PJ_LAUNCHER (file này) | Markdown | Spec v0.2 — `claude/PJ_LAUNCHER.md`; bản sao `docs/SPEC.md` |
 | Bridge files cho Claude Code | Markdown ×4 | `deliverables/study-launcher/` — `CLAUDE.md`, `docs/SPEC.md`, `docs/DESIGN.md`, `docs/SETUP.md` |
+| Tài liệu "Động lực & UI màn Hôm nay" (nghiên cứu + review UI) | Claude Docs | https://claude.ai/artifact/C9A8ab2fpX1Mo5tjhFnRU2 |
+| Mockup màn Hôm nay mới (6 trạng thái, cho S2d) | Artifact (Design canvas) | https://claude.ai/artifact/2DvaSkgPVLEEVC1bntW8MX |
 | Mockup v0.1 — 5 màn (Hôm nay, Profile+PIN, Trang khóa + xin mở, Phụ huynh giao bài, Phụ huynh duyệt + xem gộp) | Artifact (Design canvas) | https://claude.ai/artifact/LmjBU4kbFczUKae43NvFNT |

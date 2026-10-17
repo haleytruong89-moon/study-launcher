@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_HOMEWORK_FILES } from "@/lib/files";
 
 /**
  * Validation for the parent's admin forms (slice S1). Every family rule is data (CLAUDE.md),
@@ -109,6 +110,8 @@ export const settingsSchema = z
     trustUpWeeks: int(1, 12),
     trustDownPct: int(0, 100),
     homeworkLookaheadDays: int(0, 7),
+    /** 0002 (S2c). Optional: the form omits it until that migration has run. */
+    homeworkMinUpcoming: int(0, 5).optional(),
     photoRetentionDays: int(7, 365),
     bedtimes: z.array(z.object({ childId: z.uuid(), bedtime: timeOfDay })).max(10).default([]),
   })
@@ -131,6 +134,7 @@ export function settingsToRow(s: SettingsInput) {
     trust_down_pct: s.trustDownPct,
     homework_lookahead_days: s.homeworkLookaheadDays,
     photo_retention_days: s.photoRetentionDays,
+    ...(s.homeworkMinUpcoming === undefined ? {} : { homework_min_upcoming: s.homeworkMinUpcoming }),
   };
 }
 
@@ -235,38 +239,33 @@ export function templateToRow(t: TemplateInput) {
 }
 
 // ---------------------------------------------------------------------------
-// Homework assignment (parent uploads photos, 1 subject + 1 due date per item)
+// Homework assignment (parent attaches files, 1 subject + 1 due date per item)
 // ---------------------------------------------------------------------------
 
-export const MAX_HOMEWORK_PHOTOS = 10;
+const homeworkFields = {
+  subject: z.string().trim().min(1).max(40),
+  dueDate: localDateSchema,
+  note: optionalText(500),
+  photoPaths: z.array(z.string().max(300)).max(MAX_HOMEWORK_FILES, `Tối đa ${MAX_HOMEWORK_FILES} tệp mỗi bài`).default([]),
+};
+const needsContent = {
+  check: (h: { photoPaths: string[]; note: string | null }) => h.photoPaths.length > 0 || h.note !== null,
+  message: "Cần ít nhất 1 tệp hoặc ghi chú",
+};
 
 export const homeworkSchema = z
-  .object({
-    childId: z.uuid(),
-    subject: z.string().trim().min(1).max(40),
-    dueDate: localDateSchema,
-    note: optionalText(500),
-    photoPaths: z.array(z.string().max(300)).max(MAX_HOMEWORK_PHOTOS).default([]),
-  })
-  .refine((h) => h.photoPaths.length > 0 || h.note !== null, {
-    message: "Cần ít nhất 1 ảnh hoặc ghi chú",
-    path: ["photoPaths"],
-  });
+  .object({ childId: z.uuid(), ...homeworkFields })
+  .refine(needsContent.check, { message: needsContent.message, path: ["photoPaths"] });
 export type HomeworkInput = z.infer<typeof homeworkSchema>;
 
-const PHOTO_FILE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|jpeg|png|webp)$/;
+/** Parent edits a homework item (S2c): subject, due date, note, attachments. */
+export const homeworkEditSchema = z
+  .object(homeworkFields)
+  .refine(needsContent.check, { message: needsContent.message, path: ["photoPaths"] });
+export type HomeworkEditInput = z.infer<typeof homeworkEditSchema>;
 
-/**
- * A homework photo must live in this family's + child's + due date's folder of the `homework`
- * bucket (DESIGN section 9), so a parent cannot attach another child's or another family's file.
- */
-export function isHomeworkPhotoPath(path: string, familyId: string, childId: string, dueDate: string): boolean {
-  const prefix = `${familyId}/${childId}/${dueDate}/`;
-  if (!path.startsWith(prefix)) return false;
-  return PHOTO_FILE_RE.test(path.slice(prefix.length));
-}
-
-export const homeworkPatchSchema = z.object({ archived: z.boolean() });
+/** PATCH /api/admin/homework/[id]: archive/restore, or an edit. */
+export const homeworkPatchSchema = z.union([z.object({ archived: z.boolean() }).strict(), homeworkEditSchema]);
 
 // ---------------------------------------------------------------------------
 // Child profile edits (name, grade, colour)

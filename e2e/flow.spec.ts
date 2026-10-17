@@ -250,12 +250,12 @@ test("S1 homework: parent assigns homework with a phone-sized photo; the photo i
   const form = page.getByRole("form", { name: "Giao bài tập" });
   await expect(form.getByRole("button", { name: "Hạnh Nguyên", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(form.getByRole("button", { name: /Ngày mai/ })).toHaveAttribute("aria-pressed", "true");
-  await form.getByLabel("Chụp / chọn ảnh").setInputFiles({ name: "bai-toan.png", mimeType: "image/png", buffer: makePng(2400, 1800) });
-  await expect(form.getByRole("img", { name: "Ảnh 1" })).toBeVisible();
+  await form.getByLabel("Chụp ảnh / chọn tệp").setInputFiles({ name: "bai-toan.png", mimeType: "image/png", buffer: makePng(2400, 1800) });
+  await expect(form.getByRole("img", { name: "Tệp 1" })).toBeVisible();
   await form.getByLabel("Ghi chú (tùy chọn)").fill("Làm bài 1-3 trang 45");
   await form.getByRole("button", { name: "Giao Toán cho Hạnh Nguyên" }).click();
   await expect(form.getByRole("status")).toContainText("Đã giao Toán cho Hạnh Nguyên");
-  await expect(form.getByRole("status")).toContainText("(1 ảnh)");
+  await expect(form.getByRole("status")).toContainText("(1 tệp)");
 
   const list = page.getByRole("region", { name: "Bài đã giao · Hạnh Nguyên" });
   await expect(list.getByText("Làm bài 1-3 trang 45")).toBeVisible();
@@ -554,4 +554,94 @@ test("readiness now also reports the family as created", async ({ request }) => 
   };
   expect(body.ok).toBe(true);
   expect(body.checks.find((c) => c.name === "family_created")?.ok).toBe(true);
+});
+
+// ---------------------------------------------------------------------------
+// S2c — homework: deadline-only, "Sắp tới" group, edit, PDF/Word/Excel files, ★ sớm
+// ---------------------------------------------------------------------------
+
+const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
+
+test("S2c homework: parent attaches a PDF, then edits the deadline and note", async ({ page }) => {
+  const today = localDate(new Date());
+  const in5 = addDays(today, 5);
+  const in4 = addDays(today, 4);
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/homework");
+  const form = page.getByRole("form", { name: "Giao bài tập" });
+  await form.getByRole("button", { name: "Tiếng Anh", exact: true }).click();
+  await form.getByRole("button", { name: /Chọn ngày/ }).click();
+  await form.getByLabel("Ngày", { exact: true }).fill(in5);
+  await form.getByLabel("Chụp ảnh / chọn tệp").setInputFiles({ name: "de-tieng-anh.pdf", mimeType: "application/pdf", buffer: PDF });
+  await expect(form.getByText("de-tieng-anh.pdf")).toBeVisible();
+  // A file type that is not allowed is refused in the browser.
+  await form.getByLabel("Chụp ảnh / chọn tệp").setInputFiles({ name: "virus.exe", mimeType: "application/x-msdownload", buffer: Buffer.from("MZ") });
+  await expect(form.getByRole("alert")).toContainText("không phải ảnh, PDF, Word hay Excel");
+  await form.getByRole("button", { name: /^Giao Tiếng Anh cho/ }).click();
+  await expect(form.getByRole("status")).toContainText("(1 tệp)");
+
+  const list = page.getByRole("region", { name: /^Bài đã giao · Hạnh Nguyên/ });
+  const label = `Tiếng Anh nộp ${in5.slice(8, 10)}/${in5.slice(5, 7)}`;
+  const pdfLink = list.getByRole("link", { name: "PDF 1 ↗" });
+  await expect(pdfLink).toBeVisible();
+  const href = (await pdfLink.getAttribute("href")) ?? "";
+  const res = await page.request.get(href);
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toBe("application/pdf");
+
+  await list.getByRole("button", { name: `Sửa bài ${label}` }).click();
+  const edit = page.getByRole("form", { name: "Sửa bài Tiếng Anh" });
+  await expect(edit.getByRole("button", { name: /Chọn ngày/ })).toHaveAttribute("aria-pressed", "true");
+  await edit.getByLabel("Ngày", { exact: true }).fill(in4);
+  await edit.getByLabel("Ghi chú (tùy chọn)").fill("Unit 3 trang 20");
+  await edit.getByRole("button", { name: "Lưu thay đổi" }).click();
+  await expect(edit).toHaveCount(0);
+  await expect(list.getByText("Unit 3 trang 20")).toBeVisible();
+
+  const { data: hw } = await admin().from("homework_items").select("due_date, note, photo_paths").eq("subject", "Tiếng Anh").single();
+  expect(hw?.due_date).toBe(in4);
+  expect(hw?.note).toBe("Unit 3 trang 20");
+  expect(hw?.photo_paths).toHaveLength(1);
+  expect(hw?.photo_paths[0]).toMatch(/\.pdf$/);
+
+  // The server refuses a new past deadline and a file of another family.
+  const { data: row } = await admin().from("homework_items").select("id, child_id, family_id").eq("subject", "Tiếng Anh").single();
+  const refused = await page.evaluate(
+    async ({ id, childId }) => {
+      const patch = (body: unknown) =>
+        fetch(`/api/admin/homework/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.status);
+      return {
+        past: await patch({ subject: "Tiếng Anh", dueDate: "2020-01-01", note: "x", photoPaths: [] }),
+        foreign: await patch({
+          subject: "Tiếng Anh",
+          dueDate: new Date(Date.now() + 4 * 864e5).toISOString().slice(0, 10),
+          note: "x",
+          photoPaths: [`00000000-0000-4000-8000-000000000000/${childId}/2026-10-20/44444444-4444-4444-8444-444444444444.pdf`],
+        }),
+      };
+    },
+    { id: row?.id ?? "", childId: row?.child_id ?? "" },
+  );
+  expect(refused).toEqual({ past: 400, foreign: 400 });
+});
+
+test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, and finishing early earns ★ sớm", async ({ page }) => {
+  await login(page, childEmail, childPassword);
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByRole("heading", { name: "Sắp tới — làm trước được" })).toBeVisible();
+  // Due homework (Ngữ văn) was done today, so upcoming work is optional today.
+  await expect(page.getByText("Không bắt buộc hôm nay")).toBeVisible();
+
+  const item = page.getByRole("listitem", { name: "Tiếng Anh" });
+  await expect(item).toContainText("Unit 3 trang 20");
+  const href = (await item.getByRole("link", { name: "PDF 1 ↗" }).getAttribute("href")) ?? "";
+  expect(href.startsWith("/api/files/homework?path=")).toBe(true);
+  expect((await page.request.get(href)).status()).toBe(200);
+  const foreign = href.replace(/path=[^%]+/, "path=00000000-0000-4000-8000-000000000000");
+  expect((await page.request.get(foreign)).status()).toBe(404);
+
+  await item.getByRole("button", { name: "Bắt đầu" }).click();
+  await item.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
+  await expect(item.getByText("✓ Xong · ★ sớm")).toBeVisible();
+  await expect(page.getByText("★ Tuần này làm sớm 1 bài")).toBeVisible();
 });

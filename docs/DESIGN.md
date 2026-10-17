@@ -66,10 +66,10 @@ Tất cả bảng có `id uuid default gen_random_uuid()` (trừ khi ghi khác),
 |---|---|---|
 | `families` | name, timezone default `'Asia/Ho_Chi_Minh'` | 1 dòng |
 | `profiles` | id = `auth.users.id`, family_id, role (`parent`/`child`), display_name, grade, color, pin_hash, pin_failed_count, pin_locked_until, bedtime (time, mặc định 21:30) | |
-| `family_settings` | family_id (pk), break_minutes 10, free_minutes 45, extra_min_minutes 20, skill_min_minutes 20, passes_per_week 1, trust_up_pct 90, trust_up_weeks 3, trust_down_pct 70, homework_lookahead_days 1, photo_retention_days 120 | **Toàn bộ "luật gia đình"** |
+| `family_settings` | family_id (pk), break_minutes 10, free_minutes 45, extra_min_minutes 20, skill_min_minutes 20, passes_per_week 1, trust_up_pct 90, trust_up_weeks 3, trust_down_pct 70, homework_lookahead_days 1, photo_retention_days 120, homework_min_upcoming 1 (0002) | **Toàn bộ "luật gia đình"** |
 | `app_slots` | family_id, child_id, subject, kind (`internal`/`external`/`placeholder`), label, url, allow_domains text[], active | Slot app môn học; domain của slot tự vào allowlist |
 | `task_templates` | family_id, child_id, part (`extra`/`skill`), title, subject, app_slot_id, weekdays smallint[] (1=T2 … 7=CN), min_minutes, deep_link, pillar, sort, active | Bài bổ sung + kỹ năng **theo thứ trong tuần** |
-| `homework_items` | family_id, child_id, subject, due_date, note, photo_paths text[], created_by, done_at, archived_at | Bài trên lớp phụ huynh giao |
+| `homework_items` | family_id, child_id, subject, due_date, note, photo_paths text[], created_by, done_at, archived_at | Bài trên lớp phụ huynh giao. `photo_paths` chứa cả PDF/Word/Excel từ S2c (tên cột giữ nguyên) |
 | `task_runs` | family_id, child_id, local_date, source (`homework`/`template`), homework_item_id, template_id, started_at, done_at, proof_paths text[], parent_verdict (`ok`/`not_ok`/null), verdict_at | 1 lần làm 1 việc; phút = done_at − started_at |
 | `day_sessions` | pk (child_id, local_date), day_type (`normal`/`sick`/`exam`/`holiday`), disabled_template_ids uuid[], break_started_at, break_ended_at, break_skipped, part1_done_at, part2_done_at, free_started_at, pass_used_at | Mốc của ngày; tạo lười khi đọc lần đầu |
 | `overrides` | child_id, local_date, kind (`open_until`/`lock_until`), until, created_by, reason | Override phụ huynh; **bản ghi mới nhất còn hiệu lực thắng**; `until` bị cắt ở 00:00 |
@@ -133,6 +133,7 @@ Quy tắc phụ:
   - *Chốt 14/10/2026:* **Phần 1 rỗng** cho ngày đi tiếp nhưng **chưa ghi** `part1_done_at` cho đến khi con đã bắt đầu / bỏ qua nghỉ (hoặc xong Phần 2); bài giao trước thời điểm đó vẫn đưa về LOCK_P1.
 - **`part2.locked` tính từ dữ liệu, không từ status web**: khóa khi chưa có `part1_done_at` hoặc (chưa nghỉ xong và chưa bỏ qua nghỉ). Nhờ vậy ở OPEN_TRUST / OPEN_SICK / override, thứ tự Phần 1 → Phần 2 vẫn giữ.
 - Phút tối thiểu của một việc = `task_templates.min_minutes` nếu có, nếu không lấy `extra_min_minutes` / `skill_min_minutes` trong `family_settings`.
+- *Chốt 17/10/2026 (S2c, `computeDayState` diễn giải 17–18):* **mọi** `homework_items` chưa xong, chưa `archived_at` đều trả về, với `group`: `due` (`due_date ≤ localDate + homework_lookahead_days`, bắt buộc từng bài) hoặc `upcoming` (không bắt buộc từng bài). Ngày không có bài `due` nào (kể cả đã xong hôm nay) → Phần 1 thêm `pick.needed = min(homework_min_upcoming, số bài upcoming)` "chỗ", lấp bằng bài upcoming xong hôm nay. `early` = xong vào ngày ≤ `due_date − 2`; `earlyThisWeek` đếm từ thứ Hai — chỉ hiển thị, không đổi trạng thái.
 - **Phần 1** = `homework_items` chưa `done_at`, chưa `archived_at`, `due_date ≤ localDate + homework_lookahead_days` + `task_templates` part `extra` có `weekday` hôm nay, không nằm trong `disabled_template_ids`. Slot `placeholder` **vẫn hiện** thành dòng "đang xây" (trả trong `items` với cờ `placeholder: true`) nhưng **không tính** vào total/done.
 - **Phần 2** = `task_templates` part `skill` của thứ hôm nay. Khóa khi status ∈ {LOCK_P1, BREAK_OFFER, BREAK}.
 - Phần 1 xong lần đầu → ghi `part1_done_at`. Phụ huynh giao thêm bài **sau** mốc này → bài hiện trong danh sách nhưng **không khóa lại** ngày đó.
@@ -194,11 +195,11 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 
 | Bucket | Ai ghi | Ai đọc | Đường dẫn |
 |---|---|---|---|
-| `homework` (private) | phụ huynh | phụ huynh, con của bài đó | `{family_id}/{child_id}/{due_date}/{uuid}.jpg` |
+| `homework` (private) | phụ huynh | phụ huynh, con của bài đó | `{family_id}/{child_id}/{due_date}/{uuid}.{jpg,png,webp,pdf,doc,docx,xls,xlsx}` (S2c: ≤ 5 MB/tệp, ≤ 6 tệp/bài; sau khi sửa hạn, tệp cũ vẫn ở thư mục ngày cũ) |
 | `proofs` (private) | con (thư mục của mình) | phụ huynh, chính con | `{family_id}/{child_id}/{local_date}/{uuid}.jpg` |
 
 - Nén ở client trước khi tải: cạnh dài ≤ 1600px, JPEG chất lượng 0.8 (~200–400 KB/ảnh).
-- Hiển thị bằng signed URL có hạn.
+- Hiển thị bằng signed URL có hạn. *(S2c)* Tệp bài tập mở qua `GET /api/files/homework?path=…` (cùng domain với app, tải bằng phiên của người xem nên RLS kiểm tra) — máy đang khóa không cần mở domain Supabase.
 - Ước tính dung lượng: ~8 ảnh/con/ngày × ~300 KB × 2 con ≈ 5 MB/ngày → 120 ngày ≈ 600 MB, dưới mức Storage gói free (≈ 1 GB — **cần kiểm tra lại giới hạn hiện hành**). Vì vậy giữ ảnh `photo_retention_days = 120` ngày; job hằng tuần xóa ảnh cũ hơn.
 
 ## 10. Vận hành

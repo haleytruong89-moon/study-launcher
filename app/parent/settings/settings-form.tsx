@@ -14,6 +14,8 @@ export interface SettingsValues {
   trustUpWeeks: number;
   trustDownPct: number;
   homeworkLookaheadDays: number;
+  /** Absent until migration 0002 has run (then the field is hidden). */
+  homeworkMinUpcoming?: number;
   photoRetentionDays: number;
 }
 
@@ -23,7 +25,20 @@ const FIELDS: { key: keyof SettingsValues; label: string; hint?: string; min: nu
   { key: "extraMinMinutes", label: "Tối thiểu mỗi bài bổ sung (phút)", hint: "Từng việc có thể đặt riêng", min: 0, max: 180 },
   { key: "skillMinMinutes", label: "Tối thiểu mỗi kỹ năng (phút)", hint: "Từng việc có thể đặt riêng", min: 0, max: 180 },
   { key: "passesPerWeek", label: "Thẻ miễn mỗi tuần", min: 0, max: 7 },
-  { key: "homeworkLookaheadDays", label: "Hiện bài trên lớp trước hạn (ngày)", hint: "1 = bài nộp ngày mai hiện từ hôm nay", min: 0, max: 7 },
+  {
+    key: "homeworkLookaheadDays",
+    label: "“Phải xong hôm nay”: bài có hạn trong (ngày)",
+    hint: "1 = bài nộp hôm nay và ngày mai phải xong hôm nay; bài xa hơn hiện ở “Sắp tới”",
+    min: 0,
+    max: 7,
+  },
+  {
+    key: "homeworkMinUpcoming",
+    label: "Ngày không có bài đến hạn: con tự chọn làm trước (bài)",
+    hint: "0 = không bắt buộc. Con chọn bài nào trong “Sắp tới” cũng được",
+    min: 0,
+    max: 5,
+  },
   { key: "trustUpPct", label: "Lên Tin tưởng: tỷ lệ ngày đạt (%)", min: 0, max: 100 },
   { key: "trustUpWeeks", label: "Lên Tin tưởng: số tuần liên tiếp", min: 1, max: 12 },
   { key: "trustDownPct", label: "Gợi ý quay về Khóa khi tuần dưới (%)", min: 0, max: 100 },
@@ -65,7 +80,7 @@ export function SettingsForm({ initial, kids }: { initial: SettingsValues; kids:
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      {FIELDS.map((f) => (
+      {FIELDS.filter((f) => initial[f.key] !== undefined).map((f) => (
         <label key={f.key} className="flex flex-col gap-1 text-sm font-semibold">
           {f.label}
           <input

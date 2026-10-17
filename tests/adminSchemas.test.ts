@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   homeworkSchema,
-  isHomeworkPhotoPath,
+  homeworkPatchSchema,
   isValidLocalDate,
   normalizeDomain,
   settingsSchema,
@@ -10,6 +10,7 @@ import {
   slotToRow,
   templateSchema,
 } from "@/lib/admin/schemas";
+import { fileKind, isHomeworkFilePath, storedExt } from "@/lib/files";
 import { addDays } from "@/lib/admin/dates";
 import { fitWithin } from "@/lib/images";
 import { formatWeekdays } from "@/lib/subjects";
@@ -146,13 +147,28 @@ describe("homeworkSchema + photo paths", () => {
     expect(isValidLocalDate("2026-13-01")).toBe(false);
   });
 
-  it("only accepts photos in this family's + child's + due date's folder", () => {
+  it("only accepts files in this family's + child's folder (any date folder, allowed types)", () => {
     const good = `${FAMILY}/${CHILD}/2026-10-15/${FILE}`;
-    expect(isHomeworkPhotoPath(good, FAMILY, CHILD, "2026-10-15")).toBe(true);
-    expect(isHomeworkPhotoPath(good, FAMILY, OTHER_CHILD, "2026-10-15")).toBe(false);
-    expect(isHomeworkPhotoPath(good, FAMILY, CHILD, "2026-10-16")).toBe(false);
-    expect(isHomeworkPhotoPath(`${FAMILY}/${CHILD}/2026-10-15/../x/${FILE}`, FAMILY, CHILD, "2026-10-15")).toBe(false);
-    expect(isHomeworkPhotoPath(`${FAMILY}/${CHILD}/2026-10-15/photo.exe`, FAMILY, CHILD, "2026-10-15")).toBe(false);
+    const uuid = FILE.slice(0, FILE.lastIndexOf("."));
+    expect(isHomeworkFilePath(good, FAMILY, CHILD)).toBe(true);
+    expect(isHomeworkFilePath(`${FAMILY}/${CHILD}/2026-10-20/${uuid}.pdf`, FAMILY, CHILD)).toBe(true);
+    expect(isHomeworkFilePath(`${FAMILY}/${CHILD}/2026-10-20/${uuid}.docx`, FAMILY, CHILD)).toBe(true);
+    expect(isHomeworkFilePath(`${FAMILY}/${CHILD}/2026-10-20/${uuid}.xlsx`, FAMILY, CHILD)).toBe(true);
+    expect(isHomeworkFilePath(good, FAMILY, OTHER_CHILD)).toBe(false);
+    expect(isHomeworkFilePath(`${FAMILY}/${CHILD}/2026-10-15/../x/${FILE}`, FAMILY, CHILD)).toBe(false);
+    expect(isHomeworkFilePath(`${FAMILY}/${CHILD}/2026-10-15/photo.exe`, FAMILY, CHILD)).toBe(false);
+    expect(isHomeworkFilePath(`${FAMILY}/${CHILD}/2026-10-15/${uuid}.exe`, FAMILY, CHILD)).toBe(false);
+    expect(isHomeworkFilePath(`${FAMILY}/${CHILD}/x/${FILE}`, FAMILY, CHILD)).toBe(false);
+    expect(isHomeworkFilePath(`${FAMILY}/${CHILD}/${FILE}`, FAMILY, CHILD)).toBe(false);
+  });
+
+  it("caps attachments at 6 and accepts an edit or an archive patch", () => {
+    const six = Array.from({ length: 7 }, () => `${FAMILY}/${CHILD}/2026-10-15/${FILE}`);
+    expect(homeworkSchema.safeParse({ ...ok, photoPaths: six }).success).toBe(false);
+    expect(homeworkPatchSchema.safeParse({ archived: true }).success).toBe(true);
+    expect(homeworkPatchSchema.safeParse({ subject: "Toán", dueDate: "2026-10-20", note: "trang 12", photoPaths: [] }).success).toBe(true);
+    expect(homeworkPatchSchema.safeParse({ subject: "Toán", dueDate: "2026-10-20", note: null, photoPaths: [] }).success).toBe(false);
+    expect(homeworkPatchSchema.safeParse({ archived: true, subject: "x" }).success).toBe(false);
   });
 });
 
@@ -174,5 +190,22 @@ describe("helpers", () => {
     expect(formatWeekdays([1, 3, 5])).toBe("T2, T4, T6");
     expect(formatWeekdays([1, 2, 3, 4, 5, 6, 7])).toBe("Hằng ngày");
     expect(formatWeekdays([7])).toBe("CN");
+  });
+});
+
+describe("homework files", () => {
+  it("knows the allowed kinds", () => {
+    expect(fileKind("a.PDF")).toBe("pdf");
+    expect(fileKind("a.docx")).toBe("word");
+    expect(fileKind("a.xls")).toBe("excel");
+    expect(fileKind("a.jpeg")).toBe("image");
+    expect(fileKind("a.exe")).toBeNull();
+    expect(fileKind("noext")).toBeNull();
+  });
+  it("picks a stored extension from the name, else the MIME type", () => {
+    expect(storedExt({ name: "De Toan.PDF", type: "" })).toBe("pdf");
+    expect(storedExt({ name: "scan", type: "application/pdf" })).toBe("pdf");
+    expect(storedExt({ name: "x.jpeg", type: "image/jpeg" })).toBe("jpg");
+    expect(storedExt({ name: "virus.exe", type: "application/x-msdownload" })).toBeNull();
   });
 });

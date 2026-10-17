@@ -1,9 +1,11 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { addDays } from "@/lib/admin/dates";
+import { KIND_LABEL, attachmentViews } from "@/lib/files";
 import { shortDate } from "@/lib/subjects";
 import { localDate } from "@/lib/time";
 import { ParentHeader } from "../parent-header";
 import { ArchiveButton } from "./archive-button";
+import { HomeworkEdit } from "./homework-edit";
 import { HomeworkForm } from "./homework-form";
 
 export const dynamic = "force-dynamic";
@@ -33,12 +35,7 @@ export default async function HomeworkPage() {
     .order("created_at");
   const items = (data ?? []) as HomeworkRow[];
 
-  const paths = items.flatMap((i) => i.photo_paths);
-  const signed = new Map<string, string>();
-  if (paths.length > 0) {
-    const { data: urls } = await db.storage.from("homework").createSignedUrls(paths, 60 * 60);
-    for (const u of urls ?? []) if (u.path && u.signedUrl) signed.set(u.path, u.signedUrl);
-  }
+  const tomorrow = addDays(today, 1);
 
   return (
     <>
@@ -50,7 +47,7 @@ export default async function HomeworkPage() {
           <HomeworkForm
             familyId={me.profile.family_id}
             today={today}
-            tomorrow={addDays(today, 1)}
+            tomorrow={tomorrow}
             kids={children.map((c) => ({ id: c.id, name: c.display_name, color: c.color }))}
           />
         )}
@@ -66,38 +63,59 @@ export default async function HomeworkPage() {
                 <p className="text-sm text-ink/70">Chưa có bài nào.</p>
               ) : (
                 <ul className="flex flex-col gap-2">
-                  {mine.map((i) => (
-                    <li key={i.id} className="flex flex-col gap-2 rounded-xl border border-ink/10 bg-white p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex flex-col">
-                          <span className="font-semibold">{i.subject}</span>
-                          <span className="text-sm text-ink/70">
-                            Nộp {i.due_date === today ? "hôm nay" : shortDate(i.due_date)}
-                            {i.due_date < today && !i.done_at ? " · quá hạn" : ""}
-                            {i.done_at ? " · con đã làm xong" : ""}
-                          </span>
+                  {mine.map((i) => {
+                    const files = attachmentViews(i.photo_paths);
+                    const images = files.filter((f) => f.kind === "image");
+                    const docs = files.filter((f) => f.kind !== "image");
+                    const early = !!i.done_at && localDate(new Date(i.done_at)) <= addDays(i.due_date, -2);
+                    const label = `${i.subject} nộp ${shortDate(i.due_date)}`;
+                    return (
+                      <li key={i.id} className="flex flex-col gap-2 rounded-xl border border-ink/10 bg-white p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex grow flex-col">
+                            <span className="font-semibold">{i.subject}</span>
+                            <span className="text-sm text-ink/70">
+                              Nộp {i.due_date === today ? "hôm nay" : shortDate(i.due_date)}
+                              {i.due_date < today && !i.done_at ? " · quá hạn" : ""}
+                              {i.done_at ? " · con đã làm xong" : ""}
+                              {early ? " · ★ sớm" : ""}
+                            </span>
+                          </div>
+                          <HomeworkEdit
+                            item={{ id: i.id, childId: c.id, subject: i.subject, dueDate: i.due_date, note: i.note, paths: i.photo_paths }}
+                            kid={{ id: c.id, name: c.display_name, color: c.color }}
+                            familyId={me.profile.family_id}
+                            today={today}
+                            tomorrow={tomorrow}
+                            label={label}
+                          />
+                          <ArchiveButton id={i.id} label={label} />
                         </div>
-                        <ArchiveButton id={i.id} label={`${i.subject} nộp ${shortDate(i.due_date)}`} />
-                      </div>
-                      {i.note && <p className="text-sm">{i.note}</p>}
-                      {i.photo_paths.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {i.photo_paths.map((p, n) =>
-                            signed.get(p) ? (
-                              <a key={p} href={signed.get(p)} target="_blank" rel="noreferrer">
-                                {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL */}
-                                <img
-                                  src={signed.get(p)}
-                                  alt={`Ảnh ${n + 1} bài ${i.subject}`}
-                                  className="h-20 w-16 rounded-lg object-cover"
-                                />
+                        {i.note && <p className="text-sm">{i.note}</p>}
+                        {files.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {images.map((f, n) => (
+                              <a key={f.path} href={f.url} target="_blank" rel="noreferrer">
+                                {/* eslint-disable-next-line @next/next/no-img-element -- private file streamed by our own route */}
+                                <img src={f.url} alt={`Ảnh ${n + 1} bài ${i.subject}`} className="h-20 w-16 rounded-lg object-cover" />
                               </a>
-                            ) : null,
-                          )}
-                        </div>
-                      )}
-                    </li>
-                  ))}
+                            ))}
+                            {docs.map((f, n) => (
+                              <a
+                                key={f.path}
+                                href={f.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex min-h-11 items-center rounded-full border border-accent/50 px-3 text-sm font-bold text-accent"
+                              >
+                                {KIND_LABEL[f.kind]} {n + 1} ↗
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>

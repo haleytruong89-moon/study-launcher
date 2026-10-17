@@ -77,9 +77,22 @@
  *     that (e.g. 06:00 nothing yet, homework at 17:00) brings back LOCK_P1.
  * 16. Any malformed instant in the input throws; the caller should then answer with
  *     an error so the extension stays fail-closed.
+ * 17. Homework groups (parent decision 17/10/2026, "kiểu C"): the parent enters only the
+ *     deadline. EVERY unfinished homework is listed. "due" = overdue, today, or within
+ *     homework_lookahead_days: required, counted one by one. "upcoming" = later: not
+ *     required one by one, the child may do it early. On a day with NO due homework
+ *     (none listed, todo or done today), the child must finish
+ *     min(homework_min_upcoming, upcoming listed) upcoming items of their choice: Part 1
+ *     counts that quota as `pick.needed` slots, filled by upcoming items done today.
+ * 18. "★ sớm" (parent decision 17/10/2026): homework finished on a local date at least 2
+ *     days before its due date. `earlyThisWeek` counts such homework done since Monday
+ *     (the caller passes homework done since Monday for this). Display only: it never
+ *     changes status, Part 1/2 or trust progress (no points, SPEC section 15).
  */
 
-import { addDays, atLocalTime, isoWeekday, localDate, nextMidnight, weekStart } from "./time";
+import { addDays, atLocalTime, isoWeekday, localDate, nextMidnight, startOfLocalDay, weekStart } from "./time";
+
+const startOfLocalDayMs = (date: string): number => startOfLocalDay(date).getTime();
 
 // ---------------------------------------------------------------------------
 // Types
@@ -112,6 +125,8 @@ export interface FamilySettingsInput {
   trustUpWeeks: number;
   trustDownPct: number;
   homeworkLookaheadDays: number;
+  /** Interpretation 17: upcoming items required on a day with no due homework (0 = off). */
+  homeworkMinUpcoming: number;
 }
 
 /** A day_sessions row. Instants are ISO strings, dates 'YYYY-MM-DD'. */
@@ -226,7 +241,19 @@ export interface TaskView {
   deepLink: string | null;
   /** Homework created after part1_done_at: shown, does not re-lock the day. */
   addedAfterPart1Done: boolean;
+  /** Homework only (interpretation 17): 'due' is required, 'upcoming' can be done early. */
+  group: "due" | "upcoming" | null;
+  /** Homework finished >= 2 days before its due date (interpretation 18). */
+  early: boolean;
   state: "todo" | "running" | "done" | "placeholder";
+}
+
+/** Interpretation 17: the "choose upcoming homework" quota of a day with no due homework. */
+export interface PickView {
+  /** Upcoming items that must be finished today (0 when there is due homework). */
+  needed: number;
+  /** Upcoming items finished today (may exceed `needed`). */
+  done: number;
 }
 
 export interface PartView {
@@ -277,13 +304,15 @@ export interface DayState {
   openUntil: string | null;
   localDate: string;
   dayType: DayType;
-  part1: PartView;
+  part1: PartView & { pick: PickView };
   part2: PartView & { locked: boolean };
   break: BreakView;
   free: FreeView;
   passAvailable: boolean;
   passesLeft: number;
   week: { date: string; result: WeekResult }[];
+  /** Homework finished early (>= 2 days before due) since Monday. Display only. */
+  earlyThisWeek: number;
   trust: TrustView;
   milestones: DayMilestones;
   serverNow: string;
@@ -404,9 +433,17 @@ function templateViews(
         placeholder,
         deepLink: placeholder ? null : (t.deepLink ?? slot?.url ?? null),
         addedAfterPart1Done: false,
+        group: null,
+        early: false,
         state: taskState(placeholder, run, doneAt),
       } satisfies TaskView;
     });
+}
+
+/** Interpretation 18: finished on a local date at least 2 days before the due date. */
+function isEarly(h: HomeworkItemInput): boolean {
+  if (h.doneAt === null) return false;
+  return localDate(new Date(toMs(h.doneAt, "homework_items.done_at"))) <= addDays(h.dueDate, -2);
 }
 
 function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[]): TaskView[] {
@@ -414,7 +451,6 @@ function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[]
   return input.homework
     .filter((h) => {
       if (h.archivedAt !== null) return false;
-      if (h.dueDate > cutoff) return false;
       if (h.doneAt === null) return true;
       return localDate(new Date(toMs(h.doneAt, "homework_items.done_at"))) === today;
     })
@@ -448,14 +484,24 @@ function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[]
         placeholder: false,
         deepLink: null,
         addedAfterPart1Done: false,
+        group: h.dueDate > cutoff ? "upcoming" : "due",
+        early: isEarly(h),
         state: taskState(false, run, h.doneAt),
       } satisfies TaskView;
     });
 }
 
 function countPart(items: TaskView[]): { total: number; done: number } {
-  const counted = items.filter((i) => !i.placeholder);
+  const counted = items.filter((i) => !i.placeholder && i.group !== "upcoming");
   return { total: counted.length, done: counted.filter((i) => i.doneAt !== null).length };
+}
+
+/** Interpretation 17: quota of upcoming homework on a day with no due homework. */
+function pickQuota(items: TaskView[], minUpcoming: number): PickView {
+  const upcoming = items.filter((i) => i.group === "upcoming");
+  const done = upcoming.filter((i) => i.doneAt !== null).length;
+  const anyDue = items.some((i) => i.group === "due");
+  return { needed: anyDue ? 0 : Math.min(Math.max(0, minUpcoming), upcoming.length), done };
 }
 
 /** "Ngày đạt" for a day_sessions row (DESIGN section 5). */
@@ -516,12 +562,16 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const weekday = isoWeekday(today);
   const disabled = new Set(session.disabledTemplateIds);
 
-  // --- Part 1: homework (lookahead + overdue) + extra templates of today ---
+  // --- Part 1: due homework + extra templates of today + upcoming homework (17) ---
+  const homework = homeworkViews(input, today, runsToday);
   const part1Items = [
-    ...homeworkViews(input, today, runsToday),
+    ...homework.filter((i) => i.group === "due"),
     ...templateViews(input, "extra", weekday, disabled, runsToday),
+    ...homework.filter((i) => i.group === "upcoming"),
   ];
-  const part1Count = countPart(part1Items);
+  const pick = pickQuota(part1Items, settings.homeworkMinUpcoming);
+  const counted = countPart(part1Items);
+  const part1Count = { total: counted.total + pick.needed, done: counted.done + Math.min(pick.done, pick.needed) };
   const part1Empty = part1Count.total === 0;
   // Parent decision 14/10/2026: an EMPTY Part 1 is not final. It lets the day move on
   // (break offer, Part 2) but is only frozen as part1_done_at once the child has moved
@@ -652,13 +702,18 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   }
   const lastWeekBelowDown = okDaysInWeek(addDays(monday, -7)) * 100 < settings.trustDownPct * 7;
 
+  const mondayMs = startOfLocalDayMs(monday);
+  const earlyThisWeek = input.homework.filter(
+    (h) => h.archivedAt === null && isEarly(h) && toMs(h.doneAt as string, "homework_items.done_at") >= mondayMs,
+  ).length;
+
   return {
     status,
     open,
     openUntil: openUntilMs === null ? null : iso(openUntilMs),
     localDate: today,
     dayType: session.dayType,
-    part1: { ...part1Count, complete: part1Done, doneAt: session.part1DoneAt, items: part1Items },
+    part1: { ...part1Count, complete: part1Done, doneAt: session.part1DoneAt, items: part1Items, pick },
     part2: {
       ...part2Count,
       complete: session.part2DoneAt !== null,
@@ -678,6 +733,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     passAvailable,
     passesLeft,
     week,
+    earlyThisWeek,
     trust: {
       mode: input.trustMode,
       weeksMet,

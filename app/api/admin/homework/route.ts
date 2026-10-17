@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { homeworkSchema, isHomeworkPhotoPath } from "@/lib/admin/schemas";
+import { homeworkSchema } from "@/lib/admin/schemas";
+import { missingHomeworkFiles } from "@/lib/admin/homework-files";
+import { isHomeworkFilePath } from "@/lib/files";
 import { firstIssue, isFamilyChild, jsonError, readJson, requireParent, writeAudit } from "@/lib/admin/guard";
 import { addDays } from "@/lib/admin/dates";
 import { localDate } from "@/lib/time";
@@ -8,8 +10,9 @@ import { localDate } from "@/lib/time";
 const MAX_DAYS_AHEAD = 60;
 
 /**
- * Parent assigns school homework: one subject + one due date, with photos already uploaded
- * by the browser to homework/{family_id}/{child_id}/{due_date}/ (DESIGN section 9).
+ * Parent assigns school homework: one subject + one due date, with files (photos, PDF, Word,
+ * Excel) already uploaded by the browser to homework/{family_id}/{child_id}/{date}/
+ * (DESIGN section 9).
  */
 export async function POST(request: Request) {
   const guard = await requireParent();
@@ -28,20 +31,11 @@ export async function POST(request: Request) {
   if (!(await isFamilyChild(ctx.db, h.childId))) return jsonError("Không tìm thấy tài khoản con.", 400);
 
   const paths = [...new Set(h.photoPaths)];
-  if (!paths.every((p) => isHomeworkPhotoPath(p, ctx.familyId, h.childId, h.dueDate))) {
-    return jsonError("Ảnh không hợp lệ.", 400);
+  if (!paths.every((p) => isHomeworkFilePath(p, ctx.familyId, h.childId))) {
+    return jsonError("Tệp không hợp lệ.", 400);
   }
-  if (paths.length > 0) {
-    // Every referenced photo must really exist in that folder (listing is RLS-checked too).
-    const folder = `${ctx.familyId}/${h.childId}/${h.dueDate}`;
-    const { data: objects, error: listError } = await ctx.db.storage.from("homework").list(folder, { limit: 1000 });
-    if (listError) {
-      console.error("homework.create: list photos failed", listError.message);
-      return jsonError("Không kiểm tra được ảnh, thử lại.", 500);
-    }
-    const names = new Set((objects ?? []).map((o) => `${folder}/${o.name}`));
-    if (!paths.every((p) => names.has(p))) return jsonError("Ảnh chưa tải lên xong, thử lại.", 400);
-  }
+  const missing = paths.length > 0 ? await missingHomeworkFiles(ctx.db, paths) : null;
+  if (missing) return jsonError(missing, 400);
 
   const row = {
     family_id: ctx.familyId,
@@ -57,6 +51,6 @@ export async function POST(request: Request) {
     console.error("homework.create failed", error?.message);
     return jsonError("Không giao được bài.", 500);
   }
-  await writeAudit(ctx, "homework.create", { id: data.id, child_id: h.childId, subject: h.subject, due_date: h.dueDate, photos: paths.length });
+  await writeAudit(ctx, "homework.create", { id: data.id, child_id: h.childId, subject: h.subject, due_date: h.dueDate, files: paths.length });
   return NextResponse.json({ ok: true, id: data.id });
 }

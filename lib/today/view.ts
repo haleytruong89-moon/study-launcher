@@ -3,7 +3,7 @@
  * Pure functions, safe to use in client components. Display only: every decision is the server's.
  */
 import type { DayState, TaskView, WeekResult } from "@/lib/dayState";
-import { isoWeekday } from "@/lib/time";
+import { addDays, isoWeekday } from "@/lib/time";
 
 export interface Banner {
   title: string;
@@ -56,6 +56,14 @@ function remaining(part: { total: number; done: number }): number {
 export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMinutes: number }): Banner {
   switch (state.status) {
     case "LOCK_P1":
+      if (state.part1.pick.needed > 0 && !state.part1.items.some((i) => i.group === "due")) {
+        const left = Math.max(0, state.part1.pick.needed - state.part1.pick.done);
+        return {
+          title: "Hôm nay không có bài đến hạn",
+          sub: `Tự chọn ${left} bài ở “Sắp tới” để làm trước${state.part1.total > state.part1.pick.needed ? ", rồi làm bài bổ sung" : ""}. Làm sớm là được ★.`,
+          tone: "lock",
+        };
+      }
       return {
         title: `Còn ${remaining(state.part1)} việc ở Phần 1`,
         sub: "Làm xong bài trên lớp và bài bổ sung để được nghỉ và mở Phần 2.",
@@ -121,15 +129,35 @@ export function weekSummary(week: DayState["week"]): string {
   return `${past.filter((d) => isOkResult(d.result)).length}/${past.length} ngày đạt`;
 }
 
+/** "Quá hạn 15/10" · "Hạn hôm nay" · "Hạn ngày mai" · "Hạn 20/10". */
+export function dueLabel(dueDate: string, today: string): string {
+  const dm = `${dueDate.slice(8, 10)}/${dueDate.slice(5, 7)}`;
+  if (dueDate < today) return `Quá hạn ${dm}`;
+  if (dueDate === today) return "Hạn hôm nay";
+  if (dueDate === addDays(today, 1)) return "Hạn ngày mai";
+  return `Hạn ${dm}`;
+}
+
+/** Heading note of the "Sắp tới" group (interpretation 17). */
+export function upcomingHint(state: DayState): string {
+  const { needed, done } = state.part1.pick;
+  if (needed > 0) {
+    return done >= needed
+      ? `Đã chọn đủ ${needed} bài hôm nay — làm thêm càng tốt.`
+      : `Hôm nay không có bài đến hạn: tự chọn ${needed} bài để làm trước (${Math.min(done, needed)}/${needed}).`;
+  }
+  return "Không bắt buộc hôm nay — làm trước hạn ≥ 2 ngày được ★ sớm.";
+}
+
 /** Second line under a task (what to do next / how long). */
-export function taskMeta(item: TaskView, nowMs: number): string {
+export function taskMeta(item: TaskView, nowMs: number, today = ""): string {
   if (item.placeholder) return "Chưa có app — không tính vào việc phải làm";
   if (item.state === "done") {
     const took =
       item.startedAt && item.doneAt
         ? Math.max(1, Math.round((new Date(item.doneAt).getTime() - new Date(item.startedAt).getTime()) / 60_000))
         : null;
-    return `Xong${took ? ` · ${took} phút` : ""}${item.requiresProof ? " · đã gửi ảnh cho bố mẹ" : ""}`;
+    return `Xong${took ? ` · ${took} phút` : ""}${item.requiresProof ? " · đã gửi ảnh cho bố mẹ" : ""}${item.early ? " · ★ sớm" : ""}`;
   }
   if (item.state === "running" && item.startedAt) {
     const elapsed = clock(nowMs - new Date(item.startedAt).getTime());
@@ -138,7 +166,7 @@ export function taskMeta(item: TaskView, nowMs: number): string {
     return `Đủ ${item.minMinutes} phút — bấm Xong khi làm xong`;
   }
   if (item.source === "homework") {
-    const due = item.overdue ? "Quá hạn" : "Hạn nộp " + (item.dueDate ? item.dueDate.slice(8, 10) + "/" + item.dueDate.slice(5, 7) : "");
+    const due = item.dueDate ? dueLabel(item.dueDate, today || item.dueDate) : "";
     return `${due} · không giới hạn thời gian · chụp ảnh khi xong`;
   }
   return item.minMinutes > 0 ? `Tối thiểu ${item.minMinutes} phút` : "Không giới hạn thời gian";

@@ -45,6 +45,7 @@ function day(patch: Partial<DayInput> = {}): DayInput {
       trustUpWeeks: 3,
       trustDownPct: 70,
       homeworkLookaheadDays: 1,
+    homeworkMinUpcoming: 1,
     },
     bedtime: "21:30",
     trustMode: "lock",

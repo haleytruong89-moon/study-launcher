@@ -33,7 +33,7 @@ interface RunRow {
   proof_paths: string[];
   parent_verdict: "ok" | "not_ok" | null;
   task_templates: { title: string; part: "extra" | "skill" } | null;
-  homework_items: { subject: string; note: string | null } | null;
+  homework_items: { subject: string; note: string | null; due_date: string } | null;
 }
 
 /** Evening review (SPEC 2.6 "Xem gộp buổi tối"): finished work, minutes, proof photos, verdict. */
@@ -46,7 +46,7 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
 
   const { data } = await db
     .from("task_runs")
-    .select("id, child_id, source, started_at, done_at, proof_paths, parent_verdict, task_templates(title, part), homework_items(subject, note)")
+    .select("id, child_id, source, started_at, done_at, proof_paths, parent_verdict, task_templates(title, part), homework_items(subject, note, due_date)")
     .eq("local_date", day)
     .not("done_at", "is", null)
     .order("done_at");
@@ -60,7 +60,7 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
   }
 
   // Today's live status per child: display only, nothing is written from here.
-  const status = new Map<string, { label: string; p1: string; p2: string; ok: boolean }>();
+  const status = new Map<string, { label: string; p1: string; p2: string; ok: boolean; early: number }>();
   if (day === today) {
     for (const c of children) {
       try {
@@ -72,6 +72,7 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
           p1: `${s.part1.done}/${s.part1.total}`,
           p2: `${s.part2.done}/${s.part2.total}`,
           ok: todayResult === "ok" || todayResult === "pass" || todayResult === "sick",
+          early: s.earlyThisWeek,
         });
       } catch (e) {
         console.error("review status failed", e instanceof Error ? e.message : e);
@@ -117,6 +118,7 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
                 <span className="text-sm text-ink/70">
                   {mine.length} việc xong · {minutes} phút
                   {st ? ` · Phần 1: ${st.p1} · Phần 2: ${st.p2} · ${st.label}${st.ok ? " · ngày đạt ✓" : ""}` : ""}
+                  {st && st.early > 0 ? ` · ★ tuần này làm sớm ${st.early} bài` : ""}
                 </span>
               </div>
               {mine.length === 0 ? (
@@ -125,7 +127,8 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
                 <ul className="flex flex-col">
                   {mine.map((r) => {
                     const title = r.source === "homework" ? `${r.homework_items?.subject ?? "Bài"} · bài trên lớp` : (r.task_templates?.title ?? "Việc");
-                    const kind = r.source === "homework" ? "" : r.task_templates?.part === "skill" ? " · kỹ năng" : " · bài bổ sung";
+                    const early = r.source === "homework" && !!r.homework_items && localDate(new Date(r.done_at)) <= addDays(r.homework_items.due_date, -2);
+                    const kind = r.source === "homework" ? (early ? " · ★ sớm" : "") : r.task_templates?.part === "skill" ? " · kỹ năng" : " · bài bổ sung";
                     const photos = r.proof_paths.map((p) => signed.get(p)).filter((u): u is string => !!u);
                     return (
                       <li key={r.id} aria-label={title} className="flex gap-3 border-t border-ink/10 py-3 first:border-t-0">

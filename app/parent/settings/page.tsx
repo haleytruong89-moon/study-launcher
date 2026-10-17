@@ -29,6 +29,7 @@ export default async function SettingsPage() {
                 trustUpWeeks: s.trust_up_weeks,
                 trustDownPct: s.trust_down_pct,
                 homeworkLookaheadDays: s.homework_lookahead_days,
+                ...(typeof s.homework_min_upcoming === "number" ? { homeworkMinUpcoming: s.homework_min_upcoming } : {}),
                 photoRetentionDays: s.photo_retention_days,
               } satisfies SettingsValues
             }
