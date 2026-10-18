@@ -40,6 +40,20 @@ export default async function ParentPage() {
               Giao bài cho con
             </Link>
           )}
+          {children.length > 0 && (
+            <nav aria-label="Lối tắt" className="grid grid-cols-3 gap-2">
+              {[
+                { href: "/parent/devices", label: "Thiết bị", sub: "Ghép laptop" },
+                { href: "/parent/allowlist", label: "Trang học", sub: "Trang được mở" },
+                { href: "/parent/requests", label: "Xin mở", sub: "Con xin mở trang" },
+              ].map((l) => (
+                <Link key={l.href} href={l.href} className="flex min-h-14 flex-col items-center justify-center rounded-xl border border-ink/15 bg-white px-2 text-center">
+                  <span className="text-sm font-bold">{l.label}</span>
+                  <span className="text-xs text-ink/65">{l.sub}</span>
+                </Link>
+              ))}
+            </nav>
+          )}
         </section>
 
         <section className="flex flex-col gap-3">
