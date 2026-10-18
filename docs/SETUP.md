@@ -78,7 +78,7 @@ reg delete "HKLM\SOFTWARE\Policies\Google\Chrome" /f
 Bản chạy thử cài tay (chế độ nhà phát triển). Con **có thể tắt** nếu biết cách. Chạy thử vài ngày ổn rồi mới đăng cửa hàng (mục C) để cài kiểu không tắt được.
 
 1. Trên laptop con, mở **https://study-launcher-nine.vercel.app/downloads/study-launcher-extension.zip** → tải về → chuột phải → **Extract All** (giải nén). Để thư mục ở chỗ cố định, ví dụ `C:\StudyLauncher`. **Đừng xóa thư mục này**: extension chạy từ đó.
-2. Mở **edge://extensions** (Edge) hoặc **chrome://extensions** (Chrome) → bật **Developer mode / Chế độ nhà phát triển** → **Load unpacked / Tải tiện ích đã giải nén** → chọn thư mục `study-launcher-extension`.
+2. Mở **edge://extensions** (Edge) hoặc **chrome://extensions** (Chrome) → bật **Developer mode / Chế độ nhà phát triển** → **Load unpacked / Tải tiện ích đã giải nén** → chọn thư mục có file `manifest.json` bên trong (nếu báo *Manifest file is missing*, là đang chọn thư mục ngoài — mở vào thư mục con).
 3. Ở thẻ extension bấm **Details / Chi tiết** → bật **Allow in InPrivate** (Edge) / **Allow in Incognito** (Chrome). Không bật thì cửa sổ ẩn danh không bị chặn (trang Thiết bị sẽ cảnh báo).
    Extension tự mở trang **Ghép máy**. Đăng nhập **tài khoản của con** nếu được hỏi.
 4. Trên iPhone: trang phụ huynh → **Thiết bị** → ở tên con bấm **Tạo mã ghép máy** → đọc 6 số cho con nhập → **Ghép máy**. Thấy "Xong! Máy này đã ghép" là được.

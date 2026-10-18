@@ -48,7 +48,7 @@ writeFileSync(join(dist, "manifest.json"), JSON.stringify(manifest, null, 2) + "
 const files = {};
 for (const f of readdirSync(dist)) {
   const p = join(dist, f);
-  if (statSync(p).isFile()) files[`study-launcher-extension/${relative(dist, p)}`] = readFileSync(p);
+  if (statSync(p).isFile()) files[relative(dist, p)] = readFileSync(p); // flat: Windows "Extract All" already makes one folder
 }
 mkdirSync(dirname(zipPath), { recursive: true });
 writeFileSync(zipPath, zipSync(files, { level: 9 }));
