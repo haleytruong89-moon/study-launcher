@@ -29,14 +29,15 @@ export async function ParentHeader({ title, current }: { title: string; current:
         </div>
         <SignOutButton />
       </div>
-      <nav aria-label="Trang phụ huynh" className="no-scrollbar mx-auto max-w-lg overflow-x-auto px-4 pb-3">
-        <ul className="flex gap-2">
+      <nav aria-label="Trang phụ huynh" className="mx-auto max-w-lg px-4 pb-3">
+        {/* Wraps onto several rows so every page is visible on a phone (no hidden scrolling). */}
+        <ul className="flex flex-wrap gap-1.5">
           {LINKS.map((l) => (
             <li key={l.href}>
               <Link
                 href={l.href}
                 aria-current={l.href === current ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${
+                className={`inline-flex min-h-11 items-center rounded-full border px-3 text-sm font-semibold whitespace-nowrap ${
                   l.href === current ? "border-ink bg-ink text-white" : "border-ink/25 bg-white text-ink"
                 }`}
               >
