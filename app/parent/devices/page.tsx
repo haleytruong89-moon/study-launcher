@@ -31,7 +31,8 @@ export default async function DevicesPage() {
   const children = await loadChildren(db);
   const { data } = await db
     .from("extension_devices")
-    .select("*")
+    // Explicit columns: token_hash is never readable by browsers (column grants).
+    .select("id, child_id, label, last_seen_at, revoked_at, created_at, incognito_allowed")
     .is("revoked_at", null)
     .order("created_at");
   const devices = (data ?? []) as DeviceRow[];
