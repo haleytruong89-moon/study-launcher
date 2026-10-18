@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Study Launcher</title>
+<style>
+  body { margin: 0; width: 280px; font-family: system-ui, sans-serif; background: #F4F5F0; color: #1C1F1D; }
+  main { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  h1 { margin: 0; font-size: 16px; }
+  p { margin: 0; font-size: 14px; }
+  button, a { min-height: 44px; border-radius: 12px; font: inherit; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  button { border: none; background: #2B5D4F; color: #fff; cursor: pointer; }
+  a { color: #2B5D4F; border: 1.5px solid #2B5D4F; text-decoration: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Study Launcher</h1>
+  <p id="status">Đang đọc trạng thái…</p>
+  <button id="open" type="button">Mở việc hôm nay</button>
+  <a id="pair" href="#" target="_blank" hidden>Ghép máy</a>
+</main>
+<script src="popup.js"></script>
+</body>
+</html>

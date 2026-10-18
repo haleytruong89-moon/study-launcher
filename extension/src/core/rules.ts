@@ -15,6 +15,11 @@
  * pages are never blocked (SPEC 2.6). DNR: the highest priority matching rule
  * wins, so (3) > (2) > (1).
  *
+ * Parent decision 17/10/2026 (S4b security review): embedded frames (`sub_frame`) outside
+ * the allowlist are BLOCKED too while locked (rule 4, priority 1), so a blocked site
+ * cannot be shown inside an allowed page. Frames of allowlisted domains still load
+ * (rule 2 covers main_frame + sub_frame).
+ *
  * Decision (stricter, DESIGN silent): rule 3 lists every resource type, so
  * translate.goog is also blocked inside frames / as a sub-resource while locked.
  * A DNR rule without `resourceTypes` would skip main_frame, so the list is explicit.
@@ -76,6 +81,7 @@ export const RULE_IDS = {
   redirectAll: 1,
   allowList: 2,
   blockAlways: 3,
+  blockFrames: 4,
 } as const;
 
 export const MANAGED_RULE_IDS: readonly number[] = Object.values(RULE_IDS);
@@ -112,10 +118,16 @@ export function buildRules(input: RuleInput): DnrRule[] {
       condition: { regexFilter: REDIRECT_REGEX, resourceTypes: ["main_frame"] },
     },
     {
+      id: RULE_IDS.blockFrames,
+      priority: 1,
+      action: { type: "block" },
+      condition: { regexFilter: REDIRECT_REGEX, resourceTypes: ["sub_frame"] },
+    },
+    {
       id: RULE_IDS.allowList,
       priority: 2,
       action: { type: "allow" },
-      condition: { requestDomains: allowDomains, resourceTypes: ["main_frame"] },
+      condition: { requestDomains: allowDomains, resourceTypes: ["main_frame", "sub_frame"] },
     },
   ];
   if (input.blockAlways.length > 0) {

@@ -103,7 +103,7 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
       .select("id, part, title, subject, app_slot_id, weekdays, min_minutes, deep_link, sort, active")
       .eq("child_id", childId)
       .eq("active", true),
-    db.from("app_slots").select("id, kind, label, url, active"),
+    db.from("app_slots").select("id, kind, label, url, active").eq("family_id", familyId),
     db
       .from("task_runs")
       .select("id, local_date, source, homework_item_id, template_id, started_at, done_at, proof_paths")

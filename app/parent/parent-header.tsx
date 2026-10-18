@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/parent/homework", label: "Giao bài" },
   { href: "/parent/templates", label: "Mẫu việc" },
   { href: "/parent/slots", label: "App môn học" },
+  { href: "/parent/devices", label: "Thiết bị" },
   { href: "/parent/settings", label: "Cài đặt" },
 ] as const;
 
