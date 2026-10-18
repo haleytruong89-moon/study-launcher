@@ -98,18 +98,20 @@ describe("buildRules", () => {
     expect(rulesFor(open)).toEqual([]);
   });
 
-  it("locked -> 3 rules with stable ids and the DESIGN priorities", () => {
+  it("locked -> 4 rules with stable ids and the DESIGN priorities", () => {
     const rules = rulesFor(locked);
     expect(rules.map((r) => [r.id, r.priority, r.action.type])).toEqual([
       [RULE_IDS.redirectAll, 1, "redirect"],
+      [RULE_IDS.blockFrames, 1, "block"],
       [RULE_IDS.allowList, 2, "allow"],
       [RULE_IDS.blockAlways, 3, "block"],
     ]);
     expect(rules[0]!.condition.resourceTypes).toEqual(["main_frame"]);
-    expect(rules[1]!.condition.resourceTypes).toEqual(["main_frame"]);
-    expect(rules[1]!.condition.requestDomains).toContain(LAUNCHER_HOST);
-    expect(rules[2]!.condition.resourceTypes).toEqual([...ALL_RESOURCE_TYPES]);
-    expect(rules[2]!.condition.requestDomains).toEqual(["translate.goog"]);
+    expect(rules[1]!.condition.resourceTypes).toEqual(["sub_frame"]);
+    expect(rules[2]!.condition.resourceTypes).toEqual(["main_frame", "sub_frame"]);
+    expect(rules[2]!.condition.requestDomains).toContain(LAUNCHER_HOST);
+    expect(rules[3]!.condition.resourceTypes).toEqual([...ALL_RESOURCE_TYPES]);
+    expect(rules[3]!.condition.requestDomains).toEqual(["translate.goog"]);
     // Same input -> identical output (stable for updateDynamicRules).
     expect(rulesFor(locked)).toEqual(rules);
   });
@@ -136,9 +138,15 @@ describe("buildRules", () => {
     expect(evaluate(rules, "https://evil-vercel.app/", "main_frame").kind).toBe("redirect");
   });
 
-  it("never blocks images / scripts / CDN files (only main_frame is redirected)", () => {
+  it("blocks embedded frames outside the allowlist; allowlisted frames still load (parent decision 17/10)", () => {
     const rules = rulesFor(locked);
-    for (const type of ALL_RESOURCE_TYPES.filter((t) => t !== "main_frame")) {
+    expect(evaluate(rules, "https://www.youtube.com/embed/x", "sub_frame").kind).toBe("block");
+    expect(evaluate(rules, "https://math-app-gules.vercel.app/widget", "sub_frame").kind).toBe("allow");
+  });
+
+  it("never blocks images / scripts / CDN files (only pages and frames are)", () => {
+    const rules = rulesFor(locked);
+    for (const type of ALL_RESOURCE_TYPES.filter((t) => t !== "main_frame" && t !== "sub_frame")) {
       expect(evaluate(rules, "https://cdn.jsdelivr.net/npm/katex/katex.min.js", type).kind).toBe("none");
       expect(evaluate(rules, "https://i.ytimg.com/vi/x/hq.jpg", type).kind).toBe("none");
     }
@@ -150,7 +158,7 @@ describe("buildRules", () => {
       FALLBACK,
     );
     const rules = rulesFor(s);
-    expect(rules[1]!.condition.requestDomains).toContain("translate.goog");
+    expect(rules[2]!.condition.requestDomains).toContain("translate.goog");
     const proxy = "https://www-youtube-com.translate.goog/watch?v=x&_x_tr_sl=auto";
     expect(evaluate(rules, proxy, "main_frame").kind).toBe("block");
     expect(evaluate(rules, proxy, "sub_frame").kind).toBe("block");
@@ -171,7 +179,7 @@ describe("buildRules", () => {
   it("planRuleUpdate removes everything installed plus our ids, then adds the new set", () => {
     const rules = rulesFor(locked);
     expect(planRuleUpdate([7, 2], rules)).toEqual({
-      removeRuleIds: [1, 2, 3, 7],
+      removeRuleIds: [1, 2, 3, 4, 7],
       addRules: rules,
     });
     expect(planRuleUpdate([], [])).toEqual({ removeRuleIds: [...MANAGED_RULE_IDS], addRules: [] });
@@ -192,7 +200,7 @@ describe("sync: fail-closed state machine", () => {
       openUntil: null,
     });
     const rules = rulesFor(s);
-    expect(rules[1]!.condition.requestDomains).toEqual(["fallback-launcher.example.org"]);
+    expect(rules[2]!.condition.requestDomains).toEqual(["fallback-launcher.example.org"]);
   });
 
   it("never synced + failures stays launcher-only", () => {

@@ -282,6 +282,19 @@ end $$;
 reset role;
 set role service_role;
 select test_helpers.expect_count('service_role sees pairing codes', (select count(*) from public.device_pair_codes), 1);
+select test_helpers.expect_count('pair_code_try counts 1..5 then refuses',
+  (select count(*) from generate_series(1, 7) g where public.pair_code_try((select id from public.device_pair_codes limit 1)) is not null), 5);
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  begin
+    perform public.pair_code_try(gen_random_uuid());
+    raise exception 'FAIL: child called pair_code_try';
+  exception when insufficient_privilege then raise notice 'ok: child cannot call pair_code_try';
+  end;
+end $$;
 reset role;
 
 -- 0003 (S2e): plans, weekly reviews, icon ------------------------------------------

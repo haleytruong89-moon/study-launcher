@@ -11,6 +11,7 @@ interface DeviceRow {
   last_seen_at: string | null;
   revoked_at: string | null;
   created_at: string;
+  incognito_allowed?: boolean | null;
 }
 
 const STALE_MINUTES = 10;
@@ -30,7 +31,7 @@ export default async function DevicesPage() {
   const children = await loadChildren(db);
   const { data } = await db
     .from("extension_devices")
-    .select("id, child_id, label, last_seen_at, revoked_at, created_at")
+    .select("*")
     .is("revoked_at", null)
     .order("created_at");
   const devices = (data ?? []) as DeviceRow[];
@@ -55,6 +56,9 @@ export default async function DevicesPage() {
             </li>
             <li>
               Mở <strong>edge://extensions</strong> (hoặc chrome://extensions) → bật <strong>Chế độ nhà phát triển</strong> → <strong>Tải tiện ích đã giải nén</strong> → chọn thư mục vừa giải nén.
+            </li>
+            <li>
+              Bấm <strong>Chi tiết</strong> của extension → bật <strong>Cho phép trong InPrivate</strong> (Chrome: “Cho phép ở chế độ ẩn danh”), để cửa sổ ẩn danh cũng bị chặn.
             </li>
             <li>Đăng nhập tài khoản của con trên trình duyệt đó, mở trang <strong>/ghep-may</strong>.</li>
             <li>Bấm “Tạo mã ghép máy” bên dưới, đọc 6 số cho con nhập (mã hết hạn sau 10 phút).</li>
@@ -84,6 +88,11 @@ export default async function DevicesPage() {
                             Lần cuối hỏi máy chủ: {seen(d.last_seen_at, now)}
                             {stale ? " — máy tắt, ngoài mạng, hoặc extension có thể đã bị tắt" : ""}
                           </span>
+                          {d.incognito_allowed === false && (
+                            <span className="text-xs font-semibold text-[#8A2B1F]">
+                              Cửa sổ ẩn danh (InPrivate) chưa bị chặn: vào trang extension → Chi tiết → bật “Cho phép trong InPrivate”.
+                            </span>
+                          )}
                         </div>
                         <RevokeButton id={d.id} label={d.label ?? "Laptop"} />
                       </li>

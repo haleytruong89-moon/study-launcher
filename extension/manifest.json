@@ -16,9 +16,6 @@
   "background": {
     "service_worker": "background.js"
   },
-  "chrome_url_overrides": {
-    "newtab": "newtab.html"
-  },
   "action": {
     "default_title": "Study Launcher",
     "default_popup": "popup.html"

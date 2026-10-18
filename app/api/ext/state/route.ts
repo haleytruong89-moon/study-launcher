@@ -57,7 +57,12 @@ export async function GET(request: Request) {
       [...state.part1.items, ...state.part2.items].map((i) => i.deepLink),
     );
 
-    await admin.from("extension_devices").update({ last_seen_at: now.toISOString() }).eq("id", device.id);
+    // The extension reports whether it may run in InPrivate / incognito windows.
+    const incognito = request.headers.get("x-incognito-allowed");
+    await admin
+      .from("extension_devices")
+      .update({ last_seen_at: now.toISOString(), ...(incognito === "1" || incognito === "0" ? { incognito_allowed: incognito === "1" } : {}) })
+      .eq("id", device.id);
     return NextResponse.json(extStateBody(state, domains, launcherUrl(request)), { headers: NO_STORE });
   } catch (e) {
     console.error("ext.state failed", e instanceof Error ? e.message : e);

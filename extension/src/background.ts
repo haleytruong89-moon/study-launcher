@@ -26,6 +26,12 @@ import {
 
 const ALARM_POLL = "poll";
 const ALARM_OPEN = "openUntil|";
+/** A poll that does not answer within this time counts as FAILED (never leaves us open). */
+const POLL_TIMEOUT_MS = 10_000;
+/** While open, a navigation also triggers a poll at most this often (alarms follow the laptop clock). */
+const NAV_POLL_MS = 30_000;
+let lastPollAt: number | null = null;
+const NEW_TAB = /^(chrome|edge):\/\/(newtab|new-tab-page)\/?$/;
 
 interface Stored {
   sync: SyncState;
@@ -48,14 +54,25 @@ function serial<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
-async function enforce(sync: SyncState): Promise<EffectiveState> {
-  const eff = effectiveState(sync, LAUNCHER_URL);
+async function installRules(rules: ReturnType<typeof buildRules>) {
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   const update = planRuleUpdate(
     existing.map((r) => r.id),
-    buildRules(eff),
+    rules,
   );
   await chrome.declarativeNetRequest.updateDynamicRules(update as unknown as chrome.declarativeNetRequest.UpdateRuleOptions);
+}
+
+async function enforce(sync: SyncState): Promise<EffectiveState> {
+  let eff = effectiveState(sync, LAUNCHER_URL);
+  try {
+    await installRules(buildRules(eff));
+  } catch {
+    // Could not install the wanted rules (e.g. a bad allowlist entry): fail closed with
+    // the Launcher only, never leave older (possibly open) rules in place.
+    eff = { ...eff, locked: true, allow: [], openUntil: null };
+    await installRules(buildRules(eff)).catch(() => undefined);
+  }
   if (eff.locked) {
     // Idempotent: also catches tabs the network rules cannot see (file:, already open tabs).
     const tabs = await chrome.tabs.query({});
@@ -88,8 +105,20 @@ async function poll(): Promise<boolean> {
     await apply(null, false); // not paired: locked, only the Launcher (to pair) is reachable
     return false;
   }
+  lastPollAt = performance.now();
   try {
-    const res = await fetch(`${LAUNCHER_URL}/api/ext/state`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+    const incognito = await chrome.extension.isAllowedIncognitoAccess().catch(() => null);
+    const res = await fetch(`${LAUNCHER_URL}/api/ext/state`, {
+      headers: { Authorization: `Bearer ${token}`, ...(incognito === null ? {} : { "X-Incognito-Allowed": incognito ? "1" : "0" }) },
+      cache: "no-store",
+      signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
+    });
+    if (res.status === 401) {
+      // Token removed by the parent (or unknown): lock at once, not after a second failure.
+      await apply({ type: "pollFailed" }, false);
+      await apply({ type: "pollFailed" }, false);
+      return false;
+    }
     const payload = res.ok ? parseExtStatePayload(await res.json()) : null;
     if (!payload) throw new Error(`bad response ${res.status}`);
     payload.launcherUrl = LAUNCHER_URL; // the lock page always stays on our own Launcher
@@ -135,14 +164,31 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 // A tab navigating to something the network rules cannot catch (file:, data:) while locked.
+// While open, navigations also poll (throttled): alarms follow the laptop clock, so a clock
+// moved backwards would otherwise stop the polls.
 chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
   if (!info.url) return;
+  if (NEW_TAB.test(info.url)) {
+    void chrome.tabs.update(tabId, { url: `${LAUNCHER_URL}/today` }).catch(() => undefined);
+    return;
+  }
   void (async () => {
     const r = await chrome.storage.local.get("lastEffective");
     const eff = r.lastEffective as EffectiveState | undefined;
+    if (eff && !eff.locked) {
+      if (lastPollAt === null || performance.now() - lastPollAt > NAV_POLL_MS) void serial(poll);
+      return;
+    }
     if (!eff?.locked) return;
     for (const t of planTabSweep([{ ...tab, id: tabId, url: info.url }], eff)) await chrome.tabs.update(t.tabId, { url: t.url }).catch(() => undefined);
   })();
+});
+
+// New tabs open the child's "Hôm nay" (instead of a new-tab override, which browsers
+// offer to undo with one click).
+chrome.tabs.onCreated.addListener((tab) => {
+  const url = tab.pendingUrl ?? tab.url ?? "";
+  if (tab.id !== undefined && NEW_TAB.test(url)) void chrome.tabs.update(tab.id, { url: `${LAUNCHER_URL}/today` }).catch(() => undefined);
 });
 
 // Pairing messages relayed by the content script (only on the Launcher's own pages).

@@ -37,11 +37,14 @@ export async function POST(request: Request) {
     if (!row || new Date(row.expires_at).getTime() <= now.getTime()) {
       return jsonError("Mã đã hết hạn hoặc chưa có. Nhờ bố mẹ tạo mã mới.", 400);
     }
-    if (row.attempts >= PAIR_CODE_MAX_ATTEMPTS) return jsonError("Nhập sai quá nhiều lần. Nhờ bố mẹ tạo mã mới.", 429);
+    // Count this try atomically BEFORE comparing (parallel requests cannot exceed 5 tries).
+    const tried = await admin.rpc("pair_code_try", { p_code_id: row.id });
+    if (tried.error) throw new Error(tried.error.message);
+    const tries = tried.data as number | null;
+    if (tries === null) return jsonError("Nhập sai quá nhiều lần hoặc mã đã hết hạn. Nhờ bố mẹ tạo mã mới.", 429);
 
     if (!sameHash(row.code_hash, hashPairCode(ctx.childId, parsed.data.code))) {
-      await admin.from("device_pair_codes").update({ attempts: row.attempts + 1 }).eq("id", row.id);
-      return jsonError(`Mã chưa đúng (còn ${PAIR_CODE_MAX_ATTEMPTS - row.attempts - 1} lần thử).`, 400);
+      return jsonError(`Mã chưa đúng (còn ${Math.max(0, PAIR_CODE_MAX_ATTEMPTS - tries)} lần thử).`, 400);
     }
 
     // Use the code exactly once (guarded update: a second request finds nothing to update).

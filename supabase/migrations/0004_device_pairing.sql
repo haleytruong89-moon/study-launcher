@@ -34,3 +34,25 @@ grant all on public.device_pair_codes to service_role;
 
 -- Looking up a device by its token hash on every extension poll.
 create index if not exists extension_devices_token_hash_idx on public.extension_devices (token_hash);
+
+-- One try at a code, counted ATOMICALLY before the comparison (parallel requests cannot
+-- get more than 5 tries). Returns the new try count, or null when the code is used,
+-- expired, or out of tries. service_role only.
+create or replace function public.pair_code_try(p_code_id uuid)
+returns integer
+language sql
+security invoker
+set search_path = public
+as $$
+  update public.device_pair_codes
+     set attempts = attempts + 1
+   where id = p_code_id and used_at is null and expires_at > now() and attempts < 5
+  returning attempts;
+$$;
+revoke all on function public.pair_code_try(uuid) from public, anon, authenticated;
+grant execute on function public.pair_code_try(uuid) to service_role;
+
+-- Whether the extension may run in InPrivate / incognito windows (reported on each poll),
+-- so the parent's "Thiết bị" page can warn when private windows are not covered.
+alter table public.extension_devices add column if not exists incognito_allowed boolean;
+grant select (incognito_allowed) on public.extension_devices to authenticated;

@@ -26,7 +26,7 @@ cannot be loaded yet.
   locked state, `onStartup` → "startup" event + a Launcher tab, `tabs.onUpdated` for `file:`.
 - `src/content.ts`: only on the Launcher domain (fixed at build); relays `/ghep-may`'s
   `window.postMessage({source:'study-launcher-page', type:'ping'|'pair'})` to the worker.
-- `src/newtab.ts` (new tab → `/today`), `src/popup.ts` (status + "Mở việc hôm nay").
+- New tabs → `/today` via `tabs.onCreated` (no new-tab override: browsers offer a one-click undo), `src/popup.ts` (status + "Mở việc hôm nay").
 - Build: `npm run ext:build` (also runs before `npm run build`) → `extension/dist/` and
   `public/downloads/study-launcher-extension.zip`. The Launcher URL comes from
   `NEXT_PUBLIC_APP_URL` (fallback: production).

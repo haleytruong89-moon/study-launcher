@@ -15,7 +15,11 @@ const zipPath = join(root, "public", "downloads", "study-launcher-extension.zip"
 
 let launcher = "https://study-launcher-nine.vercel.app";
 try {
-  if (process.env.NEXT_PUBLIC_APP_URL) launcher = new URL(process.env.NEXT_PUBLIC_APP_URL).origin;
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    const u = new URL(process.env.NEXT_PUBLIC_APP_URL);
+    // https only, except a local test server.
+    if (u.protocol === "https:" || u.hostname === "localhost") launcher = u.origin;
+  }
 } catch {
   /* keep the fallback */
 }
@@ -24,7 +28,7 @@ rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 
 await build({
-  entryPoints: ["background", "content", "newtab", "popup"].map((n) => join(src, "src", `${n}.ts`)),
+  entryPoints: ["background", "content", "popup"].map((n) => join(src, "src", `${n}.ts`)),
   outdir: dist,
   bundle: true,
   format: "iife",

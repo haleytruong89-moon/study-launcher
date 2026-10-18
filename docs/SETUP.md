@@ -79,7 +79,8 @@ Bản chạy thử cài tay (chế độ nhà phát triển). Con **có thể t�
 
 1. Trên laptop con, mở **https://study-launcher-nine.vercel.app/downloads/study-launcher-extension.zip** → tải về → chuột phải → **Extract All** (giải nén). Để thư mục ở chỗ cố định, ví dụ `C:\StudyLauncher`. **Đừng xóa thư mục này**: extension chạy từ đó.
 2. Mở **edge://extensions** (Edge) hoặc **chrome://extensions** (Chrome) → bật **Developer mode / Chế độ nhà phát triển** → **Load unpacked / Tải tiện ích đã giải nén** → chọn thư mục `study-launcher-extension`.
-3. Extension tự mở trang **Ghép máy**. Đăng nhập **tài khoản của con** nếu được hỏi.
+3. Ở thẻ extension bấm **Details / Chi tiết** → bật **Allow in InPrivate** (Edge) / **Allow in Incognito** (Chrome). Không bật thì cửa sổ ẩn danh không bị chặn (trang Thiết bị sẽ cảnh báo).
+   Extension tự mở trang **Ghép máy**. Đăng nhập **tài khoản của con** nếu được hỏi.
 4. Trên iPhone: trang phụ huynh → **Thiết bị** → ở tên con bấm **Tạo mã ghép máy** → đọc 6 số cho con nhập → **Ghép máy**. Thấy "Xong! Máy này đã ghép" là được.
 5. Thử: mở youtube.com → phải chuyển sang trang "Đang giờ học". Ở trang phụ huynh → **Mở/khóa** → **Mở 15 phút** → trong ≤ 30 giây youtube vào được; **Về bình thường** → tab youtube tự chuyển lại trang chặn.
 6. Dùng cả Edge và Chrome trên cùng máy → làm bước 2–4 cho **từng** trình duyệt (mỗi trình duyệt một mã).
