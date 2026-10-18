@@ -836,3 +836,73 @@ test("S4b: parent code -> child pairs -> device token reads the state; revoke st
   await expect(child.getByText("www.youtube.com")).toBeVisible();
   await childCtx.close();
 });
+
+// ---------------------------------------------------------------------------
+// S3d — "Trang học" (parent's allowlist) and "Xin mở trang" (child asks, parent decides)
+// ---------------------------------------------------------------------------
+
+test("S3d: parent adds a study site; YouTube cannot be added for good; a child cannot edit the list", async ({ page, browser }) => {
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/allowlist");
+  const form = page.getByRole("form", { name: "Thêm trang học" });
+  await form.getByLabel("Trang (tên miền hoặc dán link)").fill("https://meet.google.com/abc-defg-hij");
+  await form.getByRole("button", { name: "Thêm trang" }).click();
+  await expect(form.getByRole("status")).toContainText("Đã thêm");
+  await expect(page.getByRole("listitem", { name: "meet.google.com" })).toContainText("Cả 2 con");
+  await form.getByLabel("Trang (tên miền hoặc dán link)").fill("youtube.com");
+  await form.getByRole("button", { name: "Thêm trang" }).click();
+  await expect(form.getByRole("alert")).toContainText("YouTube");
+
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  const st = await child.evaluate(async () => (await fetch("/api/admin/allowlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ domain: "x.com", childId: null, duration: "permanent" }) })).status);
+  expect(st).toBe(403);
+  await childCtx.close();
+});
+
+test("S3d: the child asks to open a blocked site; the parent opens it for 15 minutes", async ({ page, browser }) => {
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  await child.goto("/blocked?u=https://notebooklm.google.com/notebook/1?x=2");
+  const box = child.getByRole("region", { name: "Xin mở trang" });
+  await box.getByLabel("Để làm gì (tùy chọn)").fill("học với gia sư");
+  await box.getByRole("button", { name: "Xin bố mẹ mở trang này" }).click();
+  await expect(box.getByRole("status")).toContainText("Đang chờ bố mẹ");
+  // Asking again for the same site does not create a second request.
+  const again = await child.evaluate(async () => (await (await fetch("/api/unlock-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: "https://notebooklm.google.com/other" }) })).json()) as { status: string });
+  expect(again.status).toBe("pending");
+  const { count } = await admin().from("unlock_requests").select("id", { count: "exact", head: true }).eq("domain", "notebooklm.google.com");
+  expect(count).toBe(1);
+
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/requests");
+  await expect(page.getByLabel("1 yêu cầu đang chờ")).toBeVisible();
+  const card = page.getByRole("region", { name: "Yêu cầu notebooklm.google.com" });
+  await expect(card).toContainText("học với gia sư");
+  await card.getByRole("button", { name: "Mở 15 phút" }).click();
+  await expect(page.getByText("Đã mở 15 phút")).toBeVisible();
+
+  const { data: entry } = await admin().from("allowlist_entries").select("grp, expires_at, child_id").eq("domain", "notebooklm.google.com").single();
+  expect(entry?.grp).toBe("request");
+  expect(entry?.child_id).toBeTruthy();
+  const mins = (new Date(entry?.expires_at ?? 0).getTime() - Date.now()) / 60_000;
+  expect(mins).toBeGreaterThan(0);
+  expect(mins).toBeLessThanOrEqual(15.1);
+
+  await expect(box.getByText("Bố mẹ đã mở trang này 15 phút.")).toBeVisible({ timeout: 15_000 });
+  await childCtx.close();
+});
+
+test("S3d: after login the child lands on the page they asked for (/ghep-may)", async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  await p.goto("/ghep-may");
+  await expect(p).toHaveURL(/\/login\?next=%2Fghep-may|\/login\?next=\/ghep-may/);
+  await p.getByLabel("Email").fill(childEmail);
+  await p.getByLabel("Mật khẩu").fill(childPassword);
+  await p.getByRole("button", { name: /Đăng nhập/ }).click();
+  await expect(p).toHaveURL(/\/ghep-may$/);
+  await ctx.close();
+});

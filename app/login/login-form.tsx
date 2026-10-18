@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function LoginForm() {
+export function LoginForm({ next = null }: { next?: string | null }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,7 +23,7 @@ export function LoginForm() {
       setError("Email hoặc mật khẩu chưa đúng.");
       return;
     }
-    router.replace("/");
+    router.replace(next ?? "/");
     router.refresh();
   }
 
