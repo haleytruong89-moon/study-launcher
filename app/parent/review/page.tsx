@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { addDays } from "@/lib/admin/dates";
-import { computeDayState, type Status } from "@/lib/dayState";
+import { computeDayState } from "@/lib/dayState";
+import { STATUS_LABEL } from "@/lib/admin/status";
 import { shortDate } from "@/lib/subjects";
 import { loadDay } from "@/lib/today/load";
 import { vnTime } from "@/lib/today/view";
@@ -13,18 +14,7 @@ import { VerdictButtons } from "./verdict-buttons";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_LABEL: Record<Status, string> = {
-  LOCK_P1: "Đang làm Phần 1",
-  BREAK_OFFER: "Xong Phần 1, chưa nghỉ",
-  BREAK: "Đang nghỉ",
-  LOCK_P2: "Đang làm Phần 2",
-  FREE: "Đang giờ tự do",
-  LOCK_END: "Đã hết giờ tự do",
-  OPEN_SICK: "Ngày ốm — máy mở cả ngày",
-  OPEN_TRUST: "Chế độ Tin tưởng",
-  OPEN_OVERRIDE: "Bố mẹ đang mở máy",
-  LOCK_OVERRIDE: "Bố mẹ đang khóa máy",
-};
+
 
 interface RunRow {
   id: string;
