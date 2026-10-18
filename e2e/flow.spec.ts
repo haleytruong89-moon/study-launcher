@@ -895,6 +895,32 @@ test("S3d: the child asks to open a blocked site; the parent opens it for 15 min
   await childCtx.close();
 });
 
+test("S3d: the parent opens the whole zalo.me for good from one request (no Google offer)", async ({ page, browser }) => {
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  for (const url of ["https://redirect.zalo.me/v3/verifyv2/pc?token=abc", "https://docs.google.com/document/d/1"]) {
+    const st = await child.evaluate(async (u) => (await fetch("/api/unlock-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: u }) })).status, url);
+    expect(st).toBeLessThan(300);
+  }
+  await childCtx.close();
+
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/requests");
+  await expect(page.getByRole("region", { name: "Yêu cầu docs.google.com" }).getByRole("button", { name: /Luôn cho phép cả/ })).toHaveCount(0);
+  const card = page.getByRole("region", { name: "Yêu cầu redirect.zalo.me" });
+  await card.getByRole("button", { name: /Luôn cho phép cả zalo\.me/ }).click();
+  await expect(page.getByRole("region", { name: "Yêu cầu redirect.zalo.me" })).toHaveCount(0);
+
+  const { data: entry } = await admin().from("allowlist_entries").select("grp, expires_at").eq("domain", "zalo.me").single();
+  expect(entry?.grp).toBe("request");
+  expect(entry?.expires_at).toBeNull();
+  const { count } = await admin().from("allowlist_entries").select("id", { count: "exact", head: true }).eq("domain", "redirect.zalo.me");
+  expect(count).toBe(0);
+  await page.getByRole("region", { name: "Yêu cầu docs.google.com" }).getByRole("button", { name: "Không" }).click();
+  await expect(page.getByRole("region", { name: "Yêu cầu docs.google.com" })).toHaveCount(0);
+});
+
 test("S3d: after login the child lands on the page they asked for (/ghep-may)", async ({ browser }) => {
   const ctx = await browser.newContext();
   const p = await ctx.newPage();

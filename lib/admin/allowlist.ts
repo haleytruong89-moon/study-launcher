@@ -27,7 +27,7 @@ export const requestSchema = z.object({
     .transform((v) => (v ? v : null)),
 });
 
-export const decisionSchema = z.object({ decision: z.enum(["15m", "day", "permanent", "deny"]) });
+export const decisionSchema = z.object({ decision: z.enum(["15m", "day", "permanent", "permanent_base", "deny"]) });
 export type Decision = z.infer<typeof decisionSchema>["decision"];
 
 /** Normalised domain the parent typed (a domain or a full link), or an error message. */
@@ -58,10 +58,40 @@ export const DECISION_STATUS: Record<Decision, "approved_15m" | "approved_day" |
   "15m": "approved_15m",
   day: "approved_day",
   permanent: "approved_permanent",
+  permanent_base: "approved_permanent",
   deny: "denied",
 };
 
-export const DECISION_DURATION: Record<Exclude<Decision, "deny">, Duration> = { "15m": "15m", day: "today", permanent: "permanent" };
+export const DECISION_DURATION: Record<Exclude<Decision, "deny">, Duration> = {
+  "15m": "15m",
+  day: "today",
+  permanent: "permanent",
+  permanent_base: "permanent",
+};
+
+/** Second-level labels under a 2-letter country TLD that are a registry, not a site (abc.edu.vn). */
+const COUNTRY_SECOND_LEVEL = new Set(["com", "edu", "gov", "net", "org", "co", "ac", "int", "info", "biz", "name", "pro", "health"]);
+
+/** Registrable domain of a host: redirect.zalo.me → zalo.me, thcs.hanoi.edu.vn → hanoi.edu.vn. */
+export function baseDomain(domain: string): string {
+  const labels = domain.split(".");
+  if (labels.length <= 2) return domain;
+  const tld = labels[labels.length - 1] ?? "";
+  const second = labels[labels.length - 2] ?? "";
+  const keep = tld.length === 2 && COUNTRY_SECOND_LEVEL.has(second) ? 3 : 2;
+  return labels.slice(-keep).join(".");
+}
+
+/**
+ * The wider domain a parent may open for good from a request (one tap instead of asking
+ * again for every sub-site, e.g. redirect.zalo.me → zalo.me), or null when there is none or
+ * it would open a forbidden site (google.com, youtube.com, vercel.app, …).
+ */
+export function wideDomainOffer(domain: string): string | null {
+  const base = baseDomain(domain);
+  if (base === domain || permanentProblem(base)) return null;
+  return base;
+}
 
 export const GROUP_LABEL: Record<string, string> = {
   system: "Hệ thống",
