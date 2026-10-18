@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 /** "Ghép máy": on the child's laptop, signed in as the child, with the parent's 6-digit code. */
 export default async function PairPage() {
   const me = await getCurrentUser();
-  if (!me?.profile) redirect("/login");
+  if (!me?.profile) redirect("/login?next=/ghep-may");
   if (me.profile.role === "parent") redirect("/parent/devices");
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-5 px-5 py-10">

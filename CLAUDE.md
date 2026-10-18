@@ -85,9 +85,9 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 - Phase: 3 — Implementation. Đã merge: S0 (PR #1–#3), S2a (PR #4), S1 (PR #5), S2b màn Hôm nay (PR #6), S3a Xem gộp (PR #8). Production: phụ huynh + gia đình + 2 tài khoản con đã tạo (A8 xong)
 - Last updated: 17/10/2026
-- Đã merge thêm: S2c (PR #9, SQL 0002), S4a lõi extension (PR #7), S2d (PR #10), S2e (PR #11, SQL 0003). A7 xong (sign-up tắt)
-- Đang mở: PR #12 (S3c-1 mở/khóa từ iPhone bố mẹ, không DB), PR #13 (S4b extension chạy thật + ghép máy mã 6 số, **có SQL 0004**; nối tiếp #12)
-- Tiếp theo (thứ tự phụ huynh chọn 17/10): chạy thử extension cài tay vài ngày → S3d ngày đặc biệt + allowlist (+ Tin tưởng, nhật ký) → S3b/S3c-2 PIN 6 số trên máy con → S3e xóa ảnh
+- Đã merge thêm: S2c (PR #9, SQL 0002), S4a (PR #7), S2d (PR #10), S2e (PR #11, SQL 0003), S3c-1 (PR #12), S4b extension (PR #13, SQL 0004). A7 xong (sign-up tắt)
+- Đang mở: PR #14 (zip extension 1 thư mục), PR #15 (S3d-1 Trang học + Xin mở trang, không DB)
+- Tiếp theo (thứ tự phụ huynh chọn 17/10): chạy thử extension cài tay vài ngày (đang cài 18/10) → phần còn lại của S3d ngày đặc biệt + allowlist (+ Tin tưởng, nhật ký) → S3b/S3c-2 PIN 6 số trên máy con → S3e xóa ảnh
 - Động lực (chốt 17/10): không điểm/streak; ★ sớm chỉ ghi nhận; lập kế hoạch tùy chọn; con chọn biểu tượng, màu do bố mẹ đặt; tổng kết tuần tối CN
 - Việc phụ huynh: cài extension bản thử (SETUP B+); A9 (tùy chọn); thử chính sách extension (SETUP B); C1/C2 tài khoản cửa hàng extension trước khi đăng; họp gia đình chốt tham số.
 - Extension: pairing qua content script + `window.postMessage` (không dùng externally_connectable); địa chỉ máy chủ cố định lúc build từ `NEXT_PUBLIC_APP_URL`; `npm run build` tự build extension (prebuild) ra `public/downloads/study-launcher-extension.zip`
