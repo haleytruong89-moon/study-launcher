@@ -19,30 +19,38 @@ export interface SettingsValues {
   photoRetentionDays: number;
 }
 
-const FIELDS: { key: keyof SettingsValues; label: string; hint?: string; min: number; max: number }[] = [
-  { key: "breakMinutes", label: "Nghỉ giữa 2 phần (phút)", hint: "0 = không có nghỉ", min: 0, max: 60 },
-  { key: "freeMinutes", label: "Giờ tự do sau khi xong (phút)", min: 0, max: 240 },
-  { key: "extraMinMinutes", label: "Tối thiểu mỗi bài bổ sung (phút)", hint: "Từng việc có thể đặt riêng", min: 0, max: 180 },
-  { key: "skillMinMinutes", label: "Tối thiểu mỗi kỹ năng (phút)", hint: "Từng việc có thể đặt riêng", min: 0, max: 180 },
-  { key: "passesPerWeek", label: "Thẻ miễn mỗi tuần", min: 0, max: 7 },
+type Group = "time" | "homework" | "trust" | "photos";
+const GROUPS: { group: Group; title: string }[] = [
+  { group: "time", title: "Giờ học, nghỉ, giờ tự do" },
+  { group: "homework", title: "Bài tập" },
+  { group: "trust", title: "Chế độ Tin tưởng (hệ thống chỉ gợi ý, bố mẹ quyết)" },
+  { group: "photos", title: "Ảnh bài" },
+];
+
+const FIELDS: { key: keyof SettingsValues; group: Group; label: string; hint?: string; min: number; max: number }[] = [
+  { key: "breakMinutes", group: "time", label: "Nghỉ giữa 2 phần (phút)", hint: "0 = không có nghỉ", min: 0, max: 60 },
+  { key: "freeMinutes", group: "time", label: "Giờ tự do sau khi xong (phút)", min: 0, max: 240 },
+  { key: "extraMinMinutes", group: "time", label: "Tối thiểu mỗi bài bổ sung (phút)", hint: "Từng việc có thể đặt riêng", min: 0, max: 180 },
+  { key: "skillMinMinutes", group: "time", label: "Tối thiểu mỗi kỹ năng (phút)", hint: "Từng việc có thể đặt riêng", min: 0, max: 180 },
+  { key: "passesPerWeek", group: "time", label: "Thẻ miễn mỗi tuần", min: 0, max: 7 },
   {
-    key: "homeworkLookaheadDays",
+    key: "homeworkLookaheadDays", group: "homework",
     label: "“Phải xong hôm nay”: bài có hạn trong (ngày)",
     hint: "1 = bài nộp hôm nay và ngày mai phải xong hôm nay; bài xa hơn hiện ở “Sắp tới”",
     min: 0,
     max: 7,
   },
   {
-    key: "homeworkMinUpcoming",
+    key: "homeworkMinUpcoming", group: "homework",
     label: "Ngày không có bài đến hạn: con tự chọn làm trước (bài)",
     hint: "0 = không bắt buộc. Con chọn bài nào trong “Sắp tới” cũng được",
     min: 0,
     max: 5,
   },
-  { key: "trustUpPct", label: "Lên Tin tưởng: tỷ lệ ngày đạt (%)", min: 0, max: 100 },
-  { key: "trustUpWeeks", label: "Lên Tin tưởng: số tuần liên tiếp", min: 1, max: 12 },
-  { key: "trustDownPct", label: "Gợi ý quay về Khóa khi tuần dưới (%)", min: 0, max: 100 },
-  { key: "photoRetentionDays", label: "Giữ ảnh bài (ngày)", min: 7, max: 365 },
+  { key: "trustUpPct", group: "trust", label: "Lên Tin tưởng: tỷ lệ ngày đạt (%)", min: 0, max: 100 },
+  { key: "trustUpWeeks", group: "trust", label: "Lên Tin tưởng: số tuần liên tiếp", min: 1, max: 12 },
+  { key: "trustDownPct", group: "trust", label: "Gợi ý quay về Khóa khi tuần dưới (%)", min: 0, max: 100 },
+  { key: "photoRetentionDays", group: "photos", label: "Giữ ảnh bài (ngày)", min: 7, max: 365 },
 ];
 
 interface Kid {
@@ -80,26 +88,31 @@ export function SettingsForm({ initial, kids }: { initial: SettingsValues; kids:
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      {FIELDS.filter((f) => initial[f.key] !== undefined).map((f) => (
-        <label key={f.key} className="flex flex-col gap-1 text-sm font-semibold">
-          {f.label}
-          <input
-            type="number"
-            inputMode="numeric"
-            required
-            min={f.min}
-            max={f.max}
-            value={values[f.key]}
-            onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-            className="min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal"
-          />
-          {f.hint && <span className="text-xs font-normal text-ink/60">{f.hint}</span>}
-        </label>
+      {GROUPS.map((g) => (
+        <fieldset key={g.group} className="flex flex-col gap-4 rounded-2xl bg-white p-4">
+          <legend className="float-left mb-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">{g.title}</legend>
+          {FIELDS.filter((f) => f.group === g.group && initial[f.key] !== undefined).map((f) => (
+            <label key={f.key} className="flex flex-col gap-1 text-sm font-semibold">
+              {f.label}
+              <input
+                type="number"
+                inputMode="numeric"
+                required
+                min={f.min}
+                max={f.max}
+                value={values[f.key]}
+                onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                className="min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal"
+              />
+              {f.hint && <span className="text-xs font-normal text-ink/60">{f.hint}</span>}
+            </label>
+          ))}
+        </fieldset>
       ))}
 
       {kids.length > 0 && (
-        <fieldset className="flex flex-col gap-3 rounded-xl border border-ink/10 bg-white p-4">
-          <legend className="px-1 text-sm font-bold">Giờ ngủ (ngày tính “đạt” khi xong trước giờ này)</legend>
+        <fieldset className="flex flex-col gap-3 rounded-2xl bg-white p-4">
+          <legend className="float-left mb-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">Giờ ngủ (ngày “đạt” khi xong trước giờ này)</legend>
           {kids.map((k) => (
             <label key={k.id} className="flex items-center justify-between gap-3 text-sm font-semibold">
               Giờ ngủ của {k.name}
