@@ -11,7 +11,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <ParentHeader title="Cài đặt gia đình" current="/parent/settings" />
+      <ParentHeader title="Luật trong nhà" current="/parent/settings" />
       <main className="mx-auto flex max-w-lg flex-col gap-6 px-4 py-6">
         <p className="text-sm text-ink/70">
           Luật trong app = luật trong Thỏa thuận gia đình. Đổi ở đây có hiệu lực ở lần máy của con hỏi trạng thái kế tiếp.
