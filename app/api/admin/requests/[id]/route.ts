@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { DECISION_DURATION, DECISION_STATUS, decisionSchema, expiresAt, permanentProblem } from "@/lib/admin/allowlist";
+import { DECISION_DURATION, DECISION_STATUS, decisionSchema, expiresAt, permanentProblem, wideDomainOffer } from "@/lib/admin/allowlist";
 import { jsonError, readJson, requireParent, writeAudit } from "@/lib/admin/guard";
 
-/** Parent decides a "Xin mở trang": 15 minutes / rest of today / always / no. */
+/** Parent decides a "Xin mở trang": 15 minutes / rest of today / always (this site or its whole domain) / no. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requireParent();
   if (!guard.ok) return guard.response;
@@ -23,6 +23,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const problem = permanentProblem(req.domain);
     if (problem) return jsonError(problem, 400);
   }
+  // "Luôn cho phép cả zalo.me": the server recomputes the wider domain, never trusts the client.
+  const allowDomain = decision === "permanent_base" ? wideDomainOffer(req.domain) : req.domain;
+  if (!allowDomain) return jsonError("Không mở rộng được tên miền này. Chọn “Luôn cho phép” trang này thôi.", 400);
 
   const now = new Date();
   // Decide first (guarded: a second tap or another parent finds nothing to update).
@@ -39,7 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { error } = await ctx.db.from("allowlist_entries").insert({
       family_id: ctx.familyId,
       child_id: req.child_id,
-      domain: req.domain,
+      domain: allowDomain,
       grp: "request",
       expires_at: expiresAt(DECISION_DURATION[decision], now),
       created_by: ctx.userId,
@@ -49,6 +52,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return jsonError("Đã ghi quyết định nhưng chưa mở được trang, thử “Trang học”.", 500);
     }
   }
-  await writeAudit(ctx, `request.${decision}`, { id: req.id, child_id: req.child_id, domain: req.domain });
+  await writeAudit(ctx, `request.${decision}`, { id: req.id, child_id: req.child_id, domain: allowDomain, requested: req.domain });
   return NextResponse.json({ ok: true });
 }

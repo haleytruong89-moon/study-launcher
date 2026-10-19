@@ -1,3 +1,4 @@
+import { wideDomainOffer } from "@/lib/admin/allowlist";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { localDate, startOfLocalDay } from "@/lib/time";
 import { vnTime } from "@/lib/today/view";
@@ -59,7 +60,7 @@ export default async function RequestsPage() {
               </a>
               {r.reason && <span className="text-sm">“{r.reason}”</span>}
             </div>
-            <DecisionButtons id={r.id} domain={r.domain} />
+            <DecisionButtons id={r.id} domain={r.domain} wide={wideDomainOffer(r.domain)} />
           </section>
         ))}
 
