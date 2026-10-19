@@ -978,3 +978,71 @@ test("S3d: after login the child lands on the page they asked for (/ghep-may)", 
   await expect(p).toHaveURL(/\/ghep-may$/);
   await ctx.close();
 });
+
+// ---------------------------------------------------------------------------
+// Child PIN sign-in on a remembered browser (child UI review 19/10/2026)
+// ---------------------------------------------------------------------------
+
+test("PIN: parent sets it; on the remembered laptop the child signs in with 6 digits; 5 wrong tries lock it", async ({ page, browser }) => {
+  const { data: kid } = await admin().from("profiles").select("id, display_name").eq("role", "child").single();
+  const childId = kid?.id ?? "";
+
+  // The parent sets the PIN (an easy one is refused).
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/children");
+  const item = page.getByRole("listitem").filter({ hasText: kid?.display_name ?? "" });
+  await item.getByText("Sửa").click();
+  const pinForm = item.getByRole("form", { name: /^PIN của/ });
+  await pinForm.getByLabel("PIN 6 số mới").fill("123456");
+  await pinForm.getByRole("button", { name: /PIN$/ }).click();
+  await expect(pinForm.getByRole("alert")).toContainText("dễ đoán");
+  await pinForm.getByLabel("PIN 6 số mới").fill("482916");
+  await pinForm.getByRole("button", { name: /PIN$/ }).click();
+  await expect(pinForm.getByRole("status")).toContainText("Đã lưu PIN");
+  const { data: stored } = await admin().from("profiles").select("pin_hash").eq("id", childId).single();
+  expect(stored?.pin_hash).toMatch(/^scrypt\$/);
+  expect(stored?.pin_hash).not.toContain("482916");
+
+  // A child cannot set a PIN.
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword); // remembers this browser
+  const set = await child.evaluate(async (id) => (await fetch(`/api/admin/children/${id}/pin`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: "777123" }) })).status, childId);
+  expect(set).toBe(403);
+
+  // Sign out -> the login page offers the PIN; the right PIN opens /today.
+  await child.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(child).toHaveURL(/\/login$/);
+  await expect(child.getByRole("region", { name: /^PIN của/ })).toBeVisible(); // only one child: chosen already
+  await child.getByLabel("Nhập PIN 6 số").fill("482916");
+  await expect(child).toHaveURL(/\/today$/);
+
+  // Wrong PINs: 4 warnings, the 5th locks; then even the right PIN waits.
+  const pinBox = child.getByRole("region", { name: /^PIN của/ }); // (Next.js also has a role=alert announcer)
+  await child.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(child).toHaveURL(/\/login$/);
+  for (let n = 1; n <= 4; n++) {
+    await child.getByLabel("Nhập PIN 6 số").fill(`00000${n}`);
+    await expect(pinBox.getByRole("alert")).toContainText(`Còn ${5 - n} lần thử`);
+  }
+  await child.getByLabel("Nhập PIN 6 số").fill("000005");
+  await expect(pinBox.getByRole("alert")).toContainText("Đợi 15 phút");
+  await child.getByLabel("Nhập PIN 6 số").fill("482916");
+  await expect(pinBox.getByRole("alert")).toContainText("đang bị khóa");
+  await expect(child).toHaveURL(/\/login$/);
+  await childCtx.close();
+
+  // A browser that was never used by the child cannot use the PIN at all.
+  await admin().from("profiles").update({ pin_failed_count: 0, pin_locked_until: null }).eq("id", childId);
+  const strangerCtx = await browser.newContext();
+  const stranger = await strangerCtx.newPage();
+  await stranger.goto("/login");
+  await expect(stranger.getByLabel("Email")).toBeVisible(); // no PIN screen
+  const res = await stranger.evaluate(async (id) => (await fetch("/api/pin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId: id, pin: "482916" }) })).status, childId);
+  expect(res).toBe(403);
+  await strangerCtx.close();
+
+  const { data: logs } = await admin().from("audit_log").select("action").in("action", ["child.pin_set", "pin.login", "pin.login_failed"]);
+  expect(logs?.some((l) => l.action === "pin.login")).toBe(true);
+  expect(logs?.filter((l) => l.action === "pin.login_failed").length).toBe(5);
+});

@@ -1,4 +1,5 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AddChildForm } from "../add-child-form";
 import { ChildEdit } from "../child-edit";
 import { ParentHeader } from "../parent-header";
@@ -9,6 +10,20 @@ export const dynamic = "force-dynamic";
 export default async function ChildrenPage() {
   const { db } = await requireParentPage();
   const children = await loadChildren(db);
+  // Whether a PIN is set (the hash column is server-only; only a yes/no leaves the server).
+  // The ids come from the parent's own session (RLS), so only this family's children.
+  const pinSet = new Set<string>();
+  if (children.length > 0) {
+    const { data } = await createAdminClient()
+      .from("profiles")
+      .select("id")
+      .in(
+        "id",
+        children.map((c) => c.id),
+      )
+      .not("pin_hash", "is", null);
+    for (const r of data ?? []) pinSet.add(r.id as string);
+  }
 
   return (
     <>
@@ -29,7 +44,7 @@ export default async function ChildrenPage() {
                       {c.grade ? <span className="text-sm text-ink/60">lớp {c.grade}</span> : null}
                       <span className="ml-auto text-sm font-semibold text-accent">Sửa</span>
                     </summary>
-                    <ChildEdit child={{ id: c.id, displayName: c.display_name, grade: c.grade, color: c.color }} />
+                    <ChildEdit child={{ id: c.id, displayName: c.display_name, grade: c.grade, color: c.color }} pinSet={pinSet.has(c.id)} />
                   </details>
                 </li>
               ))}
