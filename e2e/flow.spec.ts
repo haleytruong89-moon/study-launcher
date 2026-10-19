@@ -88,6 +88,8 @@ test("setup cannot run a second time for someone else", async ({ page }) => {
 test("parent creates a child account and sees the credentials once", async ({ page }) => {
   await login(page, env.parentEmail, env.parentPassword);
   await expect(page).toHaveURL(/\/parent$/);
+  await page.getByRole("link", { name: "Tạo tài khoản cho con" }).click();
+  await expect(page).toHaveURL(/\/parent\/children$/);
   await page.getByLabel("Tên hiển thị").fill("Hạnh Nguyên");
   await page.getByLabel("Lớp").fill("9");
   await page.getByRole("button", { name: "Tạo tài khoản" }).click();
@@ -99,12 +101,12 @@ test("parent creates a child account and sees the credentials once", async ({ pa
   expect(childEmail).toMatch(/^hanh-nguyen-[0-9a-f]{6}@/);
   expect(childPassword.length).toBeGreaterThanOrEqual(24);
 
-  // The home page now shows the child's day; accounts live under Thêm › Các con.
   await page.reload();
-  await expect(page.getByRole("region", { name: "Hạnh Nguyên" })).toBeVisible();
-  await page.goto("/parent/children");
   await expect(page.getByRole("listitem").filter({ hasText: "Hạnh Nguyên" })).toHaveCount(1);
   await expect(page.getByText(childPassword)).toHaveCount(0); // never shown again
+  // The home page now shows the child's day.
+  await page.goto("/parent");
+  await expect(page.getByRole("region", { name: "Hạnh Nguyên" })).toBeVisible();
 });
 
 test("the child can log in, sees their name, and cannot reach the parent page", async ({ page }) => {

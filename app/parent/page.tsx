@@ -3,7 +3,6 @@ import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { loadChildrenToday, type ChildToday } from "@/lib/parent/load";
 import { localDate } from "@/lib/time";
 import { longDate, vnTime } from "@/lib/today/view";
-import { AddChildForm } from "./add-child-form";
 import { OverrideSheet } from "./override-sheet";
 import { ParentHeader } from "./parent-header";
 import { RefreshEvery } from "./refresh-every";
@@ -24,8 +23,10 @@ export default async function ParentHome() {
         <ParentHeader title={`Xin chào ${me.profile.display_name}`} current="/parent" />
         <main className="mx-auto flex max-w-lg flex-col gap-3 px-4 py-6">
           <p className="text-sm text-ink/75">Bắt đầu bằng việc tạo tài khoản cho con.</p>
-          <h2 className="text-lg font-semibold">Thêm tài khoản con</h2>
-          <AddChildForm />
+          {/* The form lives on its own page: the credentials it shows once must survive the refresh. */}
+          <Link href="/parent/children" className="btn bg-accent text-white">
+            Tạo tài khoản cho con
+          </Link>
         </main>
       </>
     );
