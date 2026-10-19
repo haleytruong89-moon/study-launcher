@@ -532,7 +532,11 @@ test("S3a review: parent sees today's finished work with photos and minutes, and
   const notOk = homework.getByRole("button", { name: "Chưa đạt" });
   await notOk.click();
   await expect(notOk).toHaveAttribute("aria-pressed", "true");
-  await kid.getByRole("listitem", { name: "Luyện đề e2e" }).getByRole("button", { name: "Đạt", exact: true }).click();
+  const ok = kid.getByRole("listitem", { name: "Luyện đề e2e" }).getByRole("button", { name: "Đạt", exact: true });
+  await ok.click();
+  await expect(ok).toHaveAttribute("aria-pressed", "true");
+  // Saved on the server before reloading (the button flips at once, the request follows).
+  await expect.poll(async () => (await admin().from("task_runs").select("id").not("parent_verdict", "is", null)).data?.length ?? 0).toBe(2);
 
   await page.reload();
   const reloaded = page.getByRole("main", { name: "Ngày của Hạnh Nguyên A" });
