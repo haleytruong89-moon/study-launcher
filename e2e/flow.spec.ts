@@ -1018,16 +1018,17 @@ test("PIN: parent sets it; on the remembered laptop the child signs in with 6 di
   await expect(child).toHaveURL(/\/today$/);
 
   // Wrong PINs: 4 warnings, the 5th locks; then even the right PIN waits.
+  const pinBox = child.getByRole("region", { name: /^PIN của/ }); // (Next.js also has a role=alert announcer)
   await child.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(child).toHaveURL(/\/login$/);
   for (let n = 1; n <= 4; n++) {
     await child.getByLabel("Nhập PIN 6 số").fill(`00000${n}`);
-    await expect(child.getByRole("alert")).toContainText(`Còn ${5 - n} lần thử`);
+    await expect(pinBox.getByRole("alert")).toContainText(`Còn ${5 - n} lần thử`);
   }
   await child.getByLabel("Nhập PIN 6 số").fill("000005");
-  await expect(child.getByRole("alert")).toContainText("Đợi 15 phút");
+  await expect(pinBox.getByRole("alert")).toContainText("Đợi 15 phút");
   await child.getByLabel("Nhập PIN 6 số").fill("482916");
-  await expect(child.getByRole("alert")).toContainText("đang bị khóa");
+  await expect(pinBox.getByRole("alert")).toContainText("đang bị khóa");
   await expect(child).toHaveURL(/\/login$/);
   await childCtx.close();
 
