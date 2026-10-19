@@ -99,7 +99,10 @@ test("parent creates a child account and sees the credentials once", async ({ pa
   expect(childEmail).toMatch(/^hanh-nguyen-[0-9a-f]{6}@/);
   expect(childPassword.length).toBeGreaterThanOrEqual(24);
 
+  // The home page now shows the child's day; accounts live under Thêm › Các con.
   await page.reload();
+  await expect(page.getByRole("region", { name: "Hạnh Nguyên" })).toBeVisible();
+  await page.goto("/parent/children");
   await expect(page.getByRole("listitem").filter({ hasText: "Hạnh Nguyên" })).toHaveCount(1);
   await expect(page.getByText(childPassword)).toHaveCount(0); // never shown again
 });
@@ -354,6 +357,7 @@ test("S1 homework: parent removes an item; it is archived, not deleted", async (
 test("S1 children: parent renames a child and resets the password; the old password stops working", async ({ page }) => {
   await login(page, env.parentEmail, env.parentPassword);
   await expect(page).toHaveURL(/\/parent$/);
+  await page.goto("/parent/children");
   const item = page.getByRole("listitem").filter({ hasText: "Hạnh Nguyên" });
   await item.getByText("Sửa").click();
   await item.getByLabel("Tên của con").fill("Hạnh Nguyên A");
@@ -514,8 +518,8 @@ test("S2b today: the child cannot change the day directly, and parents have no /
 test("S3a review: parent sees today's finished work with photos and minutes, and marks it", async ({ page }) => {
   await login(page, env.parentEmail, env.parentPassword);
   await page.goto("/parent/review");
-  const kid = page.getByRole("region", { name: "Xem gộp · Hạnh Nguyên A" });
-  await expect(kid).toContainText("3 việc xong");
+  const kid = page.getByRole("main", { name: "Ngày của Hạnh Nguyên A" });
+  await expect(kid).toContainText("Chờ bố mẹ xem (3)");
   // (No assertion on "ngày đạt": it depends on the bedtime vs the CI clock.)
 
   const homework = kid.getByRole("listitem", { name: "Ngữ văn · bài trên lớp" });
@@ -529,7 +533,9 @@ test("S3a review: parent sees today's finished work with photos and minutes, and
   await kid.getByRole("listitem", { name: "Luyện đề e2e" }).getByRole("button", { name: "Đạt", exact: true }).click();
 
   await page.reload();
-  await expect(page.getByRole("region", { name: "Xem gộp · Hạnh Nguyên A" }).getByRole("listitem", { name: "Ngữ văn · bài trên lớp" }).getByRole("button", { name: "Chưa đạt" })).toHaveAttribute("aria-pressed", "true");
+  const reloaded = page.getByRole("main", { name: "Ngày của Hạnh Nguyên A" });
+  await expect(reloaded).toContainText("Chờ bố mẹ xem (1)"); // the two marked ones moved to "Đã xem"
+  await expect(reloaded.getByRole("listitem", { name: "Ngữ văn · bài trên lớp" }).getByRole("button", { name: "Chưa đạt" })).toHaveAttribute("aria-pressed", "true");
 
   const { data: verdicts } = await admin().from("task_runs").select("parent_verdict, verdict_at").not("parent_verdict", "is", null);
   expect(verdicts?.map((v) => v.parent_verdict).sort()).toEqual(["not_ok", "ok"]);
@@ -750,13 +756,18 @@ test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Mo
 // ---------------------------------------------------------------------------
 
 test("S3c: the parent locks, then clears; the child's day follows (server clock, logged)", async ({ page, browser }) => {
-  page.on("dialog", (d) => void d.accept());
   await login(page, env.parentEmail, env.parentPassword);
-  await page.goto("/parent/control");
+  await page.goto("/parent/control"); // old link: now the home page, one sheet per child
+  await expect(page).toHaveURL(/\/parent$/);
   const card = page.getByRole("region", { name: /^Hạnh Nguyên/ });
-  await card.getByRole("button", { name: "Khóa 30 phút" }).click();
+  await card.getByRole("button", { name: "Mở / khóa máy" }).click();
+  const sheet = page.getByRole("dialog", { name: /^Máy của Hạnh Nguyên/ });
+  await sheet.getByRole("radio", { name: /Khóa lại/ }).click();
+  await sheet.getByLabel("30 phút").check();
+  await sheet.getByRole("button", { name: /^Khóa máy của Hạnh Nguyên.* 30 phút$/ }).click();
+  await expect(sheet).toBeHidden();
   await expect(card.getByRole("status")).toContainText("Đã gửi");
-  await expect(card.getByLabel(/^Trạng thái của/)).toContainText("Bố mẹ đang khóa máy");
+  await expect(card).toContainText("Bố mẹ đang khóa máy");
 
   const childCtx = await browser.newContext();
   const child = await childCtx.newPage();
@@ -764,8 +775,10 @@ test("S3c: the parent locks, then clears; the child's day follows (server clock,
   const status = async () => child.evaluate(async () => ((await (await fetch("/api/today")).json()) as { state: { status: string } }).state.status);
   expect(await status()).toBe("LOCK_OVERRIDE");
 
-  await card.getByRole("button", { name: "Về bình thường" }).click();
-  await expect(card.getByLabel(/^Trạng thái của/)).not.toContainText("Bố mẹ đang khóa máy");
+  await card.getByRole("button", { name: "Mở / khóa máy" }).click();
+  await sheet.getByRole("button", { name: /^Về bình thường/ }).click();
+  await expect(sheet).toBeHidden();
+  await expect(card).not.toContainText("Bố mẹ đang khóa máy");
   expect(await status()).not.toMatch(/OVERRIDE/);
 
   // A child cannot create overrides, neither through the API nor directly.
