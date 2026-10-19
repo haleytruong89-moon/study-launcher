@@ -24,6 +24,20 @@ export interface TaskCtx {
   onFocus: () => void;
   /** Run ids a parent has looked at ("Bố mẹ đã xem ✓"). */
   reviewed: ReadonlySet<string>;
+  /** Run ids waiting for "Nhờ bố mẹ xem trực tiếp". */
+  asked: ReadonlySet<string>;
+}
+
+const isAsked = (item: TaskView, ctx: TaskCtx) => item.state === "running" && !!item.runId && ctx.asked.has(item.runId);
+/** Photos already sent but not finished yet (e.g. the connection dropped): offer "Xong". */
+const canFinishWithPhotos = (item: TaskView) => item.state === "running" && item.requiresProof && item.proofCount > 0;
+
+function FinishButton({ item, ctx, className, style }: { item: TaskView; ctx: TaskCtx; className: string; style?: React.CSSProperties }) {
+  return (
+    <button type="button" disabled={!!ctx.busy} onClick={() => void ctx.onAct({ url: "/api/tasks/finish", body: { runId: item.runId } })} className={className} style={style}>
+      Xong · đã gửi {item.proofCount} ảnh
+    </button>
+  );
 }
 
 const TONE = {
@@ -153,7 +167,12 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
             Xong rồi · nộp ảnh
           </button>
         )}
-        {running && item.requiresProof && <ProofButton item={item} ctx={ctx} />}
+        {isAsked(item, ctx) && <span className="rounded-full bg-[#FBE9D3] px-3 py-2 text-[13px] font-bold text-[#6B3A0A]">Đang chờ bố mẹ xem…</span>}
+        {canFinishWithPhotos(item) ? (
+          <FinishButton item={item} ctx={ctx} className="min-h-11 rounded-full bg-ink px-4 text-sm font-bold text-white disabled:opacity-50" />
+        ) : (
+          running && item.requiresProof && <ProofButton item={item} ctx={ctx} />
+        )}
         {running && (
           <button type="button" onClick={ctx.onFocus} className="min-h-11 rounded-full px-4 text-sm font-bold text-white" style={{ background: ctx.color }}>
             Đang làm · mở
@@ -223,9 +242,14 @@ export function NextTask({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
         </div>
       ) : item.requiresProof ? (
         <div className="flex flex-col gap-2">
-          <button type="button" disabled={!!ctx.busy} onClick={() => ctx.onProofOpen(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }}>
-            Nộp ảnh bài
-          </button>
+          {isAsked(item, ctx) && <p className="rounded-xl bg-[#FBE9D3] px-3 py-2 text-sm font-semibold text-[#6B3A0A]">Đã nhờ bố mẹ xem. Bố mẹ bấm xác nhận là bài này xong.</p>}
+          {canFinishWithPhotos(item) ? (
+            <FinishButton item={item} ctx={ctx} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }} />
+          ) : (
+            <button type="button" disabled={!!ctx.busy} onClick={() => ctx.onProofOpen(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }}>
+              Nộp ảnh bài
+            </button>
+          )}
           <button type="button" onClick={ctx.onFocus} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold">
             Mở màn tập trung
           </button>
@@ -305,7 +329,12 @@ export function FocusView({ item, ctx, dark, onClose }: { item: TaskView; ctx: T
             Mở app ↗
           </a>
         )}
-        {item.requiresProof ? (
+        {item.requiresProof && isAsked(item, ctx) && (
+          <p className="rounded-2xl bg-white/10 px-4 py-3 text-center text-[15px]">Đã nhờ bố mẹ xem. Bố mẹ bấm xác nhận là bài này xong.</p>
+        )}
+        {item.requiresProof && canFinishWithPhotos(item) ? (
+          <FinishButton item={item} ctx={ctx} className="min-h-14 rounded-2xl text-[17px] font-bold disabled:opacity-60" style={{ background: "#FFFFFF", color: dark }} />
+        ) : item.requiresProof ? (
           <ProofButton item={item} ctx={ctx} big />
         ) : (
           <button

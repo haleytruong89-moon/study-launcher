@@ -148,7 +148,8 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
     setError(null);
     try {
       for (const [n, file] of files.entries()) {
-        setSending(`Đang gửi ảnh ${n + 1}/${files.length}…`);
+        const last = n === files.length - 1;
+        setSending(last ? `Đang gửi ảnh ${n + 1}/${files.length} và đánh dấu xong…` : `Đang gửi ảnh ${n + 1}/${files.length}…`);
         const blob = await compressImage(file);
         const path = `${child.familyId}/${child.id}/${view.state.localDate}/${crypto.randomUUID()}.jpg`;
         const { error: upErr } = await createClient().storage.from("proofs").upload(path, blob, { contentType: "image/jpeg", upsert: false });
@@ -156,18 +157,19 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
         const res = await fetch("/api/tasks/proof", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ runId: item.runId, path }),
+          // The last photo also finishes the homework in the same request (no "photos sent but
+          // the clock still running" when the connection drops in between).
+          body: JSON.stringify({ runId: item.runId, path, finish: last }),
         });
         const data = (await res.json().catch(() => null)) as (TodayView & { error?: string }) | null;
         if (!res.ok || !data?.state) {
           setError(data?.error ?? "Không gửi được ảnh, thử lại.");
+          void refresh(); // show what did arrive (e.g. "Xong · đã gửi 1 ảnh")
           return false;
         }
         accept(data);
       }
-      setSending("Đang đánh dấu xong…");
-      setBusy(null);
-      return await act({ url: "/api/tasks/finish", body: { runId: item.runId } });
+      return true;
     } catch (e) {
       console.error("proof upload failed", e);
       setError("Không tải được ảnh lên. Kiểm tra mạng rồi thử lại.");
@@ -199,15 +201,18 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on the first view
   }, [view]);
 
-  // While the sheet shows the QR code, check often so the laptop sees the phone's photos.
+  // Check often while something is in progress, so a photo sent from the phone or a parent's
+  // confirmation shows here within seconds (the clock never keeps running after "done").
   const sheetOpen = !!proofKey && !!view?.state.part1.items.some((i) => i.key === proofKey && i.state === "running");
+  const anyRunning = !!view && [...view.state.part1.items, ...view.state.part2.items].some((i) => i.state === "running");
+  const fastMs = sheetOpen ? 4000 : anyRunning ? 10_000 : 0;
   useEffect(() => {
-    if (!sheetOpen) return;
+    if (!fastMs) return;
     const id = window.setInterval(() => {
       if (document.visibilityState === "visible") void refresh();
-    }, 4000);
+    }, fastMs);
     return () => window.clearInterval(id);
-  }, [sheetOpen, refresh]);
+  }, [fastMs, refresh]);
 
   const color = child.color ?? "#2b5d4f";
   if (!view) {
@@ -255,6 +260,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
     onDoneNow: (item) => void doneNow(item),
     onFocus: () => setMinimized(null),
     reviewed: new Set(view.reviewed ?? []),
+    asked: new Set(view.asked ?? []),
   };
   const firstName = child.name.trim().split(/\s+/).pop() ?? child.name;
 
@@ -284,6 +290,12 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
           sending={sending}
           error={error}
           onSend={(files) => proofAndFinish(proofItem, files)}
+          asked={!!proofItem.runId && (view.asked ?? []).includes(proofItem.runId)}
+          onAsk={async () => {
+            const ok = await act({ url: "/api/tasks/confirm-request", body: { runId: proofItem.runId } });
+            if (ok) setMinimized(proofItem.key);
+            return ok;
+          }}
           onClose={() => setProofKey(null)}
         />
       )}

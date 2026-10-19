@@ -32,6 +32,8 @@ export interface ChildOverview {
   upcomingMore: number;
   /** Finished today with photos the parent has not marked yet. */
   awaiting: number;
+  /** "Nhờ bố mẹ xem trực tiếp" waiting for a parent. */
+  asked: number;
 }
 
 export const UPCOMING_SHOWN = 3;
@@ -72,7 +74,7 @@ function taskMetaText(item: TaskView, today: string): string {
 }
 
 /** The tag on the right of a task row: words first, colour second. */
-export function taskTag(item: TaskView, verdict: Verdict, nowMs: number): { label: string; tone: Tone } {
+export function taskTag(item: TaskView, verdict: Verdict, nowMs: number, asked = false): { label: string; tone: Tone } {
   const star = item.early ? " ★" : "";
   if (item.state === "done") {
     if (verdict === "ok") return { label: `Đạt${star}`, tone: "ok" };
@@ -80,6 +82,7 @@ export function taskTag(item: TaskView, verdict: Verdict, nowMs: number): { labe
     if (item.proofCount > 0) return { label: `Chờ xem${star}`, tone: "wait" };
     return { label: `Xong${item.doneAt ? ` ${vnTime(item.doneAt)}` : ""}${star}`, tone: "ok" };
   }
+  if (item.state === "running" && asked) return { label: "Nhờ bố mẹ xem", tone: "wait" };
   if (item.state === "running" && item.startedAt) {
     const m = Math.max(0, Math.floor((nowMs - Date.parse(item.startedAt)) / 60_000));
     return { label: `Đang làm ${m}′`, tone: "run" };
@@ -114,14 +117,14 @@ export function machineText(state: Pick<DayState, "open" | "openUntil">): string
   return `Máy: mở mọi trang${state.openUntil ? ` đến ${vnTime(state.openUntil)}` : ""}`;
 }
 
-export function childOverview(state: DayState, verdicts: ReadonlyMap<string, Verdict>, now: Date): ChildOverview {
+export function childOverview(state: DayState, verdicts: ReadonlyMap<string, Verdict>, now: Date, asked: ReadonlySet<string> = new Set()): ChildOverview {
   const today = state.localDate;
   const nowMs = now.getTime();
   const row = (i: TaskView): TaskRow => ({
     key: i.key,
     title: taskTitle(i),
     meta: taskMetaText(i, today),
-    tag: taskTag(i, i.runId ? (verdicts.get(i.runId) ?? null) : null, nowMs),
+    tag: taskTag(i, i.runId ? (verdicts.get(i.runId) ?? null) : null, nowMs, !!i.runId && asked.has(i.runId)),
   });
   const items = [...state.part1.items, ...state.part2.items].filter((i) => !i.placeholder);
   const isOverdue = (i: TaskView) => i.overdue && i.state !== "done";
@@ -147,6 +150,7 @@ export function childOverview(state: DayState, verdicts: ReadonlyMap<string, Ver
     today: todayItems.map(row),
     upcoming: upcomingAll.slice(0, UPCOMING_SHOWN).map(row),
     upcomingMore: Math.max(0, upcomingAll.length - UPCOMING_SHOWN),
+    asked: items.filter((i) => i.state === "running" && !!i.runId && asked.has(i.runId)).length,
     awaiting: items.filter((i) => i.state === "done" && i.proofCount > 0 && i.runId && (verdicts.get(i.runId) ?? null) === null).length,
   };
 }

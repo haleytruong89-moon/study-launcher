@@ -38,6 +38,8 @@ export interface TodayView {
   rules: TodayRules;
   /** Today's runs a parent has looked at ("Bố mẹ đã xem ✓"; the verdict itself is not shown). */
   reviewed: string[];
+  /** Running homework the child asked a parent to look at ("Nhờ bố mẹ xem trực tiếp"). */
+  asked: string[];
 }
 
 export interface TodayRules {
@@ -139,8 +141,14 @@ export async function todayView(ctx: ChildContext, now = new Date()): Promise<To
   for (const i of state.part1.items) if (i.source === "homework") files[i.id] = attachmentViews(homeworkPhotos[i.id] ?? []);
   const first = await ctx.db.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date").limit(1).maybeSingle();
   const firstDay = (first.data?.local_date as string | undefined) ?? state.localDate;
-  const [plan, icon, weekly, reviewed] = await Promise.all([readPlan(ctx, state.localDate), readIcon(ctx), readWeekly(ctx, now, bedtime), readReviewed(ctx, state.localDate)]);
-  return { state, homeworkFiles: files, rules, firstDay, plan, icon, weekly, reviewed };
+  const [plan, icon, weekly, reviewed, asked] = await Promise.all([
+    readPlan(ctx, state.localDate),
+    readIcon(ctx),
+    readWeekly(ctx, now, bedtime),
+    readReviewed(ctx, state.localDate),
+    readAsked(ctx, state.localDate),
+  ]);
+  return { state, homeworkFiles: files, rules, firstDay, plan, icon, weekly, reviewed, asked };
 }
 
 // S2e extras are display only: if one cannot be read (e.g. a preview before migration
@@ -155,6 +163,18 @@ async function readPlan(ctx: ChildContext, date: string): Promise<string[] | nul
 async function readReviewed(ctx: ChildContext, date: string): Promise<string[]> {
   const { data, error } = await ctx.db.from("task_runs").select("id").eq("child_id", ctx.childId).eq("local_date", date).not("parent_verdict", "is", null);
   if (error || !data) return [];
+  return data.map((r) => r.id as string);
+}
+
+async function readAsked(ctx: ChildContext, date: string): Promise<string[]> {
+  const { data, error } = await ctx.db
+    .from("task_runs")
+    .select("id")
+    .eq("child_id", ctx.childId)
+    .eq("local_date", date)
+    .not("confirm_requested_at", "is", null)
+    .is("done_at", null);
+  if (error || !data) return []; // before migration 0006: no requests
   return data.map((r) => r.id as string);
 }
 

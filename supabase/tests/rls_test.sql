@@ -417,6 +417,19 @@ update public.profiles set pin_locked_until = now() - interval '1 second' where 
 set role service_role;
 select test_helpers.expect_count('lock over: count starts again', (select public.child_pin_try('00000000-0000-0000-0000-0000000000c1')), 1);
 
+-- 0006: parent confirmation columns: the child can read but never set them ----------
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child can read confirm columns', (select count(*) from (select confirm_requested_at, confirmed_by, confirmed_at from public.task_runs limit 1) t) * 0 + 1, 1);
+do $$
+begin
+  update public.task_runs set confirmed_at = now(), done_at = now();
+  if found then raise exception 'FAIL: child confirmed own run'; end if;
+  raise notice 'ok: child cannot confirm own run (0 rows)';
+end $$;
+reset role;
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

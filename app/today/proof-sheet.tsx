@@ -27,6 +27,8 @@ export function ProofSheet({
   sending,
   error,
   onSend,
+  onAsk,
+  asked,
   onClose,
 }: {
   item: TaskView;
@@ -37,6 +39,10 @@ export function ProofSheet({
   sending: string | null;
   error: string | null;
   onSend: (files: File[]) => Promise<boolean>;
+  /** "Nhờ bố mẹ xem trực tiếp" (no photo possible); true when sent. */
+  onAsk: () => Promise<boolean>;
+  /** Already asked: show it instead of the button. */
+  asked: boolean;
   onClose: () => void;
 }) {
   const laptop = useSyncExternalStore(noop, isLaptop, () => false);
@@ -172,6 +178,26 @@ export function ProofSheet({
         >
           {sending ?? (picked.length === 0 ? "Chọn ít nhất 1 ảnh" : `Nộp ${picked.length} ảnh và xong`)}
         </button>
+
+        <div className="flex flex-col gap-1.5 border-t border-ink/10 pt-3">
+          {asked ? (
+            <p role="status" className="rounded-xl bg-[#FBE9D3] px-3 py-2 text-sm font-semibold text-[#6B3A0A]">
+              Đã nhờ bố mẹ xem. Bố mẹ bấm xác nhận trên điện thoại là bài này xong.
+            </p>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                if (await onAsk()) onClose();
+              }}
+              className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50"
+            >
+              Không chụp được? Nhờ bố mẹ xem trực tiếp
+            </button>
+          )}
+          <span className="text-xs text-ink/65">Bố mẹ ở gần thì đưa vở cho bố mẹ xem; bố mẹ bấm xác nhận trên điện thoại.</span>
+        </div>
       </section>
     </div>
   );

@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { decideProof, isProofPath } from "@/lib/today/rules";
+import { writeFinish } from "@/lib/today/finish";
+import { decideFinish, decideProof, isProofPath } from "@/lib/today/rules";
 import { jsonError, readToday, requireChild, serverError, todayView } from "@/lib/today/service";
 
-const bodySchema = z.object({ runId: z.uuid(), path: z.string().max(300) });
+const bodySchema = z.object({ runId: z.uuid(), path: z.string().max(300), finish: z.boolean().optional() });
 
 /**
  * Records a proof photo the child's browser already uploaded to
  * proofs/{family_id}/{child_id}/{local_date}/{uuid}.jpg (storage RLS: own folder only).
+ * `finish: true` (the last photo) also finishes the homework in the SAME request, so a lost
+ * connection can no longer leave "photos sent but the clock still running".
  */
 export async function POST(request: Request) {
   const guard = await requireChild();
@@ -52,6 +55,13 @@ export async function POST(request: Request) {
     const { error } = await admin.from("task_runs").update({ proof_paths: paths }).eq("id", parsed.data.runId).eq("child_id", ctx.childId);
     if (error) throw new Error(error.message);
 
+    if (parsed.data.finish) {
+      const now = new Date();
+      const { state: after } = await readToday(ctx, now);
+      const done = decideFinish(after, parsed.data.runId, now);
+      if (!done.ok) return jsonError(done.error, done.status);
+      await writeFinish(ctx.childId, done.value.item, parsed.data.runId, now);
+    }
     return NextResponse.json(await todayView(ctx));
   } catch (e) {
     return serverError("tasks.proof", e);
