@@ -18,11 +18,14 @@ export function LoginForm({ next = null }: { next?: string | null }) {
       email: String(form.get("email") ?? ""),
       password: String(form.get("password") ?? ""),
     });
-    setBusy(false);
     if (signInError) {
+      setBusy(false);
       setError("Email hoặc mật khẩu chưa đúng.");
       return;
     }
+    // A child's browser is remembered so the next sign-in can use the PIN (parents: no-op).
+    await fetch("/api/pin/remember", { method: "POST" }).catch(() => null);
+    setBusy(false);
     router.replace(next ?? "/");
     router.refresh();
   }

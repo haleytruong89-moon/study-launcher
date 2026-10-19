@@ -370,6 +370,53 @@ select test_helpers.expect_count('homework bucket accepts PDF/Word/Excel',
 select test_helpers.expect_count('proofs bucket stays photos only',
   (select count(*) from storage.buckets where id = 'proofs' and 'application/pdf' = any(allowed_mime_types)), 0);
 
+-- 0005: PIN login (server-only table + atomic tries) -----------------------------
+reset role;
+insert into public.pin_devices (family_id, child_id, token_hash)
+values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'hash-c1');
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  begin
+    perform 1 from public.pin_devices;
+    raise exception 'FAIL: child read pin_devices';
+  exception when insufficient_privilege then raise notice 'ok: child cannot read pin_devices';
+  end;
+  begin
+    perform public.child_pin_try('00000000-0000-0000-0000-0000000000c1');
+    raise exception 'FAIL: child called child_pin_try';
+  exception when insufficient_privilege then raise notice 'ok: child cannot call child_pin_try';
+  end;
+end $$;
+reset role;
+set role anon;
+do $$
+begin
+  begin
+    perform 1 from public.pin_devices;
+    raise exception 'FAIL: anon read pin_devices';
+  exception when insufficient_privilege then raise notice 'ok: anon cannot read pin_devices';
+  end;
+end $$;
+reset role;
+update public.profiles set pin_hash = 'scrypt$x$y', pin_failed_count = 0, pin_locked_until = null
+ where id = '00000000-0000-0000-0000-0000000000c1';
+set role service_role;
+select test_helpers.expect_count('PIN try 1', (select public.child_pin_try('00000000-0000-0000-0000-0000000000c1')), 1);
+select public.child_pin_try('00000000-0000-0000-0000-0000000000c1');
+select public.child_pin_try('00000000-0000-0000-0000-0000000000c1');
+select public.child_pin_try('00000000-0000-0000-0000-0000000000c1');
+select test_helpers.expect_count('PIN try 5 still allowed', (select public.child_pin_try('00000000-0000-0000-0000-0000000000c1')), 5);
+select test_helpers.expect_count('PIN locked after 5 tries', (select count(*) from public.child_pin_try('00000000-0000-0000-0000-0000000000c1') t where t is not null), 0);
+select test_helpers.expect_count('PIN lock lasts ~15 minutes',
+  (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1' and pin_locked_until > now() + interval '14 minutes'), 1);
+select test_helpers.expect_count('a parent profile never gets PIN tries', (select count(*) from public.child_pin_try('00000000-0000-0000-0000-0000000000a1') t where t is not null), 0);
+reset role;
+update public.profiles set pin_locked_until = now() - interval '1 second' where id = '00000000-0000-0000-0000-0000000000c1';
+set role service_role;
+select test_helpers.expect_count('lock over: count starts again', (select public.child_pin_try('00000000-0000-0000-0000-0000000000c1')), 1);
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

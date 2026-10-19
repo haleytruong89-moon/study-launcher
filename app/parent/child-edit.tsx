@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { sendJson } from "@/lib/api-client";
 import { CHILD_COLORS } from "@/lib/childColors";
+import { PinForm } from "./pin-form";
 
 interface Child {
   id: string;
@@ -13,7 +14,7 @@ interface Child {
 }
 
 /** Edit a child's name / grade / colour, and reset the password (shown once). */
-export function ChildEdit({ child }: { child: Child }) {
+export function ChildEdit({ child, pinSet = false }: { child: Child; pinSet?: boolean }) {
   const router = useRouter();
   const [name, setName] = useState(child.displayName);
   const [grade, setGrade] = useState(String(child.grade ?? ""));
@@ -86,6 +87,8 @@ export function ChildEdit({ child }: { child: Child }) {
       <button type="button" disabled={busy} onClick={resetPassword} className="btn border border-ink/25 bg-white disabled:opacity-60">
         Đặt lại mật khẩu
       </button>
+
+      <PinForm childId={child.id} name={child.displayName} pinSet={pinSet} />
 
       {error && (
         <p role="alert" className="text-sm font-medium text-red-700">

@@ -81,6 +81,11 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
     }
   }, [accept, router]);
 
+  // Remember this browser for the PIN sign-in (once per page load; best effort).
+  useEffect(() => {
+    void fetch("/api/pin/remember", { method: "POST" }).catch(() => null);
+  }, []);
+
   // Poll every 30 s while visible, and right away when the tab comes back (DESIGN section 6).
   useEffect(() => {
     const onVisible = () => {
