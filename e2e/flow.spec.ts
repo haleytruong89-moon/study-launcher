@@ -442,14 +442,26 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const early = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
   expect(early).toBe(409);
 
-  // Homework: start (focus mode opens), then the proof photo finishes it.
+  // Homework: start (focus mode opens), then "Nộp ảnh bài": 2 photos, one is removed, then send.
   const homework = page.getByRole("listitem", { name: "Ngữ văn" });
   const focus = page.getByRole("dialog", { name: "Đang tập trung" });
   await homework.getByRole("button", { name: "Bắt đầu" }).click();
   await expect(focus).toBeVisible();
-  await focus.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1800, 2400) });
+  await focus.getByRole("button", { name: "Nộp ảnh bài" }).click();
+  const sheet = page.getByRole("dialog", { name: "Nộp ảnh bài Ngữ văn" });
+  await expect(sheet.getByRole("img", { name: "Mã QR mở bài này trên điện thoại" })).toBeVisible(); // laptop: phone QR
+  await sheet.locator('input[type="file"]').setInputFiles([
+    { name: "vo-1.png", mimeType: "image/png", buffer: makePng(1800, 2400) },
+    { name: "vo-2.png", mimeType: "image/png", buffer: makePng(1800, 2400) },
+    { name: "mo.png", mimeType: "image/png", buffer: makePng(600, 800) },
+  ]);
+  await sheet.getByRole("button", { name: "Bỏ ảnh 3" }).click();
+  await sheet.getByRole("button", { name: "Nộp 2 ảnh và xong" }).click();
   await expect(homework.getByText("✓ Xong")).toBeVisible();
+  await expect(sheet).toHaveCount(0);
   await expect(focus).toHaveCount(0);
+  const { data: twoPhotos } = await admin().from("task_runs").select("proof_paths").eq("source", "homework").not("done_at", "is", null).single();
+  expect(twoPhotos?.proof_paths).toHaveLength(2);
 
   // Supplementary task: 20 minutes minimum on the SERVER clock.
   const extra = page.getByRole("listitem", { name: "Luyện đề e2e" });
@@ -569,6 +581,9 @@ test("S3a review: a child cannot mark verdicts", async ({ page }) => {
   expect(status).toBe(403);
   await page.goto("/parent/review");
   await expect(page).toHaveURL(/\/today$/);
+  // The child sees that a parent looked at the work, never the verdict itself.
+  await expect(page.getByText("Bố mẹ đã xem ✓").first()).toBeVisible();
+  await expect(page.getByText("Chưa đạt")).toHaveCount(0);
 });
 
 test("readiness now also reports the family as created", async ({ request }) => {
@@ -666,9 +681,18 @@ test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, an
   expect((await page.request.get(foreign)).status()).toBe(404);
 
   await expect(item.getByText(/★ nếu xong đến hết/)).toBeVisible();
-  await item.getByRole("button", { name: "Làm trước" }).click();
-  await page.getByRole("dialog", { name: "Đang tập trung" }).locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
-  await expect(item.getByText("✓ Xong · ★ sớm")).toBeVisible();
+  await expect(item.getByRole("button", { name: "Xong rồi · nộp ảnh" })).toBeVisible();
+  // The laptop's QR code opens /today?nop=<id> on the phone: the sheet opens straight away,
+  // without the focus screen (the homework was done in the notebook).
+  const { data: english } = await admin().from("homework_items").select("id").eq("subject", "Tiếng Anh").single();
+  await page.goto(`/today?nop=${english?.id ?? ""}`);
+  const sheet = page.getByRole("dialog", { name: "Nộp ảnh bài Tiếng Anh" });
+  await expect(sheet).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Đang tập trung" })).toHaveCount(0);
+  await sheet.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
+  await sheet.getByRole("button", { name: "Nộp 1 ảnh và xong" }).click();
+  await expect(page.getByRole("listitem", { name: "Tiếng Anh" }).getByText("✓ Xong · ★ sớm")).toBeVisible();
+  await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByText("Tuần này làm sớm 1 bài")).toBeVisible();
 });
 
