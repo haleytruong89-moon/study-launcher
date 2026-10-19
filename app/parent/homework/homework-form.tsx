@@ -69,6 +69,8 @@ export function HomeworkForm({
   kids,
   edit,
   onDone,
+  defaultKidId,
+  onCreated,
 }: {
   familyId: string;
   today: string;
@@ -76,9 +78,13 @@ export function HomeworkForm({
   kids: Kid[];
   edit?: EditItem;
   onDone?: () => void;
+  /** New item: the child chosen first (the page's filter). */
+  defaultKidId?: string;
+  /** New item: called with the confirmation instead of showing it in the form (the sheet closes). */
+  onCreated?: (message: string) => void;
 }) {
   const router = useRouter();
-  const [kidId, setKidId] = useState(edit?.childId ?? kids[0]?.id ?? "");
+  const [kidId, setKidId] = useState(edit?.childId ?? (kids.some((k) => k.id === defaultKidId) ? defaultKidId : undefined) ?? kids[0]?.id ?? "");
   const known = edit ? (SUBJECTS as readonly string[]).includes(edit.subject) : true;
   const [subject, setSubject] = useState<string>(edit ? (known ? edit.subject : OTHER) : SUBJECTS[0]);
   const [otherSubject, setOtherSubject] = useState(edit && !known ? edit.subject : "");
@@ -202,10 +208,12 @@ export function HomeworkForm({
       onDone?.();
       return;
     }
-    setDone(`Đã giao ${subjectName} cho ${kid.name} · nộp ${dueDate === today ? "hôm nay" : shortDate(dueDate)}${photoPaths.length ? ` (${photoPaths.length} tệp)` : ""}`);
+    const message = `Đã giao ${subjectName} cho ${kid.name} · nộp ${dueDate === today ? "hôm nay" : shortDate(dueDate)}${photoPaths.length ? ` (${photoPaths.length} tệp)` : ""}`;
     files.forEach((f) => f.preview && URL.revokeObjectURL(f.preview));
     setFiles([]);
     setNote("");
+    if (onCreated) onCreated(message);
+    else setDone(message);
     router.refresh();
   }
 

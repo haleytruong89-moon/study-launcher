@@ -252,6 +252,7 @@ let homeworkId = "";
 test("S1 homework: parent assigns homework with a phone-sized photo; the photo is shrunk to <= 1600 px", async ({ page }) => {
   await login(page, env.parentEmail, env.parentPassword);
   await page.goto("/parent/homework");
+  await page.getByRole("button", { name: "Giao bài mới" }).click();
   const form = page.getByRole("form", { name: "Giao bài tập" });
   await expect(form.getByRole("button", { name: "Hạnh Nguyên", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(form.getByRole("button", { name: /Ngày mai/ })).toHaveAttribute("aria-pressed", "true");
@@ -259,10 +260,11 @@ test("S1 homework: parent assigns homework with a phone-sized photo; the photo i
   await expect(form.getByRole("img", { name: "Tệp 1" })).toBeVisible();
   await form.getByLabel("Ghi chú (tùy chọn)").fill("Làm bài 1-3 trang 45");
   await form.getByRole("button", { name: "Giao Toán cho Hạnh Nguyên" }).click();
-  await expect(form.getByRole("status")).toContainText("Đã giao Toán cho Hạnh Nguyên");
-  await expect(form.getByRole("status")).toContainText("(1 tệp)");
+  await expect(page.getByRole("dialog", { name: "Giao bài mới" })).toBeHidden(); // the sheet closes
+  await expect(page.getByRole("status")).toContainText("Đã giao Toán cho Hạnh Nguyên");
+  await expect(page.getByRole("status")).toContainText("(1 tệp)");
 
-  const list = page.getByRole("region", { name: "Bài đã giao · Hạnh Nguyên" });
+  const list = page.getByRole("region", { name: /^Đang chờ con làm/ });
   await expect(list.getByText("Làm bài 1-3 trang 45")).toBeVisible();
   const thumb = list.getByRole("img", { name: "Ảnh 1 bài Toán" });
   await expect(thumb).toBeVisible();
@@ -348,9 +350,9 @@ test("S1 homework: parent removes an item; it is archived, not deleted", async (
   await login(page, env.parentEmail, env.parentPassword);
   await page.goto("/parent/homework");
   page.on("dialog", (d) => void d.accept());
-  const list = page.getByRole("region", { name: "Bài đã giao · Hạnh Nguyên" });
+  const list = page.getByRole("region", { name: /^Đang chờ con làm/ });
   await list.getByRole("button", { name: /^Gỡ bài Toán/ }).click();
-  await expect(list.getByText("Chưa có bài nào.")).toBeVisible();
+  await expect(page.getByRole("region", { name: /^Đang chờ con làm/ }).getByText("Không có bài nào đang chờ.")).toBeVisible();
 
   const { data: hw } = await admin().from("homework_items").select("archived_at").eq("id", homeworkId).single();
   expect(hw?.archived_at).toBeTruthy();
@@ -590,6 +592,7 @@ test("S2c homework: parent attaches a PDF, then edits the deadline and note", as
   const in4 = addDays(today, 4);
   await login(page, env.parentEmail, env.parentPassword);
   await page.goto("/parent/homework");
+  await page.getByRole("button", { name: "Giao bài mới" }).click();
   const form = page.getByRole("form", { name: "Giao bài tập" });
   await form.getByRole("button", { name: "Tiếng Anh", exact: true }).click();
   await form.getByRole("button", { name: /Chọn ngày/ }).click();
@@ -600,9 +603,9 @@ test("S2c homework: parent attaches a PDF, then edits the deadline and note", as
   await form.getByLabel("Chụp ảnh / chọn tệp").setInputFiles({ name: "virus.exe", mimeType: "application/x-msdownload", buffer: Buffer.from("MZ") });
   await expect(form.getByRole("alert")).toContainText("không phải ảnh, PDF, Word hay Excel");
   await form.getByRole("button", { name: /^Giao Tiếng Anh cho/ }).click();
-  await expect(form.getByRole("status")).toContainText("(1 tệp)");
+  await expect(page.getByRole("status")).toContainText("(1 tệp)");
 
-  const list = page.getByRole("region", { name: /^Bài đã giao · Hạnh Nguyên/ });
+  const list = page.getByRole("region", { name: /^Đang chờ con làm/ });
   const label = `Tiếng Anh nộp ${in5.slice(8, 10)}/${in5.slice(5, 7)}`;
   const pdfLink = list.getByRole("link", { name: "PDF 1 ↗" });
   await expect(pdfLink).toBeVisible();
