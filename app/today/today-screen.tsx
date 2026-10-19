@@ -6,11 +6,12 @@ import type { TaskView } from "@/lib/dayState";
 import { compressImage } from "@/lib/images";
 import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
-import { passOffered, runningTimedTask } from "@/lib/today/rules";
+import { MAX_PROOFS, passOffered, runningTimedTask } from "@/lib/today/rules";
 import { bannerFor, clock, dayProgress, longDate, nextTask, shade, statusPill, stepIndex, upcomingHint, weekSummary } from "@/lib/today/view";
 import { SignOutButton } from "../sign-out-button";
 import { FocusView, NextTask, ProgressRing, TaskRow, WeekStrip, type Act, type TaskCtx } from "./today-parts";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
+import { ProofSheet } from "./proof-sheet";
 import { nextFromPlan, plannable, planProgress } from "@/lib/today/week";
 
 interface Child {
@@ -44,6 +45,9 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   // Focus mode opens for a running task unless the child minimised THAT task.
   const [minimized, setMinimized] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"plan" | "icon" | null>(null);
+  // "Nộp ảnh bài" sheet: the homework key it is open for, and upload progress.
+  const [proofKey, setProofKey] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
   // "Để sau" on the plan nudge: remembered for today on this laptop only (a convenience).
   const storedLater = useSyncExternalStore(subscribeStorage, readPlanLater, () => null);
   const [laterNow, setPlanLater] = useState<string | null>(null);
@@ -132,36 +136,73 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
     }
   }
 
-  /** Homework: photo of the finished work -> compress -> upload -> attach -> Xong. */
-  async function proofAndFinish(item: TaskView, file: File) {
-    if (!item.runId || !view) return;
+  /** Homework: photos of the finished work -> compress -> upload -> attach each -> Xong. */
+  async function proofAndFinish(item: TaskView, files: File[]): Promise<boolean> {
+    if (!item.runId || !view) return false;
     setBusy(`proof:${item.runId}`);
     setError(null);
     try {
-      const blob = await compressImage(file);
-      const path = `${child.familyId}/${child.id}/${view.state.localDate}/${crypto.randomUUID()}.jpg`;
-      const { error: upErr } = await createClient().storage.from("proofs").upload(path, blob, { contentType: "image/jpeg", upsert: false });
-      if (upErr) throw new Error(upErr.message);
-      const res = await fetch("/api/tasks/proof", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ runId: item.runId, path }),
-      });
-      const data = (await res.json().catch(() => null)) as (TodayView & { error?: string }) | null;
-      if (!res.ok || !data?.state) {
-        setError(data?.error ?? "Không gửi được ảnh, thử lại.");
-        return;
+      for (const [n, file] of files.entries()) {
+        setSending(`Đang gửi ảnh ${n + 1}/${files.length}…`);
+        const blob = await compressImage(file);
+        const path = `${child.familyId}/${child.id}/${view.state.localDate}/${crypto.randomUUID()}.jpg`;
+        const { error: upErr } = await createClient().storage.from("proofs").upload(path, blob, { contentType: "image/jpeg", upsert: false });
+        if (upErr) throw new Error(upErr.message);
+        const res = await fetch("/api/tasks/proof", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ runId: item.runId, path }),
+        });
+        const data = (await res.json().catch(() => null)) as (TodayView & { error?: string }) | null;
+        if (!res.ok || !data?.state) {
+          setError(data?.error ?? "Không gửi được ảnh, thử lại.");
+          return false;
+        }
+        accept(data);
       }
-      accept(data);
+      setSending("Đang đánh dấu xong…");
       setBusy(null);
-      await act({ url: "/api/tasks/finish", body: { runId: item.runId } });
+      return await act({ url: "/api/tasks/finish", body: { runId: item.runId } });
     } catch (e) {
       console.error("proof upload failed", e);
       setError("Không tải được ảnh lên. Kiểm tra mạng rồi thử lại.");
+      return false;
     } finally {
       setBusy(null);
+      setSending(null);
     }
   }
+
+  /** "Xong rồi · nộp ảnh": homework done in the notebook, start it quietly and open the sheet. */
+  async function doneNow(item: TaskView) {
+    setError(null);
+    setMinimized(item.key);
+    if (item.state === "todo" && !(await act({ url: "/api/tasks/start", body: { source: item.source, id: item.id } }))) return;
+    setProofKey(item.key);
+  }
+
+  // The QR code on the laptop opens /today?nop=<homework id> on the phone: open that sheet.
+  const nopHandled = useRef(false);
+  useEffect(() => {
+    if (nopHandled.current || !view) return;
+    nopHandled.current = true;
+    const id = new URLSearchParams(window.location.search).get("nop");
+    if (!id) return;
+    window.history.replaceState(null, "", "/today");
+    const item = view.state.part1.items.find((i) => i.source === "homework" && i.id === id);
+    if (item && item.state !== "done") window.setTimeout(() => void doneNow(item), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on the first view
+  }, [view]);
+
+  // While the sheet shows the QR code, check often so the laptop sees the phone's photos.
+  const sheetOpen = !!proofKey && !!view?.state.part1.items.some((i) => i.key === proofKey && i.state === "running");
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, [sheetOpen, refresh]);
 
   const color = child.color ?? "#2b5d4f";
   if (!view) {
@@ -191,6 +232,9 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const upcoming = s.part1.items.filter((i) => i.group === "upcoming");
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
   const focusItem = next?.state === "running" && minimized !== next.key ? next : null;
+  const proofItem = proofKey ? (s.part1.items.find((i) => i.key === proofKey) ?? null) : null;
+  // Finished (e.g. from the phone) or gone: the sheet closes by itself.
+  const proofOpen = proofItem !== null && proofItem.state === "running";
   const ctx: TaskCtx = {
     today: s.localDate,
     nowMs,
@@ -199,8 +243,13 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
     files: (item) => (item.source === "homework" ? (view.homeworkFiles[item.id] ?? []) : []),
     runningTimed: runningTimedTask(s),
     onAct: act,
-    onProof: proofAndFinish,
+    onProofOpen: (item) => {
+      setError(null);
+      setProofKey(item.key);
+    },
+    onDoneNow: (item) => void doneNow(item),
     onFocus: () => setMinimized(null),
+    reviewed: new Set(view.reviewed ?? []),
   };
   const firstName = child.name.trim().split(/\s+/).pop() ?? child.name;
 
@@ -221,6 +270,18 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
         <IconPicker current={view.icon} color={color} busy={!!busy} error={error} onPick={(icon) => act({ url: "/api/profile/icon", body: { icon } })} onClose={() => setDialog(null)} />
       )}
       {focusItem && <FocusView item={focusItem} ctx={ctx} dark={shade(color)} onClose={() => setMinimized(focusItem.key)} />}
+      {proofOpen && proofItem && (
+        <ProofSheet
+          key={proofItem.key}
+          item={proofItem}
+          color={color}
+          max={Math.max(0, MAX_PROOFS - proofItem.proofCount)}
+          sending={sending}
+          error={error}
+          onSend={(files) => proofAndFinish(proofItem, files)}
+          onClose={() => setProofKey(null)}
+        />
+      )}
 
       <header className="text-white" style={{ background: color }}>
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 pt-5 pb-4">
@@ -270,7 +331,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
 
       <main className="mx-auto grid max-w-5xl gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="flex min-w-0 flex-col gap-5">
-          {error && !dialog && (
+          {error && !dialog && !proofOpen && (
             <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
               {error}
             </p>

@@ -36,6 +36,8 @@ export interface TodayView {
   weekly: { stats: WeekStats; review: WeeklyReview | null } | null;
   /** Family rules the screen needs for its wording (minutes, thresholds). */
   rules: TodayRules;
+  /** Today's runs a parent has looked at ("Bố mẹ đã xem ✓"; the verdict itself is not shown). */
+  reviewed: string[];
 }
 
 export interface TodayRules {
@@ -137,8 +139,8 @@ export async function todayView(ctx: ChildContext, now = new Date()): Promise<To
   for (const i of state.part1.items) if (i.source === "homework") files[i.id] = attachmentViews(homeworkPhotos[i.id] ?? []);
   const first = await ctx.db.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date").limit(1).maybeSingle();
   const firstDay = (first.data?.local_date as string | undefined) ?? state.localDate;
-  const [plan, icon, weekly] = await Promise.all([readPlan(ctx, state.localDate), readIcon(ctx), readWeekly(ctx, now, bedtime)]);
-  return { state, homeworkFiles: files, rules, firstDay, plan, icon, weekly };
+  const [plan, icon, weekly, reviewed] = await Promise.all([readPlan(ctx, state.localDate), readIcon(ctx), readWeekly(ctx, now, bedtime), readReviewed(ctx, state.localDate)]);
+  return { state, homeworkFiles: files, rules, firstDay, plan, icon, weekly, reviewed };
 }
 
 // S2e extras are display only: if one cannot be read (e.g. a preview before migration
@@ -148,6 +150,12 @@ async function readPlan(ctx: ChildContext, date: string): Promise<string[] | nul
   const { data, error } = await ctx.db.from("day_plans").select("item_keys").eq("child_id", ctx.childId).eq("local_date", date).maybeSingle();
   if (error || !data) return null;
   return (data.item_keys as string[] | null)?.length ? (data.item_keys as string[]) : null;
+}
+
+async function readReviewed(ctx: ChildContext, date: string): Promise<string[]> {
+  const { data, error } = await ctx.db.from("task_runs").select("id").eq("child_id", ctx.childId).eq("local_date", date).not("parent_verdict", "is", null);
+  if (error || !data) return [];
+  return data.map((r) => r.id as string);
 }
 
 async function readIcon(ctx: ChildContext): Promise<string | null> {
