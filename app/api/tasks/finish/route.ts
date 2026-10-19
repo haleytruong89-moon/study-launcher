@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { writeFinish } from "@/lib/today/finish";
 import { decideFinish } from "@/lib/today/rules";
 import { jsonError, readToday, requireChild, serverError, todayView } from "@/lib/today/service";
 
@@ -24,25 +24,7 @@ export async function POST(request: Request) {
     if (!decision.ok) return jsonError(decision.error, decision.status);
     const { item } = decision.value;
 
-    const admin = createAdminClient();
-    const doneAt = now.toISOString();
-    const { error: runError } = await admin
-      .from("task_runs")
-      .update({ done_at: doneAt })
-      .eq("id", parsed.data.runId)
-      .eq("child_id", ctx.childId)
-      .is("done_at", null);
-    if (runError) throw new Error(runError.message);
-
-    if (item.source === "homework") {
-      const { error } = await admin
-        .from("homework_items")
-        .update({ done_at: doneAt })
-        .eq("id", item.id)
-        .eq("child_id", ctx.childId)
-        .is("done_at", null);
-      if (error) throw new Error(error.message);
-    }
+    await writeFinish(ctx.childId, item, parsed.data.runId, now);
     // Part milestones are derived (and persisted) by the next read.
     return NextResponse.json(await todayView(ctx));
   } catch (e) {

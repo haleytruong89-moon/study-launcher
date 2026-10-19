@@ -35,7 +35,7 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
 - **Giờ server** cho mọi thời lượng; không tin đồng hồ máy con.
 - **Fail-closed**: không chắc trạng thái → khóa (chỉ allowlist). Extension đếm lần hỏi thất bại, không dựa vào đồng hồ máy.
 - Mọi khoảng mở (nghỉ, giờ tự do, override) **dừng ở 00:00**. Phần không có việc = đã xong. Override **mới nhất** thắng.
-- Bài trên lớp: **không có thời gian tối thiểu**, bắt buộc ảnh bằng chứng. Bài bổ sung + kỹ năng: **tối thiểu 20 phút**.
+- Bài trên lớp: **không có thời gian tối thiểu**, bắt buộc ảnh bằng chứng **hoặc bố mẹ xác nhận trực tiếp** (con xin, bố mẹ bấm; 19/10/2026). Bài bổ sung + kỹ năng: **tối thiểu 20 phút**.
 - Bài bổ sung **bắt buộc** (thuộc Phần 1). Kỹ năng v1 = **danh sách cố định theo thứ trong tuần**.
 - Nghỉ 10' (tùy chọn, 1 lần/ngày) · giờ tự do **45'** (1 lần/ngày) · thẻ miễn 1/tuần.
 - Khi khóa: chỉ allowlist (app học + từ điển/dịch). **Không** Google Search, **không** YouTube. Luôn chặn `*.translate.goog`.

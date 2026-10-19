@@ -11,21 +11,27 @@ export interface ChildToday {
   overview: ChildOverview | null;
 }
 
-/** Parent's verdicts on today's runs (RLS: this family only). */
-export async function loadVerdicts(db: SupabaseClient, date: string): Promise<Map<string, Verdict>> {
-  const { data } = await db.from("task_runs").select("id, parent_verdict").eq("local_date", date);
-  return new Map((data ?? []).map((r) => [r.id as string, (r.parent_verdict as Verdict) ?? null]));
+/** Parent's verdicts on today's runs, and the open "Nhờ bố mẹ xem" requests (RLS: this family only). */
+export async function loadVerdicts(db: SupabaseClient, date: string): Promise<{ verdicts: Map<string, Verdict>; asked: Set<string> }> {
+  const full = await db.from("task_runs").select("id, parent_verdict, confirm_requested_at, done_at").eq("local_date", date);
+  // Before migration 0006 there is no confirm column: fall back to the verdicts only.
+  type Row = { id: string; parent_verdict: string | null; confirm_requested_at?: string | null; done_at?: string | null };
+  const rows: Row[] = full.error ? (((await db.from("task_runs").select("id, parent_verdict").eq("local_date", date)).data ?? []) as Row[]) : ((full.data ?? []) as Row[]);
+  return {
+    verdicts: new Map(rows.map((r) => [r.id as string, (r.parent_verdict as Verdict) ?? null])),
+    asked: new Set(rows.filter((r) => r.confirm_requested_at && !r.done_at).map((r) => r.id)),
+  };
 }
 
 /** Each child's live day (server clock), read with the parent's own session. Display only. */
 export async function loadChildrenToday(db: SupabaseClient, familyId: string, children: ChildSummary[], today: string, now: Date): Promise<ChildToday[]> {
-  const verdicts = await loadVerdicts(db, today);
+  const { verdicts, asked } = await loadVerdicts(db, today);
   return Promise.all(
     children.map(async (child) => {
       try {
         const { input } = await loadDay(db, child.id, familyId, today);
         const state = computeDayState(input, now);
-        return { child, state, overview: childOverview(state, verdicts, now) };
+        return { child, state, overview: childOverview(state, verdicts, now, asked) };
       } catch (e) {
         console.error("parent overview failed", e instanceof Error ? e.message : e);
         return { child, state: null, overview: null };

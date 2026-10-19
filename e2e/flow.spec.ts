@@ -980,6 +980,57 @@ test("S3d: after login the child lands on the page they asked for (/ghep-may)", 
 });
 
 // ---------------------------------------------------------------------------
+// "Nhờ bố mẹ xem trực tiếp": no photo possible, a parent nearby confirms (19/10/2026)
+// ---------------------------------------------------------------------------
+
+test("Confirm: the child asks a parent to look; the parent confirms on the phone; it counts as done and Đạt", async ({ page, browser }) => {
+  const { data: kid } = await admin().from("profiles").select("id").eq("role", "child").single();
+  await login(page, env.parentEmail, env.parentPassword);
+  const due = addDays(localDate(new Date()), 1);
+  const made = await page.evaluate(
+    async ({ childId, dueDate }) => (await fetch("/api/admin/homework", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId, subject: "Mỹ thuật", dueDate, note: "Vẽ tranh trong vở" }) })).status,
+    { childId: kid?.id ?? "", dueDate: due },
+  );
+  expect(made).toBeLessThan(300);
+
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  const row = child.getByRole("listitem", { name: "Mỹ thuật" });
+  await row.getByRole("button", { name: "Xong rồi · nộp ảnh" }).click();
+  const sheet = child.getByRole("dialog", { name: "Nộp ảnh bài Mỹ thuật" });
+  await sheet.getByRole("button", { name: "Không chụp được? Nhờ bố mẹ xem trực tiếp" }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(row.getByText("Đang chờ bố mẹ xem…")).toBeVisible();
+  await expect(child.getByRole("dialog", { name: "Đang tập trung" })).toHaveCount(0);
+
+  // The child cannot confirm it.
+  const { data: run } = await admin().from("task_runs").select("id").not("confirm_requested_at", "is", null).single();
+  const self = await child.evaluate(async (id) => (await fetch(`/api/admin/runs/${id}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision: "ok" }) })).status, run?.id ?? "");
+  expect(self).toBe(403);
+
+  // The parent sees it on the home page and confirms it.
+  await page.goto("/parent");
+  await expect(page.getByRole("region", { name: "Cần bố mẹ làm" })).toContainText("nhờ bố mẹ xem bài trực tiếp");
+  await page.goto("/parent/requests");
+  const ask = page.getByRole("article", { name: "Nhờ xem Mỹ thuật" });
+  await ask.getByRole("button", { name: "Đã xem, cho xong" }).click();
+  await expect(ask).toHaveCount(0);
+
+  const { data: after } = await admin().from("task_runs").select("done_at, confirmed_by, parent_verdict, proof_paths").eq("id", run?.id ?? "").single();
+  expect(after?.done_at).toBeTruthy();
+  expect(after?.confirmed_by).toBeTruthy();
+  expect(after?.parent_verdict).toBe("ok");
+  expect(after?.proof_paths ?? []).toHaveLength(0);
+  const { data: hw } = await admin().from("homework_items").select("done_at").eq("subject", "Mỹ thuật").single();
+  expect(hw?.done_at).toBeTruthy();
+
+  // The child's screen follows by itself (fast refresh while something is in progress).
+  await expect(row.getByText("✓ Xong")).toBeVisible({ timeout: 20_000 });
+  await childCtx.close();
+});
+
+// ---------------------------------------------------------------------------
 // Child PIN sign-in on a remembered browser (child UI review 19/10/2026)
 // ---------------------------------------------------------------------------
 

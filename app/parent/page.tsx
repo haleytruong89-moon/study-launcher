@@ -39,7 +39,15 @@ export default async function ParentHome() {
   const awaiting = kids.reduce((n, k) => n + (k.overview?.awaiting ?? 0), 0);
   const overdue = kids.reduce((n, k) => n + (k.overview?.overdue.length ?? 0), 0);
   const firstAwaiting = kids.find((k) => (k.overview?.awaiting ?? 0) > 0)?.child.id;
+  const askers = kids.filter((k) => (k.overview?.asked ?? 0) > 0);
   const todo = [
+    askers.length
+      ? {
+          href: "/parent/requests#nho-xem",
+          text: `${askers.map((k) => k.child.display_name).join(", ")} nhờ bố mẹ xem bài trực tiếp`,
+          badge: `${askers.reduce((n, k) => n + (k.overview?.asked ?? 0), 0)} bài`,
+        }
+      : null,
     pending ? { href: "/parent/requests", text: `Con xin mở ${pending} trang`, badge: `${pending} mới` } : null,
     awaiting ? { href: `/parent/review?con=${firstAwaiting}`, text: `${awaiting} bài có ảnh chờ xem`, badge: null } : null,
     overdue ? { href: "/parent/homework", text: `${overdue} bài quá hạn chưa làm`, badge: null } : null,

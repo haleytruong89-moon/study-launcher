@@ -77,6 +77,15 @@ export function decideProof(state: DayState, runId: string): Decision<{ item: Ta
 
 export const MAX_PROOFS = 6;
 
+/** "Nhờ bố mẹ xem trực tiếp": only for a running homework of today (photo not possible). */
+export function decideConfirmRequest(state: DayState, runId: string): Decision<{ item: TaskView }> {
+  const item = allItems(state).find((i) => i.runId === runId);
+  if (!item) return deny(404, "Không tìm thấy lượt làm này.");
+  if (!item.requiresProof) return deny(409, "Việc này không cần bố mẹ xác nhận.");
+  if (item.state !== "running") return deny(409, "Chỉ nhờ bố mẹ xem khi đang làm bài.");
+  return { ok: true, value: { item } };
+}
+
 export type BreakAction = "start" | "skip" | "end";
 
 /** start / skip only while the break is on offer; end ("Học tiếp") only while it runs. */

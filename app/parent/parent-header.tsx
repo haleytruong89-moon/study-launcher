@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { pendingForParent } from "@/lib/admin/pending";
 import { createClient } from "@/lib/supabase/server";
 import { RequestsBadge } from "./requests-badge";
 
@@ -41,7 +42,7 @@ const TABS: { tab: Tab; href: string; label: string; icon: React.ReactNode }[] =
   {
     tab: "requests",
     href: "/parent/requests",
-    label: "Xin mở",
+    label: "Con nhờ",
     icon: (
       <>
         <rect x="5" y="11" width="14" height="10" rx="2" />
@@ -65,8 +66,8 @@ const TABS: { tab: Tab; href: string; label: string; icon: React.ReactNode }[] =
 
 /** The 4-tab bar fixed at the bottom of every parent page (thumb reach on a phone). */
 export async function ParentTabs({ current }: { current: ParentPage }) {
-  // Pending "Xin mở trang" for the red badge (RLS: this family only); 0 if unreadable.
-  const { count } = await (await createClient()).from("unlock_requests").select("id", { count: "exact", head: true }).eq("status", "pending");
+  // Pending child requests for the red badge (RLS: this family only).
+  const count = await pendingForParent(await createClient());
   const active = PAGES[current];
   return (
     <nav aria-label="Trang phụ huynh" className="fixed inset-x-0 bottom-0 z-20 border-t border-ink/10 bg-white pb-[env(safe-area-inset-bottom)]">

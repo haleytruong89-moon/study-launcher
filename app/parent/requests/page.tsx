@@ -3,6 +3,7 @@ import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { localDate, startOfLocalDay } from "@/lib/time";
 import { vnTime } from "@/lib/today/view";
 import { ParentHeader } from "../parent-header";
+import { ConfirmButtons } from "./confirm-buttons";
 import { AutoRefresh, DecisionButtons } from "./request-buttons";
 
 export const dynamic = "force-dynamic";
@@ -40,13 +41,47 @@ export default async function RequestsPage() {
   const pending = rows.filter((r) => r.status === "pending");
   const done = rows.filter((r) => r.status !== "pending");
   const kid = (id: string) => children.find((c) => c.id === id);
+  // "Nhờ bố mẹ xem trực tiếp" of today (no rows before migration 0006: the query just fails).
+  const asks = await db
+    .from("task_runs")
+    .select("id, child_id, confirm_requested_at, homework_items(subject, note)")
+    .eq("local_date", localDate(new Date()))
+    .not("confirm_requested_at", "is", null)
+    .is("done_at", null)
+    .order("confirm_requested_at");
+  const askRows = (asks.error ? [] : (asks.data ?? [])) as unknown as { id: string; child_id: string; confirm_requested_at: string; homework_items: { subject: string; note: string | null } | null }[];
 
   return (
     <>
-      <ParentHeader title="Con xin mở trang" current="/parent/requests" />
+      <ParentHeader title="Con nhờ bố mẹ" current="/parent/requests" />
       <AutoRefresh seconds={30} />
       <main className="mx-auto flex max-w-lg flex-col gap-6 px-4 py-6">
-        {pending.length === 0 && <p className="text-sm text-ink/70">Không có yêu cầu nào đang chờ.</p>}
+        {askRows.length > 0 && (
+          <section id="nho-xem" aria-labelledby="ask-h" className="flex flex-col gap-3">
+            <h2 id="ask-h" className="text-xs font-extrabold tracking-wider text-ink/70 uppercase">
+              Nhờ xem bài trực tiếp ({askRows.length})
+            </h2>
+            {askRows.map((r) => {
+              const subject = r.homework_items?.subject ?? "Bài";
+              return (
+                <article key={r.id} aria-label={`Nhờ xem ${subject}`} className="flex flex-col gap-3 rounded-2xl border-2 border-accent bg-white p-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2 text-sm font-bold">
+                      <span aria-hidden className="size-3 rounded-full" style={{ background: kid(r.child_id)?.color ?? "#999" }} />
+                      {kid(r.child_id)?.display_name ?? "Con"} · {vnTime(r.confirm_requested_at)}
+                    </span>
+                    <span className="text-lg font-bold">{subject}</span>
+                    {r.homework_items?.note && <span className="text-sm">{r.homework_items.note}</span>}
+                    <span className="text-sm text-ink/70">Con không nộp được ảnh. Xem vở của con rồi bấm.</span>
+                  </div>
+                  <ConfirmButtons runId={r.id} label={subject} />
+                </article>
+              );
+            })}
+          </section>
+        )}
+        {askRows.length > 0 && <h2 className="text-xs font-extrabold tracking-wider text-ink/70 uppercase">Xin mở trang</h2>}
+        {pending.length === 0 && <p className="text-sm text-ink/70">Không có yêu cầu mở trang nào đang chờ.</p>}
         {pending.map((r) => (
           <section key={r.id} aria-label={`Yêu cầu ${r.domain}`} className="flex flex-col gap-3 rounded-2xl border-2 border-accent bg-white p-4">
             <div className="flex flex-col gap-1">
