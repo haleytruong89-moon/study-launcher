@@ -47,6 +47,24 @@ export function PinLogin({ kids, next }: { kids: RememberedChild[]; next: string
     }
   }
 
+  // Audit 24/10: a browser used once (e.g. a friend's laptop) can stop offering PIN login.
+  async function forget() {
+    if (!window.confirm("Quên máy này? Lần sau trên trình duyệt này phải đăng nhập bằng email và mật khẩu.")) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/pin/forget", { method: "POST" });
+      if (!r.ok) throw new Error();
+      router.refresh();
+      setChosen(null);
+      setPin("");
+      setEmail(true);
+    } catch {
+      setError("Không quên được máy này, thử lại.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function type(v: string) {
     const clean = v.replace(/\D/g, "").slice(0, 6);
     setPin(clean);
@@ -138,6 +156,9 @@ export function PinLogin({ kids, next }: { kids: RememberedChild[]; next: string
       )}
       <button type="button" onClick={() => setEmail(true)} className="min-h-11 text-sm font-semibold text-ink/75 underline">
         Đăng nhập bằng email (bố mẹ, hoặc quên PIN)
+      </button>
+      <button type="button" disabled={busy} onClick={forget} className="min-h-11 text-sm text-ink/60 underline disabled:opacity-50">
+        Không phải máy của con? Quên máy này
       </button>
     </div>
   );

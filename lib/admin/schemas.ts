@@ -39,9 +39,16 @@ const FORBIDDEN_SLOT_DOMAINS = new Set([
   "youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be",
 ]);
 
+/**
+ * Google Search / YouTube under ANY country domain (google.co.uk, www.google.de,
+ * youtube.com.vn …) — audit 24/10: only the .com / .com.vn ones were listed.
+ * Sub-sites such as translate.google.co.uk are not matched.
+ */
+const SEARCH_OR_VIDEO_COUNTRY_RE = /^(?:www\.|m\.)?(?:google|youtube)\.(?:(?:com?|co)\.)?[a-z]{2,3}$/;
+
 /** Null when the domain may be added by a slot, otherwise a Vietnamese reason. */
 export function slotDomainProblem(domain: string): string | null {
-  if (FORBIDDEN_SLOT_DOMAINS.has(domain) || domain.endsWith(".translate.goog")) {
+  if (FORBIDDEN_SLOT_DOMAINS.has(domain) || domain.endsWith(".translate.goog") || SEARCH_OR_VIDEO_COUNTRY_RE.test(domain)) {
     return `Không thêm được “${domain}”: tên miền này sẽ mở quá nhiều trang (hoặc là Google Search / YouTube). Hãy nhập tên miền cụ thể của app.`;
   }
   return null;

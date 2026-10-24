@@ -25,6 +25,13 @@ describe("allowlist helpers", () => {
     expect(permanentProblem("x.translate.goog")).not.toBeNull();
     expect(permanentProblem("music.youtube.com")).not.toBeNull();
     expect(permanentProblem("meet.google.com")).toBeNull();
+    // Audit 24/10: Google Search / YouTube under other country domains.
+    for (const d of ["google.co.uk", "www.google.de", "google.com.au", "google.co.jp", "www.google.fr", "youtube.de"]) {
+      expect(permanentProblem(d)).not.toBeNull();
+    }
+    expect(permanentProblem("translate.google.co.uk")).toBeNull();
+    expect(permanentProblem("notebooklm.google")).toBeNull();
+    expect(wideDomainOffer("news.google.co.uk")).toBeNull();
   });
 
   it("offers the whole domain for good, never a forbidden one", () => {
@@ -48,5 +55,13 @@ describe("allowlist helpers", () => {
     expect(safeNext("https://evil.com")).toBeNull();
     expect(safeNext("/\\evil.com")).toBeNull();
     expect(safeNext(undefined)).toBeNull();
+    // Audit 24/10: browsers drop tabs/newlines, so these would become "//evil.com".
+    expect(safeNext("/\t/evil.com")).toBeNull();
+    expect(safeNext("/\n/evil.com")).toBeNull();
+    expect(safeNext("/%09/evil.com")).toBeNull();
+    expect(safeNext("/%2F/evil.com")).toBeNull();
+    expect(safeNext("/%5Cevil.com")).toBeNull();
+    expect(safeNext("/a\\b")).toBeNull();
+    expect(safeNext("/today?x=1#y")).toBe("/today?x=1#y");
   });
 });

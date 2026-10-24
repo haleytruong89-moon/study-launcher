@@ -14,7 +14,7 @@ interface Child {
 }
 
 /** Edit a child's name / grade / colour, and reset the password (shown once). */
-export function ChildEdit({ child, pinSet = false }: { child: Child; pinSet?: boolean }) {
+export function ChildEdit({ child, pinSet = false, remembered = 0 }: { child: Child; pinSet?: boolean; remembered?: number }) {
   const router = useRouter();
   const [name, setName] = useState(child.displayName);
   const [grade, setGrade] = useState(String(child.grade ?? ""));
@@ -23,6 +23,7 @@ export function ChildEdit({ child, pinSet = false }: { child: Child; pinSet?: bo
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [creds, setCreds] = useState<{ email: string; password: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const colors: { value: string; label: string }[] = CHILD_COLORS.some((c) => c.value === color)
     ? [...CHILD_COLORS]
@@ -41,20 +42,37 @@ export function ChildEdit({ child, pinSet = false }: { child: Child; pinSet?: bo
   }
 
   async function resetPassword() {
-    if (!window.confirm(`Đặt lại mật khẩu của ${child.displayName}? Máy của con sẽ cần đăng nhập lại bằng mật khẩu mới.`)) return;
+    if (!window.confirm(`Đặt lại mật khẩu của ${child.displayName}? Con sẽ bị đăng xuất khỏi mọi máy (trong vòng 1 giờ) và phải đăng nhập lại bằng mật khẩu mới.`)) return;
     setError(null);
+    setNotice(null);
     setCreds(null);
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/children/${child.id}/password`, { method: "POST" });
-      const body = (await res.json().catch(() => null)) as { error?: string; email?: string; password?: string } | null;
+      const body = (await res.json().catch(() => null)) as { error?: string; email?: string; password?: string; signedOut?: boolean } | null;
       if (!res.ok || !body?.password || !body.email) setError(body?.error ?? "Có lỗi, thử lại sau.");
-      else setCreds({ email: body.email, password: body.password });
+      else {
+        setCreds({ email: body.email, password: body.password });
+        if (body.signedOut === false) setError("Mật khẩu mới đã dùng được, nhưng chưa đăng xuất được con khỏi các máy cũ. Bấm “Đăng xuất con khỏi mọi máy” để thử lại.");
+        router.refresh();
+      }
     } catch {
       setError("Mất kết nối mạng, thử lại sau.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function signOutAll() {
+    if (!window.confirm(`Đăng xuất ${child.displayName} khỏi mọi máy? Máy nào cũng phải đăng nhập lại bằng mật khẩu (PIN chỉ dùng lại được sau khi đăng nhập bằng mật khẩu).`)) return;
+    setError(null);
+    setNotice(null);
+    setBusy(true);
+    const err = await sendJson("POST", `/api/admin/children/${child.id}/sign-out`, {});
+    setBusy(false);
+    if (err) return setError(err);
+    setNotice("Đã đăng xuất con khỏi mọi máy. Máy đang mở có thể còn dùng được tối đa 1 giờ.");
+    router.refresh();
   }
 
   const input = "min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal";
@@ -90,9 +108,23 @@ export function ChildEdit({ child, pinSet = false }: { child: Child; pinSet?: bo
 
       <PinForm childId={child.id} name={child.displayName} pinSet={pinSet} />
 
+      <div className="flex flex-col gap-2 rounded-xl bg-bg p-3">
+        <p className="text-sm">
+          {remembered > 0 ? `Đang nhớ PIN trên ${remembered} trình duyệt.` : "Chưa trình duyệt nào nhớ PIN."} Lỡ đăng nhập trên máy lạ, hoặc nghi con cho người khác dùng?
+        </p>
+        <button type="button" disabled={busy} onClick={signOutAll} className="btn border border-ink/25 bg-white disabled:opacity-60">
+          Đăng xuất con khỏi mọi máy
+        </button>
+      </div>
+
       {error && (
         <p role="alert" className="text-sm font-medium text-red-700">
           {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="text-sm font-semibold text-accent">
+          {notice}
         </p>
       )}
       {saved && (
