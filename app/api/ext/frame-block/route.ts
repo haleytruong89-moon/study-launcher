@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { baseDomain } from "@/lib/admin/allowlist";
+import { baseDomain, permanentProblem } from "@/lib/admin/allowlist";
 import { hostnameOf } from "@/lib/admin/schemas";
 import { AUTO_REASON_PREFIX, deviceFromRequest } from "@/lib/ext/device";
 import { allowDomainsFor } from "@/lib/ext/payload";
@@ -16,7 +16,8 @@ const QUIET_DAYS = 7;
  * The extension saw a frame of the same site blocked inside an allowed study page (e.g. a
  * Google widget inside Meet). It becomes a "Xin mở trang" the parent answers as usual
  * (15 min / today / always / no). Quiet by design: same site only, one open request per
- * host, nothing again for 7 days after the parent answered, at most 20 a day.
+ * host, nothing again for 7 days after the parent answered, at most 20 a day, never a
+ * forbidden site (Google Search, YouTube, shared hosting).
  */
 export async function POST(request: Request) {
   try {
@@ -27,6 +28,9 @@ export async function POST(request: Request) {
     const pageHost = hostnameOf(parsed.data.page);
     const frameHost = hostnameOf(parsed.data.frame);
     if (!pageHost || !frameHost || baseDomain(pageHost) !== baseDomain(frameHost)) return NextResponse.json({ ignored: "not same site" });
+    // Audit 24/10: a "Tự phát hiện" request looks trustworthy to the parent, so it may never
+    // be about a forbidden site (www.google.com inside meet.google.com, YouTube, …).
+    if (permanentProblem(frameHost)) return NextResponse.json({ ignored: "forbidden site" });
 
     const admin = createAdminClient();
     const now = new Date();

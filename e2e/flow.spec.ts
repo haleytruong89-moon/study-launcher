@@ -1141,5 +1141,7 @@ test("Frames: a same-site frame blocked inside Meet becomes one request; others 
   expect((await (await send("https://meet.google.com", "https://ads.doubleclick.net/x")).json()).ignored).toBe("not same site");
   expect((await (await send("https://www.example.com", "https://sub.example.com/x")).json()).ignored).toBe("page not allowed");
   expect((await (await send("https://meet.google.com", "https://ogs.google.com/x")).json()).ignored).toBe("already allowed");
+  // Audit 24/10: never a "Tự phát hiện" request for Google Search.
+  expect((await (await send("https://meet.google.com", "https://www.google.com/search?q=game")).json()).ignored).toBe("forbidden site");
   expect((await send("https://meet.google.com", "https://widgets.google.com/x", "not-a-real-token-0000000000000000000000000")).status()).toBe(401);
 });
