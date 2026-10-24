@@ -2,13 +2,14 @@
   "manifest_version": 3,
   "name": "Study Launcher",
   "description": "Mở trang học trước, web sau: khóa web theo trạng thái của Study Launcher.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "minimum_chrome_version": "120",
   "permissions": [
     "declarativeNetRequestWithHostAccess",
     "storage",
     "alarms",
-    "tabs"
+    "tabs",
+    "webRequest"
   ],
   "host_permissions": [
     "<all_urls>"

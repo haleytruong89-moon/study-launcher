@@ -5,13 +5,16 @@
  *  1. browser start -> locked until the first successful poll;
  *  2. openUntil reached -> locked at once (the local timer only ever locks EARLIER);
  *  3. 2 failed polls in a row -> locked with the last allowlist;
- *  4. file: tabs are sent to the lock page while locked.
+ *  4. file: tabs are sent to the lock page while locked (24/10/2026: saved .html/.htm/.pdf
+ *     stay open when the parent turns on "allowLocalFiles").
+ * Blocked same-site frames inside a study page are reported to the parent (see the end).
  * Everything is serialised through one promise chain so events never interleave.
  */
 import { EXT_SOURCE, LAUNCHER_URL, TOKEN_RE } from "./config";
 import {
   buildRules,
   effectiveState,
+  frameReport,
   initialSyncState,
   parseExtStatePayload,
   parseSyncState,
@@ -213,3 +216,38 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; token?: unknown }, s
 
 // The worker may wake for any event: make sure the poll alarm exists.
 void ensurePollAlarm();
+
+// ---------------------------------------------------------------------------
+// Blocked frames inside study pages (parent decision 24/10/2026): report them so the parent
+// can add the missing piece with one tap. Same-site frames only (see core/frames.ts);
+// each host at most once an hour, and at most 20 reports per worker life.
+// ---------------------------------------------------------------------------
+const reported = new Map<string, number>();
+let reportsLeft = 20;
+const REPORT_EVERY_MS = 60 * 60_000;
+
+chrome.webRequest.onErrorOccurred.addListener(
+  (details) => {
+    if (details.error !== "net::ERR_BLOCKED_BY_CLIENT" || reportsLeft <= 0) return;
+    void (async () => {
+      const r = await chrome.storage.local.get(["lastEffective"]).catch(() => ({}) as Record<string, unknown>);
+      const eff = (r as { lastEffective?: EffectiveState }).lastEffective;
+      if (!eff) return;
+      const report = frameReport(eff, details.initiator, details.url);
+      if (!report) return;
+      const last = reported.get(report.frameHost);
+      if (last !== undefined && performance.now() - last < REPORT_EVERY_MS) return;
+      reported.set(report.frameHost, performance.now());
+      reportsLeft--;
+      const { token } = await load();
+      if (!token) return;
+      await fetch(`${LAUNCHER_URL}/api/ext/frame-block`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ page: report.page, frame: report.frame }),
+        signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
+      }).catch(() => undefined);
+    })();
+  },
+  { urls: ["<all_urls>"], types: ["sub_frame"] },
+);
