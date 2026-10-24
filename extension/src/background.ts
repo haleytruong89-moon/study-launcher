@@ -5,6 +5,8 @@
  *  1. browser start -> locked until the first successful poll;
  *  2. openUntil reached -> locked at once (the local timer only ever locks EARLIER);
  *  3. 2 failed polls in a row -> locked with the last allowlist;
+ *  5. (audit 24/10) no access to all sites ("Site access: On click") -> locked, the
+ *     catch-all becomes a plain block (a redirect needs site access, a block does not);
  *  4. file: tabs are sent to the lock page while locked (24/10/2026: saved .html/.htm/.pdf
  *     stay open when the parent turns on "allowLocalFiles").
  * Blocked same-site frames inside a study page are reported to the parent (see the end).
@@ -22,6 +24,7 @@ import {
   planRuleUpdate,
   planTabSweep,
   reduceSync,
+  withHostAccess,
   type EffectiveState,
   type SyncEvent,
   type SyncState,
@@ -66,8 +69,13 @@ async function installRules(rules: ReturnType<typeof buildRules>) {
   await chrome.declarativeNetRequest.updateDynamicRules(update as unknown as chrome.declarativeNetRequest.UpdateRuleOptions);
 }
 
+/** Access to every site ("Site access: On all sites"). Unknown -> false (fail closed). */
+async function hasHostAccess(): Promise<boolean> {
+  return chrome.permissions.contains({ origins: ["<all_urls>"] }).catch(() => false);
+}
+
 async function enforce(sync: SyncState): Promise<EffectiveState> {
-  let eff = effectiveState(sync, LAUNCHER_URL);
+  let eff = withHostAccess(effectiveState(sync, LAUNCHER_URL), await hasHostAccess());
   try {
     await installRules(buildRules(eff));
   } catch {
@@ -251,3 +259,8 @@ chrome.webRequest.onErrorOccurred.addListener(
   },
   { urls: ["<all_urls>"], types: ["sub_frame"] },
 );
+
+// Audit 24/10: site access can be taken away (or given back) in the extension's details
+// page at any time; re-apply at once instead of waiting for the next poll.
+chrome.permissions.onRemoved.addListener(() => void serial(() => apply(null, false)));
+chrome.permissions.onAdded.addListener(() => void serial(() => apply(null, false)));

@@ -14,6 +14,8 @@ async function render() {
   const pair = document.getElementById("pair") as HTMLAnchorElement | null;
   if (!status) return;
   if (!paired) status.textContent = "Chưa ghép máy với tài khoản của con.";
+  else if (eff?.reason === "no-host-access")
+    status.textContent = "Tiện ích bị tắt quyền truy cập trang web — đang khóa. Bố mẹ/con vào Quản lý tiện ích › Study Launcher › Quyền truy cập trang web, chọn “Trên tất cả các trang web”.";
   else if (!eff || eff.locked) {
     status.textContent =
       eff?.reason === "offline" ? "Mất kết nối máy chủ — đang chỉ mở trang học." : eff?.reason === "unconfirmed" || eff?.reason === "never-synced" ? "Đang kiểm tra với máy chủ…" : "Giờ học — chỉ mở trang học.";
