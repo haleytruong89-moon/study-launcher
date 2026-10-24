@@ -63,11 +63,13 @@ export interface ExtStateBody {
   launcherUrl: string;
   pollSeconds: number;
   serverNow: string;
+  /** Family setting (0007): saved .html/.htm/.pdf files may open while locked. */
+  allowLocalFiles: boolean;
   /** Extra (ignored by the core parser): for the popup. */
   status: DayState["status"];
 }
 
-export function extStateBody(state: DayState, allow: string[], launcherUrl: string): ExtStateBody {
+export function extStateBody(state: DayState, allow: string[], launcherUrl: string, allowLocalFiles = false): ExtStateBody {
   return {
     open: state.open,
     openUntil: state.openUntil,
@@ -76,6 +78,7 @@ export function extStateBody(state: DayState, allow: string[], launcherUrl: stri
     launcherUrl,
     pollSeconds: EXT_POLL_SECONDS,
     serverNow: state.serverNow,
+    allowLocalFiles,
     status: state.status,
   };
 }

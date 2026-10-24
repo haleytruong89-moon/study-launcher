@@ -17,6 +17,8 @@ export interface SettingsValues {
   /** Absent until migration 0002 has run (then the field is hidden). */
   homeworkMinUpcoming?: number;
   photoRetentionDays: number;
+  /** Absent until migration 0007 has run (then the switch is hidden). */
+  allowLocalFiles?: boolean;
 }
 
 type Group = "time" | "homework" | "trust" | "photos";
@@ -62,8 +64,10 @@ interface Kid {
 export function SettingsForm({ initial, kids }: { initial: SettingsValues; kids: Kid[] }) {
   const router = useRouter();
   const [values, setValues] = useState<Record<keyof SettingsValues, string>>(
-    () => Object.fromEntries(Object.entries(initial).map(([k, v]) => [k, String(v)])) as Record<keyof SettingsValues, string>,
+    () =>
+      Object.fromEntries(Object.entries(initial).filter(([k]) => k !== "allowLocalFiles").map(([k, v]) => [k, String(v)])) as Record<keyof SettingsValues, string>,
   );
+  const [localFiles, setLocalFiles] = useState(initial.allowLocalFiles === true);
   const [bedtimes, setBedtimes] = useState<Record<string, string>>(() => Object.fromEntries(kids.map((k) => [k.id, k.bedtime])));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +82,7 @@ export function SettingsForm({ initial, kids }: { initial: SettingsValues; kids:
     setBusy(true);
     const err = await sendJson("PUT", "/api/admin/settings", {
       ...numbers,
+      ...(initial.allowLocalFiles === undefined ? {} : { allowLocalFiles: localFiles }),
       bedtimes: kids.map((k) => ({ childId: k.id, bedtime: bedtimes[k.id] })),
     });
     setBusy(false);
@@ -109,6 +114,21 @@ export function SettingsForm({ initial, kids }: { initial: SettingsValues; kids:
           ))}
         </fieldset>
       ))}
+
+      {initial.allowLocalFiles !== undefined && (
+        <fieldset className="flex flex-col gap-2 rounded-2xl bg-white p-4">
+          <legend className="float-left mb-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">File trên máy của con</legend>
+          <label className="flex min-h-11 items-start gap-3 text-sm font-semibold">
+            <input type="checkbox" checked={localFiles} onChange={(e) => setLocalFiles(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-accent" />
+            <span className="flex flex-col gap-0.5">
+              Cho mở file HTML và PDF trên máy trong giờ học
+              <span className="text-xs font-normal text-ink/65">
+                Ví dụ app ôn thi .html, đề .pdf tải về hoặc nhận qua Zalo. Link trong file mà dẫn ra web vẫn bị chặn như thường. Cần extension bản mới (0.3).
+              </span>
+            </span>
+          </label>
+        </fieldset>
+      )}
 
       {kids.length > 0 && (
         <fieldset className="flex flex-col gap-3 rounded-2xl bg-white p-4">

@@ -23,7 +23,14 @@
  *    unknown schemes, unparseable strings) is NOT allowed while locked.
  *    Note: DNR cannot see `file:` navigations, so blocking them relies on the tab
  *    sweep / tab listeners (S4b).
+ *  - Exception (parent decision 24/10/2026, a family setting, OFF by default): with
+ *    `localFiles` on, a `file:` page whose path ends in .html / .htm / .pdf is allowed
+ *    (study apps and worksheets saved on the laptop). Any web link it opens is checked
+ *    like every other navigation.
  */
+
+/** Saved study files a parent may allow while locked (`allowLocalFiles`). */
+export const LOCAL_FILE_RE = /\.(?:html?|pdf)$/i;
 
 /** Built-in "always block while locked" domains, merged with the server list. */
 export const BUILTIN_BLOCK_ALWAYS: readonly string[] = ["translate.goog"];
@@ -107,6 +114,7 @@ export function hostMatchesAny(host: string, domains: readonly string[]): boolea
 export type UrlClass =
   | { kind: "web"; host: string }
   | { kind: "internal" }
+  | { kind: "file"; path: string }
   | { kind: "other" };
 
 /** Classifies a tab / navigation URL. See the header for the rules. */
@@ -123,6 +131,15 @@ export function classifyUrl(url: string): UrlClass {
     return host === null ? { kind: "other" } : { kind: "web", host };
   }
   if (INTERNAL_SCHEMES.has(scheme)) return { kind: "internal" };
+  if (scheme === "file:") {
+    let path = parsed.pathname;
+    try {
+      path = decodeURIComponent(path);
+    } catch {
+      /* keep the raw path */
+    }
+    return { kind: "file", path };
+  }
   if (scheme === "blob:") {
     // blob:https://example.com/uuid -> same origin as the page that created it.
     const inner = classifyUrl(parsed.pathname);
@@ -143,9 +160,11 @@ export function isAllowed(
   allow: readonly string[],
   blockAlways: readonly string[],
   launcherHost: string,
+  opts: { localFiles?: boolean } = {},
 ): boolean {
   const c = classifyUrl(url);
   if (c.kind === "internal") return true;
+  if (c.kind === "file") return opts.localFiles === true && LOCAL_FILE_RE.test(c.path);
   if (c.kind === "other") return false;
   const blocked = normalizeDomainList([...BUILTIN_BLOCK_ALWAYS, ...blockAlways]);
   if (hostMatchesAny(c.host, blocked)) return false;

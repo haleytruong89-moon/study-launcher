@@ -113,6 +113,8 @@ export const settingsSchema = z
     /** 0002 (S2c). Optional: the form omits it until that migration has run. */
     homeworkMinUpcoming: int(0, 5).optional(),
     photoRetentionDays: int(7, 365),
+    /** 0007: saved .html/.htm/.pdf files may open in study time. Optional (absent before 0007). */
+    allowLocalFiles: z.boolean().optional(),
     bedtimes: z.array(z.object({ childId: z.uuid(), bedtime: timeOfDay })).max(10).default([]),
   })
   .refine((s) => s.trustDownPct <= s.trustUpPct, {
@@ -135,6 +137,7 @@ export function settingsToRow(s: SettingsInput) {
     homework_lookahead_days: s.homeworkLookaheadDays,
     photo_retention_days: s.photoRetentionDays,
     ...(s.homeworkMinUpcoming === undefined ? {} : { homework_min_upcoming: s.homeworkMinUpcoming }),
+    ...(s.allowLocalFiles === undefined ? {} : { allow_local_files: s.allowLocalFiles }),
   };
 }
 

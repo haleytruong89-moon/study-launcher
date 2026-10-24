@@ -48,6 +48,8 @@ export interface ExtStatePayload {
   launcherUrl: string;
   pollSeconds: number;
   serverNow: string;
+  /** Family setting (0007): saved .html/.htm/.pdf files may open while locked. Missing -> false. */
+  allowLocalFiles: boolean;
 }
 
 export const FAIL_CLOSED_AFTER_FAILURES = 2;
@@ -93,6 +95,8 @@ export interface EffectiveState {
   /** Only set when open AND the latest poll succeeded. */
   openUntil: string | null;
   failures: number;
+  /** Saved .html/.htm/.pdf files stay open while locked (family setting). */
+  allowLocalFiles: boolean;
 }
 
 export function initialSyncState(): SyncState {
@@ -127,6 +131,7 @@ export function parseExtStatePayload(raw: unknown): ExtStatePayload | null {
     launcherUrl: r.launcherUrl,
     pollSeconds: r.pollSeconds,
     serverNow: r.serverNow,
+    allowLocalFiles: r.allowLocalFiles === true,
   };
 }
 
@@ -186,7 +191,7 @@ export function effectiveState(state: SyncState, fallbackLauncherUrl: string): E
   const g = state.lastGood;
   const blockAlways = normalizeDomainList([...BUILTIN_BLOCK_ALWAYS, ...(g?.blockAlways ?? [])])
     .filter((d) => !hostMatchesDomain(launcherHost, d));
-  const base = { blockAlways, launcherUrl, launcherHost, failures: state.failures };
+  const base = { blockAlways, launcherUrl, launcherHost, failures: state.failures, allowLocalFiles: g?.allowLocalFiles === true };
 
   if (g === null) {
     return { ...base, locked: true, reason: "never-synced", allow: [], openUntil: null };
