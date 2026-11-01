@@ -83,11 +83,13 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 ## Current status
 
-- Phase: 3 — Implementation. Đã merge: S0 (PR #1–#3), S2a (PR #4), S1 (PR #5), S2b màn Hôm nay (PR #6), S3a Xem gộp (PR #8). Production: phụ huynh + gia đình + 2 tài khoản con đã tạo (A8 xong)
-- Last updated: 17/10/2026
-- Đã merge thêm: S2c (PR #9, SQL 0002), S4a (PR #7), S2d (PR #10), S2e (PR #11, SQL 0003), S3c-1 (PR #12), S4b extension (PR #13, SQL 0004). A7 xong (sign-up tắt)
-- Đang mở: PR #14 (zip extension 1 thư mục), PR #15 (S3d-1 Trang học + Xin mở trang, không DB)
-- Tiếp theo (thứ tự phụ huynh chọn 17/10): chạy thử extension cài tay vài ngày (đang cài 18/10) → phần còn lại của S3d ngày đặc biệt + allowlist (+ Tin tưởng, nhật ký) → S3b/S3c-2 PIN 6 số trên máy con → S3e xóa ảnh
+- Phase: 3 — Implementation. Last updated: 01/11/2026
+- Đã merge: S0 (#1–#3), S2a (#4), S1 (#5), S2b (#6), S4a (#7), S3a (#8), S2c (#9, SQL 0002), S2d (#10), S2e (#11, SQL 0003), S3c-1 (#12), S4b extension (#13, SQL 0004), #14 zip, S3d-1 Trang học + Xin mở (#15), #16, Zalo cả tên miền (#17), **UI phụ huynh mới** (#18–#20: tab Hôm nay/Giao bài/Con nhờ/Thêm, Ngày của con, Mở/khóa tấm trượt, Bài tập nhóm theo trạng thái, Lịch việc tuần), **UI của con** (#21 nộp nhiều ảnh + QR sang điện thoại, #22 PIN 6 số – SQL 0005, #23 nhờ bố mẹ xem trực tiếp + sửa đồng hồ – SQL 0006)
+- Đã merge thêm 01/11: Next.js 16.4.3 (#26), vá bảo mật audit 24/10 (#28), Thêm nhanh Meet/NotebookLM/Docs + mở file trên máy (#25, SQL 0007), báo khung bị chặn (#27). **Chưa vào main:** extension 0.3.2 fail-closed khi mất quyền — #29 lỡ merge vào nhánh #27, mở lại thành **#31**
+- Góc bình yên (well-being, khu `/binh-yen`): Phase 1.5 xong — `docs/BINH_YEN.md` + `docs/BINH_YEN_CATALOG.md` (PR #30, chỉ tài liệu). Phụ huynh chốt 01/11: PIN Góc bình yên do con tự đặt; bố mẹ không thấy số liệu, chỉ tín hiệu; chữ con viết mã hóa, chỉ trên laptop riêng. Tiếp: duyệt catalog → spike S1–S4 → lát S-BY0. Mặc định tắt
+- Production 20/10: tên con đã có dấu, PIN đã đặt cho cả 2 con; laptop An đã ghép extension (cài tay)
+- Tiếp theo (chưa chốt thứ tự): phần còn lại S3d (ngày đặc biệt ốm/thi/lễ, gợi ý + xác nhận Tin tưởng, xem nhật ký) → S3e xóa ảnh quá hạn → S5 thông báo đẩy → S6 đăng cửa hàng extension + chính sách. Đề xuất chưa làm: trang chặn tự mở lại khi bố mẹ đồng ý, báo trước 5 phút hết giờ tự do, danh sách "trang mở được" cho con, PIN phụ huynh trên máy con
 - Động lực (chốt 17/10): không điểm/streak; ★ sớm chỉ ghi nhận; lập kế hoạch tùy chọn; con chọn biểu tượng, màu do bố mẹ đặt; tổng kết tuần tối CN
-- Việc phụ huynh: cài extension bản thử (SETUP B+); A9 (tùy chọn); thử chính sách extension (SETUP B); C1/C2 tài khoản cửa hàng extension trước khi đăng; họp gia đình chốt tham số.
+- Việc phụ huynh: C1/C2 tài khoản cửa hàng extension trước khi đăng; ghép laptop Nguyên nếu có; họp gia đình chốt tham số
 - Extension: pairing qua content script + `window.postMessage` (không dùng externally_connectable); địa chỉ máy chủ cố định lúc build từ `NEXT_PUBLIC_APP_URL`; `npm run build` tự build extension (prebuild) ra `public/downloads/study-launcher-extension.zip`
+- CI: e2e chạy trên Supabase local; log tải về bị chặn, đọc lỗi qua check-run annotations
