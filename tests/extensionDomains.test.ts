@@ -157,6 +157,16 @@ describe("isAllowed", () => {
     }
   });
 
+  it("saved study files open only with the family setting on", () => {
+    expect(isAllowed("file:///C:/Users/an/Downloads/bai.html", allow, [], LAUNCHER, { localFiles: true })).toBe(true);
+    expect(isAllowed("file:///C:/Users/an/Downloads/bai.htm", allow, [], LAUNCHER, { localFiles: true })).toBe(true);
+    expect(isAllowed("file:///C:/Users/an/de.pdf", allow, [], LAUNCHER, { localFiles: true })).toBe(true);
+    expect(isAllowed("file:///C:/Users/an/game.html.exe", allow, [], LAUNCHER, { localFiles: true })).toBe(false);
+    expect(isAllowed("file:///C:/Users/an/", allow, [], LAUNCHER, { localFiles: true })).toBe(false);
+    expect(isAllowed("file:///C:/Users/an/bai.html", allow, [], LAUNCHER)).toBe(false);
+    expect(isAllowed("data:text/html,<h1>x</h1>", allow, [], LAUNCHER, { localFiles: true })).toBe(false);
+  });
+
   it("blob: URLs follow their inner origin", () => {
     expect(isAllowed("blob:https://example.com/0b6c-1", allow, [], LAUNCHER)).toBe(true);
     expect(isAllowed("blob:https://youtube.com/0b6c-1", allow, [], LAUNCHER)).toBe(false);
@@ -168,7 +178,7 @@ describe("classifyUrl", () => {
   it("classifies web, internal and other URLs", () => {
     expect(classifyUrl("https://Example.com./x")).toEqual({ kind: "web", host: "example.com" });
     expect(classifyUrl("edge://newtab")).toEqual({ kind: "internal" });
-    expect(classifyUrl("file:///tmp/a")).toEqual({ kind: "other" });
+    expect(classifyUrl("file:///tmp/a")).toEqual({ kind: "file", path: "/tmp/a" });
   });
 });
 

@@ -37,7 +37,7 @@ export function planTabSweep(tabs: readonly TabLike[], state: EffectiveState): T
       (u) =>
         u !== undefined &&
         u !== "" &&
-        !isAllowed(u, state.allow, state.blockAlways, state.launcherHost),
+        !isAllowed(u, state.allow, state.blockAlways, state.launcherHost, { localFiles: state.allowLocalFiles }),
     );
     if (disallowed !== undefined) {
       out.push({ tabId: tab.id, url: buildBlockedUrl(state.launcherUrl, disallowed) });
@@ -57,6 +57,7 @@ export function shouldSweep(prev: EffectiveState | null, next: EffectiveState): 
   return (
     prev.launcherHost !== next.launcherHost ||
     prev.allow.join(",") !== next.allow.join(",") ||
-    prev.blockAlways.join(",") !== next.blockAlways.join(",")
+    prev.blockAlways.join(",") !== next.blockAlways.join(",") ||
+    prev.allowLocalFiles !== next.allowLocalFiles
   );
 }

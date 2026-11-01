@@ -907,6 +907,25 @@ test("S3d: parent adds a study site; YouTube cannot be added for good; a child c
   await childCtx.close();
 });
 
+test("Thêm nhanh: one tap adds Google Meet for both children; saved HTML/PDF files can be allowed", async ({ page }) => {
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/allowlist");
+  await page.getByRole("button", { name: "Thêm Google Meet" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Đã thêm Google Meet" })).toBeVisible();
+  await expect(page.getByRole("listitem", { name: "ogs.google.com" })).toContainText("Cả 2 con");
+  const { data: meet } = await admin().from("allowlist_entries").select("child_id, expires_at").eq("domain", "meet.google.com");
+  expect(meet?.some((r) => r.child_id === null && r.expires_at === null)).toBe(true);
+  await expect(page.getByRole("region", { name: "Thêm nhanh" }).getByText("✓ Đã có").first()).toBeVisible();
+
+  // "Luật trong nhà": the saved-files switch is stored (the extension reads it from /api/ext/state).
+  await page.goto("/parent/settings");
+  await page.getByLabel("Cho mở file HTML và PDF trên máy trong giờ học").check();
+  await page.getByRole("button", { name: "Lưu cài đặt" }).click();
+  await expect(page.getByRole("status")).toHaveText("Đã lưu cài đặt.");
+  const { data: fs } = await admin().from("family_settings").select("allow_local_files").single();
+  expect(fs?.allow_local_files).toBe(true);
+});
+
 test("S3d: the child asks to open a blocked site; the parent opens it for 15 minutes", async ({ page, browser }) => {
   const childCtx = await browser.newContext();
   const child = await childCtx.newPage();

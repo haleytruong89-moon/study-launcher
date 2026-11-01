@@ -38,6 +38,7 @@ function payload(over: Partial<ExtStatePayload> = {}): ExtStatePayload {
     launcherUrl: LAUNCHER_URL,
     pollSeconds: 60,
     serverNow: "2026-10-15T12:00:00.000Z",
+    allowLocalFiles: false,
     ...over,
   };
 }
@@ -402,6 +403,27 @@ describe("tab sweep", () => {
       { tabId: 8, url: buildBlockedUrl(LAUNCHER_URL, "https://google.com/search?q=x") },
       { tabId: 9, url: buildBlockedUrl(LAUNCHER_URL, "https://google.com/") },
     ]);
+  });
+
+  it("with the family setting on, saved .html/.pdf files stay open while locked (other files do not)", () => {
+    const s = effectiveState(run([ok(payload({ allowLocalFiles: true }))]), FALLBACK);
+    const local = [
+      { id: 21, url: "file:///C:/Users/an/Downloads/%C3%94n%20thi%20KHTN%209.html" },
+      { id: 22, url: "file:///C:/Users/an/Desktop/de-thi.PDF" },
+      { id: 23, url: "file:///C:/Users/an/Downloads/game.exe" },
+      { id: 24, url: "file:///C:/Users/an/Downloads/" },
+    ];
+    expect(planTabSweep(local, s).map((r) => r.tabId)).toEqual([23, 24]);
+    // Old servers (no field) and the setting off keep blocking every file.
+    expect(planTabSweep(local, effectiveState(run([ok(payload())]), FALLBACK)).map((r) => r.tabId)).toEqual([21, 22, 23, 24]);
+    // Turning the setting off while locked triggers a new sweep.
+    expect(shouldSweep(s, effectiveState(run([ok(payload())]), FALLBACK))).toBe(true);
+  });
+
+  it("a payload without allowLocalFiles parses as false", () => {
+    const { allowLocalFiles: _drop, ...old } = payload();
+    void _drop;
+    expect(parseExtStatePayload(old)?.allowLocalFiles).toBe(false);
   });
 
   it("fail-closed sweep uses the stored allowlist; never-synced sweeps everything but the launcher", () => {

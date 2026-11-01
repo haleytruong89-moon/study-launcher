@@ -43,9 +43,11 @@ export async function GET(request: Request) {
     const now = new Date();
     const { state } = await readToday(ctx, now);
 
-    const [allow, slots] = await Promise.all([
+    const [allow, slots, files] = await Promise.all([
       admin.from("allowlist_entries").select("domain, child_id, expires_at").eq("family_id", device.family_id),
       admin.from("app_slots").select("child_id, url, allow_domains, active, kind").eq("family_id", device.family_id),
+      // 0007 setting; before that migration the read fails and files stay blocked.
+      admin.from("family_settings").select("allow_local_files").eq("family_id", device.family_id).maybeSingle(),
     ]);
     if (allow.error) throw new Error(allow.error.message);
     if (slots.error) throw new Error(slots.error.message);
@@ -63,7 +65,8 @@ export async function GET(request: Request) {
       .from("extension_devices")
       .update({ last_seen_at: now.toISOString(), ...(incognito === "1" || incognito === "0" ? { incognito_allowed: incognito === "1" } : {}) })
       .eq("id", device.id);
-    return NextResponse.json(extStateBody(state, domains, launcherUrl(request)), { headers: NO_STORE });
+    const allowLocalFiles = !files.error && files.data?.allow_local_files === true;
+    return NextResponse.json(extStateBody(state, domains, launcherUrl(request), allowLocalFiles), { headers: NO_STORE });
   } catch (e) {
     console.error("ext.state failed", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "server" }, { status: 500, headers: NO_STORE });

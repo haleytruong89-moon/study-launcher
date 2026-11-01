@@ -31,6 +31,7 @@ export default async function SettingsPage() {
                 homeworkLookaheadDays: s.homework_lookahead_days,
                 ...(typeof s.homework_min_upcoming === "number" ? { homeworkMinUpcoming: s.homework_min_upcoming } : {}),
                 photoRetentionDays: s.photo_retention_days,
+                ...(typeof s.allow_local_files === "boolean" ? { allowLocalFiles: s.allow_local_files } : {}),
               } satisfies SettingsValues
             }
             kids={children.map((c) => ({ id: c.id, name: c.display_name, bedtime: c.bedtime.slice(0, 5) }))}
