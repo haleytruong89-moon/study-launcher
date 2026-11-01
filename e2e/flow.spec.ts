@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
@@ -1115,6 +1116,34 @@ test("PIN: parent sets it; on the remembered laptop the child signs in with 6 di
   const { data: logs } = await admin().from("audit_log").select("action").in("action", ["child.pin_set", "pin.login", "pin.login_failed"]);
   expect(logs?.some((l) => l.action === "pin.login")).toBe(true);
   expect(logs?.filter((l) => l.action === "pin.login_failed").length).toBe(5);
+});
+
+// ---------------------------------------------------------------------------
+// Blocked frames inside a study page become a "Con nhờ" entry (24/10/2026)
+// ---------------------------------------------------------------------------
+
+test("Frames: a same-site frame blocked inside Meet becomes one request; others are ignored", async ({ request }) => {
+  const { data: kid } = await admin().from("profiles").select("id, family_id").eq("role", "child").single();
+  const token = randomBytes(32).toString("base64url");
+  await admin().from("extension_devices").insert({ family_id: kid?.family_id, child_id: kid?.id, token_hash: createHash("sha256").update(token).digest("hex"), label: "e2e frames" });
+  const send = (page: string, frame: string, t = token) =>
+    request.post("/api/ext/frame-block", { headers: { Authorization: `Bearer ${t}` }, data: { page, frame } });
+
+  // meet.google.com is allowed (Thêm nhanh earlier); widgets.google.com is not.
+  expect((await (await send("https://meet.google.com", "https://widgets.google.com/frame?x=1")).json()).ok).toBe(true);
+  const { data: rows } = await admin().from("unlock_requests").select("domain, status, reason").eq("domain", "widgets.google.com");
+  expect(rows).toHaveLength(1);
+  expect(rows?.[0]?.status).toBe("pending");
+  expect(rows?.[0]?.reason).toContain("Tự phát hiện");
+  expect(rows?.[0]?.reason).toContain("meet.google.com");
+
+  expect((await (await send("https://meet.google.com", "https://widgets.google.com/other")).json()).ignored).toBe("already asked");
+  expect((await (await send("https://meet.google.com", "https://ads.doubleclick.net/x")).json()).ignored).toBe("not same site");
+  expect((await (await send("https://www.example.com", "https://sub.example.com/x")).json()).ignored).toBe("page not allowed");
+  expect((await (await send("https://meet.google.com", "https://ogs.google.com/x")).json()).ignored).toBe("already allowed");
+  // Audit 24/10: never a "Tự phát hiện" request for Google Search.
+  expect((await (await send("https://meet.google.com", "https://www.google.com/search?q=game")).json()).ignored).toBe("forbidden site");
+  expect((await send("https://meet.google.com", "https://widgets.google.com/x", "not-a-real-token-0000000000000000000000000")).status()).toBe(401);
 });
 
 // ---------------------------------------------------------------------------

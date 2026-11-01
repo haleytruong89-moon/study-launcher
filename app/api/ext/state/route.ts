@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { allowDomainsFor, extStateBody } from "@/lib/ext/payload";
-import { bearer, hashToken } from "@/lib/ext/secrets";
+import { deviceFromRequest } from "@/lib/ext/device";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readToday, type ChildContext } from "@/lib/today/service";
 
@@ -25,18 +25,11 @@ function launcherUrl(request: Request): string {
  * Any error -> non-200, which the extension counts as a failed poll (2 in a row = locked).
  */
 export async function GET(request: Request) {
-  const token = bearer(request);
-  if (!token) return NextResponse.json({ error: "no token" }, { status: 401, headers: NO_STORE });
-
   try {
     const admin = createAdminClient();
-    const { data: device, error } = await admin
-      .from("extension_devices")
-      .select("id, child_id, family_id, revoked_at")
-      .eq("token_hash", hashToken(token))
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!device || device.revoked_at) return NextResponse.json({ error: "unknown device" }, { status: 401, headers: NO_STORE });
+    const found = await deviceFromRequest(request);
+    if (!found) return NextResponse.json({ error: "unknown device" }, { status: 401, headers: NO_STORE });
+    const device = { id: found.id, child_id: found.childId, family_id: found.familyId };
 
     // The child's day, read with service_role but filtered to this child only (server-side).
     const ctx: ChildContext = { childId: device.child_id, familyId: device.family_id, displayName: "", grade: null, color: null, db: admin };
