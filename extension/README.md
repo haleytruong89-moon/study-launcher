@@ -30,6 +30,9 @@ cannot be loaded yet.
 - Build: `npm run ext:build` (also runs before `npm run build`) → `extension/dist/` and
   `public/downloads/study-launcher-extension.zip`. The Launcher URL comes from
   `NEXT_PUBLIC_APP_URL` (fallback: production).
+- S6 (0.3.3, 01/11/2026): after pairing, `chrome.runtime.setUninstallURL(<launcher>/api/ext/uninstalled?k=<sha256(token)>)`
+  (`src/core/uninstall.ts`; never the token itself) so the parents hear when it is removed. The Launcher's `/today`
+  pings the content script and reports when no extension answers (desktop Chrome / Edge only).
 - Still later: store packaging (unlisted) + force-install policy (S6), icons.
 
 ## Checked in a real browser (S4b, Chromium + mock server)

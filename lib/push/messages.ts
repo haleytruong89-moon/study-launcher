@@ -54,6 +54,26 @@ export function eveningMessage(unreviewed: number, waiting: number): PushMessage
   };
 }
 
+/** S6: the extension was removed from one of the child's laptops (its uninstall address opened). */
+export function extensionRemovedMessage(childName: string, deviceLabel: string, deviceId: string): PushMessage {
+  return {
+    title: `Extension trên laptop của ${childName} vừa bị gỡ`,
+    body: `${deviceLabel} · web trên máy này không còn bị khóa · chạm để xem`,
+    url: "/parent/devices",
+    tag: `ext-removed-${deviceId}`,
+  };
+}
+
+/** S6: the child opened the Launcher on a desktop Chrome / Edge where the extension did not answer. */
+export function extensionMissingMessage(childName: string, browser: string, childId: string): PushMessage {
+  return {
+    title: `${childName} đang mở Study Launcher trên một trình duyệt không có extension`,
+    body: `${browser} trên máy tính · chạm để xem cách xử lý`,
+    url: "/parent/devices",
+    tag: `ext-missing-${childId}`,
+  };
+}
+
 /** The "Gửi thử" button on the notifications page. */
 export function testMessage(): PushMessage {
   return {

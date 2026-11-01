@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { requireChild, todayView } from "@/lib/today/service";
+import { ExtensionCheck } from "./extension-check";
 import { TodayScreen } from "./today-screen";
 
 export const dynamic = "force-dynamic";
@@ -26,9 +27,12 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   }
 
   return (
-    <TodayScreen
-      child={{ id: ctx.childId, familyId: ctx.familyId, name: ctx.displayName, grade: ctx.grade, color: ctx.color }}
-      initial={initial}
-    />
+    <>
+      <ExtensionCheck />
+      <TodayScreen
+        child={{ id: ctx.childId, familyId: ctx.familyId, name: ctx.displayName, grade: ctx.grade, color: ctx.color }}
+        initial={initial}
+      />
+    </>
   );
 }

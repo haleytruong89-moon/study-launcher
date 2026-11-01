@@ -24,6 +24,8 @@ import {
   planRuleUpdate,
   planTabSweep,
   reduceSync,
+  tokenProof,
+  uninstallUrl,
   withHostAccess,
   type EffectiveState,
   type SyncEvent,
@@ -141,6 +143,21 @@ async function poll(): Promise<boolean> {
   }
 }
 
+/**
+ * S6 (01/11/2026): when the extension is removed, the browser opens our "đã gỡ" route so the
+ * server can tell the parents. The address holds only the token's SHA-256 (never the token).
+ * Not paired -> "" (nothing opens). Never throws: this must not affect locking.
+ */
+async function syncUninstallUrl(): Promise<void> {
+  try {
+    const { token } = await load();
+    const url = uninstallUrl(LAUNCHER_URL, token ? await tokenProof(token) : null);
+    await chrome.runtime.setUninstallURL(url);
+  } catch {
+    /* best effort only */
+  }
+}
+
 async function ensurePollAlarm() {
   if (!(await chrome.alarms.get(ALARM_POLL))) await chrome.alarms.create(ALARM_POLL, { periodInMinutes: 0.5 });
 }
@@ -214,6 +231,7 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; token?: unknown }, s
     const token = msg.token;
     void serial(async () => {
       await chrome.storage.local.set({ token, sync: initialSyncState() });
+      await syncUninstallUrl();
       const ok = await poll();
       sendResponse({ source: EXT_SOURCE, ok });
     });
@@ -222,8 +240,10 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; token?: unknown }, s
   return false;
 });
 
-// The worker may wake for any event: make sure the poll alarm exists.
+// The worker may wake for any event: make sure the poll alarm exists, and the uninstall
+// address matches the stored token (also covers laptops paired before 0.3.3).
 void ensurePollAlarm();
+void syncUninstallUrl();
 
 // ---------------------------------------------------------------------------
 // Blocked frames inside study pages (parent decision 24/10/2026): report them so the parent

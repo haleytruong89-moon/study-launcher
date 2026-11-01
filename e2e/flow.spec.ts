@@ -1266,3 +1266,101 @@ test("Push: a parent turns notifications on/off for a device; children cannot; c
   expect(ok.status()).toBe(200);
   expect((await ok.json()).ok).toBe(true);
 });
+
+// ---------------------------------------------------------------------------
+// S6 "Báo bố mẹ khi extension bị gỡ / không chạy" (01/11/2026)
+// ---------------------------------------------------------------------------
+
+test("S6: the uninstall address records once per laptop per hour and never needs the token", async ({ page, request }) => {
+  const { data: kid } = await admin().from("profiles").select("id, family_id").eq("role", "child").single();
+  const token = randomBytes(32).toString("base64url");
+  const proof = createHash("sha256").update(token).digest("hex");
+  const { data: dev } = await admin()
+    .from("extension_devices")
+    .insert({ family_id: kid?.family_id, child_id: kid?.id, token_hash: proof, label: "e2e gỡ" })
+    .select("id")
+    .single();
+  const deviceId = dev?.id as string;
+  const open = (k: string) => request.get(`/api/ext/uninstalled?k=${encodeURIComponent(k)}`, { maxRedirects: 0 });
+  const forDevice = async () => (await admin().from("audit_log").select("payload").eq("action", "ext.uninstalled").eq("payload->>device_id", deviceId)).data ?? [];
+  const total = async () => (await admin().from("audit_log").select("id", { count: "exact", head: true }).eq("action", "ext.uninstalled")).count ?? 0;
+
+  // Valid proof (SHA-256 of the token): one record, the parents are told, the laptop is NOT revoked.
+  const first = await open(proof);
+  expect(first.status()).toBe(303);
+  expect(first.headers().location).toContain("/da-go-extension");
+  const rows = await forDevice();
+  expect(rows).toHaveLength(1);
+  expect(rows[0]?.payload).toMatchObject({ device_id: deviceId, label: "e2e gỡ", notified: true });
+  const { data: still } = await admin().from("extension_devices").select("revoked_at").eq("id", deviceId).single();
+  expect(still?.revoked_at).toBeNull();
+
+  // Opening it again within the hour does nothing more.
+  expect((await open(proof)).status()).toBe(303);
+  expect(await forDevice()).toHaveLength(1);
+
+  // Unknown proof, the token itself, garbage: same answer, nothing recorded.
+  const before = await total();
+  for (const k of [createHash("sha256").update("someone-else").digest("hex"), token, "x", proof.toUpperCase()]) {
+    const r = await open(k);
+    expect(r.status()).toBe(303);
+    expect(r.headers().location).toContain("/da-go-extension");
+  }
+  expect(await total()).toBe(before);
+
+  // What the browser shows after removing the extension: a short neutral page (public).
+  await page.goto(`/api/ext/uninstalled?k=${proof}`);
+  await expect(page).toHaveURL(/\/da-go-extension$/);
+  await expect(page.getByRole("heading", { name: "Đã gỡ extension Study Launcher" })).toBeVisible();
+});
+
+test("S6: /today without the extension tells the parents at most once a day; child only; never on iPad", async ({ page, browser, request }) => {
+  const { data: kid } = await admin().from("profiles").select("id, family_id").eq("role", "child").single();
+  // Start the day clean (other tests may have opened /today without an extension already).
+  await admin().from("audit_log").delete().eq("action", "ext.missing");
+  const report = (p: Page) =>
+    p.evaluate(async () => {
+      const r = await fetch("/api/ext/missing", { method: "POST" });
+      return { status: r.status, body: (await r.json()) as { status?: string } };
+    });
+  const count = async () => (await admin().from("audit_log").select("id", { count: "exact", head: true }).eq("action", "ext.missing")).count ?? 0;
+
+  expect((await request.post("/api/ext/missing")).status()).toBe(401);
+
+  // The child on a desktop Chromium with no extension: /today pings, nobody answers -> reported once.
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  await expect(k).toHaveURL(/\/today/);
+  await expect(k.getByRole("status", { name: "Extension" })).toContainText("bố mẹ đã được báo", { timeout: 20_000 });
+  expect(await count()).toBe(1);
+  const { data: row } = await admin().from("audit_log").select("payload").eq("action", "ext.missing").single();
+  expect(row?.payload).toMatchObject({ browser: "Chrome", notified: true });
+  // Again the same day: nothing new.
+  expect(await report(k)).toEqual({ status: 200, body: { status: "already" } });
+  await k.reload();
+  await expect(k.getByRole("status", { name: "Extension" })).toBeVisible({ timeout: 20_000 });
+  expect(await count()).toBe(1);
+  await kCtx.close();
+
+  // The child's iPad (Safari asks for the desktop site): never reported.
+  await admin().from("audit_log").delete().eq("action", "ext.missing");
+  const iCtx = await browser.newContext({
+    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+  });
+  const i = await iCtx.newPage();
+  await login(i, childEmail, childPassword);
+  expect((await report(i)).body.status).toBe("ignored");
+  await i.waitForTimeout(7000); // longer than the page's own wait: it must not report either
+  await expect(i.getByRole("status", { name: "Extension" })).toHaveCount(0);
+  expect(await count()).toBe(0);
+  await iCtx.close();
+
+  // Parents cannot report; they see both events on "Thiết bị".
+  await admin().from("audit_log").insert({ family_id: kid?.family_id, actor_id: kid?.id, action: "ext.missing", payload: { browser: "Edge", notified: true } });
+  await login(page, env.parentEmail, env.parentPassword);
+  expect((await report(page)).status).toBe(403);
+  await page.goto("/parent/devices");
+  await expect(page.getByText(/mở Study Launcher trên trình duyệt không có extension: Edge, hôm nay/)).toBeVisible();
+  await expect(page.getByText(/Extension trên máy này đã bị gỡ \(hôm nay/)).toBeVisible();
+});
