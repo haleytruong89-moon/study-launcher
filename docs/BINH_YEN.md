@@ -2,7 +2,7 @@
 
 > **Trạng thái:** bản nháp 01/11/2026. **Chưa có code, chưa có SQL.**
 > Bản này đã qua một vòng review độc lập; các điểm review sửa được đánh dấu *(review)*.
-> Ô **⏳** là chỗ phụ huynh cần chốt trước khi viết migration.
+> Các câu hỏi ở §7 đã được phụ huynh chốt ngày 01/11/2026.
 >
 > Thiết kế trải nghiệm: hub `deliverables/study-launcher/GOC_BINH_YEN_DESIGN_v1.md` (v1.1).
 > Bản mẫu bấm thử (không lưu dữ liệu): https://claude.ai/artifact/MqDzfE32PkVW3yyrPSrDVT
@@ -23,7 +23,7 @@ Khác mọi phần còn lại của app: **dữ liệu ở đây là của con, 
 | Trang manga, Tập của tuần (Nguyên); khu rừng sống (An) | Chuỗi ngày, điểm, xếp hạng, đổi giờ chơi (SPEC §15) |
 | "Con muốn nói chuyện" → tín hiệu cho bố mẹ | Nhúng nhạc / video bên ngoài (YouTube, Spotify…) *(review)* |
 | Phát hiện câu nguy hiểm → 111 / 115 + tín hiệu "cần được quan tâm" | Công cụ theo dõi bên thứ ba (analytics, ghi màn hình, Sentry…) trên `/binh-yen` *(review)* |
-| **PIN Góc bình yên riêng do con tự đặt** + tự khóa sau 5 phút *(review, ⏳ Q1)* | |
+| **PIN Góc bình yên riêng do con tự đặt** + tự khóa sau 5 phút *(review, Q1)* | |
 
 **Mặc định tắt:** `by_enabled = false`. Merge PR không tự bật cho con. Bố mẹ bật khi đã nói chuyện với con *(review)*.
 
@@ -47,7 +47,7 @@ Khác mọi phần còn lại của app: **dữ liệu ở đây là của con, 
 |---|---|---|
 | `by_checkins` | Mỗi lượt con đi hết | `quad`, `word_key`, `intensity` (1–5, chỉ khi khó chịu), `activity_key`, `cause_key` (mã cố định hoặc `custom`), `understood_at`, `local_date`, **`client_run_id` unique** (bấm Xong 2 lần chỉ tạo 1 dòng) |
 | `by_rewards` | Phần thưởng đã mở, không có nội dung cảm xúc | `local_date`, `reward_key` (loài cây / trang). **Unique `(child_id, local_date)`** khi giới hạn 1/ngày, để hai lượt cùng lúc không mở 2 lần |
-| `by_sessions` | Phiên Góc bình yên do máy chủ giữ (PIN, tự khóa 5', giới hạn 10' giờ học) | `token_hash`, `device_id`, `started_at`, `last_seen_at`, `ended_at` |
+| `by_sessions` | Phiên Góc bình yên do máy chủ giữ (PIN, tự khóa 5', giới hạn 10' trong giờ học) | `token_hash`, `device_id`, `started_at`, `last_seen_at`, `ended_at` |
 | `by_signals` | Tín hiệu cho bố mẹ, **không có nội dung** | `kind` (`want_talk` · `needs_care`), `to_parent_id` (null = cả hai), `created_at`, `seen_at`, `seen_by` |
 | `by_child_cards` | Thẻ "Do An thêm" (ngoại lệ D1) | `title` ≤ 80, `fact` ≤ 300 ký tự, `status` (`pending` · `checked`) |
 | `by_catalog` | Danh sách cố định cho từng con | `kind` (word · cause · activity · lesson · risk_phrase), `key`, `label`, `child_id` (null = cả hai), `weight`/`data` (jsonb), `retired` |
@@ -57,8 +57,8 @@ Khác mọi phần còn lại của app: **dữ liệu ở đây là của con, 
 Giá trị kiểu `quad`, `kind`, `status` được kiểm ở route máy chủ và bằng `by_catalog`, **không** dùng CHECK cố định. Muốn thêm giá trị sau này thì chỉ cần thêm dòng, không phải sửa ràng buộc (giữ luật "migration chỉ thêm") *(review)*.
 
 **Dữ liệu chỉ ở trên máy con:** câu kể, "Hỏi lại cái đầu", nhật ký tối, tên nguyên nhân tự đặt.
-- ⏳ Q2: có **mã hóa** bằng khóa sinh từ PIN Góc bình yên của con không?
-- Nếu không mã hóa: ai mở công cụ nhà phát triển của trình duyệt trên máy đó đều đọc được. Phải nói rõ với con *(review)*.
+- **Mã hóa** bằng khóa sinh từ PIN Góc bình yên của con (Q2). **Chỉ trên laptop riêng**: iPad dùng chung không lưu chữ (Q3).
+- Mã hóa bằng PIN 6 số chặn được người xem lướt, nhưng không chặn được người rành kỹ thuật cố tình dò. Phải nói rõ điều này với con *(review)*.
 
 ---
 
@@ -91,7 +91,7 @@ Lý do: phiên đăng nhập thường của con kéo dài và trình duyệt đ
    - con bấm "muốn nói chuyện";
    - con viết điều cho thấy con không an toàn. Tín hiệu này **không kèm chữ**, nhưng bố mẹ sẽ biết là đã có chuyện như vậy *(review)*.
 3. Thẻ "Do An thêm" là để bố mẹ cùng xem.
-4. Chữ con viết chỉ nằm trên máy này. Xóa dữ liệu trình duyệt là mất. *(Nếu Q2 = không mã hóa: người rành máy tính mở được.)*
+4. Chữ con viết chỉ nằm trên laptop của con, được khóa bằng PIN của con. Xóa dữ liệu trình duyệt là mất.
 5. **Về kỹ thuật, quản trị hệ thống (bố mẹ) vẫn có thể mở bảng dữ liệu.** Bố mẹ hứa không làm vậy, và hệ thống không có trang nào cho bố mẹ xem.
 6. Nếu bố mẹ xóa PIN Góc bình yên: dữ liệu trên máy bị xóa theo, và con được báo ngay lần mở sau.
 
@@ -182,10 +182,10 @@ Câu 1 bình thường hóa cảm xúc. Câu 2 là bài học theo nguyên nhân
 **Tín hiệu không được lặng lẽ thất bại** *(review)*:
 1. Gửi không được (mất mạng) thì thử lại. Nói với con: "Chưa gửi được cho bố mẹ, hãy tìm bố mẹ trực tiếp hoặc gọi 111."
 2. Con thấy trạng thái tín hiệu: *đã gửi* / *bố mẹ đã thấy*.
-3. Bố mẹ chưa bấm "Đã thấy" sau ⏳ Q5 phút: nhắc lại, gửi cho cả hai bố mẹ.
+3. Bố mẹ chưa bấm "Đã thấy" sau 10 phút (Q5): nhắc lại, gửi cho cả hai bố mẹ.
    - ⚠️ Thông báo đẩy (S5) **chưa làm**. Trước khi bật Góc bình yên cần có ít nhất **một kênh chắc chắn tới bố mẹ**.
 
-**Dấu hiệu lặp lại, không cần chữ** *(review)*: 3 lần mức 5 trong 7 ngày thì hiện cho **con** lời nhắn 111 + "nói với bố mẹ". Quy tắc này chạy trên máy con và không tự báo bố mẹ (⏳ Q4).
+**Dấu hiệu lặp lại, không cần chữ** *(review)*: 3 lần mức 5 trong 7 ngày thì hiện cho **con** lời nhắn 111 + "nói với bố mẹ". Quy tắc này chạy trên máy con và không tự báo bố mẹ (Q4).
 
 | # | Con gõ | Đáp án |
 |---|---|---|
@@ -228,13 +228,13 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 |---|---|---|
 | 1 | Giờ học, vào 19:00 | Về Hôm nay lúc 19:10 |
 | 2 | Giờ tự do / đã xong bài | Không giới hạn |
-| 3 | Vào lại ngay sau khi bị đẩy ra | ⏳ Q6 |
+| 3 | Vào lại ngay sau khi bị đẩy ra | Được (Q6) |
 | 4 | Đang ở màn an toàn lúc hết 10' | Không đẩy ra |
 | 5 | Đổi giờ máy con | Không ảnh hưởng (giờ máy chủ) |
 
 ### R6. PIN Góc bình yên
 
-- **PIN riêng do con tự đặt** (⏳ Q1), khác PIN đăng nhập mà bố mẹ đặt.
+- **PIN riêng do con tự đặt** (Q1), khác PIN đăng nhập mà bố mẹ đặt.
   - Lý do: bố mẹ biết PIN đăng nhập, nên dùng chung thì bố mẹ mở được Góc bình yên trên máy con bất cứ lúc nào *(review)*.
 - Sai 5 lần thì khóa 15'.
 - Quên PIN: bố mẹ chỉ có thể **xóa** PIN Góc bình yên. Xóa PIN thì xóa luôn dữ liệu trên máy và báo con. Check-in trên máy chủ giữ nguyên; con đặt PIN mới là thấy lại.
@@ -242,7 +242,7 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 - **iPad dùng chung:**
   - Đổi người phải gõ PIN của người kia.
   - Đổi người thì xóa bản nháp trên màn hình.
-  - Thêm cờ `pin_devices.shared` để app biết máy nào là máy dùng chung (cho Q3).
+  - Thêm cờ `pin_devices.shared` để app biết máy nào là máy dùng chung (để không lưu chữ trên máy dùng chung, Q3).
 
 ---
 
@@ -254,7 +254,7 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 | Bố mẹ mở Góc bình yên trên máy con | Cần PIN của con; bố mẹ chỉ xóa được PIN (và con sẽ biết) |
 | Mất mạng khi bấm Xong | "Chưa lưu được, thử lại"; với tín hiệu thì luôn thử lại + báo con |
 | Con xóa dữ liệu trình duyệt / đổi máy | Mất chữ riêng tư (nói trước); check-in + phần thưởng còn |
-| Con muốn xóa hết | Nút "Xóa hết của con" trong phiên Góc bình yên (⏳ Q7) |
+| Con muốn xóa hết | Nút "Xóa hết của con" trong phiên Góc bình yên, xóa hẳn (Q7) |
 | `want_talk` khi chính bố/mẹ là nguyên nhân | Con chọn được gửi cho ai (mặc định: cả hai) |
 | Bố mẹ tắt `by_enabled` | Khu bị ẩn, nhưng nút "Muốn nói chuyện" + màn an toàn vẫn còn ở Hôm nay |
 | Từ / nguyên nhân bị bỏ khỏi danh sách | Đặt cờ `retired`, không xóa |
@@ -262,17 +262,17 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 
 ---
 
-## 7. Quyết định cần bố mẹ chốt (⏳)
+## 7. Quyết định đã chốt (phụ huynh, 01/11/2026)
 
-| # | Câu hỏi | Đề xuất |
+| # | Câu hỏi | Đã chốt |
 |---|---|---|
-| Q1 | PIN Góc bình yên **do con tự đặt** (bố mẹ chỉ xóa được)? | **Có**. Không có cái này thì lời hứa "bố mẹ không đọc" chỉ là lời nói |
-| Q2 | Mã hóa chữ trên máy bằng PIN của con ngay từ bản đầu? | **Có**, mã hóa đơn giản. Không chặn được người rành kỹ thuật cố tình, nhưng chặn được xem lướt |
-| Q3 | iPad dùng chung có lưu chữ con viết không? | **Không**; chỉ lưu trên laptop riêng |
-| Q4 | Bố mẹ có thấy con số nào không (số lần ghé, mức 5 lặp lại)? | **Không**. Chỉ tín hiệu con gửi + `needs_care` |
-| Q5 | Bố mẹ chưa thấy `needs_care` sau bao lâu thì nhắc lại? | **10 phút** |
-| Q6 | Giờ học: giới hạn số lần vào? | **Không**, chỉ 10'/lần; xem lại sau 2 tuần |
-| Q7 | Con xóa: xóa hẳn? Giữ check-in bao lâu? | **Xóa hẳn**; tự xóa sau **12 tháng** |
+| Q1 | PIN mở Góc bình yên | **Con tự đặt PIN riêng.** Bố mẹ chỉ xóa được; xóa thì chữ trên máy bị xóa và con được báo |
+| Q2 | Mã hóa chữ trên máy | **Có**, bằng khóa sinh từ PIN Góc bình yên của con |
+| Q3 | Lưu chữ trên iPad dùng chung | **Không.** Chỉ lưu trên laptop riêng; trên iPad, viết xong là buông |
+| Q4 | Bố mẹ thấy con số nào không | **Không.** Chỉ thấy tín hiệu con gửi và `needs_care` |
+| Q5 | Nhắc lại `needs_care` khi chưa ai thấy | Sau **10 phút** |
+| Q6 | Giới hạn số lần vào trong giờ học | **Không giới hạn số lần**, mỗi lần tối đa 10'; xem lại sau 2 tuần |
+| Q7 | Xóa, giữ dữ liệu | Con xóa thì **xóa hẳn**; tự xóa sau **12 tháng** |
 
 ---
 
