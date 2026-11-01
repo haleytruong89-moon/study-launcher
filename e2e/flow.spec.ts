@@ -1272,8 +1272,12 @@ test("S3e: weekly cleanup deletes only old files, keeps every row; parent previe
   expect(previewJson).toMatchObject({ retentionDays: 120, proofs: 1, homework: 1, more: false });
   await page.goto("/parent/settings");
   await expect(page.getByRole("heading", { name: "Tự xóa ảnh cũ" })).toBeVisible();
-  await page.getByRole("button", { name: "Xem trước sẽ xóa gì" }).click();
   const result = page.getByRole("region", { name: "Kết quả xem trước" });
+  // Retry the tap in case it lands before the page is interactive.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Xem trước sẽ xóa gì" }).click();
+    await expect(result).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
   await expect(result).toContainText("sẽ xóa 1 ảnh bài con nộp và 1 tệp đề bài");
   await expect(result).toContainText("Xem trước không xóa gì");
   expect(await exists("proofs", oldProof)).toBe(true);
