@@ -23,3 +23,14 @@ export function wrongPinMessage(tryNumber: number): string {
   const left = PIN_MAX_TRIES - tryNumber;
   return left > 0 ? `PIN chưa đúng. Còn ${left} lần thử.` : `Sai ${PIN_MAX_TRIES} lần. Đợi ${PIN_LOCK_MINUTES} phút rồi thử lại, hoặc nhờ bố mẹ.`;
 }
+
+/**
+ * True when the session was issued before the parent's last "sign out everywhere".
+ * `iat` only has whole seconds, so a login in the same second as the sign-out counts as new
+ * (the server's own throw-away session from that second is already signed out).
+ */
+export function staleAfterRevoke(issuedAtSec: number | null, lastRevokedAt: string | null): boolean {
+  if (!lastRevokedAt) return false;
+  if (issuedAtSec === null) return true;
+  return issuedAtSec < Math.floor(Date.parse(lastRevokedAt) / 1000);
+}

@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
@@ -907,6 +908,25 @@ test("S3d: parent adds a study site; YouTube cannot be added for good; a child c
   await childCtx.close();
 });
 
+test("Thêm nhanh: one tap adds Google Meet for both children; saved HTML/PDF files can be allowed", async ({ page }) => {
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/allowlist");
+  await page.getByRole("button", { name: "Thêm Google Meet" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Đã thêm Google Meet" })).toBeVisible();
+  await expect(page.getByRole("listitem", { name: "ogs.google.com" })).toContainText("Cả 2 con");
+  const { data: meet } = await admin().from("allowlist_entries").select("child_id, expires_at").eq("domain", "meet.google.com");
+  expect(meet?.some((r) => r.child_id === null && r.expires_at === null)).toBe(true);
+  await expect(page.getByRole("region", { name: "Thêm nhanh" }).getByText("✓ Đã có").first()).toBeVisible();
+
+  // "Luật trong nhà": the saved-files switch is stored (the extension reads it from /api/ext/state).
+  await page.goto("/parent/settings");
+  await page.getByLabel("Cho mở file HTML và PDF trên máy trong giờ học").check();
+  await page.getByRole("button", { name: "Lưu cài đặt" }).click();
+  await expect(page.getByRole("status")).toHaveText("Đã lưu cài đặt.");
+  const { data: fs } = await admin().from("family_settings").select("allow_local_files").single();
+  expect(fs?.allow_local_files).toBe(true);
+});
+
 test("S3d: the child asks to open a blocked site; the parent opens it for 15 minutes", async ({ page, browser }) => {
   const childCtx = await browser.newContext();
   const child = await childCtx.newPage();
@@ -1096,4 +1116,102 @@ test("PIN: parent sets it; on the remembered laptop the child signs in with 6 di
   const { data: logs } = await admin().from("audit_log").select("action").in("action", ["child.pin_set", "pin.login", "pin.login_failed"]);
   expect(logs?.some((l) => l.action === "pin.login")).toBe(true);
   expect(logs?.filter((l) => l.action === "pin.login_failed").length).toBe(5);
+});
+
+// ---------------------------------------------------------------------------
+// Blocked frames inside a study page become a "Con nhờ" entry (24/10/2026)
+// ---------------------------------------------------------------------------
+
+test("Frames: a same-site frame blocked inside Meet becomes one request; others are ignored", async ({ request }) => {
+  const { data: kid } = await admin().from("profiles").select("id, family_id").eq("role", "child").single();
+  const token = randomBytes(32).toString("base64url");
+  await admin().from("extension_devices").insert({ family_id: kid?.family_id, child_id: kid?.id, token_hash: createHash("sha256").update(token).digest("hex"), label: "e2e frames" });
+  const send = (page: string, frame: string, t = token) =>
+    request.post("/api/ext/frame-block", { headers: { Authorization: `Bearer ${t}` }, data: { page, frame } });
+
+  // meet.google.com is allowed (Thêm nhanh earlier); widgets.google.com is not.
+  expect((await (await send("https://meet.google.com", "https://widgets.google.com/frame?x=1")).json()).ok).toBe(true);
+  const { data: rows } = await admin().from("unlock_requests").select("domain, status, reason").eq("domain", "widgets.google.com");
+  expect(rows).toHaveLength(1);
+  expect(rows?.[0]?.status).toBe("pending");
+  expect(rows?.[0]?.reason).toContain("Tự phát hiện");
+  expect(rows?.[0]?.reason).toContain("meet.google.com");
+
+  expect((await (await send("https://meet.google.com", "https://widgets.google.com/other")).json()).ignored).toBe("already asked");
+  expect((await (await send("https://meet.google.com", "https://ads.doubleclick.net/x")).json()).ignored).toBe("not same site");
+  expect((await (await send("https://www.example.com", "https://sub.example.com/x")).json()).ignored).toBe("page not allowed");
+  expect((await (await send("https://meet.google.com", "https://ogs.google.com/x")).json()).ignored).toBe("already allowed");
+  // Audit 24/10: never a "Tự phát hiện" request for Google Search.
+  expect((await (await send("https://meet.google.com", "https://www.google.com/search?q=game")).json()).ignored).toBe("forbidden site");
+  expect((await send("https://meet.google.com", "https://widgets.google.com/x", "not-a-real-token-0000000000000000000000000")).status()).toBe(401);
+});
+
+// ---------------------------------------------------------------------------
+// Security fixes after the audit of 24/10/2026
+// ---------------------------------------------------------------------------
+
+test("Audit: parent signs the child out of every browser; 'Quên máy này'; login never leaves the site", async ({ page, browser }) => {
+  const { data: kid } = await admin().from("profiles").select("id, display_name").eq("role", "child").single();
+  const childId = kid?.id ?? "";
+
+  // Laptop A remembers the child, then signs out (PIN offered). Browser B stays signed in.
+  const aCtx = await browser.newContext();
+  const a = await aCtx.newPage();
+  a.on("dialog", (d) => void d.accept());
+  await login(a, childEmail, childPassword);
+  await a.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(a.getByRole("region", { name: /^PIN của/ })).toBeVisible();
+  const bCtx = await browser.newContext();
+  const b = await bCtx.newPage();
+  await login(b, childEmail, childPassword);
+
+  // The parent: "Đăng xuất con khỏi mọi máy".
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/children");
+  const item = page.getByRole("listitem").filter({ hasText: kid?.display_name ?? "" });
+  await item.getByText("Sửa").click();
+  await expect(item.getByText(/Đang nhớ PIN trên \d+ trình duyệt/)).toBeVisible();
+  page.on("dialog", (d) => void d.accept());
+  await item.getByRole("button", { name: "Đăng xuất con khỏi mọi máy" }).click();
+  await expect(item.getByRole("status")).toContainText("Đã đăng xuất con khỏi mọi máy");
+  const { count: left } = await admin().from("pin_devices").select("id", { count: "exact", head: true }).eq("child_id", childId).is("revoked_at", null);
+  expect(left).toBe(0);
+
+  // Laptop A no longer offers the PIN, and the PIN is refused there.
+  await a.goto("/login");
+  await expect(a.getByLabel("Email")).toBeVisible();
+  await expect(a.getByRole("region", { name: /^PIN của/ })).toHaveCount(0);
+  const pinRes = await a.evaluate(async (id) => (await fetch("/api/pin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId: id, pin: "482916" }) })).status, childId);
+  expect(pinRes).toBe(403);
+
+  // Browser B's old session cannot remember a browser again (signed out, or too old).
+  const again = await b.evaluate(async () => (await fetch("/api/pin/remember", { method: "POST" })).status);
+  expect([401, 409]).toContain(again);
+  await bCtx.close();
+
+  // A fresh password login on laptop A remembers it again; then the child forgets it.
+  await login(a, childEmail, childPassword);
+  await a.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(a.getByRole("region", { name: /^PIN của/ })).toBeVisible();
+  await a.getByRole("button", { name: /Quên máy này/ }).click();
+  await expect(a.getByLabel("Email")).toBeVisible();
+  await a.reload();
+  await expect(a.getByRole("region", { name: /^PIN của/ })).toHaveCount(0);
+  await expect(a.getByRole("button", { name: /Quay lại đăng nhập bằng PIN/ })).toHaveCount(0);
+  await aCtx.close();
+
+  // A tricky "next" after login stays on our own site.
+  const cCtx = await browser.newContext();
+  const c = await cCtx.newPage();
+  await c.goto("/login?next=/%09/example.com");
+  await c.getByLabel("Email").fill(childEmail);
+  await c.getByLabel("Mật khẩu").fill(childPassword);
+  await c.getByRole("button", { name: /Đăng nhập/ }).click();
+  await expect(c).toHaveURL(/\/today$/);
+  expect(new URL(c.url()).hostname).toBe("localhost");
+  await cCtx.close();
+
+  const { data: logs } = await admin().from("audit_log").select("action").in("action", ["child.sign_out_all", "child.sessions_revoked"]);
+  expect(logs?.some((l) => l.action === "child.sign_out_all")).toBe(true);
+  expect(logs?.some((l) => l.action === "child.sessions_revoked")).toBe(true);
 });

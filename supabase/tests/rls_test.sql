@@ -430,6 +430,20 @@ begin
 end $$;
 reset role;
 
+-- 0007: saved-files setting, off by default; the child can read but not change it -----
+reset role;
+select test_helpers.expect_count('allow_local_files defaults to off',
+  (select count(*) from public.family_settings where allow_local_files = false and family_id = '10000000-0000-0000-0000-00000000000a'), 1);
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  update public.family_settings set allow_local_files = true;
+  if found then raise exception 'FAIL: child changed allow_local_files'; end if;
+  raise notice 'ok: child cannot turn on saved files (0 rows)';
+end $$;
+reset role;
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

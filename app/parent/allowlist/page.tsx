@@ -3,7 +3,9 @@ import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { hostnameOf } from "@/lib/admin/schemas";
 import { vnTime } from "@/lib/today/view";
 import { ParentHeader } from "../parent-header";
+import { PRESETS } from "@/lib/admin/presets";
 import { AllowAddForm, AllowRemoveButton } from "./allow-forms";
+import { PresetButtons } from "./preset-buttons";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +40,7 @@ export default async function AllowlistPage() {
         <p className="text-sm text-ink/70">
           Khi máy đang giờ học, con chỉ mở được các trang dưới đây (và các app ở “App môn học”). Google Search và YouTube không thêm vĩnh viễn được — chỉ mở 15 phút hoặc đến hết hôm nay.
         </p>
+        <PresetButtons presets={PRESETS} have={rows.filter((r) => r.child_id === null && r.expires_at === null).map((r) => r.domain)} />
         <AllowAddForm kids={children.map((c) => ({ id: c.id, name: c.display_name, color: c.color }))} />
 
         <section aria-labelledby="al-list" className="flex flex-col gap-2">

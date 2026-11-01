@@ -39,9 +39,16 @@ const FORBIDDEN_SLOT_DOMAINS = new Set([
   "youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be",
 ]);
 
+/**
+ * Google Search / YouTube under ANY country domain (google.co.uk, www.google.de,
+ * youtube.com.vn …) — audit 24/10: only the .com / .com.vn ones were listed.
+ * Sub-sites such as translate.google.co.uk are not matched.
+ */
+const SEARCH_OR_VIDEO_COUNTRY_RE = /^(?:www\.|m\.)?(?:google|youtube)\.(?:(?:com?|co)\.)?[a-z]{2,3}$/;
+
 /** Null when the domain may be added by a slot, otherwise a Vietnamese reason. */
 export function slotDomainProblem(domain: string): string | null {
-  if (FORBIDDEN_SLOT_DOMAINS.has(domain) || domain.endsWith(".translate.goog")) {
+  if (FORBIDDEN_SLOT_DOMAINS.has(domain) || domain.endsWith(".translate.goog") || SEARCH_OR_VIDEO_COUNTRY_RE.test(domain)) {
     return `Không thêm được “${domain}”: tên miền này sẽ mở quá nhiều trang (hoặc là Google Search / YouTube). Hãy nhập tên miền cụ thể của app.`;
   }
   return null;
@@ -113,6 +120,8 @@ export const settingsSchema = z
     /** 0002 (S2c). Optional: the form omits it until that migration has run. */
     homeworkMinUpcoming: int(0, 5).optional(),
     photoRetentionDays: int(7, 365),
+    /** 0007: saved .html/.htm/.pdf files may open in study time. Optional (absent before 0007). */
+    allowLocalFiles: z.boolean().optional(),
     bedtimes: z.array(z.object({ childId: z.uuid(), bedtime: timeOfDay })).max(10).default([]),
   })
   .refine((s) => s.trustDownPct <= s.trustUpPct, {
@@ -135,6 +144,7 @@ export function settingsToRow(s: SettingsInput) {
     homework_lookahead_days: s.homeworkLookaheadDays,
     photo_retention_days: s.photoRetentionDays,
     ...(s.homeworkMinUpcoming === undefined ? {} : { homework_min_upcoming: s.homeworkMinUpcoming }),
+    ...(s.allowLocalFiles === undefined ? {} : { allow_local_files: s.allowLocalFiles }),
   };
 }
 
