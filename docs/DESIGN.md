@@ -140,6 +140,7 @@ Quy tắc phụ:
 - Phần 2 xong → ghi `part2_done_at` và `free_started_at = now` (cùng một transaction). *Chốt 14/10/2026:* nếu lúc đó đang có override **khóa**, `free_started_at` được hoãn đến lần đọc đầu tiên sau khi hết khóa.
 - Thẻ miễn: còn thẻ khi số `pass_used_at` trong tuần (T2–CN) < `passes_per_week` **và hôm nay chưa có `free_started_at`** (không cho dùng thẻ để có giờ tự do lần 2). Dùng → `pass_used_at = now`, `free_started_at = now`.
 - "Ngày đạt" (cho thống kê tuần và chế độ Tin tưởng): có `part2_done_at` trước `bedtime`, **hoặc** dùng thẻ, **hoặc** `day_type ∈ {sick, holiday}`. Ngày thi (`exam`) **không** tự tính đạt. Tính lười khi đọc, không cần cron.
+- *(S3d, 01/11/2026)* **Ngày đặc biệt** do phụ huynh đặt (`POST /api/admin/special-days`, phiên của phụ huynh, ghi `audit_log` `day_type.set`): cho **hôm nay hoặc tối đa 60 ngày tới** (giờ server), **không sửa ngày đã qua**. `exam` / `holiday` tắt được **mẫu việc** (bài bổ sung / kỹ năng) **có lịch vào thứ của ngày đó**; bài trên lớp không tắt ở đây (dời hạn ở Giao bài). `normal` / `sick` xóa danh sách tắt. Về "Ngày thường" = ghi `day_type = normal`, không xóa dòng. Hiệu lực vẫn do `computeDayState` (không đổi).
 - Tiến độ Tin tưởng: đếm số tuần **liên tiếp gần nhất** có tỷ lệ ngày đạt ≥ `trust_up_pct`. Đủ `trust_up_weeks` → hiện gợi ý cho phụ huynh xác nhận. **Không tự chuyển chế độ.** Đang Tin tưởng mà 1 tuần < `trust_down_pct` → gợi ý quay lại Khóa.
 
 **Bắt buộc có test** cho từng dòng của bảng ưu tiên + mốc biên (đúng giây hết 10', hết 45', qua 00:00, tuần mới).
@@ -162,10 +163,13 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/parent-pin/override` | máy con + PIN phụ huynh | `open_until` / `lock_until` / **cộng N phút** = tạo `open_until` mới tính từ `max(openUntil hiện tại, now)` (cắt ở 00:00) |
 | `POST /api/parent-pin/verify` | máy con + PIN phụ huynh | Mở nhanh cài đặt nhẹ trên máy con (vd ghép extension) |
 | `GET/POST /api/admin/*` | phụ huynh | Tài khoản con, cài đặt, allowlist, mẫu việc, slot, ngày đặc biệt, chế độ Tin tưởng, verdict |
+| `POST /api/admin/special-days` | phụ huynh | *(S3d)* `{childId, date, dayType, disabledTemplateIds}` → upsert `day_sessions.day_type` + `disabled_template_ids` (hôm nay … +60 ngày) |
 | `POST /api/push/subscribe` | mọi profile | Lưu subscription |
 | `POST /api/ext/pair` | máy con + PIN phụ huynh | Tạo token thiết bị (trả 1 lần, lưu hash) |
 | `GET /api/ext/state` | extension | `{open, openUntil, allow: string[], blockAlways: string[], launcherUrl, pollSeconds, serverNow}`; cập nhật `last_seen_at` |
 | `GET /api/cron/evening` | Vercel Cron (1 lần/ngày ~20:30 VN) | Push nhắc phụ huynh "xem gộp buổi tối" |
+| `GET /api/cron/cleanup` | GitHub Actions hằng tuần (`Authorization: Bearer CRON_SECRET`) | *(S3e)* Xóa **tệp** quá `photo_retention_days`; `?dryRun=1` chỉ đếm; ≤ 500 tệp/lần; log chỉ số đếm |
+| `GET /api/admin/photo-cleanup` | phụ huynh | *(S3e)* "Xem trước sẽ xóa gì" — đếm (không xóa) cho gia đình mình, bằng phiên phụ huynh (RLS) |
 
 ## 7. Extension (thư mục `extension/`)
 
@@ -205,6 +209,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 
 - Nén ở client trước khi tải: cạnh dài ≤ 1600px, JPEG chất lượng 0.8 (~200–400 KB/ảnh).
 - Hiển thị bằng signed URL có hạn. *(S2c)* Tệp bài tập mở qua `GET /api/files/homework?path=…` (cùng domain với app, tải bằng phiên của người xem nên RLS kiểm tra) — máy đang khóa không cần mở domain Supabase.
+- *(S3e)* **Tự xóa tệp quá hạn** (`lib/cleanup/`, job hằng tuần thứ Hai 04:17 VN): tệp có ngày (VN) **trước** `hôm nay − photo_retention_days` (đúng N ngày = giữ; sàn an toàn 7 ngày). `proofs`: mọi ảnh trong thư mục ngày cũ mà **chính tệp** cũng cũ (`created_at` trước mốc; tệp không bao giờ bị ghi đè). `homework`: chỉ tệp của bài **đã gỡ hoặc đã xong** quá N ngày, tạo + hạn nộp cũng quá N ngày, và không còn nằm trong bài nào khác; bài đang làm không bao giờ bị đụng. **Chỉ xóa tệp, không xóa/sửa dòng nào**: `proof_paths`/`photo_paths` giữ nguyên để số đếm (vd "Chờ xem", số ảnh) không đổi; "Ngày của con" hiện "Ảnh đã xóa sau N ngày" thay ảnh vỡ. Ghi `audit_log` `photos.cleanup` (chỉ số đếm).
 - Ước tính dung lượng: ~8 ảnh/con/ngày × ~300 KB × 2 con ≈ 5 MB/ngày → 120 ngày ≈ 600 MB, dưới mức Storage gói free (≈ 1 GB — **cần kiểm tra lại giới hạn hiện hành**). Vì vậy giữ ảnh `photo_retention_days = 120` ngày; job hằng tuần xóa ảnh cũ hơn.
 
 ## 10. Vận hành

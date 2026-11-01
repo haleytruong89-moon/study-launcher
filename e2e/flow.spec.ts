@@ -1,4 +1,5 @@
-import { createHash, randomBytes } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
@@ -1265,6 +1266,222 @@ test("Push: a parent turns notifications on/off for a device; children cannot; c
   const ok = await request.get("/api/cron/evening", { headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` } });
   expect(ok.status()).toBe(200);
   expect((await ok.json()).ok).toBe(true);
+});
+
+// ---------------------------------------------------------------------------
+// S3d — special days (sick / exam / holiday) set by the parent from the phone
+// ---------------------------------------------------------------------------
+
+test("S3d special days: sick opens the child's day; exam drops a task; a child cannot set it", async ({ page, browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, display_name").eq("role", "child").single();
+  const childId = kid?.id ?? "";
+  const name = kid?.display_name ?? "";
+  const today = localDate(new Date());
+  const tomorrow = addDays(today, 1);
+  const { data: tpl } = await db.from("task_templates").select("id").eq("title", "Luyện đề e2e").single();
+
+  // Parent: today is a sick day.
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent");
+  const card = page.getByRole("region", { name });
+  await card.getByRole("button", { name: /^Ngày đặc biệt/ }).click();
+  const sheet = page.getByRole("dialog", { name: `Ngày đặc biệt của ${name}` });
+  await expect(sheet.getByRole("button", { name: /^Hôm nay/ })).toHaveAttribute("aria-pressed", "true");
+  await sheet.getByRole("radio", { name: /^Ngày ốm/ }).click();
+  await sheet.getByRole("button", { name: /^Đặt ngày ốm hôm nay/ }).click();
+  await expect(sheet).toBeHidden();
+  await expect(card.getByRole("status")).toContainText("Đã lưu");
+  await expect(card.getByRole("button", { name: "Ngày đặc biệt · hôm nay: Ngày ốm" })).toBeVisible();
+
+  // Child: the whole day is open, and the screen says why.
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  type S = { status: string; open: boolean; dayType: string; part1: { items: { title: string }[] } };
+  const state = async () => child.evaluate(async () => ((await (await fetch("/api/today")).json()) as { state: S }).state);
+  let s = await state();
+  expect(s.status).toBe("OPEN_SICK");
+  expect(s.open).toBe(true);
+  await expect(child.getByText("Ngày ốm · mở mọi trang")).toBeVisible();
+
+  // Parent: change today to an exam day without "Luyện đề e2e" (the sheet shows what is set).
+  await card.getByRole("button", { name: /^Ngày đặc biệt/ }).click();
+  await expect(sheet.getByRole("radio", { name: /^Ngày ốm/ })).toHaveAttribute("aria-checked", "true");
+  await sheet.getByRole("radio", { name: /^Ngày thi/ }).click();
+  await sheet.getByLabel(/Luyện đề e2e/).check();
+  await sheet.getByRole("button", { name: /^Đặt ngày thi hôm nay .* bỏ 1 việc$/ }).click();
+  await expect(sheet).toBeHidden();
+  const { data: row } = await db.from("day_sessions").select("day_type, disabled_template_ids").eq("child_id", childId).eq("local_date", today).single();
+  expect(row).toEqual({ day_type: "exam", disabled_template_ids: [tpl?.id] });
+
+  s = await state();
+  expect(s.dayType).toBe("exam");
+  expect(s.status).not.toBe("OPEN_SICK");
+  expect(s.part1.items.map((i) => i.title)).not.toContain("Luyện đề e2e");
+  await child.reload();
+  await expect(child.getByText("Ngày thi · xong các việc còn lại là đạt")).toBeVisible();
+
+  // Parent: tomorrow is a holiday (planned ahead); today back to normal.
+  await card.getByRole("button", { name: /^Ngày đặc biệt/ }).click();
+  await sheet.getByRole("button", { name: /^Ngày mai/ }).click();
+  await expect(sheet.getByRole("radio", { name: /^Ngày thường/ })).toHaveAttribute("aria-checked", "true");
+  await sheet.getByRole("radio", { name: /^Ngày lễ/ }).click();
+  await sheet.getByRole("button", { name: /^Đặt ngày lễ ngày mai/ }).click();
+  await expect(sheet).toBeHidden();
+  await card.getByRole("button", { name: /^Ngày đặc biệt/ }).click();
+  await sheet.getByRole("radio", { name: /^Ngày thường/ }).click();
+  await sheet.getByRole("button", { name: /^Để hôm nay .* là ngày thường/ }).click();
+  await expect(sheet).toBeHidden();
+  await expect(card.getByRole("button", { name: /^Ngày đặc biệt · Ngày lễ/ })).toBeVisible();
+
+  const { data: rows } = await db.from("day_sessions").select("local_date, day_type, disabled_template_ids").eq("child_id", childId).in("local_date", [today, tomorrow]).order("local_date");
+  expect(rows).toEqual([
+    { local_date: today, day_type: "normal", disabled_template_ids: [] },
+    { local_date: tomorrow, day_type: "holiday", disabled_template_ids: [] },
+  ]);
+  expect((await state()).dayType).toBe("normal");
+
+  // The server refuses a past day and a task that is not the child's.
+  const refused = await page.evaluate(
+    async ({ childId, past, today }) => {
+      const post = async (body: unknown) => (await fetch("/api/admin/special-days", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).status;
+      return [
+        await post({ childId, date: past, dayType: "sick" }),
+        await post({ childId, date: today, dayType: "exam", disabledTemplateIds: ["00000000-0000-4000-8000-000000000000"] }),
+      ];
+    },
+    { childId, past: addDays(today, -1), today },
+  );
+  expect(refused).toEqual([400, 400]);
+
+  // A child cannot set a day type: not through the API, not directly in the database.
+  const viaApi = await child.evaluate(
+    async ({ childId, today }) => (await fetch("/api/admin/special-days", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId, date: today, dayType: "sick" }) })).status,
+    { childId, today },
+  );
+  expect(viaApi).toBe(403);
+  await childCtx.close();
+  const direct = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await direct.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  const write = await direct.from("day_sessions").update({ day_type: "sick" }).eq("child_id", childId).select("local_date");
+  expect(write.data ?? []).toHaveLength(0);
+  const { data: still } = await db.from("day_sessions").select("day_type").eq("child_id", childId).eq("local_date", today).single();
+  expect(still?.day_type).toBe("normal");
+
+  const { data: logs } = await db.from("audit_log").select("action").eq("action", "day_type.set");
+  expect(logs?.length).toBe(4);
+});
+
+// ---------------------------------------------------------------------------
+// S3e weekly photo cleanup (01/11/2026)
+// ---------------------------------------------------------------------------
+
+test("S3e: weekly cleanup deletes only old files, keeps every row; parent preview; cron needs the secret", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
+  const familyId = kid?.family_id as string;
+  const childId = kid?.id as string;
+  const oldDay = "2025-01-06";
+  const folder = `${familyId}/${childId}/${oldDay}`;
+  const oldProof = `${folder}/${randomUUID()}.png`; // old file in an old folder -> deleted
+  const newProof = `${folder}/${randomUUID()}.png`; // NEW file in an old folder -> kept
+  const oldHwFile = `${folder}/${randomUUID()}.png`; // file of homework archived long ago -> deleted
+  const activeHwFile = `${folder}/${randomUUID()}.png`; // file of still-active homework -> kept
+  const png = () => new Blob([new Uint8Array(makePng(8, 8))], { type: "image/png" });
+  for (const p of [oldProof, newProof]) expect((await db.storage.from("proofs").upload(p, png())).error).toBeNull();
+  for (const p of [oldHwFile, activeHwFile]) expect((await db.storage.from("homework").upload(p, png())).error).toBeNull();
+  const { data: hw, error: hwError } = await db
+    .from("homework_items")
+    .insert([
+      { family_id: familyId, child_id: childId, subject: "Lịch sử", due_date: oldDay, created_at: "2025-01-05T03:00:00Z", archived_at: "2025-01-07T03:00:00Z", photo_paths: [oldHwFile] },
+      { family_id: familyId, child_id: childId, subject: "Địa lí", due_date: oldDay, created_at: "2025-01-05T03:00:00Z", photo_paths: [activeHwFile] },
+    ])
+    .select("id");
+  expect(hwError).toBeNull();
+  const hwIds = (hw ?? []).map((h) => h.id as string);
+  // Storage stamps uploads "now": age three of them in the local database (CI only).
+  const dbUrl = process.env.E2E_DB_URL ?? "";
+  expect(dbUrl, "E2E_DB_URL (local Supabase) is needed to age test files").not.toBe("");
+  const aged = execFileSync(
+    "psql",
+    [dbUrl, "-v", "ON_ERROR_STOP=1", "-qAt", "-c", `with u as (update storage.objects set created_at = now() - interval '400 days' where name in ('${oldProof}', '${oldHwFile}', '${activeHwFile}') returning 1) select count(*) from u`],
+    { encoding: "utf8" },
+  ).trim();
+  expect(aged).toBe("3");
+  const exists = async (bucket: string, p: string) => !(await db.storage.from(bucket).download(p)).error;
+
+  // Cron: refused without the secret; the dry run only counts.
+  expect((await request.get("/api/cron/cleanup")).status()).toBe(401);
+  expect((await request.get("/api/cron/cleanup", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
+  const auth = { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` };
+  const dry = await request.get("/api/cron/cleanup?dryRun=1", { headers: auth });
+  expect(dry.status()).toBe(200);
+  const dryBody = await dry.json();
+  expect(dryBody).toMatchObject({ ok: true, dryRun: true, found: { proofs: 1, homework: 1 }, deleted: { proofs: 0, homework: 0 } });
+  expect(await exists("proofs", oldProof)).toBe(true);
+  expect(await exists("homework", oldHwFile)).toBe(true);
+
+  // Parent preview (own session, RLS): the same counts, nothing deleted.
+  await login(page, env.parentEmail, env.parentPassword);
+  const previewJson = await page.evaluate(async () => (await fetch("/api/admin/photo-cleanup")).json());
+  expect(previewJson).toMatchObject({ retentionDays: 120, proofs: 1, homework: 1, more: false });
+  await page.goto("/parent/settings");
+  await expect(page.getByRole("heading", { name: "Tự xóa ảnh cũ" })).toBeVisible();
+  const result = page.getByRole("region", { name: "Kết quả xem trước" });
+  // Retry the tap in case it lands before the page is interactive.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Xem trước sẽ xóa gì" }).click();
+    await expect(result).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
+  await expect(result).toContainText("sẽ xóa 1 ảnh bài con nộp và 1 tệp đề bài");
+  await expect(result).toContainText("Xem trước không xóa gì");
+  expect(await exists("proofs", oldProof)).toBe(true);
+
+  // A child cannot use the preview.
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  expect(await k.evaluate(async () => (await fetch("/api/admin/photo-cleanup")).status)).toBe(403);
+  await kCtx.close();
+
+  // The real run deletes only the old files.
+  const run = await request.get("/api/cron/cleanup", { headers: auth });
+  expect(run.status()).toBe(200);
+  const body = await run.json();
+  expect(body).toMatchObject({ ok: true, dryRun: false, deleted: { proofs: 1, homework: 1 }, more: false });
+  expect(JSON.stringify(body)).not.toContain(childId); // counts only, never paths
+  expect(await exists("proofs", oldProof)).toBe(false);
+  expect(await exists("homework", oldHwFile)).toBe(false);
+  expect(await exists("proofs", newProof)).toBe(true);
+  expect(await exists("homework", activeHwFile)).toBe(true);
+  // Rows stay as they were (paths kept, so counts on every screen stay right).
+  const { data: rows } = await db.from("homework_items").select("id, photo_paths").in("id", hwIds);
+  expect(rows).toHaveLength(2);
+  expect(rows?.find((r) => r.id === hwIds[0])?.photo_paths).toEqual([oldHwFile]);
+  const { data: logs } = await db.from("audit_log").select("payload").eq("action", "photos.cleanup");
+  expect(logs?.length).toBeGreaterThanOrEqual(1);
+  // Nothing left to do on the next run.
+  expect((await (await request.get("/api/cron/cleanup?dryRun=1", { headers: auth })).json()).found).toEqual({ proofs: 0, homework: 0 });
+
+  // "Ngày của con" shows a neutral note instead of a broken photo for a day past retention.
+  const today = localDate(new Date());
+  const day = addDays(today, -10);
+  const { error: runError } = await db.from("task_runs").insert({
+    family_id: familyId, child_id: childId, local_date: day, source: "homework", homework_item_id: hwIds[0],
+    started_at: new Date(Date.now() - 10 * 86400000).toISOString(), done_at: new Date(Date.now() - 10 * 86400000 + 600000).toISOString(), proof_paths: [oldProof],
+  });
+  expect(runError).toBeNull();
+  await db.from("family_settings").update({ photo_retention_days: 7 }).eq("family_id", familyId);
+  await page.goto(`/parent/review?con=${childId}&ngay=${day}`);
+  await expect(page.getByText("Ảnh đã xóa sau 7 ngày")).toBeVisible();
+  await db.from("family_settings").update({ photo_retention_days: 120 }).eq("family_id", familyId);
+  await page.reload();
+  await expect(page.getByText("Không mở được ảnh")).toBeVisible();
+
+  // Tidy the test rows so later tests see the same data as before.
+  await db.from("task_runs").delete().eq("child_id", childId).eq("local_date", day).eq("homework_item_id", hwIds[0]);
+  await db.from("homework_items").delete().in("id", hwIds);
 });
 
 // ---------------------------------------------------------------------------
