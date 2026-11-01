@@ -76,6 +76,7 @@ export type SyncEvent =
   | { type: "openUntilReached"; openUntil: string };
 
 export type LockReason =
+  | "no-host-access"
   | "server-open"
   | "server-locked"
   | "never-synced"
@@ -97,6 +98,8 @@ export interface EffectiveState {
   failures: number;
   /** Saved .html/.htm/.pdf files stay open while locked (family setting). */
   allowLocalFiles: boolean;
+  /** false = the extension lost access to sites (see `withHostAccess`). */
+  hostAccess?: boolean;
 }
 
 export function initialSyncState(): SyncState {
@@ -244,4 +247,14 @@ export function planAlarms(state: SyncState): AlarmPlan {
   }
   const delayMs = Math.max(0, Date.parse(g.openUntil) - Date.parse(g.serverNow));
   return { pollPeriodMinutes, openUntil: { openUntil: g.openUntil, delayInMinutes: delayMs / 60000 } };
+}
+
+/**
+ * Audit 24/10: with "Site access: On click" (or "On specific sites") the extension can no
+ * longer redirect pages, and cannot be sure of anything. Fail closed: locked with the
+ * last allowlist, catch-all as a plain block, until access to all sites is back.
+ */
+export function withHostAccess(eff: EffectiveState, hostAccess: boolean): EffectiveState {
+  if (hostAccess) return { ...eff, hostAccess: true };
+  return { ...eff, locked: true, reason: "no-host-access", openUntil: null, hostAccess: false };
 }

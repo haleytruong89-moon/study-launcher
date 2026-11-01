@@ -98,6 +98,13 @@ export interface RuleInput {
   launcherUrl: string;
   /** Normalised launcher host. */
   launcherHost: string;
+  /**
+   * Whether the extension still has access to every site (audit 24/10: "Site access: On
+   * click" takes it away). A redirect needs that access; a block does not. Without it the
+   * catch-all becomes a plain block (Chrome's error page) so nothing slips through.
+   * Default true.
+   */
+  hostAccess?: boolean;
 }
 
 /** The dynamic rule set for a state. Open -> []. */
@@ -111,10 +118,13 @@ export function buildRules(input: RuleInput): DnrRule[] {
     {
       id: RULE_IDS.redirectAll,
       priority: 1,
-      action: {
-        type: "redirect",
-        redirect: { regexSubstitution: `${origin}${BLOCKED_PATH}?u=\\1` },
-      },
+      action:
+        input.hostAccess === false
+          ? { type: "block" }
+          : {
+              type: "redirect",
+              redirect: { regexSubstitution: `${origin}${BLOCKED_PATH}?u=\\1` },
+            },
       condition: { regexFilter: REDIRECT_REGEX, resourceTypes: ["main_frame"] },
     },
     {
