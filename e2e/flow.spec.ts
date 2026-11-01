@@ -1255,8 +1255,21 @@ test("S3e: weekly cleanup deletes only old files, keeps every row; parent previe
   expect(aged).toBe("3");
   const exists = async (bucket: string, p: string) => !(await db.storage.from(bucket).download(p)).error;
 
-  // Parent preview: counts only, nothing deleted.
+  // Cron: refused without the secret; the dry run only counts.
+  expect((await request.get("/api/cron/cleanup")).status()).toBe(401);
+  expect((await request.get("/api/cron/cleanup", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
+  const auth = { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` };
+  const dry = await request.get("/api/cron/cleanup?dryRun=1", { headers: auth });
+  expect(dry.status()).toBe(200);
+  const dryBody = await dry.json();
+  expect(dryBody).toMatchObject({ ok: true, dryRun: true, found: { proofs: 1, homework: 1 }, deleted: { proofs: 0, homework: 0 } });
+  expect(await exists("proofs", oldProof)).toBe(true);
+  expect(await exists("homework", oldHwFile)).toBe(true);
+
+  // Parent preview (own session, RLS): the same counts, nothing deleted.
   await login(page, env.parentEmail, env.parentPassword);
+  const previewJson = await page.evaluate(async () => (await fetch("/api/admin/photo-cleanup")).json());
+  expect(previewJson).toMatchObject({ retentionDays: 120, proofs: 1, homework: 1, more: false });
   await page.goto("/parent/settings");
   await expect(page.getByRole("heading", { name: "Tự xóa ảnh cũ" })).toBeVisible();
   await page.getByRole("button", { name: "Xem trước sẽ xóa gì" }).click();
@@ -1272,17 +1285,7 @@ test("S3e: weekly cleanup deletes only old files, keeps every row; parent previe
   expect(await k.evaluate(async () => (await fetch("/api/admin/photo-cleanup")).status)).toBe(403);
   await kCtx.close();
 
-  // Cron: refused without the secret; dry run counts; the real run deletes only the old files.
-  expect((await request.get("/api/cron/cleanup")).status()).toBe(401);
-  expect((await request.get("/api/cron/cleanup", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
-  const auth = { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` };
-  const dry = await request.get("/api/cron/cleanup?dryRun=1", { headers: auth });
-  expect(dry.status()).toBe(200);
-  const dryBody = await dry.json();
-  expect(dryBody).toMatchObject({ ok: true, dryRun: true, found: { proofs: 1, homework: 1 }, deleted: { proofs: 0, homework: 0 } });
-  expect(await exists("proofs", oldProof)).toBe(true);
-  expect(await exists("homework", oldHwFile)).toBe(true);
-
+  // The real run deletes only the old files.
   const run = await request.get("/api/cron/cleanup", { headers: auth });
   expect(run.status()).toBe(200);
   const body = await run.json();
