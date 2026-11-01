@@ -1145,3 +1145,73 @@ test("Frames: a same-site frame blocked inside Meet becomes one request; others 
   expect((await (await send("https://meet.google.com", "https://www.google.com/search?q=game")).json()).ignored).toBe("forbidden site");
   expect((await send("https://meet.google.com", "https://widgets.google.com/x", "not-a-real-token-0000000000000000000000000")).status()).toBe(401);
 });
+
+// ---------------------------------------------------------------------------
+// Security fixes after the audit of 24/10/2026
+// ---------------------------------------------------------------------------
+
+test("Audit: parent signs the child out of every browser; 'Quên máy này'; login never leaves the site", async ({ page, browser }) => {
+  const { data: kid } = await admin().from("profiles").select("id, display_name").eq("role", "child").single();
+  const childId = kid?.id ?? "";
+
+  // Laptop A remembers the child, then signs out (PIN offered). Browser B stays signed in.
+  const aCtx = await browser.newContext();
+  const a = await aCtx.newPage();
+  a.on("dialog", (d) => void d.accept());
+  await login(a, childEmail, childPassword);
+  await a.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(a.getByRole("region", { name: /^PIN của/ })).toBeVisible();
+  const bCtx = await browser.newContext();
+  const b = await bCtx.newPage();
+  await login(b, childEmail, childPassword);
+
+  // The parent: "Đăng xuất con khỏi mọi máy".
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/children");
+  const item = page.getByRole("listitem").filter({ hasText: kid?.display_name ?? "" });
+  await item.getByText("Sửa").click();
+  await expect(item.getByText(/Đang nhớ PIN trên \d+ trình duyệt/)).toBeVisible();
+  page.on("dialog", (d) => void d.accept());
+  await item.getByRole("button", { name: "Đăng xuất con khỏi mọi máy" }).click();
+  await expect(item.getByRole("status")).toContainText("Đã đăng xuất con khỏi mọi máy");
+  const { count: left } = await admin().from("pin_devices").select("id", { count: "exact", head: true }).eq("child_id", childId).is("revoked_at", null);
+  expect(left).toBe(0);
+
+  // Laptop A no longer offers the PIN, and the PIN is refused there.
+  await a.goto("/login");
+  await expect(a.getByLabel("Email")).toBeVisible();
+  await expect(a.getByRole("region", { name: /^PIN của/ })).toHaveCount(0);
+  const pinRes = await a.evaluate(async (id) => (await fetch("/api/pin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId: id, pin: "482916" }) })).status, childId);
+  expect(pinRes).toBe(403);
+
+  // Browser B's old session cannot remember a browser again (signed out, or too old).
+  const again = await b.evaluate(async () => (await fetch("/api/pin/remember", { method: "POST" })).status);
+  expect([401, 409]).toContain(again);
+  await bCtx.close();
+
+  // A fresh password login on laptop A remembers it again; then the child forgets it.
+  await login(a, childEmail, childPassword);
+  await a.getByRole("button", { name: "Đăng xuất" }).click();
+  await expect(a.getByRole("region", { name: /^PIN của/ })).toBeVisible();
+  await a.getByRole("button", { name: /Quên máy này/ }).click();
+  await expect(a.getByLabel("Email")).toBeVisible();
+  await a.reload();
+  await expect(a.getByRole("region", { name: /^PIN của/ })).toHaveCount(0);
+  await expect(a.getByRole("button", { name: /Quay lại đăng nhập bằng PIN/ })).toHaveCount(0);
+  await aCtx.close();
+
+  // A tricky "next" after login stays on our own site.
+  const cCtx = await browser.newContext();
+  const c = await cCtx.newPage();
+  await c.goto("/login?next=/%09/example.com");
+  await c.getByLabel("Email").fill(childEmail);
+  await c.getByLabel("Mật khẩu").fill(childPassword);
+  await c.getByRole("button", { name: /Đăng nhập/ }).click();
+  await expect(c).toHaveURL(/\/today$/);
+  expect(new URL(c.url()).hostname).toBe("localhost");
+  await cCtx.close();
+
+  const { data: logs } = await admin().from("audit_log").select("action").in("action", ["child.sign_out_all", "child.sessions_revoked"]);
+  expect(logs?.some((l) => l.action === "child.sign_out_all")).toBe(true);
+  expect(logs?.some((l) => l.action === "child.sessions_revoked")).toBe(true);
+});
