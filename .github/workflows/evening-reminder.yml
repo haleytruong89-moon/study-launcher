@@ -1,0 +1,29 @@
+name: Evening reminder (21:45)
+
+# S5 (parent decision 01/11/2026): at 21:45 Viet Nam time, push the parents ONLY when today's
+# work still waits for them. The app decides; this job only calls /api/cron/evening.
+# GitHub may start a scheduled job a few minutes late, so it never arrives before 21:45.
+on:
+  schedule:
+    - cron: "45 14 * * *" # 14:45 UTC = 21:45 Asia/Ho_Chi_Minh
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/cron/evening
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::APP_URL / CRON_SECRET secrets are not set yet (SETUP A10); skipping."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/evening"
+          echo

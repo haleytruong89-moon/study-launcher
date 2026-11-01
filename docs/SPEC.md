@@ -327,6 +327,7 @@ Quy tắc:
 | 24/10/2026 | **Vá bảo mật sau audit độc lập** (phụ huynh chọn qua pop-up): (1) **Đặt lại mật khẩu con = đăng xuất con khỏi mọi máy** + quên mọi trình duyệt nhớ PIN; thêm nút **"Đăng xuất con khỏi mọi máy"** ở Thêm › Các con; (2) trang đăng nhập có **"Không phải máy của con? Quên máy này"**; (3) đường dẫn quay lại sau đăng nhập không thể dẫn ra trang ngoài; (4) Google Search / YouTube **mọi tên miền quốc gia** (google.co.uk, google.de…) không thêm vào danh sách trang học được. Không đổi luật khóa/mở |
 | 17/10/2026 | Thứ tự tiếp theo (phụ huynh chọn): **S3c-1 mở/khóa từ iPhone bố mẹ** (lối thoát khi kẹt) → **S4b nối extension** (khóa thật) → **S3d ngày đặc biệt + allowlist** → S3b/S3c-2 PIN trên máy con → S3e |
 | 15/10/2026 | Chốt kế hoạch S3: chia S3a (xem gộp) → S3b (PIN phụ huynh **6 số**) → S3c (mở/khóa/cộng phút bằng tay **từ cả máy con bằng PIN lẫn iPhone phụ huynh**) → S3d (ngày đặc biệt, gợi ý Tin tưởng, sửa allowlist, nhật ký) → S3e (**tự xóa ảnh** quá `photo_retention_days`, phụ huynh đồng ý). **Màn chọn hồ sơ + PIN 4 số của con để sau v1** (mỗi laptop đăng nhập sẵn tài khoản của 1 con) |
+| 01/11/2026 | **Thông báo đẩy (S5)**: báo iPhone bố mẹ khi con **Xin mở trang** và **Nhờ bố mẹ xem trực tiếp**; **21:45** nhắc xem gộp chỉ khi còn bài chưa xem hoặc việc con đang nhờ. Không báo cho khung bị chặn tự phát hiện. **Không** có giờ yên lặng. |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 
