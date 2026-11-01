@@ -1,4 +1,5 @@
-import { createHash, randomBytes } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
@@ -1214,4 +1215,108 @@ test("Audit: parent signs the child out of every browser; 'Quên máy này'; log
   const { data: logs } = await admin().from("audit_log").select("action").in("action", ["child.sign_out_all", "child.sessions_revoked"]);
   expect(logs?.some((l) => l.action === "child.sign_out_all")).toBe(true);
   expect(logs?.some((l) => l.action === "child.sessions_revoked")).toBe(true);
+});
+
+// ---------------------------------------------------------------------------
+// S3e weekly photo cleanup (01/11/2026)
+// ---------------------------------------------------------------------------
+
+test("S3e: weekly cleanup deletes only old files, keeps every row; parent preview; cron needs the secret", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
+  const familyId = kid?.family_id as string;
+  const childId = kid?.id as string;
+  const oldDay = "2025-01-06";
+  const folder = `${familyId}/${childId}/${oldDay}`;
+  const oldProof = `${folder}/${randomUUID()}.png`; // old file in an old folder -> deleted
+  const newProof = `${folder}/${randomUUID()}.png`; // NEW file in an old folder -> kept
+  const oldHwFile = `${folder}/${randomUUID()}.png`; // file of homework archived long ago -> deleted
+  const activeHwFile = `${folder}/${randomUUID()}.png`; // file of still-active homework -> kept
+  const png = () => new Blob([new Uint8Array(makePng(8, 8))], { type: "image/png" });
+  for (const p of [oldProof, newProof]) expect((await db.storage.from("proofs").upload(p, png())).error).toBeNull();
+  for (const p of [oldHwFile, activeHwFile]) expect((await db.storage.from("homework").upload(p, png())).error).toBeNull();
+  const { data: hw, error: hwError } = await db
+    .from("homework_items")
+    .insert([
+      { family_id: familyId, child_id: childId, subject: "Lịch sử", due_date: oldDay, created_at: "2025-01-05T03:00:00Z", archived_at: "2025-01-07T03:00:00Z", photo_paths: [oldHwFile] },
+      { family_id: familyId, child_id: childId, subject: "Địa lí", due_date: oldDay, created_at: "2025-01-05T03:00:00Z", photo_paths: [activeHwFile] },
+    ])
+    .select("id");
+  expect(hwError).toBeNull();
+  const hwIds = (hw ?? []).map((h) => h.id as string);
+  // Storage stamps uploads "now": age three of them in the local database (CI only).
+  const dbUrl = process.env.E2E_DB_URL ?? "";
+  expect(dbUrl, "E2E_DB_URL (local Supabase) is needed to age test files").not.toBe("");
+  const aged = execFileSync(
+    "psql",
+    [dbUrl, "-v", "ON_ERROR_STOP=1", "-qAt", "-c", `with u as (update storage.objects set created_at = now() - interval '400 days', updated_at = now() - interval '400 days' where name in ('${oldProof}', '${oldHwFile}', '${activeHwFile}') returning 1) select count(*) from u`],
+    { encoding: "utf8" },
+  ).trim();
+  expect(aged).toBe("3");
+  const exists = async (bucket: string, p: string) => !(await db.storage.from(bucket).download(p)).error;
+
+  // Parent preview: counts only, nothing deleted.
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/settings");
+  await expect(page.getByRole("heading", { name: "Tự xóa ảnh cũ" })).toBeVisible();
+  await page.getByRole("button", { name: "Xem trước sẽ xóa gì" }).click();
+  const result = page.getByRole("region", { name: "Kết quả xem trước" });
+  await expect(result).toContainText("sẽ xóa 1 ảnh bài con nộp và 1 tệp đề bài");
+  await expect(result).toContainText("Xem trước không xóa gì");
+  expect(await exists("proofs", oldProof)).toBe(true);
+
+  // A child cannot use the preview.
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  expect(await k.evaluate(async () => (await fetch("/api/admin/photo-cleanup")).status)).toBe(403);
+  await kCtx.close();
+
+  // Cron: refused without the secret; dry run counts; the real run deletes only the old files.
+  expect((await request.get("/api/cron/cleanup")).status()).toBe(401);
+  expect((await request.get("/api/cron/cleanup", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
+  const auth = { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` };
+  const dry = await request.get("/api/cron/cleanup?dryRun=1", { headers: auth });
+  expect(dry.status()).toBe(200);
+  const dryBody = await dry.json();
+  expect(dryBody).toMatchObject({ ok: true, dryRun: true, found: { proofs: 1, homework: 1 }, deleted: { proofs: 0, homework: 0 } });
+  expect(await exists("proofs", oldProof)).toBe(true);
+  expect(await exists("homework", oldHwFile)).toBe(true);
+
+  const run = await request.get("/api/cron/cleanup", { headers: auth });
+  expect(run.status()).toBe(200);
+  const body = await run.json();
+  expect(body).toMatchObject({ ok: true, dryRun: false, deleted: { proofs: 1, homework: 1 }, more: false });
+  expect(JSON.stringify(body)).not.toContain(childId); // counts only, never paths
+  expect(await exists("proofs", oldProof)).toBe(false);
+  expect(await exists("homework", oldHwFile)).toBe(false);
+  expect(await exists("proofs", newProof)).toBe(true);
+  expect(await exists("homework", activeHwFile)).toBe(true);
+  // Rows stay as they were (paths kept, so counts on every screen stay right).
+  const { data: rows } = await db.from("homework_items").select("id, photo_paths").in("id", hwIds);
+  expect(rows).toHaveLength(2);
+  expect(rows?.find((r) => r.id === hwIds[0])?.photo_paths).toEqual([oldHwFile]);
+  const { data: logs } = await db.from("audit_log").select("payload").eq("action", "photos.cleanup");
+  expect(logs?.length).toBeGreaterThanOrEqual(1);
+  // Nothing left to do on the next run.
+  expect((await (await request.get("/api/cron/cleanup?dryRun=1", { headers: auth })).json()).found).toEqual({ proofs: 0, homework: 0 });
+
+  // "Ngày của con" shows a neutral note instead of a broken photo for a day past retention.
+  const today = localDate(new Date());
+  const day = addDays(today, -10);
+  const { error: runError } = await db.from("task_runs").insert({
+    family_id: familyId, child_id: childId, local_date: day, source: "homework", homework_item_id: hwIds[0],
+    started_at: new Date(Date.now() - 10 * 86400000).toISOString(), done_at: new Date(Date.now() - 10 * 86400000 + 600000).toISOString(), proof_paths: [oldProof],
+  });
+  expect(runError).toBeNull();
+  await db.from("family_settings").update({ photo_retention_days: 7 }).eq("family_id", familyId);
+  await page.goto(`/parent/review?con=${childId}&ngay=${day}`);
+  await expect(page.getByText("Ảnh đã xóa sau 7 ngày")).toBeVisible();
+  await db.from("family_settings").update({ photo_retention_days: 120 }).eq("family_id", familyId);
+  await page.reload();
+  await expect(page.getByText("Không mở được ảnh")).toBeVisible();
+
+  // Tidy the test rows so later tests see the same data as before.
+  await db.from("task_runs").delete().eq("child_id", childId).eq("local_date", day).eq("homework_item_id", hwIds[0]);
+  await db.from("homework_items").delete().in("id", hwIds);
 });

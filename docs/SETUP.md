@@ -142,3 +142,17 @@ Cách khôi phục (Claude làm giúp, cần máy có `psql` + `pg_restore` bả
    ```
 4. Đăng nhập lại bằng tài khoản phụ huynh để kiểm tra.
 
+
+---
+
+## F. Tự xóa ảnh cũ (S3e, ~5 phút, sau khi merge PR S3e)
+
+Mỗi tuần (thứ Hai 04:17 giờ VN) GitHub gọi `/api/cron/cleanup` để xóa **tệp** ảnh/đề bài cũ hơn số ngày ở **Luật trong nhà › Giữ ảnh bài** (mặc định 120). Việc này **chỉ bắt đầu khi đủ 2 secret GitHub dưới đây**; thiếu thì job tự bỏ qua (chỉ hiện cảnh báo).
+
+| Bước | Việc | Ghi chú |
+|---|---|---|
+| F1 | **Đã làm bước A10 (thông báo đẩy, PR S5)?** → **không phải làm gì thêm**: job này dùng lại đúng 2 secret GitHub `CRON_SECRET` + `APP_URL` và biến Vercel `CRON_SECRET` của A10 | Cùng 1 giá trị cho cả nhắc 21:45 và tự xóa ảnh |
+| F2 | **Chưa làm A10:** tự tạo `CRON_SECRET` = chuỗi ngẫu nhiên ≥ 32 ký tự (vd nút "tạo mật khẩu" của trình quản lý mật khẩu, chỉ chữ + số). (1) **Vercel → Settings → Environment Variables**: thêm `CRON_SECRET` (Production) → **Redeploy**; (2) **GitHub → Secrets** (như A9): thêm `CRON_SECRET` (cùng giá trị) và `APP_URL` (= link Vercel chính thức, vd `https://study-launcher.vercel.app`) | Không gửi giá trị này qua chat. Sau này làm A10 thì dùng lại giá trị này, không tạo cái mới |
+| F3 | Trước lần chạy thật đầu tiên, nên bấm **Luật trong nhà › Xem trước sẽ xóa gì** để thấy số ảnh sẽ bị xóa | Muốn thử job mà không xóa: **GitHub → Actions → Weekly photo cleanup → Run workflow** (ô "Chỉ đếm, không xóa" mặc định đã tick) |
+
+Ảnh đã xóa **không lấy lại được**: bản sao lưu hằng tuần (A9) không gồm ảnh. Muốn giữ lâu hơn: tăng "Giữ ảnh bài" (tối đa 365 ngày) **trước** lần chạy kế tiếp.

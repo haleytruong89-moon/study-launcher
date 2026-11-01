@@ -166,6 +166,8 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/ext/pair` | máy con + PIN phụ huynh | Tạo token thiết bị (trả 1 lần, lưu hash) |
 | `GET /api/ext/state` | extension | `{open, openUntil, allow: string[], blockAlways: string[], launcherUrl, pollSeconds, serverNow}`; cập nhật `last_seen_at` |
 | `GET /api/cron/evening` | Vercel Cron (1 lần/ngày ~20:30 VN) | Push nhắc phụ huynh "xem gộp buổi tối" |
+| `GET /api/cron/cleanup` | GitHub Actions hằng tuần (`Authorization: Bearer CRON_SECRET`) | *(S3e)* Xóa **tệp** quá `photo_retention_days`; `?dryRun=1` chỉ đếm; ≤ 500 tệp/lần; log chỉ số đếm |
+| `GET /api/admin/photo-cleanup` | phụ huynh | *(S3e)* "Xem trước sẽ xóa gì" — đếm (không xóa) cho gia đình mình, bằng phiên phụ huynh (RLS) |
 
 ## 7. Extension (thư mục `extension/`)
 
@@ -203,6 +205,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 
 - Nén ở client trước khi tải: cạnh dài ≤ 1600px, JPEG chất lượng 0.8 (~200–400 KB/ảnh).
 - Hiển thị bằng signed URL có hạn. *(S2c)* Tệp bài tập mở qua `GET /api/files/homework?path=…` (cùng domain với app, tải bằng phiên của người xem nên RLS kiểm tra) — máy đang khóa không cần mở domain Supabase.
+- *(S3e)* **Tự xóa tệp quá hạn** (`lib/cleanup/`, job hằng tuần thứ Hai 04:17 VN): tệp có ngày (VN) **trước** `hôm nay − photo_retention_days` (đúng N ngày = giữ; sàn an toàn 7 ngày). `proofs`: mọi ảnh trong thư mục ngày cũ mà **chính tệp** cũng cũ (tạo + sửa trước mốc). `homework`: chỉ tệp của bài **đã gỡ hoặc đã xong** quá N ngày, tạo + hạn nộp cũng quá N ngày, và không còn nằm trong bài nào khác; bài đang làm không bao giờ bị đụng. **Chỉ xóa tệp, không xóa/sửa dòng nào**: `proof_paths`/`photo_paths` giữ nguyên để số đếm (vd "Chờ xem", số ảnh) không đổi; "Ngày của con" hiện "Ảnh đã xóa sau N ngày" thay ảnh vỡ. Ghi `audit_log` `photos.cleanup` (chỉ số đếm).
 - Ước tính dung lượng: ~8 ảnh/con/ngày × ~300 KB × 2 con ≈ 5 MB/ngày → 120 ngày ≈ 600 MB, dưới mức Storage gói free (≈ 1 GB — **cần kiểm tra lại giới hạn hiện hành**). Vì vậy giữ ảnh `photo_retention_days = 120` ngày; job hằng tuần xóa ảnh cũ hơn.
 
 ## 10. Vận hành

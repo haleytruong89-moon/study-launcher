@@ -79,6 +79,9 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$(get SERVICE_ROLE_KEY)" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_APP_URL=http://localhost:3100" >> "$GITHUB_ENV"
           echo "FIRST_PARENT_EMAIL=parent@example.com" >> "$GITHUB_ENV"
+          # S3e: cron secret for /api/cron/* and the local database URL (the test ages its own files).
+          echo "CRON_SECRET=e2e-cron-secret-$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          echo "E2E_DB_URL=$(get DB_URL)" >> "$GITHUB_ENV"
       - run: npx playwright install --with-deps chromium
       - name: Build
         run: npm run build

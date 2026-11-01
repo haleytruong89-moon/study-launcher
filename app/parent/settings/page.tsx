@@ -1,5 +1,6 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { ParentHeader } from "../parent-header";
+import { PhotoCleanup } from "./photo-cleanup";
 import { SettingsForm, type SettingsValues } from "./settings-form";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ export default async function SettingsPage() {
             Chưa có cài đặt gia đình. Hãy báo Claude (thiếu dòng family_settings).
           </p>
         )}
+        {s && <PhotoCleanup retentionDays={s.photo_retention_days} />}
       </main>
     </>
   );
