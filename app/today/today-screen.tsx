@@ -7,6 +7,7 @@ import { compressImage } from "@/lib/images";
 import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningTimedTask } from "@/lib/today/rules";
+import { childDayTypeNote } from "@/lib/admin/specialDay";
 import { bannerFor, clock, dayProgress, longDate, nextTask, shade, statusPill, stepIndex, upcomingHint, weekSummary } from "@/lib/today/view";
 import { SignOutButton } from "../sign-out-button";
 import { FocusView, NextTask, ProgressRing, TaskRow, WeekStrip, type Act, type TaskCtx } from "./today-parts";
@@ -233,6 +234,8 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const banner = bannerFor(s, view.rules);
   const idx = stepIndex(s, nowMs);
   const pill = statusPill(s, nowMs);
+  // Special day (S3d): the sick status pill already says "Ngày ốm" when the sick day decides the state.
+  const dayNote = s.status === "OPEN_SICK" ? null : childDayTypeNote(s.dayType);
   const progress = dayProgress(s);
   const next = nextFromPlan(s, view.plan) ?? nextTask(s);
   const planItems = plannable(s).filter((i) => i.state !== "done");
@@ -328,6 +331,11 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
               <span aria-hidden className={`size-2 rounded-full ${pill.open ? "bg-[#FBD38D]" : "bg-white"}`} />
               {pill.label}
             </span>
+            {dayNote && (
+              <span className="inline-flex min-h-9 items-center rounded-full bg-white px-3 text-[13px] font-bold" style={{ color }}>
+                {dayNote}
+              </span>
+            )}
             <span className="ml-auto">
               <SignOutButton onDark />
             </span>

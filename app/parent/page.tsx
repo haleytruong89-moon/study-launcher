@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { loadChildrenToday, type ChildToday } from "@/lib/parent/load";
+import { DAY_TYPE_INFO, specialDayWindow, type TemplateForDay } from "@/lib/admin/specialDay";
 import { localDate } from "@/lib/time";
-import { longDate, vnTime } from "@/lib/today/view";
+import { dayMonth, longDate, vnTime } from "@/lib/today/view";
 import { OverrideSheet } from "./override-sheet";
 import { ParentHeader } from "./parent-header";
 import { RefreshEvery } from "./refresh-every";
+import { SpecialDaySheet, type SpecialDayRow } from "./special-day-sheet";
 import { TaskGroup } from "./task-rows";
 
 export const dynamic = "force-dynamic";
@@ -32,10 +34,24 @@ export default async function ParentHome() {
     );
   }
 
-  const [kids, { count: pending }] = await Promise.all([
+  const range = specialDayWindow(now);
+  const [kids, { count: pending }, templateRes, specialRes] = await Promise.all([
     loadChildrenToday(db, me.profile.family_id, children, today, now),
     db.from("unlock_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    db.from("task_templates").select("id, child_id, part, title, weekdays, sort, active").eq("active", true),
+    db
+      .from("day_sessions")
+      .select("child_id, local_date, day_type, disabled_template_ids")
+      .gte("local_date", range.from)
+      .lte("local_date", range.to)
+      .neq("day_type", "normal")
+      .order("local_date"),
   ]);
+  type TemplateRow = TemplateForDay & { child_id: string };
+  type SpecialRow = { child_id: string; local_date: string; day_type: SpecialDayRow["dayType"]; disabled_template_ids: string[] | null };
+  const templateRows = (templateRes.data ?? []) as TemplateRow[];
+  const specialRows = (specialRes.data ?? []) as SpecialRow[];
+  const special = { today, maxDate: range.to, templateRows, specialRows };
   const awaiting = kids.reduce((n, k) => n + (k.overview?.awaiting ?? 0), 0);
   const overdue = kids.reduce((n, k) => n + (k.overview?.overdue.length ?? 0), 0);
   const firstAwaiting = kids.find((k) => (k.overview?.awaiting ?? 0) > 0)?.child.id;
@@ -86,15 +102,29 @@ export default async function ParentHome() {
         </section>
 
         {kids.map((k) => (
-          <ChildCard key={k.child.id} kid={k} />
+          <ChildCard key={k.child.id} kid={k} special={special} />
         ))}
       </main>
     </>
   );
 }
 
-function ChildCard({ kid }: { kid: ChildToday }) {
+interface SpecialData {
+  today: string;
+  maxDate: string;
+  templateRows: (TemplateForDay & { child_id: string })[];
+  specialRows: { child_id: string; local_date: string; day_type: SpecialDayRow["dayType"]; disabled_template_ids: string[] | null }[];
+}
+
+function ChildCard({ kid, special }: { kid: ChildToday; special: SpecialData }) {
   const { child, state, overview: o } = kid;
+  const templates: TemplateForDay[] = special.templateRows.filter((t) => t.child_id === child.id);
+  const days: SpecialDayRow[] = special.specialRows
+    .filter((d) => d.child_id === child.id)
+    .map((d) => ({ date: d.local_date, dayType: d.day_type, disabledTemplateIds: d.disabled_template_ids ?? [] }));
+  const todayType = state?.dayType ?? "normal";
+  const todayLabel = todayType === "normal" ? null : DAY_TYPE_INFO[todayType].label;
+  const nextSpecial = days.find((d) => d.date > special.today);
   const color = child.color ?? "#2B5D4F";
   const override =
     state?.status === "OPEN_OVERRIDE" ? `đang mở${state.openUntil ? ` đến ${vnTime(state.openUntil)}` : ""}` : state?.status === "LOCK_OVERRIDE" ? "đang khóa" : null;
@@ -103,7 +133,10 @@ function ChildCard({ kid }: { kid: ChildToday }) {
       <div className="flex flex-col gap-2.5 px-4 py-3.5 text-white" style={{ background: color }}>
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xl font-extrabold">{child.display_name}</h2>
-          {o && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold">{o.pill}</span>}
+          <span className="flex flex-wrap justify-end gap-1.5">
+            {todayLabel && todayLabel !== o?.pill && <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold" style={{ color }}>{todayLabel}</span>}
+            {o && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold">{o.pill}</span>}
+          </span>
         </div>
         {o && state ? (
           <>
@@ -129,6 +162,22 @@ function ChildCard({ kid }: { kid: ChildToday }) {
               <Link href={`/parent/review?con=${child.id}`} className="flex min-h-11 items-center justify-center rounded-xl border-[1.5px] border-white/70 font-extrabold">
                 {o.awaiting > 0 ? `Xem ảnh · duyệt (${o.awaiting})` : "Xem chi tiết"}
               </Link>
+              <SpecialDaySheet
+                childId={child.id}
+                name={child.display_name}
+                today={special.today}
+                maxDate={special.maxDate}
+                templates={templates}
+                days={days}
+                triggerClass="col-span-2 min-h-11 rounded-xl border-[1.5px] border-white/70 px-2 text-sm font-bold"
+                triggerLabel={
+                  todayLabel
+                    ? `Ngày đặc biệt · hôm nay: ${todayLabel}`
+                    : nextSpecial
+                      ? `Ngày đặc biệt · ${DAY_TYPE_INFO[nextSpecial.dayType].label} ${dayMonth(nextSpecial.date)}`
+                      : "Ngày đặc biệt (ốm · thi · lễ)"
+                }
+              />
             </div>
           </>
         ) : (
