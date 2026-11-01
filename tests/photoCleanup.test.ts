@@ -70,10 +70,9 @@ describe("expiry boundaries", () => {
 });
 
 describe("storage objects", () => {
-  it("needs an old creation time; a recent update keeps it", () => {
+  it("needs an old upload (creation) time", () => {
     expect(isExpiredObject({ name: "x.jpg", id: "1", created_at: OLD }, CUT)).toBe(true);
-    expect(isExpiredObject({ name: "x.jpg", id: "1", created_at: OLD, updated_at: OLD }, CUT)).toBe(true);
-    expect(isExpiredObject({ name: "x.jpg", id: "1", created_at: OLD, updated_at: RECENT }, CUT)).toBe(false);
+    expect(isExpiredObject({ name: "x.jpg", id: "1", created_at: "2026-07-03T17:00:00Z" }, CUT)).toBe(false); // 04/07 00:00 VN
     expect(isExpiredObject({ name: "x.jpg", id: "1", created_at: RECENT }, CUT)).toBe(false);
     expect(isExpiredObject({ name: "x.jpg", id: "1" }, CUT)).toBe(false);
     expect(isExpiredObject({ name: "folder", id: null, created_at: OLD }, CUT)).toBe(false);

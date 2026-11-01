@@ -53,15 +53,17 @@ export interface StoredObject {
   /** null for a folder */
   id?: string | null;
   created_at?: string | null;
-  updated_at?: string | null;
   metadata?: { size?: number } | null;
 }
 
-/** The object itself must be old: created (and, if set, last updated) before the cutoff. */
+/**
+ * The object itself must be old: uploaded (created_at) before the cutoff. Files are never
+ * overwritten (uploads use upsert: false and nobody has an update policy), so created_at is
+ * the file's real age. updated_at is NOT used: Storage bumps it on any row change.
+ */
 export function isExpiredObject(o: StoredObject, cutoff: string): boolean {
   if (!o.id) return false; // a folder, not a file
-  if (!isExpiredInstant(o.created_at, cutoff)) return false;
-  return o.updated_at == null || isExpiredInstant(o.updated_at, cutoff);
+  return isExpiredInstant(o.created_at, cutoff);
 }
 
 export function objectSize(o: StoredObject): number {

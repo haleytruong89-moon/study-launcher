@@ -1249,7 +1249,7 @@ test("S3e: weekly cleanup deletes only old files, keeps every row; parent previe
   expect(dbUrl, "E2E_DB_URL (local Supabase) is needed to age test files").not.toBe("");
   const aged = execFileSync(
     "psql",
-    [dbUrl, "-v", "ON_ERROR_STOP=1", "-qAt", "-c", `with u as (update storage.objects set created_at = now() - interval '400 days', updated_at = now() - interval '400 days' where name in ('${oldProof}', '${oldHwFile}', '${activeHwFile}') returning 1) select count(*) from u`],
+    [dbUrl, "-v", "ON_ERROR_STOP=1", "-qAt", "-c", `with u as (update storage.objects set created_at = now() - interval '400 days' where name in ('${oldProof}', '${oldHwFile}', '${activeHwFile}') returning 1) select count(*) from u`],
     { encoding: "utf8" },
   ).trim();
   expect(aged).toBe("3");
