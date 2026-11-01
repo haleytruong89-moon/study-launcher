@@ -16,6 +16,7 @@ import {
   parseSyncState,
   planAlarms,
   reduceSync,
+  withHostAccess,
   type EffectiveState,
   type ExtStatePayload,
   type SyncEvent,
@@ -115,6 +116,23 @@ describe("buildRules", () => {
     expect(rules[3]!.condition.requestDomains).toEqual(["translate.goog"]);
     // Same input -> identical output (stable for updateDynamicRules).
     expect(rulesFor(locked)).toEqual(rules);
+  });
+
+  it("audit 24/10: without site access the extension locks and the catch-all is a plain block", () => {
+    const open = effectiveState(run([ok(openPayload())]), FALLBACK);
+    const lost = withHostAccess(open, false);
+    expect(lost).toMatchObject({ locked: true, reason: "no-host-access", openUntil: null, hostAccess: false });
+    expect(lost.allow).toEqual(open.allow);
+    const rules = rulesFor(lost);
+    expect(rules.map((r) => [r.id, r.priority, r.action.type])).toEqual([
+      [RULE_IDS.redirectAll, 1, "block"],
+      [RULE_IDS.blockFrames, 1, "block"],
+      [RULE_IDS.allowList, 2, "allow"],
+      [RULE_IDS.blockAlways, 3, "block"],
+    ]);
+    // With access nothing changes.
+    expect(withHostAccess(open, true).locked).toBe(false);
+    expect(rulesFor(withHostAccess(locked, true))).toEqual(rulesFor(locked));
   });
 
   it("redirects a blocked navigation to the lock page keeping the original URL (&, #, ?)", () => {
