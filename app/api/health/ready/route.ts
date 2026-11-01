@@ -5,6 +5,7 @@ import {
   EXPECTED_TABLES,
   REQUIRED_ENV,
   evaluateReadiness,
+  PUSH_ENV,
   type ReadinessInput,
 } from "@/lib/readiness";
 
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
     signupDisabled: null,
     hostMatchesAppUrl: null,
     familyExists: null,
+    pushMissing: PUSH_ENV.filter((name) => !process.env[name]),
   };
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
