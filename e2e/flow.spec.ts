@@ -1234,8 +1234,8 @@ test("Push: a parent turns notifications on/off for a device; children cannot; c
   // The parent page loads and offers the switch (keys are set in CI).
   await login(page, env.parentEmail, env.parentPassword);
   await page.goto("/parent/notifications");
-  await expect(page.getByRole("heading", { name: "Thông báo" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Máy này" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Thông báo", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Máy này", exact: true })).toBeVisible();
 
   const { data: parent } = await admin().from("profiles").select("id").eq("role", "parent").limit(1).single();
   expect(await call(page, "POST", "/api/push/subscribe", sub)).toBe(200);
