@@ -1,28 +1,31 @@
 # Góc bình yên — Quy tắc & dữ liệu (Phase 1.5)
 
-> **Trạng thái:** bản nháp 01/11/2026 · **chưa có code, chưa có SQL**.
-> Các ô **⏳ Chờ bố mẹ** là chỗ phụ huynh cần chốt trước khi viết migration.
+> **Trạng thái:** bản nháp 01/11/2026. **Chưa có code, chưa có SQL.**
+> Bản này đã qua một vòng review độc lập; các điểm review sửa được đánh dấu *(review)*.
+> Ô **⏳** là chỗ phụ huynh cần chốt trước khi viết migration.
 >
 > Thiết kế trải nghiệm: hub `deliverables/study-launcher/GOC_BINH_YEN_DESIGN_v1.md` (v1.1).
 > Bản mẫu bấm thử (không lưu dữ liệu): https://claude.ai/artifact/MqDzfE32PkVW3yyrPSrDVT
 
-Góc bình yên là khu `/binh-yen` trong Study Launcher. Con dùng nó để gọi tên cảm xúc, làm dịu, và (nếu muốn) hiểu nguyên nhân.
+Góc bình yên là khu `/binh-yen` trong Study Launcher. Ở đây con gọi tên cảm xúc, làm dịu, và nếu muốn thì hiểu nguyên nhân.
 
-Tài liệu này khác mọi phần khác của app ở một điểm: **dữ liệu là của con, bố mẹ không đọc được nội dung**.
+Khác mọi phần còn lại của app: **dữ liệu ở đây là của con, bố mẹ không đọc nội dung.**
 
 ---
 
 ## 1. Phạm vi
 
-| Có trong v1 | Chưa làm (ghi để không ai tự thêm) |
+| Có trong v1 | Chưa làm (ghi ra để không ai tự thêm) |
 |---|---|
-| Chọn ô cảm xúc → chọn từ → mức độ (khó chịu) → gợi ý 3 hoạt động → làm → bài học | AI viết lời mentor, AI vẽ nhân vật |
-| Card "Muốn hiểu vì sao?" (tùy chọn): chạm chọn nguyên nhân | Picrew / nhân vật riêng |
-| Bảng điều tra (Nguyên) / Bàn pha chế (An): tự gom nguyên nhân | Mã hóa nhật ký bằng mật khẩu con (bản 2) |
-| Phần thưởng: trang manga tự ghép, Tập của tuần (Nguyên); khu rừng sống (An) | Chuỗi ngày, điểm, xếp hạng, đổi giờ chơi (SPEC §15) |
-| Nút "Con muốn nói chuyện" → tín hiệu cho bố mẹ | Bố mẹ xem báo cáo cảm xúc của con |
-| Phát hiện câu nguy hiểm khi con gõ chữ → 111 + tín hiệu "cần được quan tâm" | |
-| PIN mỗi lần vào + tự khóa sau 5 phút không dùng | |
+| Chọn ô cảm xúc → chọn từ → mức độ (khi khó chịu) → 3 gợi ý → làm → bài học | AI viết lời mentor, AI vẽ nhân vật |
+| Card "Muốn hiểu vì sao?" (tùy chọn) | Picrew / nhân vật riêng |
+| Bảng điều tra (Nguyên) / Bàn pha chế (An) | Bố mẹ xem báo cáo cảm xúc của con |
+| Trang manga, Tập của tuần (Nguyên); khu rừng sống (An) | Chuỗi ngày, điểm, xếp hạng, đổi giờ chơi (SPEC §15) |
+| "Con muốn nói chuyện" → tín hiệu cho bố mẹ | Nhúng nhạc / video bên ngoài (YouTube, Spotify…) *(review)* |
+| Phát hiện câu nguy hiểm → 111 / 115 + tín hiệu "cần được quan tâm" | Công cụ theo dõi bên thứ ba (analytics, ghi màn hình, Sentry…) trên `/binh-yen` *(review)* |
+| **PIN Góc bình yên riêng do con tự đặt** + tự khóa sau 5 phút *(review, ⏳ Q1)* | |
+
+**Mặc định tắt:** `by_enabled = false`. Merge PR không tự bật cho con. Bố mẹ bật khi đã nói chuyện với con *(review)*.
 
 ---
 
@@ -30,278 +33,266 @@ Tài liệu này khác mọi phần khác của app ở một điểm: **dữ li
 
 ### 2.1 Nguyên tắc
 
-- **D1. Không có cột chữ tự do trên máy chủ.** Mọi thứ con *gõ* đều ở lại trên máy, gồm: câu kể chuyện, "Hỏi lại cái đầu", nhật ký tối, nguyên nhân tự đặt tên. Máy chủ chỉ lưu **mã cố định**, ví dụ `quad = 'red'`, `word_key = 'lo_lang'`, `cause_key = 'baitap'`.
-- **D2. Thứ gì tính được thì không lưu.** Số loài cây, trang manga, Tập của tuần, Bảng điều tra đều tính lại từ check-in.
-- **D3.** Liên kết bằng `id`. Mỗi bảng có `family_id`, `child_id`, `created_at`. Ngày tính theo giờ máy chủ, cột `local_date` theo `Asia/Ho_Chi_Minh`, giống phần còn lại của app.
-- **D4.** Tham số gia đình (10 phút, 5 phút, bật/tắt) nằm trong `family_settings`, không ghi cứng trong code.
+- **D1. Chữ con gõ không lên máy chủ.** Gồm câu kể chuyện, "Hỏi lại cái đầu", nhật ký tối, tên nguyên nhân tự đặt. Máy chủ chỉ lưu **mã cố định** (`quad = 'red'`, `word_key = 'lo_lang'`, `cause_key = 'baitap'`).
+  - **Ngoại lệ duy nhất:** thẻ "Do An thêm" (`by_child_cards`). Đây là nội dung con *muốn* bố mẹ cùng xem, và màn hình phải ghi rõ điều đó *(review)*.
+- **D2. Phần thưởng tách khỏi check-in.** Con xóa check-in hoặc check-in hết hạn thì khu rừng / trang manga **không** mất. Xóa để giữ riêng tư không được làm con bị phạt *(review)*.
+- **D3.** Liên kết bằng `id`; mỗi bảng có `family_id`, `child_id`, `created_at`. Mọi thời lượng (5 phút, 10 phút) tính theo **giờ máy chủ**, không theo đồng hồ máy con (CLAUDE.md) *(review)*.
+- **D4.** Tham số gia đình nằm trong `family_settings`; danh sách cố định (từ, nguyên nhân, hoạt động, bài học, cụm từ an toàn) nằm trong **bảng dữ liệu**, không ghi cứng trong code *(review)*.
+- **D5. Không để lại dấu vết ngoài bảng.** Route `/api/by/*` không ghi `audit_log`, không `console.log` nội dung, không đưa giá trị vào URL, và kiểm tra dữ liệu trước khi lưu (để log lỗi của Postgres không in ra dòng dữ liệu) *(review)*.
+- **D6. Bản sao lưu A9 bỏ dữ liệu `by_*`.** Thêm `--exclude-table-data 'public.by_*'` vào `backup.yml`. Nếu không, bản sao lưu giữ check-in 30 ngày, kể cả những cái con đã xóa *(review)*.
 
-### 2.2 Bảng đề xuất
+### 2.2 Bảng đề xuất (chưa phải SQL)
 
-Chỉ là đề xuất, chưa phải SQL.
-
-**`by_checkins`**: mỗi lần con đi hết một lượt.
-
-| Cột | Kiểu | Ghi chú |
+| Bảng | Mục đích | Cột chính |
 |---|---|---|
-| `id` | uuid | |
-| `family_id`, `child_id` | uuid | FK `(child_id, family_id)` → profiles, giống 0004/0005 |
-| `local_date` | date | |
-| `quad` | text enum | `red` · `yellow` · `blue` · `green` |
-| `word_key` | text | Mã trong danh sách từ cố định (§5.0) |
-| `intensity` | smallint null | 1–5; chỉ có khi cảm xúc khó chịu |
-| `activity_key` | text null | Hoạt động con đã làm (mã cố định) |
-| `cause_key` | text null | Mã nguyên nhân cố định, hoặc `custom` (tên con tự đặt ở lại trên máy) |
-| `understood_at` | timestamptz null | Con đã mở card "Muốn hiểu vì sao?" và lưu |
-| `reward_granted` | boolean | Lần này có mở phần thưởng không (R4) |
-| `created_at` | timestamptz | |
+| `by_checkins` | Mỗi lượt con đi hết | `quad`, `word_key`, `intensity` (1–5, chỉ khi khó chịu), `activity_key`, `cause_key` (mã cố định hoặc `custom`), `understood_at`, `local_date`, **`client_run_id` unique** (bấm Xong 2 lần chỉ tạo 1 dòng) |
+| `by_rewards` | Phần thưởng đã mở, không có nội dung cảm xúc | `local_date`, `reward_key` (loài cây / trang). **Unique `(child_id, local_date)`** khi giới hạn 1/ngày, để hai lượt cùng lúc không mở 2 lần |
+| `by_sessions` | Phiên Góc bình yên do máy chủ giữ (PIN, tự khóa 5', giới hạn 10' giờ học) | `token_hash`, `device_id`, `started_at`, `last_seen_at`, `ended_at` |
+| `by_signals` | Tín hiệu cho bố mẹ, **không có nội dung** | `kind` (`want_talk` · `needs_care`), `to_parent_id` (null = cả hai), `created_at`, `seen_at`, `seen_by` |
+| `by_child_cards` | Thẻ "Do An thêm" (ngoại lệ D1) | `title` ≤ 80, `fact` ≤ 300 ký tự, `status` (`pending` · `checked`) |
+| `by_catalog` | Danh sách cố định cho từng con | `kind` (word · cause · activity · lesson · risk_phrase), `key`, `label`, `child_id` (null = cả hai), `weight`/`data` (jsonb), `retired` |
+| `profiles` (thêm cột) | PIN Góc bình yên của con | `by_pin_hash`, `by_pin_failed_count`, `by_pin_locked_until`, `by_pin_reset_at` |
+| `family_settings` (thêm cột) | Tham số | `by_enabled` (mặc định **false**), `by_study_minutes` (10, **≥ 5**), `by_idle_lock_minutes` (5, **2–15**), `by_daily_rewards` (1, ≥ 1) |
 
-**`by_signals`**: tín hiệu cho bố mẹ, **không có nội dung**.
+Giá trị kiểu `quad`, `kind`, `status` được kiểm ở route máy chủ và bằng `by_catalog`, **không** dùng CHECK cố định. Muốn thêm giá trị sau này thì chỉ cần thêm dòng, không phải sửa ràng buộc (giữ luật "migration chỉ thêm") *(review)*.
 
-| Cột | Kiểu | Ghi chú |
-|---|---|---|
-| `id`, `family_id`, `child_id` | uuid | |
-| `kind` | text enum | `want_talk` (con bấm) · `needs_care` (phát hiện câu nguy hiểm) |
-| `created_at` | timestamptz | |
-| `seen_at`, `seen_by` | timestamptz, uuid null | Bố mẹ bấm "Đã thấy" |
-
-**`by_child_cards`** (An): thẻ "Do An thêm". Đây là nội dung con **muốn** bố mẹ cùng xem.
-
-| Cột | Kiểu | Ghi chú |
-|---|---|---|
-| `id`, `family_id`, `child_id` | uuid | |
-| `title`, `fact` | text | Giới hạn 80 / 300 ký tự; chạy kiểm tra an toàn (R3) trước khi gửi |
-| `status` | text enum | `pending` · `checked` (bố mẹ đã cùng xem) |
-| `created_at`, `checked_at` | timestamptz | |
-
-**Thêm cột vào `family_settings`** (đề xuất):
-
-| Cột | Mặc định |
-|---|---|
-| `by_enabled` | `true` |
-| `by_study_minutes` | `10` |
-| `by_idle_lock_minutes` | `5` |
-| `by_daily_rewards` | `1` |
-
-**Dữ liệu chỉ ở trên máy con** (`localStorage`, có khóa theo `child_id`):
-- câu kể chuyện;
-- "Hỏi lại cái đầu";
-- nhật ký tối;
-- tên nguyên nhân tự đặt;
-- bản nháp.
-
-> Không có bảng cho "Viết rồi buông" hay nội dung "Hỏi lại cái đầu": các nội dung này không lưu ở đâu cả.
+**Dữ liệu chỉ ở trên máy con:** câu kể, "Hỏi lại cái đầu", nhật ký tối, tên nguyên nhân tự đặt.
+- ⏳ Q2: có **mã hóa** bằng khóa sinh từ PIN Góc bình yên của con không?
+- Nếu không mã hóa: ai mở công cụ nhà phát triển của trình duyệt trên máy đó đều đọc được. Phải nói rõ với con *(review)*.
 
 ---
 
 ## 3. Ai được làm gì
 
-Kiểm tra ở database (RLS), không chỉ ẩn nút. Con **không** ghi trực tiếp: mọi thao tác đi qua route máy chủ, giống phần còn lại của app (CLAUDE.md).
+**Con không có quyền đọc trực tiếp các bảng `by_*`.** Mọi đọc / ghi đi qua route `/api/by/*`. Route kiểm tra **phiên Góc bình yên** (`by_sessions`) ở máy chủ trước.
 
-| Dữ liệu | Con (chính mình) | Anh/chị/em | Bố mẹ (trang web) | Route máy chủ |
-|---|---|---|---|---|
-| `by_checkins` | Xem ✅ · tạo/xóa qua route | ❌ | **❌ không có policy nào** | Ghi sau khi kiểm tra phiên PIN còn hạn |
-| `by_signals` | Xem của mình | ❌ | Xem + bấm "Đã thấy" | Tạo khi con bấm hoặc khi phát hiện câu nguy hiểm |
-| `by_child_cards` | Xem | ❌ | Xem + đánh dấu `checked` | Tạo khi An thêm |
-| Dữ liệu trên máy | Có | Không thấy trong app (khóa theo `child_id` + PIN) | Không | Không bao giờ nhận |
-| `family_settings.by_*` | Xem | — | Sửa | — |
+Lý do: phiên đăng nhập thường của con kéo dài và trình duyệt đọc được. Nếu bảng mở quyền đọc, ai cầm máy đang đăng nhập đều truy vấn thẳng được, bỏ qua PIN Góc bình yên *(review)*.
 
-**⚠️ Nói thật với con (bắt buộc ghi trong màn "🔒 Ai thấy gì?"):** "chặn bố mẹ" ở đây là chặn **trang web của bố mẹ**, không phải chặn tuyệt đối. Hiện có 3 đường bố mẹ *về kỹ thuật* vẫn đọc được `by_checkins`:
+| Dữ liệu | Con (qua route, có phiên BY) | Anh/chị/em | Bố mẹ (trang web) |
+|---|---|---|---|
+| `by_checkins`, `by_rewards` | Xem, tạo, xóa của mình | ❌ | **❌ không grant, không policy** |
+| `by_sessions` | — (chỉ máy chủ) | ❌ | ❌ |
+| `by_signals` | Tạo; xem trạng thái "bố mẹ đã thấy chưa" | ❌ | Xem; **chỉ sửa được `seen_at`, `seen_by` = chính mình**; không xóa *(review)* |
+| `by_child_cards` | Tạo, xem | ❌ | Xem; chỉ sửa `status` |
+| `by_catalog` | Xem (qua route) | — | Sửa (như allowlist) |
+| `family_settings.by_*` | Xem | — | Sửa, trong giới hạn min/max |
+| Dữ liệu trên máy | Có | Không thấy trong app | Không |
 
-1. Bố mẹ là quản trị Supabase, nên xem được bảng trong trang quản trị.
-2. Bố mẹ đặt lại được mật khẩu / PIN của con (DESIGN §2), rồi đăng nhập như con.
-3. Bản sao lưu hằng tuần (A9) được mã hóa bằng cụm mật khẩu của bố mẹ.
+**Test bắt buộc trong `supabase/tests/`:**
+- không policy nào trên `by_checkins` / `by_rewards` nhắc tới `parent`;
+- role `authenticated` không có grant trên `by_checkins`, `by_rewards`, `by_sessions`.
 
-Vì vậy, lời hứa với con là **lời hứa của bố mẹ**, có hệ thống hỗ trợ. Những gì riêng tư nhất (chữ con viết) thì **không bao giờ lên máy chủ** (D1). Chỉ mã hóa bằng mật khẩu con (bản 2) mới chặn được cả 3 đường trên.
+**Xuất / xóa toàn bộ dữ liệu** chỉ làm được **từ trong phiên Góc bình yên của con**. Không có nút cho bố mẹ *(review)*.
+
+### "🔒 Ai thấy gì?": những điều phải nói thật với con
+
+1. Bố mẹ **không** xem được cảm xúc, nguyên nhân, chữ con viết.
+2. Bố mẹ **có** nhận tín hiệu khi:
+   - con bấm "muốn nói chuyện";
+   - con viết điều cho thấy con không an toàn. Tín hiệu này **không kèm chữ**, nhưng bố mẹ sẽ biết là đã có chuyện như vậy *(review)*.
+3. Thẻ "Do An thêm" là để bố mẹ cùng xem.
+4. Chữ con viết chỉ nằm trên máy này. Xóa dữ liệu trình duyệt là mất. *(Nếu Q2 = không mã hóa: người rành máy tính mở được.)*
+5. **Về kỹ thuật, quản trị hệ thống (bố mẹ) vẫn có thể mở bảng dữ liệu.** Bố mẹ hứa không làm vậy, và hệ thống không có trang nào cho bố mẹ xem.
+6. Nếu bố mẹ xóa PIN Góc bình yên: dữ liệu trên máy bị xóa theo, và con được báo ngay lần mở sau.
 
 ---
 
-## 4. Một lần ghé: các bước
+## 4. Một lần ghé
 
 ```
-[PIN] → chọn ô → chọn từ → (khó chịu: mức độ 1–5) → 3 gợi ý → làm hoạt động → XONG
-                                                                      │
-                                         lưu by_checkins, xét phần thưởng (R4)
-                                                                      ▼
-                                    Phần thưởng + bài học → (tùy chọn) "Muốn hiểu vì sao?"
-                                                                      │
-                                                     lưu cause_key, understood_at (cùng dòng)
+[PIN Góc bình yên] → chọn ô → chọn từ → (khó chịu: mức 1–5) → 3 gợi ý → làm → XONG
+                                                                              │
+                                     lưu by_checkins (client_run_id) + xét by_rewards (R4)
+                                                                              ▼
+                                        Phần thưởng + bài học → (tùy chọn) "Muốn hiểu vì sao?"
 ```
 
-- **Bỏ giữa chừng** (đóng tab, hết 5 phút tự khóa, đổi sang anh/chị/em) thì **không lưu gì**. Chỉ khi bấm "Xong" ở hoạt động mới tạo dòng mới.
-- **"Con muốn nói chuyện"** bấm được ở mọi bước, kể cả màn chính. Bấm là tạo `by_signals(want_talk)` ngay, không cần đi hết lượt.
-- **Câu nguy hiểm** bị phát hiện ở bất kỳ ô gõ chữ nào thì dừng lượt, hiện màn an toàn (R3).
-- Con **xóa** một check-in của mình qua route. ⏳ Xóa hẳn hay xóa mềm: xem §7 (Q4).
+- **Bỏ giữa chừng** (đóng tab, tự khóa, đổi người) thì không lưu gì.
+- **"Con muốn nói chuyện"** và **màn an toàn** nằm **ngoài mọi cài đặt và đồng hồ**:
+  - vẫn hiện khi `by_enabled = false`;
+  - không bị tự khóa 5' che mất;
+  - không bị giới hạn 10' đẩy ra *(review)*.
 
 ---
 
 ## 5. Quy tắc + ví dụ chuẩn
 
-> **Ví dụ chuẩn** là đáp án do bố mẹ xác nhận. Test sẽ kiểm theo đáp án này, không theo kết quả code đang chạy ra.
-> Cột "Bản mẫu cho ra" được chạy từ code bản mẫu ngày 01/11. Dòng 🔴 là chỗ bản mẫu **sai**, cần sửa trước khi build.
-
-### 5.0 Danh sách cố định
-
-- **Ô:** đỏ (khó chịu, nhiều năng lượng) · lam (khó chịu, ít năng lượng) · vàng (dễ chịu, nhiều năng lượng) · lục (dễ chịu, ít năng lượng).
-- **Từ:** khoảng 5–6 từ mỗi ô, như trong bản mẫu. Từ mới là việc của bố mẹ (dữ liệu, không phải code).
-- **Nguyên nhân Nguyên:** trường lớp, bạn bè, gia đình, bài tập/kiểm tra, điện thoại/mạng xã hội, ngủ ít, đói/mệt, được vẽ, vận động, nghe nhạc, đọc truyện, thời tiết, + tự đặt.
-- **Nguyên nhân An:** ở trường, bạn bè, gia đình, bài tập/kiểm tra, tivi/điện thoại, ngủ ít, đói/mệt, chơi ngoài trời, con vật, khám phá điều mới, vận động, với chị Nguyên, + tự đặt.
+> Ví dụ chuẩn = đáp án bố mẹ xác nhận. Test kiểm theo đáp án này.
+> Cột "Bản mẫu" là kết quả chạy code bản mẫu ngày 01/11. 🔴 = bản mẫu sai, 🟡 = đề xuất chỉnh.
 
 ### R1. Gợi ý 3 hoạt động
 
-**Định nghĩa:**
-- Ô cảm xúc cho biết kiểu chăm sóc cần có. Từ cụ thể và nguyên nhân cộng thêm điểm cho từng kiểu.
-- Chọn 3 hoạt động hợp nhất trong danh sách của con đó.
-- **Khó chịu + mức 4–5 thì "Nhắn bố mẹ" luôn đứng đầu.**
+Ô cảm xúc cho biết kiểu chăm sóc. Từ cụ thể và nguyên nhân cộng thêm trọng số. Lấy 3 hoạt động hợp nhất.
 
-| # | Ai | Cảm xúc · nguyên nhân · mức | Bản mẫu cho ra | Đề xuất đáp án | ⏳ |
-|---|---|---|---|---|---|
-| 1 | Nguyên | tức giận · điện thoại · 3 | Nhảy 1 bài, Thở cho dịu, Hỏi lại cái đầu | giữ nguyên | |
-| 2 | Nguyên | lo lắng · bài tập · 2 | Hỏi lại cái đầu, Thở cho dịu, Nhảy 1 bài | giữ nguyên | |
-| 3 | Nguyên | lo lắng · bài tập · **5** | **Nhắn bố mẹ**, Hỏi lại cái đầu, Thở cho dịu | giữ nguyên (biên: mức 5) | |
-| 4 | Nguyên | cô đơn · bạn bè · 3 | Kể cho 1 người, Nhắn bố mẹ, Thở cho dịu | giữ nguyên | |
-| 5 | Nguyên | mệt · ngủ ít · 2 | Thở cho dịu, Kể cho 1 người, Nhắn bố mẹ | 🟡 Thở, **Nghỉ/ngủ sớm** (hoạt động mới), Kể cho 1 người | |
-| 6 | Nguyên | chán · (không chọn) · 2 | Kể cho 1 người, Nhắn bố mẹ, Thở cho dịu | 🔴 **Nhảy 1 bài**, Kể cho 1 người, Giữ khoảnh khắc ("chán" cần vận động/sáng tạo, không phải nhắn bố mẹ) | |
-| 7 | Nguyên | tự hào · được vẽ | Kể cho 1 người, 3 bằng chứng, 3 điều biết ơn | 🟡 **Giữ khoảnh khắc**, Kể cho 1 người, 3 điều biết ơn | |
-| 8 | An | tức giận · với chị Nguyên · **4** | **Nhắn bố mẹ**, Đo nhịp tim, Núi lửa trong lọ | giữ nguyên | |
-| 9 | An | lo lắng · bài tập · 2 | Đo nhịp tim, Lọ bình tĩnh, Bong bóng chậm | giữ nguyên | |
-| 10 | An | buồn · bạn bè · 3 | Kể cho 1 người, Nhắn bố mẹ, Quan sát bầu trời | giữ nguyên | |
-| 11 | An | chán · tivi/điện thoại · 2 | Câu hỏi tò mò, Kể cho 1 người, Núi lửa trong lọ | giữ nguyên | |
-| 12 | An | tò mò · khám phá | Câu hỏi tò mò, Kể cho 1 người, Quan sát bầu trời | giữ nguyên | |
+**Khó chịu + mức 4–5 → "Nhắn bố mẹ" đứng đầu.**
+
+| # | Ai | Cảm xúc · nguyên nhân · mức | Bản mẫu | Đáp án đề xuất |
+|---|---|---|---|---|
+| 1 | Nguyên | tức giận · điện thoại · 3 | Nhảy 1 bài, Thở cho dịu, Hỏi lại cái đầu | giữ |
+| 2 | Nguyên | lo lắng · bài tập · 2 | Hỏi lại cái đầu, Thở cho dịu, Nhảy 1 bài | giữ |
+| 3 | Nguyên | lo lắng · bài tập · **5** | **Nhắn bố mẹ**, Hỏi lại cái đầu, Thở cho dịu | giữ |
+| 4 | Nguyên | cô đơn · bạn bè · 3 | Kể cho 1 người, Nhắn bố mẹ, Thở cho dịu | giữ |
+| 5 | Nguyên | mệt · ngủ ít · 2 | Thở, Kể cho 1 người, Nhắn bố mẹ | 🟡 Thở, **Nghỉ / ngủ sớm** (hoạt động mới), Kể cho 1 người |
+| 6 | Nguyên | chán · — · 2 | Kể cho 1 người, Nhắn bố mẹ, Thở | 🔴 **Nhảy 1 bài**, Kể cho 1 người, Giữ khoảnh khắc |
+| 7 | Nguyên | tự hào · được vẽ | Kể cho 1 người, 3 bằng chứng, 3 điều biết ơn | 🟡 **Giữ khoảnh khắc**, Kể cho 1 người, 3 điều biết ơn |
+| 8 | An | tức giận · với chị Nguyên · **4** | **Nhắn bố mẹ**, Đo nhịp tim, Núi lửa trong lọ | giữ |
+| 9 | An | lo lắng · bài tập · 2 | Đo nhịp tim, Lọ bình tĩnh, Bong bóng chậm | giữ |
+| 10 | An | buồn · bạn bè · 3 | Kể cho 1 người, Nhắn bố mẹ, Quan sát bầu trời | giữ |
+| 11 | An | chán · tivi · 2 | Câu hỏi tò mò, Kể cho 1 người, Núi lửa trong lọ | giữ |
+| 12 | An | tò mò · khám phá | Câu hỏi tò mò, Kể cho 1 người, Quan sát bầu trời | giữ |
+
+"Nhảy 1 bài": con tự bật nhạc bằng thứ con có. App **không** nhúng hay mở link nhạc bên ngoài.
 
 ### R2. Bài học "lần sau"
 
-**Định nghĩa:**
-- Câu 1 là bình thường hóa cảm xúc. Với cảm xúc dễ chịu thì là "đáng giữ".
-- Câu 2 là bài học theo nguyên nhân.
-- **Cảm xúc dễ chịu và khó chịu có bài học khác nhau cho cùng một nguyên nhân.**
+Câu 1 bình thường hóa cảm xúc. Câu 2 là bài học theo nguyên nhân. **Cùng một nguyên nhân thì cảm xúc dễ chịu và khó chịu có bài học khác nhau.**
 
-| # | Cảm xúc · nguyên nhân | Bản mẫu cho ra (câu 2) | Đề xuất đáp án | ⏳ |
-|---|---|---|---|---|
-| 1 | lo lắng · bài tập | "Áp lực bài vở dễ làm đầu nghĩ 'mình không làm nổi'. Chia nhỏ ra…" | giữ nguyên | |
-| 2 | mệt · ngủ ít | "Thiếu ngủ thì cảm xúc dễ bùng — không phải con tệ, là pin yếu…" | giữ nguyên | |
-| 3 | **tự hào · bài tập** | 🔴 "Áp lực bài vở dễ làm đầu nghĩ 'mình không làm nổi'…" (sai: con đang tự hào) | "Con vừa thấy cố gắng của mình được đền đáp. Lần sau gặp bài khó, nhớ lại cảm giác hôm nay." | |
-| 4 | **biết ơn · gia đình** | 🔴 "Người thân làm mình buồn nhất vì mình yêu họ nhất…" (sai) | "Biết ơn người thân mà nói ra thì cả hai cùng ấm lòng. Thử nói một câu cảm ơn hôm nay." | |
-| 5 | bình yên · chơi ngoài trời | "Giữ lấy điều vừa mang lại cảm giác này — lần sau mệt mỏi, nhớ dành thời gian cho nó." | giữ nguyên (câu chung cho dễ chịu) | |
-| 6 | chán · (không chọn) | "Gọi tên được cảm xúc và nguyên nhân là đã hiểu mình hơn một chút…" | giữ nguyên (câu chung cho khó chịu) | |
+| # | Cảm xúc · nguyên nhân | Bản mẫu (câu 2) | Đáp án đề xuất |
+|---|---|---|---|
+| 1 | lo lắng · bài tập | "Áp lực bài vở… Chia nhỏ ra…" | giữ |
+| 2 | mệt · ngủ ít | "Thiếu ngủ thì cảm xúc dễ bùng — không phải con tệ, là pin yếu…" | giữ |
+| 3 | **tự hào · bài tập** | 🔴 "Áp lực bài vở…" | "Con vừa thấy cố gắng của mình được đền đáp. Lần sau gặp bài khó, nhớ lại cảm giác hôm nay." |
+| 4 | **biết ơn · gia đình** | 🔴 "Người thân làm mình buồn nhất…" | "Biết ơn người thân mà nói ra thì cả hai cùng ấm lòng. Thử nói một câu cảm ơn hôm nay." |
+| 5 | bình yên · ngoài trời | Câu chung cho cảm xúc dễ chịu | giữ |
+| 6 | chán · — | Câu chung cho cảm xúc khó chịu | giữ |
 
-→ Khi build cần có bảng bài học **2 chiều** (nguyên nhân × dễ chịu/khó chịu) cho mọi nguyên nhân cố định. Claude soạn, bố mẹ duyệt cả bảng.
+→ Khi build: bảng bài học **2 chiều** (nguyên nhân × dễ chịu/khó chịu) trong `by_catalog`. Claude soạn, bố mẹ duyệt.
 
-### R3. An toàn: phát hiện câu nguy hiểm
+### R3. An toàn
 
-**Định nghĩa:**
-- Chạy **trên máy con**, trên mọi ô gõ chữ (kể cả chữ không lưu) trước khi lưu hoặc gửi.
-- Khớp thì dừng lượt và hiện màn an toàn: lời nhắn nhẹ + **Tổng đài 111** + nút "Con muốn nói chuyện với bố mẹ".
-- Máy chủ nhận `needs_care`, **không kèm chữ**.
+- Chạy **trên máy con**, trên mọi ô gõ chữ (kể cả chữ không lưu).
+- Kiểm tra **trong lúc gõ** (sau khi ngừng gõ ~1 giây), không chỉ lúc bấm nút. Con gõ rồi bỏ dở vẫn được kiểm tra *(review)*.
 
-**Lỗi bản mẫu phát hiện khi làm ví dụ:**
-- Bản mẫu bỏ dấu rồi tìm chuỗi con, nên "tự tử" → `tu tu`, khớp cả "**từ từ**" và "**tư tư**ởng".
-- Hệ quả: báo nhầm rất thường xuyên, con thấy phiền và bố mẹ hoảng.
+**Lỗi bản mẫu:**
+- Cách so khớp bỏ dấu biến "tự tử" thành `tu tu`.
+- Vì vậy "**từ từ**" và "**tư tư**ởng" đều bị báo nhầm.
+- Danh sách cũng thiếu nhiều cách nói *(review)*:
+  - teencode: "mún chết", "ko mun song";
+  - tiếng Anh: "kms", "kill myself", "unalive";
+  - chữ cách nhau;
+  - cách nói nhẹ: "muốn biến mất", "không muốn tồn tại", "ngủ luôn không dậy".
 
-**Đề xuất 2 mức:**
+**2 mức:**
 
 | Mức | Khi nào | Con thấy | Bố mẹ nhận |
 |---|---|---|---|
-| **Mạnh** | Cụm rõ nghĩa, khớp nguyên từ: "muốn chết", "tự tử" (có dấu), "không muốn sống", "tự làm đau mình", "muon chet", "khong muon song"… | Màn an toàn | `needs_care` ngay |
-| **Cần hỏi lại** | Cụm dễ trùng nghĩa: "tu tu" không dấu, "cắt tay", "chết mất"… | Câu hỏi nhẹ: "Con có đang nghĩ đến việc làm đau mình không?" → **Có**: như mức mạnh · **Không**: tiếp tục | Chỉ khi con chọn "Có" |
+| **Mạnh** | Cụm rõ nghĩa, khớp nguyên từ | Màn an toàn: **111** (trò chuyện) + **115** (nguy hiểm ngay) + nút nói với bố mẹ | `needs_care` ngay |
+| **Hỏi lại** | Cụm dễ trùng nghĩa | "Con có đang nghĩ đến việc làm đau mình không?" — **Có**: như mức Mạnh · **Không**: tiếp tục | Chỉ khi con chọn "Có" |
 
-| # | Con gõ | Đáp án đề xuất | ⏳ |
-|---|---|---|---|
-| 1 | "con muốn chết" | Mạnh → 111 + `needs_care` | |
-| 2 | "con muon chet" (không dấu) | Mạnh | |
-| 3 | "từ từ thôi" | Không gì cả | |
-| 4 | "ôn tư tưởng Hồ Chí Minh" | Không gì cả | |
-| 5 | "bài khó quá chết mất" | Không gì cả (cách nói thường ngày) | |
-| 6 | "cắt tay vào giấy" | Cần hỏi lại | |
-| 7 | "tu tu" (không dấu, đứng riêng) | Cần hỏi lại | |
-| 8 | "không ai cần mình" | Mạnh | |
+**Tín hiệu không được lặng lẽ thất bại** *(review)*:
+1. Gửi không được (mất mạng) thì thử lại. Nói với con: "Chưa gửi được cho bố mẹ, hãy tìm bố mẹ trực tiếp hoặc gọi 111."
+2. Con thấy trạng thái tín hiệu: *đã gửi* / *bố mẹ đã thấy*.
+3. Bố mẹ chưa bấm "Đã thấy" sau ⏳ Q5 phút: nhắc lại, gửi cho cả hai bố mẹ.
+   - ⚠️ Thông báo đẩy (S5) **chưa làm**. Trước khi bật Góc bình yên cần có ít nhất **một kênh chắc chắn tới bố mẹ**.
 
-Danh sách cụm từ: Claude soạn, bố mẹ duyệt, lưu dạng dữ liệu. Thêm test cho tiếng lóng thường gặp ở tuổi teen.
+**Dấu hiệu lặp lại, không cần chữ** *(review)*: 3 lần mức 5 trong 7 ngày thì hiện cho **con** lời nhắn 111 + "nói với bố mẹ". Quy tắc này chạy trên máy con và không tự báo bố mẹ (⏳ Q4).
 
-### R4. Phần thưởng (khu rừng, trang manga)
+| # | Con gõ | Đáp án |
+|---|---|---|
+| 1 | "con muốn chết" | Mạnh |
+| 2 | "con muon chet" | Mạnh |
+| 3 | "mún chết quá" | Mạnh |
+| 4 | "kms" | Mạnh |
+| 5 | "không ai cần mình" | Mạnh |
+| 6 | "từ từ thôi" | Không gì |
+| 7 | "ôn tư tưởng Hồ Chí Minh" | Không gì |
+| 8 | "bài khó quá chết mất" | Không gì |
+| 9 | "cắt tay vào giấy" | Hỏi lại |
+| 10 | "muốn biến mất khỏi lớp này" | Hỏi lại |
 
-**Định nghĩa:**
+Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`; bố mẹ duyệt danh sách.
+
+### R4. Phần thưởng
+
 - Mỗi lượt **hoàn thành** được tính.
-- **Tối đa `by_daily_rewards` (mặc định 1) lần mở thưởng mỗi ngày**, để không "cày" Góc bình yên cho rừng to.
-- **Phần thưởng không phụ thuộc cảm xúc nào**: buồn hay vui đều như nhau, để con không phải giả vui.
+- Mở tối đa `by_daily_rewards` (1) lần mỗi ngày.
+- Phần thưởng **không phụ thuộc cảm xúc** (buồn cũng như vui), để con không phải giả vui.
+- Đã mở thì giữ mãi, kể cả khi check-in bị xóa (D2).
 
-| # | Tình huống | Đáp án đề xuất | ⏳ |
-|---|---|---|---|
-| 1 | An hoàn thành lượt đầu tiên hôm nay | Mở 1 loài cây; `reward_granted = true` | |
-| 2 | An hoàn thành lượt thứ 3 cùng ngày | Không mở thêm; lời nhắn "Hôm nay khu rừng đã có cây mới rồi, mai nhé" | |
-| 3 | Nguyên chọn "buồn", làm xong | Trang manga hôm nay tạo như mọi ngày (không thưởng ít hơn) | |
-| 4 | Lượt hoàn thành lúc 23:59, lượt tiếp 00:01 | Hai ngày khác nhau, cả hai đều được mở | |
-| 5 | Bỏ giữa chừng | Không tính | |
+| # | Tình huống | Đáp án |
+|---|---|---|
+| 1 | Lượt đầu tiên trong ngày | Mở 1 loài cây / 1 trang |
+| 2 | Lượt thứ 3 cùng ngày | Không mở thêm: "Hôm nay khu rừng đã có cây mới rồi, mai nhé" |
+| 3 | Nguyên chọn "buồn" | Vẫn có trang manga như mọi ngày |
+| 4 | 23:59 rồi 00:01 | Hai ngày khác nhau, cả hai được mở |
+| 5 | Con xóa check-in hôm qua | Cây hôm qua vẫn còn |
+| 6 | Bấm Xong 2 lần khi mạng chậm | 1 check-in, 1 phần thưởng |
 
-### R5. Dùng trong giờ học
+### R5. Giờ học
 
-**Định nghĩa:**
-- Mở được cả khi máy đang khóa, vì `/binh-yen` nằm trên tên miền Launcher (đã có trong allowlist) — **không đổi luật khóa**.
-- Trong giờ học, mỗi lần ở tối đa `by_study_minutes` (10 phút). Hết giờ: lời nhắn "Quay lại học nhé, lúc nào cần thì vào lại", rồi tự về màn Hôm nay.
-- **"Con muốn nói chuyện" và màn an toàn không bao giờ bị giới hạn giờ.**
+- Vào được khi máy khóa, vì Launcher đã có trong allowlist. **Không đổi luật khóa.**
+- Giờ học: mỗi lần tối đa `by_study_minutes` (10'), tính bằng **giờ máy chủ** qua `by_sessions`. Hết giờ thì về màn Hôm nay.
+- "Muốn nói chuyện" và màn an toàn không bị giới hạn.
 
-| # | Tình huống | Đáp án đề xuất | ⏳ |
-|---|---|---|---|
-| 1 | Giờ học, con vào lúc 19:00 | Tự về Hôm nay lúc 19:10 | |
-| 2 | Giờ tự do / đã xong bài | Không giới hạn | |
-| 3 | Con vào lại ngay sau khi bị đẩy ra | ⏳ Q3 | |
-| 4 | Đang ở màn an toàn khi hết 10 phút | Không đẩy ra | |
+| # | Tình huống | Đáp án |
+|---|---|---|
+| 1 | Giờ học, vào 19:00 | Về Hôm nay lúc 19:10 |
+| 2 | Giờ tự do / đã xong bài | Không giới hạn |
+| 3 | Vào lại ngay sau khi bị đẩy ra | ⏳ Q6 |
+| 4 | Đang ở màn an toàn lúc hết 10' | Không đẩy ra |
+| 5 | Đổi giờ máy con | Không ảnh hưởng (giờ máy chủ) |
 
-### R6. Khóa trên iPad dùng chung
+### R6. PIN Góc bình yên
 
-- Phiên Góc bình yên **riêng**, ngắn hơn phiên đăng nhập thường: phải gõ PIN của con khi vào; sau `by_idle_lock_minutes` (5 phút) không chạm thì khóa lại.
-- Dùng lại PIN 6 số có sẵn (0005), gồm cả luật sai 5 lần khóa 15 phút.
-- Chọn sang tên anh/chị/em thì xóa mọi bản nháp chưa lưu trên màn hình.
+- **PIN riêng do con tự đặt** (⏳ Q1), khác PIN đăng nhập mà bố mẹ đặt.
+  - Lý do: bố mẹ biết PIN đăng nhập, nên dùng chung thì bố mẹ mở được Góc bình yên trên máy con bất cứ lúc nào *(review)*.
+- Sai 5 lần thì khóa 15'.
+- Quên PIN: bố mẹ chỉ có thể **xóa** PIN Góc bình yên. Xóa PIN thì xóa luôn dữ liệu trên máy và báo con. Check-in trên máy chủ giữ nguyên; con đặt PIN mới là thấy lại.
+- Tự khóa sau `by_idle_lock_minutes` không chạm, tính ở máy chủ (`by_sessions.last_seen_at`).
+- **iPad dùng chung:**
+  - Đổi người phải gõ PIN của người kia.
+  - Đổi người thì xóa bản nháp trên màn hình.
+  - Thêm cờ `pin_devices.shared` để app biết máy nào là máy dùng chung (cho Q3).
 
 ---
 
-## 6. Ca khó (edge cases)
+## 6. Ca khó
 
-| Ca | Xử lý đề xuất |
+| Ca | Xử lý |
 |---|---|
-| iPad dùng chung, An mở nhầm tên chị | PIN chặn; không có PIN thì không vào được |
-| Dữ liệu "chỉ trên máy" trên iPad dùng chung | Khóa theo `child_id`, app chỉ hiện của người đang mở PIN. ⏳ Q2: có cho lưu chữ trên iPad không |
-| Mất mạng khi bấm "Xong" | Báo "chưa lưu được, thử lại"; không xếp hàng ngầm |
-| Con xóa trình duyệt / đổi máy | Chữ riêng tư mất (nói trước với con); check-in trên máy chủ còn |
-| Bấm "Xong" 2 lần (mạng chậm) | Route chống trùng: một mã lượt chỉ tạo 1 dòng |
-| Bố mẹ đặt lại PIN của con | Ghi `audit_log` như hiện nay; ⏳ Q5: có báo cho con biết không |
-| Con muốn xóa hết dữ liệu Góc bình yên | Nút "Xóa hết của con" qua route (⏳ Q4) |
-| Con lớn lên / rời app | Xuất / xóa toàn bộ theo `child_id` |
-| Push "con muốn nói chuyện" | Nội dung push chung chung: "Nguyên muốn nói chuyện với bố mẹ", không kèm cảm xúc |
-| Bản sao lưu A9 chứa check-in | Đã mã hóa; ghi trong màn "Ai thấy gì?" (§3) |
-| Từ / nguyên nhân bị bỏ khỏi danh sách sau này | Giữ mã cũ trong dữ liệu; danh sách hiển thị có cờ `retired` (không xóa) |
+| An mở nhầm tên chị trên iPad | PIN Góc bình yên chặn |
+| Bố mẹ mở Góc bình yên trên máy con | Cần PIN của con; bố mẹ chỉ xóa được PIN (và con sẽ biết) |
+| Mất mạng khi bấm Xong | "Chưa lưu được, thử lại"; với tín hiệu thì luôn thử lại + báo con |
+| Con xóa dữ liệu trình duyệt / đổi máy | Mất chữ riêng tư (nói trước); check-in + phần thưởng còn |
+| Con muốn xóa hết | Nút "Xóa hết của con" trong phiên Góc bình yên (⏳ Q7) |
+| `want_talk` khi chính bố/mẹ là nguyên nhân | Con chọn được gửi cho ai (mặc định: cả hai) |
+| Bố mẹ tắt `by_enabled` | Khu bị ẩn, nhưng nút "Muốn nói chuyện" + màn an toàn vẫn còn ở Hôm nay |
+| Từ / nguyên nhân bị bỏ khỏi danh sách | Đặt cờ `retired`, không xóa |
+| Thông báo đẩy "con muốn nói chuyện" | Nội dung chung chung, không kèm cảm xúc |
 
 ---
 
-## 7. Quyết định khó đổi (⏳ chờ bố mẹ chốt trước khi viết SQL)
+## 7. Quyết định cần bố mẹ chốt (⏳)
 
 | # | Câu hỏi | Đề xuất |
 |---|---|---|
-| Q1 | Bố mẹ có thấy **bất kỳ con số nào** về Góc bình yên không (vd "con ghé 5 lần tuần này")? | **Không.** Chỉ tín hiệu con chủ động gửi. Con số cũng là thông tin; nếu cần, để con tự kể ở Tổng kết tuần |
-| Q2 | Trên **iPad dùng chung**, có lưu chữ con viết (câu kể, nhật ký) không? | **Không lưu trên iPad**; chỉ lưu trên laptop riêng của từng con. iPad vẫn dùng đủ, chữ viết xong là buông |
-| Q3 | Giờ học: giới hạn số lần vào? | **Không giới hạn số lần**, chỉ 10'/lần; bố mẹ xem lại sau 2 tuần dùng thử |
-| Q4 | Con xóa check-in: xóa hẳn hay giữ bản ẩn? | **Xóa hẳn** (riêng tư hơn lịch sử) |
-| Q5 | Bố mẹ đặt lại PIN của con: có báo cho con không? | **Có**, lần mở Góc bình yên sau sẽ hiện "PIN vừa được bố mẹ đổi lúc …" (giữ lòng tin) |
-| Q6 | Giữ check-in bao lâu? | **12 tháng** rồi tự xóa; con xóa sớm được |
+| Q1 | PIN Góc bình yên **do con tự đặt** (bố mẹ chỉ xóa được)? | **Có**. Không có cái này thì lời hứa "bố mẹ không đọc" chỉ là lời nói |
+| Q2 | Mã hóa chữ trên máy bằng PIN của con ngay từ bản đầu? | **Có**, mã hóa đơn giản. Không chặn được người rành kỹ thuật cố tình, nhưng chặn được xem lướt |
+| Q3 | iPad dùng chung có lưu chữ con viết không? | **Không**; chỉ lưu trên laptop riêng |
+| Q4 | Bố mẹ có thấy con số nào không (số lần ghé, mức 5 lặp lại)? | **Không**. Chỉ tín hiệu con gửi + `needs_care` |
+| Q5 | Bố mẹ chưa thấy `needs_care` sau bao lâu thì nhắc lại? | **10 phút** |
+| Q6 | Giờ học: giới hạn số lần vào? | **Không**, chỉ 10'/lần; xem lại sau 2 tuần |
+| Q7 | Con xóa: xóa hẳn? Giữ check-in bao lâu? | **Xóa hẳn**; tự xóa sau **12 tháng** |
 
 ---
 
-## 8. Đề xuất ghi vào SPEC §18 (chưa ghi; chờ bố mẹ duyệt)
+## 8. Đề xuất ghi SPEC §18 (chưa ghi; chờ duyệt)
 
-> | 01/11/2026 | **Góc bình yên** (khu `/binh-yen`, thiết kế: hub GOC_BINH_YEN_DESIGN v1.1, quy tắc: `docs/BINH_YEN.md`). Không bắt buộc, không gắn mở khóa; bố mẹ **không đọc** dữ liệu cảm xúc, chỉ nhận tín hiệu không nội dung. **Ngoại lệ có chủ ý với §15:** có đếm lượt ghé để mở loài cây / trang manga, nhưng tối đa 1 lần/ngày, không phụ thuộc cảm xúc, không đổi ra giờ chơi, không chuỗi ngày, không so sánh 2 con. "Khu rừng" và "giao diện theo tuổi" (v2 trong §15) làm sớm **chỉ trong Góc bình yên**. |
+> | 01/11/2026 | **Góc bình yên** (`/binh-yen`; thiết kế: hub GOC_BINH_YEN_DESIGN v1.1; quy tắc: `docs/BINH_YEN.md`). Không bắt buộc, không gắn mở khóa, **mặc định tắt**. Bố mẹ **không đọc** dữ liệu cảm xúc, chỉ nhận tín hiệu không nội dung. PIN Góc bình yên do con đặt. **Ngoại lệ có chủ ý với §15:** đếm lượt để mở loài cây / trang manga, tối đa 1/ngày, không phụ thuộc cảm xúc, không đổi giờ chơi, không chuỗi ngày, không so sánh 2 con. "Khu rừng" và "giao diện theo tuổi" (v2) làm sớm **chỉ trong Góc bình yên**. Bản sao lưu bỏ dữ liệu `by_*`. |
 
----
-
-## 9. Cần thử trước (spike) — trước khi build lát đầu
+## 9. Cần thử trước (spike)
 
 | # | Thử gì | Đạt khi |
 |---|---|---|
-| S1 | Phiên PIN ngắn cho `/binh-yen` trên iPad Safari: tự khóa sau 5 phút, cả khi app nằm nền rồi mở lại | Mở lại sau 6 phút thì phải gõ PIN |
-| S2 | Lưu chữ trên máy theo `child_id` (laptop Edge/Chrome), sống qua khởi động lại; xóa dữ liệu trình duyệt thì mất | Đúng như mô tả; con được báo trước |
-| S3 | Bộ phát hiện an toàn 2 mức (R3) với ~50 câu thử: có dấu, không dấu, tiếng lóng, câu bình thường dễ trùng | Mọi câu mức "Mạnh" đều bắt được; câu bình thường không báo nhầm |
+| S1 | Phiên Góc bình yên do máy chủ giữ, tự khóa 5' trên iPad Safari (cả khi app chạy nền) | Mở lại sau 6' thì phải gõ PIN |
+| S2 | Lưu chữ mã hóa theo PIN con trên Edge / Chrome | Đúng PIN thì đọc được; sai PIN hoặc người khác thì không |
+| S3 | Bộ phát hiện an toàn 2 mức với ≥ 50 câu | Mọi câu "Mạnh" đều bắt được; câu thường ngày không báo nhầm |
+| S4 | Một kênh chắc chắn tới bố mẹ (thông báo đẩy iPhone, hoặc tạm dùng email) | Tín hiệu tới trong ≤ 1 phút |
 
-## 10. Lát build dự kiến (sau khi chốt §7 + spike)
+## 10. Lát build dự kiến
 
-- **S-BY1 (bộ khung):** PIN → chọn ô → từ → mức độ → 3 gợi ý (R1) → 1–2 hoạt động → Xong → lưu `by_checkins`; RLS bố mẹ không đọc; test RLS; nút "Con muốn nói chuyện" + `by_signals` + trang bố mẹ "Đã thấy". **Chưa có ô gõ chữ**, nên chưa cần R3.
-- **S-BY2:** ô gõ chữ + R3 (cùng lát, bắt buộc) + dữ liệu chỉ trên máy.
-- **S-BY3:** card hiểu nguyên nhân + bài học R2 + Bảng điều tra / Bàn pha chế.
-- **S-BY4:** phần thưởng R4 (khu rừng An, trang manga Nguyên).
+1. **S-BY0:** PIN Góc bình yên + `by_sessions` + `by_signals` + trang bố mẹ "Đã thấy" + kênh báo (S4). Có nút "Con muốn nói chuyện" ở màn Hôm nay. Cần có trước mọi thứ khác.
+2. **S-BY1:** chọn ô → từ → mức → 3 gợi ý (R1) → hoạt động → Xong → `by_checkins` + test quyền. Chưa có ô gõ chữ.
+3. **S-BY2:** ô gõ chữ + R3 (cùng lát, bắt buộc) + chữ mã hóa trên máy.
+4. **S-BY3:** hiểu nguyên nhân + bài học R2 + Bảng điều tra / Bàn pha chế.
+5. **S-BY4:** phần thưởng R4 (khu rừng An, trang manga Nguyên).
