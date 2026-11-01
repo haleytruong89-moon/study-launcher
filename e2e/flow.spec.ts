@@ -1218,6 +1218,162 @@ test("Audit: parent signs the child out of every browser; 'Quên máy này'; log
 });
 
 // ---------------------------------------------------------------------------
+// S5 Web Push (01/11/2026)
+// ---------------------------------------------------------------------------
+
+test("Push: a parent turns notifications on/off for a device; children cannot; cron needs the secret", async ({ page, browser, request }) => {
+  const sub = {
+    endpoint: `https://push.example.invalid/e2e-${randomBytes(6).toString("hex")}`,
+    keys: { p256dh: "B" + "A".repeat(86), auth: "A".repeat(22) },
+  };
+  const call = (p: Page, method: string, url: string, body?: unknown) =>
+    p.evaluate(
+      async ([m, u, b]) => (await fetch(u as string, { method: m as string, headers: { "Content-Type": "application/json" }, body: b === undefined ? undefined : JSON.stringify(b) })).status,
+      [method, url, body] as const,
+    );
+
+  // The parent page loads and offers the switch (keys are set in CI).
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/notifications");
+  await expect(page.getByRole("heading", { name: "Thông báo", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Máy này", exact: true })).toBeVisible();
+
+  const { data: parent } = await admin().from("profiles").select("id").eq("role", "parent").limit(1).single();
+  expect(await call(page, "POST", "/api/push/subscribe", sub)).toBe(200);
+  expect(await call(page, "POST", "/api/push/subscribe", sub)).toBe(200); // same device twice = one row
+  const { data: rows } = await admin().from("push_subscriptions").select("profile_id").eq("endpoint", sub.endpoint);
+  expect(rows).toHaveLength(1);
+  expect(rows?.[0]?.profile_id).toBe(parent?.id);
+  expect(await call(page, "POST", "/api/push/subscribe", { endpoint: "http://insecure.example/x", keys: sub.keys })).toBe(400);
+  // "Gửi thử" answers even when the push service cannot be reached.
+  expect(await call(page, "POST", "/api/push/test")).toBe(200);
+
+  // A child cannot register a device for parent notifications.
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  expect(await call(k, "POST", "/api/push/subscribe", { ...sub, endpoint: sub.endpoint + "-kid" })).toBe(403);
+  await kCtx.close();
+
+  // Turning it off removes the row.
+  expect(await call(page, "DELETE", "/api/push/subscribe", { endpoint: sub.endpoint })).toBe(200);
+  const { count } = await admin().from("push_subscriptions").select("id", { count: "exact", head: true }).eq("endpoint", sub.endpoint);
+  expect(count).toBe(0);
+
+  // Evening reminder: refused without the secret, runs with it.
+  expect((await request.get("/api/cron/evening")).status()).toBe(401);
+  expect((await request.get("/api/cron/evening", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
+  const ok = await request.get("/api/cron/evening", { headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` } });
+  expect(ok.status()).toBe(200);
+  expect((await ok.json()).ok).toBe(true);
+});
+
+// ---------------------------------------------------------------------------
+// S3d — special days (sick / exam / holiday) set by the parent from the phone
+// ---------------------------------------------------------------------------
+
+test("S3d special days: sick opens the child's day; exam drops a task; a child cannot set it", async ({ page, browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, display_name").eq("role", "child").single();
+  const childId = kid?.id ?? "";
+  const name = kid?.display_name ?? "";
+  const today = localDate(new Date());
+  const tomorrow = addDays(today, 1);
+  const { data: tpl } = await db.from("task_templates").select("id").eq("title", "Luyện đề e2e").single();
+
+  // Parent: today is a sick day.
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent");
+  const card = page.getByRole("region", { name });
+  await card.getByRole("button", { name: /^Ngày đặc biệt/ }).click();
+  const sheet = page.getByRole("dialog", { name: `Ngày đặc biệt của ${name}` });
+  await expect(sheet.getByRole("button", { name: /^Hôm nay/ })).toHaveAttribute("aria-pressed", "true");
+  await sheet.getByRole("radio", { name: /^Ngày ốm/ }).click();
+  await sheet.getByRole("button", { name: /^Đặt ngày ốm hôm nay/ }).click();
+  await expect(sheet).toBeHidden();
+  await expect(card.getByRole("status")).toContainText("Đã lưu");
+  await expect(card.getByRole("button", { name: "Ngày đặc biệt · hôm nay: Ngày ốm" })).toBeVisible();
+
+  // Child: the whole day is open, and the screen says why.
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  type S = { status: string; open: boolean; dayType: string; part1: { items: { title: string }[] } };
+  const state = async () => child.evaluate(async () => ((await (await fetch("/api/today")).json()) as { state: S }).state);
+  let s = await state();
+  expect(s.status).toBe("OPEN_SICK");
+  expect(s.open).toBe(true);
+  await expect(child.getByText("Ngày ốm · mở mọi trang")).toBeVisible();
+
+  // Parent: change today to an exam day without "Luyện đề e2e" (the sheet shows what is set).
+  await card.getByRole("button", { name: /^Ngày đặc biệt/ }).click();
+  await expect(sheet.getByRole("radio", { name: /^Ngày ốm/ })).toHaveAttribute("aria-checked", "true");
+  await sheet.getByRole("radio", { name: /^Ngày thi/ }).click();
+  await sheet.getByLabel(/Luyện đề e2e/).check();
+  await sheet.getByRole("button", { name: /^Đặt ngày thi hôm nay .* bỏ 1 việc$/ }).click();
+  await expect(sheet).toBeHidden();
+  const { data: row } = await db.from("day_sessions").select("day_type, disabled_template_ids").eq("child_id", childId).eq("local_date", today).single();
+  expect(row).toEqual({ day_type: "exam", disabled_template_ids: [tpl?.id] });
+
+  s = await state();
+  expect(s.dayType).toBe("exam");
+  expect(s.status).not.toBe("OPEN_SICK");
+  expect(s.part1.items.map((i) => i.title)).not.toContain("Luyện đề e2e");
+  await child.reload();
+  await expect(child.getByText("Ngày thi · xong các việc còn lại là đạt")).toBeVisible();
+
+  // Parent: tomorrow is a holiday (planned ahead); today back to normal.
+  await card.getByRole("button", { name: /^Ngày đặc biệt/ }).click();
+  await sheet.getByRole("button", { name: /^Ngày mai/ }).click();
+  await expect(sheet.getByRole("radio", { name: /^Ngày thường/ })).toHaveAttribute("aria-checked", "true");
+  await sheet.getByRole("radio", { name: /^Ngày lễ/ }).click();
+  await sheet.getByRole("button", { name: /^Đặt ngày lễ ngày mai/ }).click();
+  await expect(sheet).toBeHidden();
+  await card.getByRole("button", { name: /^Ngày đặc biệt/ }).click();
+  await sheet.getByRole("radio", { name: /^Ngày thường/ }).click();
+  await sheet.getByRole("button", { name: /^Để hôm nay .* là ngày thường/ }).click();
+  await expect(sheet).toBeHidden();
+  await expect(card.getByRole("button", { name: /^Ngày đặc biệt · Ngày lễ/ })).toBeVisible();
+
+  const { data: rows } = await db.from("day_sessions").select("local_date, day_type, disabled_template_ids").eq("child_id", childId).in("local_date", [today, tomorrow]).order("local_date");
+  expect(rows).toEqual([
+    { local_date: today, day_type: "normal", disabled_template_ids: [] },
+    { local_date: tomorrow, day_type: "holiday", disabled_template_ids: [] },
+  ]);
+  expect((await state()).dayType).toBe("normal");
+
+  // The server refuses a past day and a task that is not the child's.
+  const refused = await page.evaluate(
+    async ({ childId, past, today }) => {
+      const post = async (body: unknown) => (await fetch("/api/admin/special-days", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).status;
+      return [
+        await post({ childId, date: past, dayType: "sick" }),
+        await post({ childId, date: today, dayType: "exam", disabledTemplateIds: ["00000000-0000-4000-8000-000000000000"] }),
+      ];
+    },
+    { childId, past: addDays(today, -1), today },
+  );
+  expect(refused).toEqual([400, 400]);
+
+  // A child cannot set a day type: not through the API, not directly in the database.
+  const viaApi = await child.evaluate(
+    async ({ childId, today }) => (await fetch("/api/admin/special-days", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId, date: today, dayType: "sick" }) })).status,
+    { childId, today },
+  );
+  expect(viaApi).toBe(403);
+  await childCtx.close();
+  const direct = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await direct.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  const write = await direct.from("day_sessions").update({ day_type: "sick" }).eq("child_id", childId).select("local_date");
+  expect(write.data ?? []).toHaveLength(0);
+  const { data: still } = await db.from("day_sessions").select("day_type").eq("child_id", childId).eq("local_date", today).single();
+  expect(still?.day_type).toBe("normal");
+
+  const { data: logs } = await db.from("audit_log").select("action").eq("action", "day_type.set");
+  expect(logs?.length).toBe(4);
+});
+
+// ---------------------------------------------------------------------------
 // S3e weekly photo cleanup (01/11/2026)
 // ---------------------------------------------------------------------------
 

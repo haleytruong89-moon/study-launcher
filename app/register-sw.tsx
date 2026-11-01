@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-/** Registers the (currently empty) service worker so the app can be installed to the Home Screen. */
+/** Registers the service worker: installable to the Home Screen + Web Push for parents (S5). */
 export function RegisterServiceWorker() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;

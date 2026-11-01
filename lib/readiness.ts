@@ -8,6 +8,9 @@ export const REQUIRED_ENV = [
   "FIRST_PARENT_EMAIL",
 ] as const;
 
+/** S5 Web Push + evening reminder. Missing = a warning only (the app works without push). */
+export const PUSH_ENV = ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "CRON_SECRET"] as const;
+
 export const EXPECTED_TABLES = [
   "families",
   "profiles",
@@ -40,6 +43,8 @@ export interface ReadinessInput {
   hostMatchesAppUrl: boolean | null;
   /** null = not checked */
   familyExists: boolean | null;
+  /** S5: push env vars not set yet (VAPID keys, CRON_SECRET). Optional = treated as none. */
+  pushMissing?: string[];
 }
 
 export interface ReadinessCheck {
@@ -99,6 +104,12 @@ export function evaluateReadiness(input: ReadinessInput): ReadinessResult {
       ok: input.familyExists === true,
       level: "warn",
       hint: "Chưa thiết lập gia đình. Đăng nhập tài khoản phụ huynh để làm 'Thiết lập lần đầu'.",
+    },
+    {
+      name: "push_configured",
+      ok: (input.pushMissing ?? []).length === 0,
+      level: "warn",
+      hint: `Thông báo đẩy chưa bật (thiếu: ${(input.pushMissing ?? []).join(", ")}). Phụ huynh vào Thêm › Thông báo để tạo khóa (SETUP bước A10).`,
     },
   ];
 

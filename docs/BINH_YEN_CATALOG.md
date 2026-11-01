@@ -49,6 +49,8 @@ So khớp **nguyên cụm**, không theo chữ lẻ. Kiểm tra cả bản có d
 **Hỏi lại** → hỏi "Con có đang nghĩ đến việc làm đau mình không?":
 - "tu tu" (không dấu, đứng riêng) · cắt tay · muốn biến mất · chán sống · mệt mỏi với tất cả · không chịu nổi nữa · bỏ cuộc hết
 
+**Nói quá kiểu "X muốn chết"** (thêm sau spike 01/11): "cười / buồn cười / nóng / lạnh / đói / sợ / ngon / xấu hổ / ngại… muốn chết" → **không báo**; "mệt / chán / buồn / khổ / tủi / cô đơn / đau… muốn chết" → **hỏi lại**; còn lại (vd "con muốn chết", "muốn chết" đứng đầu câu) → **Mạnh**.
+
 **Không báo** (câu thường ngày, phải có trong bộ test): từ từ · tư tưởng · chết mất (vd "đói chết mất") · chết cười · "bài này giết mình" · game "chết" / "hồi sinh".
 
 > Danh sách này là để **bảo vệ con**, không chẩn đoán. Không bộ lọc nào bắt được hết — vì vậy nút "Con muốn nói chuyện" luôn có ở mọi màn.

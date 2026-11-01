@@ -79,8 +79,13 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$(get SERVICE_ROLE_KEY)" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_APP_URL=http://localhost:3100" >> "$GITHUB_ENV"
           echo "FIRST_PARENT_EMAIL=parent@example.com" >> "$GITHUB_ENV"
-          # S3e: cron secret for /api/cron/* and the local database URL (the test ages its own files).
+          # S5: throwaway Web Push keys + cron secret, so push routes run for real in e2e.
+          keys=$(npx --no-install web-push generate-vapid-keys --json)
+          echo "VAPID_PUBLIC_KEY=$(echo "$keys" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).publicKey')" >> "$GITHUB_ENV"
+          echo "VAPID_PRIVATE_KEY=$(echo "$keys" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).privateKey')" >> "$GITHUB_ENV"
+          echo "VAPID_SUBJECT=mailto:ci@example.com" >> "$GITHUB_ENV"
           echo "CRON_SECRET=e2e-cron-secret-$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          # S3e: local database URL (the cleanup test ages its own files). CRON_SECRET comes from S5 above.
           echo "E2E_DB_URL=$(get DB_URL)" >> "$GITHUB_ENV"
       - run: npx playwright install --with-deps chromium
       - name: Build

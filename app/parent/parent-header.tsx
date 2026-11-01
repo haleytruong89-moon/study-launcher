@@ -16,6 +16,7 @@ const PAGES = {
   "/parent/allowlist": "more",
   "/parent/devices": "more",
   "/parent/settings": "more",
+  "/parent/notifications": "more",
 } as const;
 
 export type ParentPage = keyof typeof PAGES;

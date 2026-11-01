@@ -140,6 +140,7 @@ Quy tắc phụ:
 - Phần 2 xong → ghi `part2_done_at` và `free_started_at = now` (cùng một transaction). *Chốt 14/10/2026:* nếu lúc đó đang có override **khóa**, `free_started_at` được hoãn đến lần đọc đầu tiên sau khi hết khóa.
 - Thẻ miễn: còn thẻ khi số `pass_used_at` trong tuần (T2–CN) < `passes_per_week` **và hôm nay chưa có `free_started_at`** (không cho dùng thẻ để có giờ tự do lần 2). Dùng → `pass_used_at = now`, `free_started_at = now`.
 - "Ngày đạt" (cho thống kê tuần và chế độ Tin tưởng): có `part2_done_at` trước `bedtime`, **hoặc** dùng thẻ, **hoặc** `day_type ∈ {sick, holiday}`. Ngày thi (`exam`) **không** tự tính đạt. Tính lười khi đọc, không cần cron.
+- *(S3d, 01/11/2026)* **Ngày đặc biệt** do phụ huynh đặt (`POST /api/admin/special-days`, phiên của phụ huynh, ghi `audit_log` `day_type.set`): cho **hôm nay hoặc tối đa 60 ngày tới** (giờ server), **không sửa ngày đã qua**. `exam` / `holiday` tắt được **mẫu việc** (bài bổ sung / kỹ năng) **có lịch vào thứ của ngày đó**; bài trên lớp không tắt ở đây (dời hạn ở Giao bài). `normal` / `sick` xóa danh sách tắt. Về "Ngày thường" = ghi `day_type = normal`, không xóa dòng. Hiệu lực vẫn do `computeDayState` (không đổi).
 - Tiến độ Tin tưởng: đếm số tuần **liên tiếp gần nhất** có tỷ lệ ngày đạt ≥ `trust_up_pct`. Đủ `trust_up_weeks` → hiện gợi ý cho phụ huynh xác nhận. **Không tự chuyển chế độ.** Đang Tin tưởng mà 1 tuần < `trust_down_pct` → gợi ý quay lại Khóa.
 
 **Bắt buộc có test** cho từng dòng của bảng ưu tiên + mốc biên (đúng giây hết 10', hết 45', qua 00:00, tuần mới).
@@ -162,6 +163,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/parent-pin/override` | máy con + PIN phụ huynh | `open_until` / `lock_until` / **cộng N phút** = tạo `open_until` mới tính từ `max(openUntil hiện tại, now)` (cắt ở 00:00) |
 | `POST /api/parent-pin/verify` | máy con + PIN phụ huynh | Mở nhanh cài đặt nhẹ trên máy con (vd ghép extension) |
 | `GET/POST /api/admin/*` | phụ huynh | Tài khoản con, cài đặt, allowlist, mẫu việc, slot, ngày đặc biệt, chế độ Tin tưởng, verdict |
+| `POST /api/admin/special-days` | phụ huynh | *(S3d)* `{childId, date, dayType, disabledTemplateIds}` → upsert `day_sessions.day_type` + `disabled_template_ids` (hôm nay … +60 ngày) |
 | `POST /api/push/subscribe` | mọi profile | Lưu subscription |
 | `POST /api/ext/pair` | máy con + PIN phụ huynh | Tạo token thiết bị (trả 1 lần, lưu hash) |
 | `GET /api/ext/state` | extension | `{open, openUntil, allow: string[], blockAlways: string[], launcherUrl, pollSeconds, serverNow}`; cập nhật `last_seen_at` |
@@ -192,7 +194,9 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 ## 8. Thông báo đẩy (Web Push)
 
 - Khóa VAPID trong env (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
-- `public/sw.js`: nhận `push` → hiện thông báo; `notificationclick` → mở `/parent/requests/<id>`.
+- `public/sw.js`: nhận `push` (`{title, body, url, tag}`) → hiện thông báo; `notificationclick` → mở `url` trong app (`/parent/requests`, `/parent/review`).
+- *(S5, chốt 01/11/2026)* Gửi khi: con **Xin mở trang** (chỉ lần đầu cho mỗi trang), con **Nhờ bố mẹ xem** (chỉ lần đầu cho mỗi lượt), **21:45** nếu còn bài chưa xem / việc con đang nhờ (`/api/cron/evening`, gọi bởi `.github/workflows/evening-reminder.yml`). **Không** gửi cho "Tự phát hiện" khung bị chặn (chỉ số đỏ). Không có giờ yên lặng.
+- Gửi bằng `lib/push/send.ts` (`web-push`, service_role, không bao giờ làm hỏng thao tác của con; endpoint hết hạn 404/410 thì xóa). Nội dung push **không chứa chữ con viết**. Bố mẹ bật/tắt/gửi thử ở **Thêm › Thông báo**; khóa VAPID + `CRON_SECRET` tạo ngay trong trình duyệt phụ huynh (SETUP A10).
 - iOS: chỉ hoạt động khi PWA đã **Add to Home Screen**, và phải xin quyền từ một thao tác bấm của người dùng. Thông báo iOS không có nút hành động, nên "1 chạm" = chạm thông báo → trang có 4 nút duyệt. **Cần thử trên iPhone thật ở S5.**
 - Dự phòng nếu push iOS không ổn: trang phụ huynh tự làm mới mỗi 30 giây khi đang mở + huy hiệu số yêu cầu chờ.
 
