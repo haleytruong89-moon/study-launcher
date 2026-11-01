@@ -25,6 +25,7 @@ const GROUPS: { title: string; links: { href: string; label: string; sub: string
     links: [
       { href: "/parent/children", label: "Các con", sub: "Tên, lớp, màu, mật khẩu" },
       { href: "/parent/settings", label: "Luật trong nhà", sub: "Giờ tự do, nghỉ, thẻ miễn, giờ ngủ" },
+      { href: "/parent/notifications", label: "Thông báo", sub: "Báo lên điện thoại khi con xin mở trang, nhờ xem bài" },
     ],
   },
 ];

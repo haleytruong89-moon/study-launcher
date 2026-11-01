@@ -190,7 +190,9 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 ## 8. Thông báo đẩy (Web Push)
 
 - Khóa VAPID trong env (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
-- `public/sw.js`: nhận `push` → hiện thông báo; `notificationclick` → mở `/parent/requests/<id>`.
+- `public/sw.js`: nhận `push` (`{title, body, url, tag}`) → hiện thông báo; `notificationclick` → mở `url` trong app (`/parent/requests`, `/parent/review`).
+- *(S5, chốt 01/11/2026)* Gửi khi: con **Xin mở trang** (chỉ lần đầu cho mỗi trang), con **Nhờ bố mẹ xem** (chỉ lần đầu cho mỗi lượt), **21:45** nếu còn bài chưa xem / việc con đang nhờ (`/api/cron/evening`, gọi bởi `.github/workflows/evening-reminder.yml`). **Không** gửi cho "Tự phát hiện" khung bị chặn (chỉ số đỏ). Không có giờ yên lặng.
+- Gửi bằng `lib/push/send.ts` (`web-push`, service_role, không bao giờ làm hỏng thao tác của con; endpoint hết hạn 404/410 thì xóa). Nội dung push **không chứa chữ con viết**. Bố mẹ bật/tắt/gửi thử ở **Thêm › Thông báo**; khóa VAPID + `CRON_SECRET` tạo ngay trong trình duyệt phụ huynh (SETUP A10).
 - iOS: chỉ hoạt động khi PWA đã **Add to Home Screen**, và phải xin quyền từ một thao tác bấm của người dùng. Thông báo iOS không có nút hành động, nên "1 chạm" = chạm thông báo → trang có 4 nút duyệt. **Cần thử trên iPhone thật ở S5.**
 - Dự phòng nếu push iOS không ổn: trang phụ huynh tự làm mới mỗi 30 giây khi đang mở + huy hiệu số yêu cầu chờ.
 

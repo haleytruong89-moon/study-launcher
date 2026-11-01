@@ -1215,3 +1215,54 @@ test("Audit: parent signs the child out of every browser; 'Quên máy này'; log
   expect(logs?.some((l) => l.action === "child.sign_out_all")).toBe(true);
   expect(logs?.some((l) => l.action === "child.sessions_revoked")).toBe(true);
 });
+
+// ---------------------------------------------------------------------------
+// S5 Web Push (01/11/2026)
+// ---------------------------------------------------------------------------
+
+test("Push: a parent turns notifications on/off for a device; children cannot; cron needs the secret", async ({ page, browser, request }) => {
+  const sub = {
+    endpoint: `https://push.example.invalid/e2e-${randomBytes(6).toString("hex")}`,
+    keys: { p256dh: "B" + "A".repeat(86), auth: "A".repeat(22) },
+  };
+  const call = (p: Page, method: string, url: string, body?: unknown) =>
+    p.evaluate(
+      async ([m, u, b]) => (await fetch(u as string, { method: m as string, headers: { "Content-Type": "application/json" }, body: b === undefined ? undefined : JSON.stringify(b) })).status,
+      [method, url, body] as const,
+    );
+
+  // The parent page loads and offers the switch (keys are set in CI).
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent/notifications");
+  await expect(page.getByRole("heading", { name: "Thông báo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Máy này" })).toBeVisible();
+
+  const { data: parent } = await admin().from("profiles").select("id").eq("role", "parent").limit(1).single();
+  expect(await call(page, "POST", "/api/push/subscribe", sub)).toBe(200);
+  expect(await call(page, "POST", "/api/push/subscribe", sub)).toBe(200); // same device twice = one row
+  const { data: rows } = await admin().from("push_subscriptions").select("profile_id").eq("endpoint", sub.endpoint);
+  expect(rows).toHaveLength(1);
+  expect(rows?.[0]?.profile_id).toBe(parent?.id);
+  expect(await call(page, "POST", "/api/push/subscribe", { endpoint: "http://insecure.example/x", keys: sub.keys })).toBe(400);
+  // "Gửi thử" answers even when the push service cannot be reached.
+  expect(await call(page, "POST", "/api/push/test")).toBe(200);
+
+  // A child cannot register a device for parent notifications.
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  expect(await call(k, "POST", "/api/push/subscribe", { ...sub, endpoint: sub.endpoint + "-kid" })).toBe(403);
+  await kCtx.close();
+
+  // Turning it off removes the row.
+  expect(await call(page, "DELETE", "/api/push/subscribe", { endpoint: sub.endpoint })).toBe(200);
+  const { count } = await admin().from("push_subscriptions").select("id", { count: "exact", head: true }).eq("endpoint", sub.endpoint);
+  expect(count).toBe(0);
+
+  // Evening reminder: refused without the secret, runs with it.
+  expect((await request.get("/api/cron/evening")).status()).toBe(401);
+  expect((await request.get("/api/cron/evening", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
+  const ok = await request.get("/api/cron/evening", { headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` } });
+  expect(ok.status()).toBe(200);
+  expect((await ok.json()).ok).toBe(true);
+});

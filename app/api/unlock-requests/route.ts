@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { requestSchema } from "@/lib/admin/allowlist";
 import { hostnameOf } from "@/lib/admin/schemas";
+import { unlockRequestMessage } from "@/lib/push/messages";
+import { notifyParents } from "@/lib/push/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { jsonError, requireChild, serverError } from "@/lib/today/service";
 
@@ -32,6 +34,8 @@ export async function POST(request: Request) {
       .single();
     if (error || !data) throw new Error(error?.message ?? "insert failed");
     await admin.from("audit_log").insert({ family_id: ctx.familyId, actor_id: ctx.childId, action: "request.create", payload: { id: data.id, domain } });
+    // S5: tell the parents' phones (only for a NEW request; asking again does not push again).
+    after(() => notifyParents(ctx.familyId, unlockRequestMessage(ctx.displayName, domain)));
     return NextResponse.json({ id: data.id, status: data.status });
   } catch (e) {
     return serverError("unlock.create", e);
