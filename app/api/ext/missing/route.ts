@@ -11,6 +11,16 @@ export const dynamic = "force-dynamic";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
+function onOfficialHost(request: Request): boolean {
+  try {
+    const official = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "").host;
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host;
+    return official !== "" && host === official;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The child's /today page found no extension in this browser (S6, 01/11/2026): it pinged the
  * content script for a few seconds and nobody answered. Child login only.
@@ -29,6 +39,9 @@ export async function POST(request: Request) {
 
   const browser = desktopBrowser(request.headers.get("user-agent"));
   if (!browser) return NextResponse.json({ status: "ignored", reason: "not desktop chrome/edge" }, { headers: NO_STORE });
+  // The extension only answers on the official address (fixed at build time): a Vercel preview
+  // link would always look "missing" and wake the parents for nothing.
+  if (!onOfficialHost(request)) return NextResponse.json({ status: "ignored", reason: "not the official address" }, { headers: NO_STORE });
 
   try {
     const admin = createAdminClient();
