@@ -289,6 +289,15 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 | S3 | Bộ phát hiện an toàn 2 mức với ≥ 50 câu | Mọi câu "Mạnh" đều bắt được; câu thường ngày không báo nhầm |
 | S4 | Một kênh chắc chắn tới bố mẹ (thông báo đẩy iPhone, hoặc tạm dùng email) | Tín hiệu tới trong ≤ 1 phút |
 
+### Kết quả spike (01/11/2026)
+
+| # | Kết quả | Ghi chú |
+|---|---|---|
+| S2 | ✅ **Đạt.** Code: `lib/binhYen/vault.ts`; 8 test: đúng PIN mở được, sai PIN không mở, đem sang tài khoản anh/chị/em không mở, sửa 1 byte bị phát hiện, xóa PIN là xóa hết, dữ liệu hỏng không làm sập | PBKDF2 600.000 vòng: mở khóa ≈ 0,1 giây trên máy chủ; trên laptop của con cần đo lại khi build S-BY2. Giới hạn đã nói với con: PIN 6 số chặn được xem lướt, không chặn được người rành kỹ thuật cố tình dò |
+| S3 | ✅ **Đạt.** Code: `lib/binhYen/safety.ts`; **66 câu thử**: 28 câu Mạnh, 11 câu Hỏi lại, 25 câu thường ngày, tất cả đúng | Phát hiện mới: tiếng Việt hay nói quá kiểu "**cười / nóng / sợ muốn chết**" → không báo; "**mệt / chán / buồn / đau… muốn chết**" → hỏi lại con; "**con / mình muốn chết**" → Mạnh. Bắt được cả chữ kéo dài ("chếttt"), chữ cách nhau ("m u ố n c h ế t"), teencode, vài cụm tiếng Anh. "tu tu" không dấu → hỏi lại (vì có thể là "từ từ") |
+| S1 | ⏳ Chưa làm — cần iPad thật | Làm cùng lát S-BY0 |
+| S4 | 🔵 Đang chờ bố mẹ thử thông báo đẩy (PR #32 + SETUP A10) | |
+
 ## 10. Lát build dự kiến
 
 1. **S-BY0:** PIN Góc bình yên + `by_sessions` + `by_signals` + trang bố mẹ "Đã thấy" + kênh báo (S4). Có nút "Con muốn nói chuyện" ở màn Hôm nay. Cần có trước mọi thứ khác.
