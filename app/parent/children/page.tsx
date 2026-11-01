@@ -13,7 +13,17 @@ export default async function ChildrenPage() {
   // Whether a PIN is set (the hash column is server-only; only a yes/no leaves the server).
   // The ids come from the parent's own session (RLS), so only this family's children.
   const pinSet = new Set<string>();
+  const remembered = new Map<string, number>();
   if (children.length > 0) {
+    const { data: devices } = await createAdminClient()
+      .from("pin_devices")
+      .select("child_id")
+      .in(
+        "child_id",
+        children.map((c) => c.id),
+      )
+      .is("revoked_at", null);
+    for (const d of devices ?? []) remembered.set(d.child_id as string, (remembered.get(d.child_id as string) ?? 0) + 1);
     const { data } = await createAdminClient()
       .from("profiles")
       .select("id")
@@ -44,7 +54,7 @@ export default async function ChildrenPage() {
                       {c.grade ? <span className="text-sm text-ink/60">lớp {c.grade}</span> : null}
                       <span className="ml-auto text-sm font-semibold text-accent">Sửa</span>
                     </summary>
-                    <ChildEdit child={{ id: c.id, displayName: c.display_name, grade: c.grade, color: c.color }} pinSet={pinSet.has(c.id)} />
+                    <ChildEdit child={{ id: c.id, displayName: c.display_name, grade: c.grade, color: c.color }} pinSet={pinSet.has(c.id)} remembered={remembered.get(c.id) ?? 0} />
                   </details>
                 </li>
               ))}
