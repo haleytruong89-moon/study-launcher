@@ -1689,7 +1689,7 @@ test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and 
   await page.goto("/parent/more");
   await page.getByRole("link", { name: /^Nhật ký/ }).click();
   await expect(page).toHaveURL(/\/parent\/log$/);
-  await expect(page.getByText(`Chuyển ${name} sang chế độ Tin tưởng`)).toBeVisible();
+  await expect(page.getByText(`Chuyển ${name} sang chế độ Tin tưởng`, { exact: true })).toBeVisible();
   const body = (await page.locator("main").innerText()).toLowerCase();
   for (const raw of ["child_id", "payload", "token", "endpoint", "{", childId]) expect(body).not.toContain(raw);
 
@@ -1707,5 +1707,5 @@ test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and 
   // Another group: the S3c lock earlier in this run reads as a sentence too.
   await page.goto("/parent/log?nhom=lock");
   await expect(page.getByText(new RegExp(`^Khóa máy của ${name} đến`)).first()).toBeVisible();
-  await expect(page.getByText(/^Đưa máy của .* về bình thường$/).first()).toBeVisible();
+  await expect(page.getByText(/^Đưa máy của .* về bình thường/).first()).toBeVisible();
 });

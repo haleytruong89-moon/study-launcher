@@ -157,7 +157,7 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
   const p = (entry.payload && typeof entry.payload === "object" && !Array.isArray(entry.payload) ? entry.payload : {}) as Record<string, unknown>;
   const childId = str(p.child_id) ?? (entry.actor_id && names.has(entry.actor_id) ? entry.actor_id : null);
   const kid = (childId && names.get(childId)) || "con";
-  const group = ACTION_GROUP[entry.action] ?? null;
+  const group = Object.hasOwn(ACTION_GROUP, entry.action) ? (ACTION_GROUP[entry.action] ?? null) : null;
   const say = (text: string) => ({ text, group });
 
   switch (entry.action) {

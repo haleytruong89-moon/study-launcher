@@ -69,9 +69,11 @@ export default async function LogPage({ searchParams }: { searchParams: Promise<
         <p className="text-sm text-ink/75">Những gì đã đổi trong nhà: mở/khóa máy, giao bài, xin mở trang, chế độ Tin tưởng… Mới nhất ở trên.</p>
 
         <form method="get" action="/parent/log" className="grid grid-cols-2 gap-2 rounded-2xl bg-white p-3">
-          <label className="flex flex-col gap-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">
-            Con
-            <select name="con" defaultValue={q.childId ?? ""} className="min-h-11 rounded-xl border border-ink/30 bg-white px-2 text-base font-semibold tracking-normal text-ink normal-case">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="log-con" className="text-xs font-extrabold tracking-wider text-ink/70 uppercase">
+              Con
+            </label>
+            <select id="log-con" name="con" defaultValue={q.childId ?? ""} className="min-h-11 rounded-xl border border-ink/30 bg-white px-2 text-base font-semibold text-ink">
               <option value="">Cả nhà</option>
               {children.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -79,10 +81,12 @@ export default async function LogPage({ searchParams }: { searchParams: Promise<
                 </option>
               ))}
             </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">
-            Nhóm
-            <select name="nhom" defaultValue={q.group ?? ""} className="min-h-11 rounded-xl border border-ink/30 bg-white px-2 text-base font-semibold tracking-normal text-ink normal-case">
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="log-nhom" className="text-xs font-extrabold tracking-wider text-ink/70 uppercase">
+              Nhóm
+            </label>
+            <select id="log-nhom" name="nhom" defaultValue={q.group ?? ""} className="min-h-11 rounded-xl border border-ink/30 bg-white px-2 text-base font-semibold text-ink">
               <option value="">Tất cả</option>
               {AUDIT_GROUPS.map((g) => (
                 <option key={g} value={g}>
@@ -90,7 +94,7 @@ export default async function LogPage({ searchParams }: { searchParams: Promise<
                 </option>
               ))}
             </select>
-          </label>
+          </div>
           <button type="submit" className="col-span-2 min-h-11 rounded-xl bg-accent font-extrabold text-white">
             Xem
           </button>

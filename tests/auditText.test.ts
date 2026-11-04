@@ -78,6 +78,7 @@ describe("Nhật ký: every action in the repo has a sentence", () => {
   it("falls back to a neutral line for an unknown action, showing nothing of the payload", () => {
     const r = auditText({ action: "something.new", payload: { token_hash: "abc123", endpoint: "https://push.example/xyz" }, actor_id: PARENT }, names);
     expect(r).toEqual({ text: UNKNOWN_TEXT, group: null });
+    expect(auditText({ action: "toString", payload: {}, actor_id: null }, names)).toEqual({ text: UNKNOWN_TEXT, group: null });
   });
 
   it("survives broken payloads", () => {
