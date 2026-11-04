@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { addDays } from "@/lib/admin/dates";
+import { photosExpiredOn, retentionDays } from "@/lib/cleanup/rules";
 import { loadChildrenToday } from "@/lib/parent/load";
 import { localDate, weekStart } from "@/lib/time";
 import { isOkResult, longDate, vnTime } from "@/lib/today/view";
@@ -51,7 +52,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
     );
   }
 
-  const [{ data }, live] = await Promise.all([
+  const [{ data }, live, { data: settings }] = await Promise.all([
     db
       .from("task_runs")
       .select("id, child_id, source, started_at, done_at, proof_paths, parent_verdict, task_templates(title, part), homework_items(subject, note, due_date)")
@@ -60,12 +61,17 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
       .not("done_at", "is", null)
       .order("done_at"),
     day === today ? loadChildrenToday(db, me.profile.family_id, [child], today, now) : Promise.resolve([]),
+    db.from("family_settings").select("photo_retention_days").eq("family_id", me.profile.family_id).maybeSingle(),
   ]);
   const runs = (data ?? []) as unknown as RunRow[];
   const state = live[0]?.state ?? null;
   const o = live[0]?.overview ?? null;
 
-  const proofPaths = runs.flatMap((r) => r.proof_paths);
+  // S3e: photos of a day past the family's retention were deleted by the weekly job (the run
+  // keeps its proof_paths so counts stay right): show a neutral note, do not sign dead links.
+  const retention = settings?.photo_retention_days as number | undefined;
+  const photoNote: PhotoNote = photosExpiredOn(day, now, retention) ? { expired: true, days: retentionDays(retention) ?? 0 } : { expired: false };
+  const proofPaths = photoNote.expired ? [] : runs.flatMap((r) => r.proof_paths);
   const signed = new Map<string, string>();
   if (proofPaths.length > 0) {
     const { data: urls } = await db.storage.from("proofs").createSignedUrls(proofPaths, 60 * 60);
@@ -158,7 +164,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
           ) : (
             <ul className="flex flex-col gap-2">
               {waiting.map((r) => (
-                <RunCard key={r.id} run={r} signed={signed} big />
+                <RunCard key={r.id} run={r} signed={signed} photoNote={photoNote} big />
               ))}
             </ul>
           )}
@@ -182,7 +188,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
             </h2>
             <ul className="flex flex-col gap-2">
               {marked.map((r) => (
-                <RunCard key={r.id} run={r} signed={signed} />
+                <RunCard key={r.id} run={r} signed={signed} photoNote={photoNote} />
               ))}
             </ul>
           </section>
@@ -233,11 +239,14 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RunCard({ run: r, signed, big = false }: { run: RunRow; signed: Map<string, string>; big?: boolean }) {
+type PhotoNote = { expired: true; days: number } | { expired: false };
+
+function RunCard({ run: r, signed, photoNote, big = false }: { run: RunRow; signed: Map<string, string>; photoNote: PhotoNote; big?: boolean }) {
   const title = r.source === "homework" ? `${r.homework_items?.subject ?? "Bài"} · bài trên lớp` : (r.task_templates?.title ?? "Việc");
   const early = r.source === "homework" && !!r.homework_items && localDate(new Date(r.done_at)) <= addDays(r.homework_items.due_date, -2);
   const kind = r.source === "homework" ? (early ? " · ★ sớm" : "") : r.task_templates?.part === "skill" ? " · kỹ năng" : " · bài bổ sung";
   const photos = r.proof_paths.map((p) => signed.get(p)).filter((u): u is string => !!u);
+  const missing = r.proof_paths.length > 0 && photos.length === 0;
   return (
     <li aria-label={title} className="flex flex-col gap-2.5 rounded-2xl bg-white p-3">
       <div className="flex gap-3">
@@ -258,6 +267,11 @@ function RunCard({ run: r, signed, big = false }: { run: RunRow; signed: Map<str
             {minutesOf(r)} phút{kind} · xong {vnTime(r.done_at)}
             {photos.length > 1 ? ` · ${photos.length} ảnh` : ""}
           </span>
+          {missing && (
+            <span className="self-start rounded-md bg-ink/6 px-2 py-0.5 text-[13px] font-semibold text-ink/65">
+              {photoNote.expired ? `Ảnh đã xóa sau ${photoNote.days} ngày` : "Không mở được ảnh"}
+            </span>
+          )}
           {!big && <VerdictButtons runId={r.id} initial={r.parent_verdict} label={title} />}
         </div>
       </div>

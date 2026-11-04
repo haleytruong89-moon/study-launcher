@@ -1,0 +1,38 @@
+name: Weekly photo cleanup
+
+# S3e (DESIGN §9–§10): once a week, delete photo/attachment FILES older than the family's
+# "Giữ ảnh bài" setting (default 120 days). The app decides what is old; this job only calls
+# /api/cron/cleanup with the CRON_SECRET. Database rows are never deleted.
+# Monday 04:17 Viet Nam time (outside 6–9 AM), after the weekly backup (03:43).
+on:
+  schedule:
+    - cron: "17 21 * * 0" # Sunday 21:17 UTC = Monday 04:17 Asia/Ho_Chi_Minh
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Chỉ đếm, không xóa (dry run)"
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/cron/cleanup
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::APP_URL / CRON_SECRET secrets are not set yet (SETUP F); skipping."
+            exit 0
+          fi
+          query=""
+          if [ "$DRY_RUN" = "1" ]; then query="?dryRun=1"; fi
+          curl --fail --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/cleanup${query}"
+          echo
