@@ -328,6 +328,7 @@ Quy tắc:
 | 17/10/2026 | Thứ tự tiếp theo (phụ huynh chọn): **S3c-1 mở/khóa từ iPhone bố mẹ** (lối thoát khi kẹt) → **S4b nối extension** (khóa thật) → **S3d ngày đặc biệt + allowlist** → S3b/S3c-2 PIN trên máy con → S3e |
 | 15/10/2026 | Chốt kế hoạch S3: chia S3a (xem gộp) → S3b (PIN phụ huynh **6 số**) → S3c (mở/khóa/cộng phút bằng tay **từ cả máy con bằng PIN lẫn iPhone phụ huynh**) → S3d (ngày đặc biệt, gợi ý Tin tưởng, sửa allowlist, nhật ký) → S3e (**tự xóa ảnh** quá `photo_retention_days`, phụ huynh đồng ý). **Màn chọn hồ sơ + PIN 4 số của con để sau v1** (mỗi laptop đăng nhập sẵn tài khoản của 1 con) |
 | 01/11/2026 | **Thông báo đẩy (S5)**: báo iPhone bố mẹ khi con **Xin mở trang** và **Nhờ bố mẹ xem trực tiếp**; **21:45** nhắc xem gộp chỉ khi còn bài chưa xem hoặc việc con đang nhờ. Không báo cho khung bị chặn tự phát hiện. **Không** có giờ yên lặng. |
+| 04/11/2026 | **Chế độ Tin tưởng + Nhật ký (S3d, PR `feature/s3d-tin-tuong`)**: gợi ý hiện trên thẻ của con ở Hôm nay (bố mẹ bấm "Chuyển…" hoặc "Để sau"), công tắc tay có xác nhận ở Thêm › Các con, trang Thêm › Nhật ký (lọc theo con + nhóm). *Đề xuất, chờ bố mẹ chốt:* sau khi bố mẹ đã chuyển hoặc bấm "Để sau" trong tuần, **gợi ý ẩn đến thứ Hai tuần sau** (gợi ý chỉ tính từ tuần đã trọn nên trong tuần không đổi) |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 

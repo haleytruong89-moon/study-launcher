@@ -30,13 +30,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   if ("archived" in body) {
     const archivedAt = body.archived ? new Date().toISOString() : null;
-    const { data, error } = await ctx.db.from("homework_items").update({ archived_at: archivedAt }).eq("id", id.data).select("id");
+    const { data, error } = await ctx.db.from("homework_items").update({ archived_at: archivedAt }).eq("id", id.data).select("id, child_id, subject");
     if (error) {
       console.error("homework.archive failed", error.message);
       return jsonError("Không lưu được.", 500);
     }
     if (!data || data.length === 0) return jsonError("Không tìm thấy bài.", 404);
-    await writeAudit(ctx, body.archived ? "homework.archive" : "homework.restore", { id: id.data });
+    await writeAudit(ctx, body.archived ? "homework.archive" : "homework.restore", { id: id.data, child_id: data[0]?.child_id ?? null, subject: data[0]?.subject ?? null });
     return NextResponse.json({ ok: true });
   }
 
@@ -81,6 +81,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   await removeHomeworkFiles(ctx.db, removed, id.data);
   await writeAudit(ctx, "homework.edit", {
     id: id.data,
+    child_id: current.child_id,
     subject: body.subject,
     due_date: body.dueDate,
     previous_due_date: current.due_date,

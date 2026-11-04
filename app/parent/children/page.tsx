@@ -1,8 +1,10 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { localDate } from "@/lib/time";
 import { AddChildForm } from "../add-child-form";
 import { ChildEdit } from "../child-edit";
 import { ParentHeader } from "../parent-header";
+import { TrustSwitch } from "../trust-switch";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,13 @@ export default async function ChildrenPage() {
       .not("pin_hash", "is", null);
     for (const r of data ?? []) pinSet.add(r.id as string);
   }
+  // Khóa / Tin tưởng per child (parent's own session, RLS: this family only).
+  const { data: trustRows } = await db.from("trust_state").select("child_id, mode, since");
+  const trust = new Map((trustRows ?? []).map((r) => [r.child_id as string, { mode: r.mode === "trust" ? ("trust" as const) : ("lock" as const), since: r.since as string }]));
+  const dm = (iso: string) => {
+    const d = localDate(new Date(iso));
+    return `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+  };
 
   return (
     <>
@@ -52,9 +61,18 @@ export default async function ChildrenPage() {
                       <span aria-hidden className="size-3 rounded-full" style={{ background: c.color ?? "#999" }} />
                       <span className="font-medium">{c.display_name}</span>
                       {c.grade ? <span className="text-sm text-ink/60">lớp {c.grade}</span> : null}
+                      {trust.get(c.id)?.mode === "trust" ? <span className="rounded-full bg-[#E3EEEA] px-2 py-0.5 text-xs font-bold text-accent">Tin tưởng</span> : null}
                       <span className="ml-auto text-sm font-semibold text-accent">Sửa</span>
                     </summary>
                     <ChildEdit child={{ id: c.id, displayName: c.display_name, grade: c.grade, color: c.color }} pinSet={pinSet.has(c.id)} remembered={remembered.get(c.id) ?? 0} />
+                    <div className="pb-3">
+                      <TrustSwitch
+                        childId={c.id}
+                        name={c.display_name}
+                        mode={trust.get(c.id)?.mode ?? "lock"}
+                        since={trust.has(c.id) ? dm(trust.get(c.id)?.since ?? "") : null}
+                      />
+                    </div>
                   </details>
                 </li>
               ))}

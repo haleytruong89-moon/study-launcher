@@ -1581,3 +1581,131 @@ test("S6: /today without the extension tells the parents at most once a day; chi
   await expect(page.getByText(/mở Study Launcher trên trình duyệt không có extension: Edge, hôm nay/)).toBeVisible();
   await expect(page.getByText(/Extension trên máy này đã bị gỡ \(hôm nay/)).toBeVisible();
 });
+
+// ---------------------------------------------------------------------------
+// S3d — "Chế độ Tin tưởng" (the system suggests, the parent decides) and "Nhật ký"
+// ---------------------------------------------------------------------------
+
+test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and back; child cannot; Nhật ký lists it", async ({ page, browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
+  const childId = kid?.id ?? "";
+  const name = kid?.display_name ?? "";
+  const today = localDate(new Date());
+  const { data: rules } = await db.from("family_settings").select("trust_up_weeks").single();
+  const weeks = rules?.trust_up_weeks ?? 3;
+
+  // Every day of the last complete weeks was "đạt" (Part 2 done in the morning, before bedtime).
+  const monday = weekStart(today);
+  const rows = Array.from({ length: 7 * weeks }, (_, i) => {
+    const date = addDays(monday, -(i + 1));
+    return { child_id: childId, family_id: kid?.family_id, local_date: date, part2_done_at: new Date(`${date}T10:00:00+07:00`).toISOString() };
+  });
+  const { error: seedError } = await db.from("day_sessions").upsert(rows, { onConflict: "child_id,local_date" });
+  expect(seedError).toBeNull();
+  await db.from("audit_log").delete().in("action", ["trust.set", "trust.dismissed"]);
+
+  // Parent: the card suggests Tin tưởng; "Để sau" hides it for the week.
+  await login(page, env.parentEmail, env.parentPassword);
+  await page.goto("/parent");
+  const card = page.getByRole("region", { name });
+  const suggestion = card.getByRole("region", { name: "Gợi ý chế độ Tin tưởng" });
+  await expect(suggestion).toContainText(`${name} đã đạt ${weeks}/${weeks} tuần liên tiếp`);
+  await expect(suggestion).toContainText("mở mọi trang ngay cả khi chưa xong việc");
+  await suggestion.getByRole("button", { name: "Để sau" }).click();
+  await expect(suggestion).toBeHidden();
+  await page.reload();
+  await expect(card).toBeVisible();
+  await expect(card.getByRole("region", { name: "Gợi ý chế độ Tin tưởng" })).toHaveCount(0);
+  const { data: modeAfterLater } = await db.from("trust_state").select("mode").eq("child_id", childId).single();
+  expect(modeAfterLater?.mode).toBe("lock"); // "Để sau" never switches anything
+
+  // Parent: manual switch in Thêm › Các con, with a confirm step.
+  await page.goto("/parent/children");
+  await page.getByRole("listitem").filter({ hasText: name }).locator("summary").click();
+  const box = page.getByRole("group", { name: `Chế độ của ${name}` });
+  await expect(box).toContainText("Chế độ hiện tại: Khóa");
+  await box.getByRole("button", { name: "Chuyển sang chế độ Tin tưởng…" }).click();
+  await box.getByRole("button", { name: "Xác nhận: Tin tưởng" }).click();
+  await expect(box.getByRole("status")).toContainText("Đã chuyển");
+  const { data: trusted } = await db.from("trust_state").select("mode, updated_by").eq("child_id", childId).single();
+  expect(trusted?.mode).toBe("trust");
+
+  // Child: the day is OPEN_TRUST, the screen says so; nothing else changes.
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  type S = { status: string; open: boolean; trust: { mode: string } };
+  const state = async () => child.evaluate(async () => ((await (await fetch("/api/today")).json()) as { state: S }).state);
+  let s = await state();
+  expect(s.status).toBe("OPEN_TRUST");
+  expect(s.open).toBe(true);
+  expect(s.trust.mode).toBe("trust");
+  await child.reload();
+  await expect(child.getByText("Đang ở chế độ Tin tưởng")).toBeVisible();
+  await expect(child.getByText("Tin tưởng · mở mọi trang")).toBeVisible();
+
+  // Child: no write path — not the route, not the database.
+  const viaApi = await child.evaluate(
+    async (id) => (await fetch("/api/admin/trust", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ childId: id, mode: "lock" }) })).status,
+    childId,
+  );
+  expect(viaApi).toBe(403);
+  const direct = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await direct.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  const write = await direct.from("trust_state").update({ mode: "lock" }).eq("child_id", childId).select("child_id");
+  expect(write.data ?? []).toHaveLength(0);
+  const insert = await direct.from("trust_state").upsert({ child_id: childId, family_id: kid?.family_id, mode: "lock" });
+  expect(insert.error).not.toBeNull();
+  expect((await db.from("trust_state").select("mode").eq("child_id", childId).single()).data?.mode).toBe("trust");
+  // A child cannot read the Nhật ký either.
+  await child.goto("/parent/log");
+  await expect(child).toHaveURL(/\/today$/);
+
+  // Parent: back to Khóa.
+  await page.reload();
+  await page.getByRole("listitem").filter({ hasText: name }).locator("summary").click();
+  await expect(box).toContainText("Chế độ hiện tại: Tin tưởng");
+  await box.getByRole("button", { name: "Chuyển về chế độ Khóa…" }).click();
+  await box.getByRole("button", { name: "Xác nhận: Khóa" }).click();
+  await expect(box.getByRole("status")).toContainText("Đã chuyển");
+  s = await state();
+  expect(s.status).not.toBe("OPEN_TRUST");
+  expect(s.trust.mode).toBe("lock");
+  await childCtx.close();
+  // Decided this week: no suggestion on the home card until Monday.
+  await page.goto("/parent");
+  await expect(card).toBeVisible();
+  await expect(card.getByRole("region", { name: "Gợi ý chế độ Tin tưởng" })).toHaveCount(0);
+
+  const { data: logs } = await db.from("audit_log").select("action, payload").in("action", ["trust.set", "trust.dismissed"]).order("created_at");
+  expect(logs?.map((l) => [l.action, (l.payload as { mode?: string; previous?: string }).mode ?? null])).toEqual([
+    ["trust.dismissed", null],
+    ["trust.set", "trust"],
+    ["trust.set", "lock"],
+  ]);
+
+  // Nhật ký (Thêm › Nhật ký): Vietnamese sentences, filters, never raw data.
+  await page.goto("/parent/more");
+  await page.getByRole("link", { name: /^Nhật ký/ }).click();
+  await expect(page).toHaveURL(/\/parent\/log$/);
+  await expect(page.getByText(`Chuyển ${name} sang chế độ Tin tưởng`)).toBeVisible();
+  const body = (await page.locator("main").innerText()).toLowerCase();
+  for (const raw of ["child_id", "payload", "token", "endpoint", "{", childId]) expect(body).not.toContain(raw);
+
+  await page.getByLabel("Con", { exact: true }).selectOption({ label: name });
+  await page.getByLabel("Nhóm", { exact: true }).selectOption({ label: "Tin tưởng" });
+  await page.getByRole("button", { name: "Xem", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`con=${childId}.*nhom=trust`));
+  const items = page.locator("main li");
+  await expect(items).toHaveCount(3);
+  await expect(items.nth(0)).toContainText(`Chuyển ${name} về chế độ Khóa`);
+  await expect(items.nth(1)).toContainText(`Chuyển ${name} sang chế độ Tin tưởng`);
+  await expect(items.nth(2)).toContainText(`Để sau gợi ý chuyển ${name} sang chế độ Tin tưởng`);
+  await expect(page.getByRole("link", { name: "Xem thêm" })).toHaveCount(0);
+
+  // Another group: the S3c lock earlier in this run reads as a sentence too.
+  await page.goto("/parent/log?nhom=lock");
+  await expect(page.getByText(new RegExp(`^Khóa máy của ${name} đến`)).first()).toBeVisible();
+  await expect(page.getByText(/^Đưa máy của .* về bình thường$/).first()).toBeVisible();
+});
