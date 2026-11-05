@@ -60,7 +60,8 @@ export async function talkRecipients(familyId: string): Promise<TalkParent[]> {
   return parents.filter((p) => withPush.has(p.id as string)).map((p) => ({ id: p.id as string, name: p.display_name as string }));
 }
 
-async function latestSignal(childId: string, now: Date): Promise<SignalRow | null> {
+/** The child's latest signal; `ok: false` when the table cannot be read (e.g. a preview before migration 0008). */
+async function latestSignal(childId: string, now: Date): Promise<{ ok: boolean; row: SignalRow | null }> {
   const since = new Date(now.getTime() - STATUS_SHOW_HOURS * 3600_000).toISOString();
   const { data, error } = await createAdminClient()
     .from("by_signals")
@@ -71,16 +72,17 @@ async function latestSignal(childId: string, now: Date): Promise<SignalRow | nul
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
-  return (data as SignalRow | null) ?? null;
+  if (error) return { ok: false, row: null };
+  return { ok: true, row: (data as SignalRow | null) ?? null };
 }
 
 export async function talkInfo(ctx: ChildContext, now = new Date()): Promise<TalkInfo> {
   const [parents, last, settings] = await Promise.all([talkRecipients(ctx.familyId), latestSignal(ctx.childId, now), bySettings(ctx.familyId)]);
   return {
-    available: talkAvailable(!!vapidConfig(), parents.length),
+    // No signal table yet = nothing could be stored: never offer the button then.
+    available: last.ok && talkAvailable(!!vapidConfig(), parents.length),
     parents,
-    status: talkStatus(last, now),
+    status: talkStatus(last.row, now),
     pollMs: STATUS_POLL_MS,
     corner: settings.enabled,
     serverNow: now.toISOString(),
