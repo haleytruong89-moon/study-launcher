@@ -1581,3 +1581,295 @@ test("S6: /today without the extension tells the parents at most once a day; chi
   await expect(page.getByText(/mở Study Launcher trên trình duyệt không có extension: Edge, hôm nay/)).toBeVisible();
   await expect(page.getByText(/Extension trên máy này đã bị gỡ \(hôm nay/)).toBeVisible();
 });
+
+// ---------------------------------------------------------------------------
+// Góc bình yên S-BY0 (docs/BINH_YEN.md): the child's own PIN, idle lock on the server clock,
+// parent can only wipe; "Con muốn nói chuyện" → parent "Đã thấy"; reminder after 10 minutes.
+// ---------------------------------------------------------------------------
+
+const BY_PIN = "593817";
+const LOGIN_PIN = "482916";
+
+function byPsql(sql: string): string {
+  const dbUrl = process.env.E2E_DB_URL ?? "";
+  expect(dbUrl, "E2E_DB_URL (local Supabase) is needed to age Góc bình yên rows").not.toBe("");
+  return execFileSync("psql", [dbUrl, "-v", "ON_ERROR_STOP=1", "-qAt", "-c", sql], { encoding: "utf8" }).trim();
+}
+
+const byCall = (p: Page, method: string, url: string, body?: unknown) =>
+  p.evaluate(
+    async ([m, u, b]) => (await fetch(u as string, { method: m as string, headers: { "Content-Type": "application/json" }, body: b === undefined ? undefined : JSON.stringify(b) })).status,
+    [method, url, body] as const,
+  );
+
+test("Góc bình yên: off by default; child sets an OWN PIN; 5 wrong tries lock; idle needs the PIN again; parent can only wipe it", async ({ page, browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
+  const childId = kid?.id as string;
+
+  // Off by default: friendly page, and the API refuses a PIN.
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  await k.goto("/binh-yen");
+  await expect(k.getByRole("heading", { name: "Góc bình yên chưa mở." })).toBeVisible();
+  const head = await k.request.get("/binh-yen");
+  expect(head.headers()["content-security-policy"]).toContain("default-src 'self'");
+  expect(head.headers()["content-security-policy"]).toContain("connect-src 'self'");
+  expect(await byCall(k, "POST", "/api/by/pin/set", { pin: BY_PIN, again: BY_PIN })).toBe(409);
+
+  // The parent knows the login PIN; turns Góc bình yên on in "Luật trong nhà".
+  await login(page, env.parentEmail, env.parentPassword);
+  expect(await byCall(page, "POST", `/api/admin/children/${childId}/pin`, { pin: LOGIN_PIN })).toBe(200);
+  expect(await byCall(page, "POST", "/api/by/pin/set", { pin: BY_PIN, again: BY_PIN })).toBe(403); // parents have no corner
+  await page.goto("/parent/settings");
+  const box = page.getByRole("group", { name: "Góc bình yên" });
+  await box.getByLabel("Bật Góc bình yên cho các con").check();
+  await box.getByLabel(/Tự khóa sau bao lâu/).fill("5");
+  await page.getByRole("button", { name: "Lưu cài đặt" }).click();
+  await expect(page.getByRole("status")).toContainText("Đã lưu cài đặt");
+  const { data: fs } = await db.from("family_settings").select("by_enabled, by_idle_lock_minutes").eq("family_id", kid?.family_id).single();
+  expect(fs).toEqual({ by_enabled: true, by_idle_lock_minutes: 5 });
+
+  // The child sets their own PIN: the login PIN is refused, another one opens the corner.
+  await k.goto("/binh-yen");
+  const setForm = k.getByRole("form", { name: "Đặt PIN Góc bình yên" });
+  await setForm.getByLabel("PIN mới (6 số)").fill(LOGIN_PIN);
+  await setForm.getByLabel("Gõ lại PIN").fill(LOGIN_PIN);
+  await setForm.getByRole("button", { name: "Đặt PIN" }).click();
+  await expect(setForm.getByRole("alert")).toContainText("giống PIN đăng nhập");
+  await setForm.getByLabel("PIN mới (6 số)").fill(BY_PIN);
+  await setForm.getByLabel("Gõ lại PIN").fill(BY_PIN);
+  await setForm.getByRole("button", { name: "Đặt PIN" }).click();
+  const home = k.getByRole("region", { name: "Góc của con" });
+  await expect(home.getByRole("heading", { name: /^Chào/ })).toBeVisible();
+  await home.getByText("🔒 Ai thấy gì?").click();
+  await expect(home.getByText(/Bố mẹ không xem được cảm xúc/)).toBeVisible();
+  await expect(home.getByText(/tự khóa sau 5 phút/)).toBeVisible();
+  const { data: stored } = await db.from("profiles").select("by_pin_hash, pin_hash").eq("id", childId).single();
+  expect(stored?.by_pin_hash).toMatch(/^scrypt\$/);
+  expect(stored?.by_pin_hash).not.toContain(BY_PIN);
+  expect(stored?.by_pin_hash).not.toBe(stored?.pin_hash);
+  // Server-held session; cookies httpOnly + Secure + SameSite=Strict, only for the corner's paths.
+  const { count: open } = await db.from("by_sessions").select("id", { count: "exact", head: true }).eq("child_id", childId).is("ended_at", null);
+  expect(open).toBe(1);
+  const cookies = (await kCtx.cookies()).filter((c) => c.name.startsWith("sl_by"));
+  expect(cookies.map((c) => [c.name, c.path, c.httpOnly, c.secure, c.sameSite]).sort()).toEqual([
+    ["sl_by_api", "/api/by", true, true, "Strict"],
+    ["sl_by_page", "/binh-yen", true, true, "Strict"],
+  ]);
+  // A second PIN cannot be set over the first; no one in the browser reads the hash.
+  expect(await byCall(k, "POST", "/api/by/pin/set", { pin: "605938", again: "605938" })).toBe(409);
+  const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  expect((await asChild.from("profiles").select("by_pin_hash")).error).not.toBeNull();
+  expect((await asChild.from("by_sessions").select("id")).error).not.toBeNull();
+
+  // Lock, then 4 wrong tries warn and the 5th locks for 15 minutes (even the right PIN waits).
+  await home.getByRole("button", { name: "Khóa lại" }).click();
+  const pinForm = k.getByRole("form", { name: "Mở Góc bình yên" });
+  for (let n = 1; n <= 4; n++) {
+    await pinForm.getByLabel("PIN Góc bình yên").fill(`70000${n}`);
+    await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
+    await expect(pinForm.getByRole("alert")).toContainText(`Còn ${5 - n} lần thử`);
+  }
+  await pinForm.getByLabel("PIN Góc bình yên").fill("700005");
+  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
+  await expect(k.getByRole("heading", { name: "Đang khóa" })).toBeVisible();
+  await expect(k.getByText(/đang khóa vì gõ sai nhiều lần/)).toBeVisible();
+  expect(await byCall(k, "POST", "/api/by/pin/verify", { pin: BY_PIN })).toBe(429);
+
+  // Lock over (test shortcut) → the right PIN opens it again.
+  await db.from("profiles").update({ by_pin_failed_count: 0, by_pin_locked_until: null }).eq("id", childId);
+  await k.reload();
+  await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
+  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
+  await expect(home).toBeVisible();
+
+  // 6 minutes without a touch (server clock) → the PIN again.
+  expect(byPsql(`with u as (update public.by_sessions set last_seen_at = now() - interval '6 minutes' where child_id = '${childId}' and ended_at is null returning 1) select count(*) from u`)).toBe("1");
+  await k.reload();
+  await expect(pinForm).toBeVisible();
+  await expect(home).toHaveCount(0);
+  const { count: stillOpen } = await db.from("by_sessions").select("id", { count: "exact", head: true }).eq("child_id", childId).is("ended_at", null);
+  expect(stillOpen).toBe(0);
+  // No trace of the child's tries or visits in the audit log (D5).
+  const { count: byLogs } = await db.from("audit_log").select("id", { count: "exact", head: true }).like("action", "%by%");
+  expect(byLogs).toBe(0);
+
+  // Open again, and pretend this laptop keeps private text for the child.
+  await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
+  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
+  await expect(home).toBeVisible();
+  await k.evaluate((id) => {
+    localStorage.setItem(`by:v1:${id}:vault`, '{"v":1}');
+    localStorage.setItem(`by:v1:${id}:entries`, "[]");
+  }, childId);
+
+  // A child cannot wipe; the parent can — only that, with a clear warning.
+  expect(await byCall(k, "POST", `/api/admin/children/${childId}/by-pin`, {})).toBe(403);
+  await page.goto("/parent/children");
+  const item = page.getByRole("listitem").filter({ hasText: kid?.display_name ?? "" });
+  await item.getByText("Sửa").click();
+  const byBox = item.getByRole("group", { name: /^Góc bình yên của/ });
+  page.once("dialog", (d) => {
+    expect(d.message()).toContain("sẽ bị xóa");
+    void d.accept();
+  });
+  await byBox.getByRole("button", { name: "Xóa PIN Góc bình yên" }).click();
+  await expect(byBox.getByRole("status")).toContainText("Đã xóa");
+  const { data: wiped } = await db.from("profiles").select("by_pin_hash, by_pin_reset_at").eq("id", childId).single();
+  expect(wiped?.by_pin_hash).toBeNull();
+  expect(wiped?.by_pin_reset_at).not.toBeNull();
+  const { count: afterWipe } = await db.from("by_sessions").select("id", { count: "exact", head: true }).eq("child_id", childId).is("ended_at", null);
+  expect(afterWipe).toBe(0);
+  const { count: wipeLogs } = await db.from("audit_log").select("id", { count: "exact", head: true }).eq("action", "child.by_pin_wiped").eq("payload->>child_id", childId);
+  expect(wipeLogs).toBe(1);
+
+  // The child's next visit: told when, the private text on this laptop is gone, new PIN.
+  await k.reload();
+  await expect(setForm.getByRole("status")).toContainText("vừa được bố mẹ xóa lúc");
+  await expect.poll(() => k.evaluate((id) => [localStorage.getItem(`by:v1:${id}:vault`), localStorage.getItem(`by:v1:${id}:entries`)], childId)).toEqual([null, null]);
+  await setForm.getByLabel("PIN mới (6 số)").fill(BY_PIN);
+  await setForm.getByLabel("Gõ lại PIN").fill(BY_PIN);
+  await setForm.getByRole("button", { name: "Đặt PIN" }).click();
+  await expect(home).toBeVisible();
+  await kCtx.close();
+});
+
+test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã thấy' reaches the child; siblings and direct writes refused; reminder after 10 minutes", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const { data: parent } = await db.from("profiles").select("id").eq("role", "parent").limit(1).single();
+  const parentId = parent?.id as string;
+  await db.from("push_subscriptions").delete().eq("profile_id", parentId);
+
+  // No parent phone with notifications → no button (the child is never told "đã báo" for nothing).
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  await k.goto("/today");
+  await expect(k.getByRole("link", { name: "🌿 Góc bình yên" })).toBeVisible(); // the corner is on (previous test)
+  await expect(k.getByRole("button", { name: /Muốn nói chuyện|Đã gửi bố mẹ/ })).toHaveCount(0);
+  expect(await byCall(k, "POST", "/api/by/signal", { kind: "want_talk", to: null })).toBe(409);
+
+  // A parent phone turns notifications on → the button shows (also while the corner is locked).
+  const endpoint = `https://push.example.invalid/by-${randomBytes(6).toString("hex")}`;
+  expect((await db.from("push_subscriptions").insert({ profile_id: parentId, endpoint, p256dh: "B" + "A".repeat(86), auth: "A".repeat(22) })).error).toBeNull();
+  await k.goto("/binh-yen");
+  await expect(k.getByRole("form", { name: "Mở Góc bình yên" })).toBeVisible();
+  await expect(k.getByRole("region", { name: "Con muốn nói chuyện" })).toBeVisible();
+  await k.goto("/today");
+  await k.getByRole("button", { name: "💬 Muốn nói chuyện" }).click();
+  const talk = k.getByRole("region", { name: "Con muốn nói chuyện" });
+  expect(await byCall(k, "POST", "/api/by/signal", { kind: "needs_care", to: null })).toBe(400); // not a kind the child sends
+  expect(await byCall(k, "POST", "/api/by/signal", { kind: "want_talk", to: null, note: "x" })).toBe(400); // no extra fields
+  await talk.getByRole("button", { name: "💬 Con muốn nói chuyện" }).click();
+  await expect(talk.getByRole("status")).toContainText("Đã gửi lúc");
+  // The fake phone cannot be reached in CI: the child is told plainly what to do instead.
+  await expect(talk.getByRole("status")).toContainText("Chưa báo được tới điện thoại của bố mẹ");
+  await talk.getByRole("button", { name: "💬 Con muốn nói chuyện" }).click(); // within 2 minutes
+  await expect(talk.getByRole("status")).toContainText("Con vừa gửi rồi");
+  const { data: rows } = await db.from("by_signals").select("id, kind, to_parent_id, seen_at").eq("child_id", childId);
+  expect(rows).toHaveLength(1);
+  expect(rows?.[0]).toMatchObject({ kind: "want_talk", to_parent_id: null, seen_at: null });
+  const signalId = rows?.[0]?.id as string;
+
+  // Directly against the database: the child reads only their own, and cannot write.
+  const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  expect((await asChild.from("by_signals").select("id")).data).toHaveLength(1);
+  expect((await asChild.from("by_signals").insert({ family_id: familyId, child_id: childId, kind: "want_talk" })).error).not.toBeNull();
+  const childSeen = await asChild.from("by_signals").update({ seen_at: new Date().toISOString(), seen_by: childId }).eq("id", signalId).select("id");
+  expect(childSeen.data ?? []).toHaveLength(0);
+
+  // A sibling sees nothing of it (neither in the database nor through the app).
+  const sibEmail = `sibling-${randomBytes(4).toString("hex")}@example.com`;
+  const sibPassword = `Sib-${randomBytes(12).toString("hex")}`;
+  const { data: sibUser, error: sibErr } = await db.auth.admin.createUser({ email: sibEmail, password: sibPassword, email_confirm: true });
+  expect(sibErr).toBeNull();
+  const sibId = sibUser.user?.id as string;
+  try {
+    expect((await db.from("profiles").insert({ id: sibId, family_id: familyId, role: "child", display_name: "Em thử", grade: 6 })).error).toBeNull();
+    const asSib = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asSib.auth.signInWithPassword({ email: sibEmail, password: sibPassword });
+    expect((await asSib.from("by_signals").select("id")).data).toHaveLength(0);
+    const sCtx = await browser.newContext();
+    const s = await sCtx.newPage();
+    await login(s, sibEmail, sibPassword);
+    const sib = await s.evaluate(async () => (await (await fetch("/api/by/signal")).json()) as { status: unknown });
+    expect(sib.status).toBeNull();
+    await sCtx.close();
+  } finally {
+    await db.auth.admin.deleteUser(sibId);
+  }
+
+  // The parent: a banner on every page → "Con muốn nói chuyện" → "Đã thấy" in their own name.
+  await login(page, env.parentEmail, env.parentPassword);
+  expect(await byCall(page, "POST", "/api/by/signal", { kind: "want_talk", to: null })).toBe(403);
+  await page.goto("/parent/more");
+  await page.getByRole("link", { name: /Con muốn nói chuyện với bố mẹ/ }).click();
+  await expect(page).toHaveURL(/\/parent\/talk$/);
+  const card = page.getByRole("article", { name: `${kid?.display_name} muốn nói chuyện` });
+  await expect(card).toContainText("gửi cho cả bố và mẹ");
+  const asParent = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await asParent.auth.signInWithPassword({ email: env.parentEmail, password: env.parentPassword });
+  const inOtherName = await asParent.from("by_signals").update({ seen_at: new Date().toISOString(), seen_by: childId }).eq("id", signalId).select("id");
+  expect(inOtherName.error).not.toBeNull();
+  expect((await asParent.from("by_signals").update({ kind: "x" }).eq("id", signalId)).error).not.toBeNull();
+  expect((await asParent.from("by_signals").delete().eq("id", signalId)).error).not.toBeNull();
+  expect((await asParent.from("by_sessions").select("id")).error).not.toBeNull();
+  expect((await asParent.from("profiles").select("by_pin_hash")).error).not.toBeNull();
+  await card.getByRole("button", { name: "Đã thấy" }).click();
+  await expect(card).toHaveCount(0);
+  await expect(page.getByText(/Bạn đã thấy lúc/)).toBeVisible();
+  const { data: seen } = await db.from("by_signals").select("seen_at, seen_by").eq("id", signalId).single();
+  expect(seen?.seen_by).toBe(parentId);
+  await expect(page.getByRole("link", { name: /Con muốn nói chuyện với bố mẹ/ })).toHaveCount(0);
+
+  // The child sees it was seen.
+  await k.reload();
+  await k.getByRole("button", { name: "💬 Muốn nói chuyện" }).click();
+  await expect(talk.getByRole("status")).toContainText("Bố/mẹ đã thấy lúc");
+
+  // 10 minutes and nobody saw it: the cron (needs the secret) re-pushes ONCE …
+  await k.goto("about:blank"); // (no child request may run the check before the cron does)
+  await db.from("by_signals").update({ seen_at: null, seen_by: null, created_at: new Date(Date.now() - 11 * 60_000).toISOString() }).eq("id", signalId);
+  expect((await request.get("/api/cron/by-escalate")).status()).toBe(401);
+  expect((await request.get("/api/cron/by-escalate", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
+  const auth = { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` };
+  const first = await request.get("/api/cron/by-escalate", { headers: auth });
+  expect(first.status()).toBe(200);
+  expect((await first.json()).escalated).toBe(1);
+  const { data: esc } = await db.from("by_signals").select("escalated_at").eq("id", signalId).single();
+  expect(esc?.escalated_at).not.toBeNull();
+  expect((await (await request.get("/api/cron/by-escalate", { headers: auth })).json()).escalated).toBe(0);
+  // … and the child is told to find a parent or call 111.
+  await k.goto("/today");
+  await k.getByRole("button", { name: /Đã gửi bố mẹ/ }).click();
+  await expect(talk.getByRole("status")).toContainText("Chưa ai thấy. Con hãy tìm bố mẹ trực tiếp hoặc gọi 111");
+
+  // Without GitHub: the child's own /api/today request runs the same check for the family.
+  const { data: other } = await db
+    .from("by_signals")
+    .insert({ family_id: familyId, child_id: childId, kind: "want_talk", created_at: new Date(Date.now() - 12 * 60_000).toISOString() })
+    .select("id")
+    .single();
+  expect(await byCall(k, "GET", "/api/today")).toBe(200);
+  await expect
+    .poll(async () => (await db.from("by_signals").select("escalated_at").eq("id", other?.id as string).single()).data?.escalated_at ?? null, { timeout: 10_000 })
+    .not.toBeNull();
+
+  // Góc bình yên turned off: the corner hides, "Con muốn nói chuyện" stays.
+  await db.from("family_settings").update({ by_enabled: false }).eq("family_id", familyId);
+  await k.goto("/binh-yen");
+  await expect(k.getByRole("heading", { name: "Góc bình yên chưa mở." })).toBeVisible();
+  await expect(k.getByRole("region", { name: "Con muốn nói chuyện" })).toBeVisible();
+  await k.goto("/today");
+  await expect(k.getByRole("button", { name: /Muốn nói chuyện|Đã gửi bố mẹ/ })).toBeVisible();
+  await expect(k.getByRole("link", { name: "🌿 Góc bình yên" })).toHaveCount(0);
+  await kCtx.close();
+  await db.from("push_subscriptions").delete().eq("endpoint", endpoint);
+});

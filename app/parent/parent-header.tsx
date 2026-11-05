@@ -2,6 +2,8 @@ import Link from "next/link";
 import { pendingForParent } from "@/lib/admin/pending";
 import { createClient } from "@/lib/supabase/server";
 import { RequestsBadge } from "./requests-badge";
+import { unseenTalkCount } from "@/lib/binhYen/parent";
+import { TalkBanner } from "./talk-banner";
 
 /** Every parent page; the tab it belongs to (UI review 19/10/2026: 4 tabs at the bottom). */
 const PAGES = {
@@ -9,6 +11,7 @@ const PAGES = {
   "/parent/review": "home",
   "/parent/homework": "homework",
   "/parent/requests": "requests",
+  "/parent/talk": "requests",
   "/parent/more": "more",
   "/parent/children": "more",
   "/parent/templates": "more",
@@ -102,8 +105,11 @@ export async function ParentTabs({ current }: { current: ParentPage }) {
 /** Shared header for parent pages: a plain title (+ "‹ Thêm" on the less used pages) and the tab bar. */
 export async function ParentHeader({ title, current }: { title: string; current: ParentPage }) {
   const back = PAGES[current] === "more" && current !== "/parent/more";
+  // Góc bình yên: an unseen "Con muốn nói chuyện" shows on top of every parent page.
+  const talk = await unseenTalkCount(await createClient());
   return (
     <>
+      <TalkBanner initial={talk} />
       <header className="border-b border-ink/10 bg-white">
         <div className="mx-auto flex max-w-lg flex-col px-4 pt-3 pb-3">
           {back ? (

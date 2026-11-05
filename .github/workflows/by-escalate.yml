@@ -1,0 +1,37 @@
+name: Góc bình yên reminder (every 5 min)
+
+# S-BY0 (docs/BINH_YEN.md R3, Q5): a "Con muốn nói chuyện" that no parent marked "Đã thấy"
+# after 10 minutes is pushed again, once. The app decides; this job only calls
+# /api/cron/by-escalate with the CRON_SECRET (same secrets as SETUP A10).
+# BEST EFFORT: GitHub often starts scheduled jobs late (sometimes 10–30 minutes, or skips a
+# run when busy). The app also runs the same check whenever a child's screen asks the server
+# (/api/today every 30 s, /api/by/*), so the reminder does not depend on GitHub alone.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: by-escalate
+  cancel-in-progress: false
+
+jobs:
+  escalate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call /api/cron/by-escalate
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::APP_URL / CRON_SECRET secrets are not set yet (SETUP A10); skipping."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/by-escalate"
+          echo

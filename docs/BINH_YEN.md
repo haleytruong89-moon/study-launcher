@@ -1,6 +1,6 @@
 # Góc bình yên — Quy tắc & dữ liệu (Phase 1.5)
 
-> **Trạng thái:** bản nháp 01/11/2026. **Chưa có code, chưa có SQL.**
+> **Trạng thái:** bản nháp 01/11/2026. **05/11/2026: lát S-BY0 đã có PR** (PIN riêng của con, phiên do máy chủ giữ, "Con muốn nói chuyện" + trang bố mẹ "Đã thấy", SQL `0008_binh_yen_base.sql`) — xem §11. Chưa có phần cảm xúc.
 > Bản này đã qua một vòng review độc lập; các điểm review sửa được đánh dấu *(review)*.
 > Các câu hỏi ở §7 đã được phụ huynh chốt ngày 01/11/2026.
 >
@@ -300,8 +300,38 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 
 ## 10. Lát build dự kiến
 
-1. **S-BY0:** PIN Góc bình yên + `by_sessions` + `by_signals` + trang bố mẹ "Đã thấy" + kênh báo (S4). Có nút "Con muốn nói chuyện" ở màn Hôm nay. Cần có trước mọi thứ khác.
+1. **S-BY0:** PIN Góc bình yên + `by_sessions` + `by_signals` + trang bố mẹ "Đã thấy" + kênh báo (S4). Có nút "Con muốn nói chuyện" ở màn Hôm nay. Cần có trước mọi thứ khác. → **PR mở 05/11/2026** (§11).
 2. **S-BY1:** chọn ô → từ → mức → 3 gợi ý (R1) → hoạt động → Xong → `by_checkins` + test quyền. Chưa có ô gõ chữ.
 3. **S-BY2:** ô gõ chữ + R3 (cùng lát, bắt buộc) + chữ mã hóa trên máy.
 4. **S-BY3:** hiểu nguyên nhân + bài học R2 + Bảng điều tra / Bàn pha chế.
 5. **S-BY4:** phần thưởng R4 (khu rừng An, trang manga Nguyên).
+
+## 11. S-BY0 — đã làm gì (05/11/2026)
+
+**SQL `0008_binh_yen_base.sql`** (chỉ thêm, tự chạy khi merge):
+- `profiles`: `by_pin_hash`, `by_pin_failed_count`, `by_pin_locked_until`, `by_pin_reset_at`. Trình duyệt **không** đọc / ghi được (giống PIN đăng nhập: không cấp quyền cột).
+- `family_settings`: `by_enabled` (**false**), `by_study_minutes` (10, ≥ 5), `by_idle_lock_minutes` (5, 2–15), `by_daily_rewards` (1, ≥ 1).
+- `by_sessions`: chỉ máy chủ (không cấp quyền cho trình duyệt, RLS bật, không policy).
+- `by_signals`: con xem tín hiệu **của mình**; bố mẹ xem tín hiệu gửi cả hai hoặc gửi mình, chỉ sửa được `seen_at` + `seen_by` = chính mình; **không ai** thêm / xóa từ trình duyệt.
+- Hàm chỉ máy chủ: `by_pin_try` (đếm lần thử trước khi so, 5 lần → khóa 15'), `by_signal_create` (giới hạn 1 lần / 2 phút / con / loại, khóa theo từng con để 2 cú bấm cùng lúc không lọt).
+- `backup.yml`: bỏ **dữ liệu** bảng `by_*` khỏi bản sao lưu (D6), giữ cấu trúc.
+
+**Màn hình:**
+- `/binh-yen`: tắt → "Góc bình yên chưa mở. Bố mẹ sẽ bật cùng con."; bật → con tự đặt PIN (khác PIN đăng nhập, máy chủ kiểm) → trang chờ có "🔒 Ai thấy gì?" (`lib/binhYen/copy.ts`), nút nói chuyện, "Sắp có: chọn cảm xúc". Không script bên thứ ba (Content-Security-Policy chỉ cho phép chính trang).
+- Hôm nay: nút **💬 Muốn nói chuyện** ở đầu trang (+ lối vào **🌿 Góc bình yên** khi bật).
+- Bố mẹ: dải đỏ trên mọi trang khi có tín hiệu chưa xem → `/parent/talk` → **Đã thấy**. Thêm › Các con: **Xóa PIN Góc bình yên** (có giải thích). Thêm › Luật trong nhà: bật/tắt + 2 giới hạn phút.
+- Nhắc lại sau 10': `/api/cron/by-escalate` (GitHub mỗi 5', có thể trễ) **và** mỗi lần máy con hỏi máy chủ (`/api/today` 30 giây/lần, `/api/by/*`).
+
+**Khác / thêm so với bản quy tắc (cần bố mẹ biết):**
+| # | Điểm | Đã làm | Vì sao |
+|---|---|---|---|
+| K1 | Nút "Con muốn nói chuyện" khi chưa có điện thoại bố mẹ bật thông báo | **Ẩn** | Không để con thấy "đã báo bố mẹ" khi không có gì tới được (R3 "không lặng lẽ thất bại") |
+| K2 | Con chỉ gửi cho **một** bố/mẹ | Người kia **không thấy** tín hiệu (RLS), và lần **nhắc lại sau 10'** cũng **chỉ** gửi lại người con chọn | Tôn trọng lựa chọn của con (§6). Với `needs_care` (S-BY2) luôn gửi cả hai (R3.3). **Cần bố mẹ chốt** |
+| K3 | Push tới được hay không | Gửi xong mà không điện thoại nào nhận → con thấy ngay "Chưa báo được tới điện thoại của bố mẹ. Con hãy tìm bố mẹ trực tiếp hoặc gọi 111" | R3 |
+| K4 | `kind` của `by_signals` | Có CHECK **định dạng** (`^[a-z_]{1,32}$`), không phải danh sách cố định | Thêm loại mới không cần sửa ràng buộc; chặn chữ tự do lọt vào |
+| K5 | Bố mẹ có biết con đã đặt PIN chưa? | **Không** — nút xóa luôn hiện, không nói có PIN hay chưa | Q4 (bố mẹ không thấy số liệu) |
+| K6 | Bố mẹ đặt PIN đăng nhập **trùng** PIN Góc bình yên của con | **Không chặn** được: chặn thì lộ PIN của con cho bố mẹ | Giới hạn đã biết; con được nhắc chọn PIN khác PIN đăng nhập lúc đặt |
+| K7 | Giới hạn 10' trong giờ học (R5), `pin_devices.shared`, xuất / xóa dữ liệu | **Chưa làm** — chưa có nội dung để giới hạn; làm cùng S-BY1 | Ngoài phạm vi S-BY0 |
+| K8 | Spike S1 (iPad thật, app chạy nền) | Chưa thử trên iPad; e2e mô phỏng "6 phút không chạm" bằng giờ máy chủ | Cần máy thật |
+| K9 | `audit_log` | Không ghi lần thử / mở PIN của con (D5); **có** ghi việc bố mẹ xóa PIN (`child.by_pin_wiped`, không nội dung) | D5 |
+

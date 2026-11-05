@@ -47,7 +47,9 @@ jobs:
           stamp="$(date -u +%Y%m%d)"
           mkdir -p work backup
           # App data (public schema) and the login accounts (auth.users / auth.identities) so a restore keeps the same user ids.
-          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --schema=public --format=custom --file work/public.dump
+          # Góc bình yên (BINH_YEN.md D6): the by_* tables keep their structure but NOT their rows,
+          # so a 30-day backup never holds what a child deleted or anything from their corner.
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --schema=public --exclude-table-data='public.by_*' --format=custom --file work/public.dump
           pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --data-only --format=custom \
             --table=auth.users --table=auth.identities --file work/auth.dump
           tar -C work -cf "work/study-launcher-${stamp}.tar" public.dump auth.dump

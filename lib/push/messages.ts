@@ -74,6 +74,29 @@ export function extensionMissingMessage(childName: string, browser: string, chil
   };
 }
 
+/**
+ * Góc bình yên "Con muốn nói chuyện" (S-BY0). Deliberately generic: WHO only, never a feeling,
+ * a reason or anything the child chose inside Góc bình yên (BINH_YEN.md §6).
+ */
+export function wantTalkMessage(childName: string): PushMessage {
+  return {
+    title: `${childName} muốn nói chuyện với bố mẹ`,
+    body: "Chạm để mở, rồi tìm con khi có thể",
+    url: "/parent/talk",
+    tag: "want-talk",
+  };
+}
+
+/** Same signal, nobody pressed "Đã thấy" after 10 minutes (sent once). */
+export function wantTalkReminderMessage(childName: string): PushMessage {
+  return {
+    title: `Nhắc lại: ${childName} muốn nói chuyện với bố mẹ`,
+    body: "Chưa ai bấm “Đã thấy” · chạm để mở",
+    url: "/parent/talk",
+    tag: "want-talk",
+  };
+}
+
 /** The "Gửi thử" button on the notifications page. */
 export function testMessage(): PushMessage {
   return {

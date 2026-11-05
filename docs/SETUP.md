@@ -157,3 +157,16 @@ Mỗi tuần (thứ Hai 04:17 giờ VN) GitHub gọi `/api/cron/cleanup` để x
 | F3 | Trước lần chạy thật đầu tiên, nên bấm **Luật trong nhà › Xem trước sẽ xóa gì** để thấy số ảnh sẽ bị xóa | Muốn thử job mà không xóa: **GitHub → Actions → Weekly photo cleanup → Run workflow** (ô "Chỉ đếm, không xóa" mặc định đã tick) |
 
 Ảnh đã xóa **không lấy lại được**: bản sao lưu hằng tuần (A9) không gồm ảnh. Muốn giữ lâu hơn: tăng "Giữ ảnh bài" (tối đa 365 ngày) **trước** lần chạy kế tiếp.
+
+---
+
+## G. Góc bình yên (S-BY0, ~5 phút, sau khi merge PR S-BY0)
+
+Merge PR **không** tự bật cho con (`by_enabled = false`). Bật khi cả nhà đã nói chuyện về Góc bình yên.
+
+| Bước | Việc | Ghi chú |
+|---|---|---|
+| G1 | **Đã làm A10** (thông báo đẩy) → nhắc lại "Con muốn nói chuyện" sau 10' **không phải cài thêm gì**: job `by-escalate.yml` dùng lại 2 secret GitHub `CRON_SECRET` + `APP_URL` của A10. Chưa làm A10 → làm A10 trước | GitHub chạy job **mỗi 5 phút nhưng hay trễ** (có khi 10–30'). App cũng tự kiểm mỗi lần máy con hỏi máy chủ (30 giây/lần khi con mở Hôm nay), nên không phụ thuộc hẳn vào GitHub |
+| G2 | Trên **iPhone của bố và của mẹ**: Thêm › **Thông báo** → bật, bấm **Gửi thử** | Chưa có điện thoại nào bật → con **không thấy** nút "Muốn nói chuyện" (để con không tưởng là đã báo) |
+| G3 | Thêm › **Luật trong nhà** › mục **Góc bình yên** → tích **Bật Góc bình yên cho các con** → Lưu | Tự khóa sau 5' không chạm (2–15). Tắt lúc nào cũng được: khu này ẩn, PIN của con giữ nguyên, nút "Muốn nói chuyện" vẫn còn |
+| G4 | Ngồi cùng con: con mở **🌿 Góc bình yên** trên màn Hôm nay → **tự đặt PIN 6 số** (bố mẹ không nhìn) → mở **🔒 Ai thấy gì?** đọc cùng con | Con quên PIN: Thêm › **Các con** › Sửa › **Xóa PIN Góc bình yên** (chữ con viết trên máy bị xóa, con được báo) |
