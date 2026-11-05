@@ -537,6 +537,9 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
                   </span>
                 )}
               </div>
+              {s.trust.mode === "trust" && (
+                <span className="text-[13px] text-ink/70">Máy không chặn trang nào — con tự quản giờ học. Việc hôm nay vẫn ở trên, làm xong vẫn tính ngày đạt như thường.</span>
+              )}
               {s.trust.mode === "lock" && (
                 <>
                   <div

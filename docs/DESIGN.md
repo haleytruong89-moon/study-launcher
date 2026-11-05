@@ -144,6 +144,7 @@ Quy tắc phụ:
 - "Ngày đạt" (cho thống kê tuần và chế độ Tin tưởng): có `part2_done_at` trước `bedtime`, **hoặc** dùng thẻ, **hoặc** `day_type ∈ {sick, holiday}`. Ngày thi (`exam`) **không** tự tính đạt. Tính lười khi đọc, không cần cron.
 - *(S3d, 01/11/2026)* **Ngày đặc biệt** do phụ huynh đặt (`POST /api/admin/special-days`, phiên của phụ huynh, ghi `audit_log` `day_type.set`): cho **hôm nay hoặc tối đa 60 ngày tới** (giờ server), **không sửa ngày đã qua**. `exam` / `holiday` tắt được **mẫu việc** (bài bổ sung / kỹ năng) **có lịch vào thứ của ngày đó**; bài trên lớp không tắt ở đây (dời hạn ở Giao bài). `normal` / `sick` xóa danh sách tắt. Về "Ngày thường" = ghi `day_type = normal`, không xóa dòng. Hiệu lực vẫn do `computeDayState` (không đổi).
 - Tiến độ Tin tưởng: đếm số tuần **liên tiếp gần nhất** có tỷ lệ ngày đạt ≥ `trust_up_pct`. Đủ `trust_up_weeks` → hiện gợi ý cho phụ huynh xác nhận. **Không tự chuyển chế độ.** Đang Tin tưởng mà 1 tuần < `trust_down_pct` → gợi ý quay lại Khóa.
+  - *(S3d, 04/11/2026)* Gợi ý hiện thành thẻ trên thẻ của con ở **Hôm nay** của bố mẹ, nút "Chuyển sang Tin tưởng" / "Quay lại chế độ Khóa" và **"Để sau"**. Bố mẹ còn chuyển tay bất kỳ lúc nào ở **Thêm › Các con** (có bước xác nhận). Ghi bằng phiên bố mẹ (`trust_state`, RLS `parent_all`; `since = now`, `updated_by`), log `trust.set {child_id, mode, previous, via}`. "Để sau" chỉ ghi log `trust.dismissed {child_id, suggestion, week}`. *Đề xuất, chờ bố mẹ chốt:* đã chuyển (bất kỳ chiều) hoặc "Để sau" trong tuần (T2–CN) → **ẩn gợi ý đến thứ Hai tuần sau** (`lib/admin/trust.ts`, đọc lại từ `audit_log`, không thêm bảng). `computeDayState` không đổi.
 
 **Bắt buộc có test** cho từng dòng của bảng ưu tiên + mốc biên (đúng giây hết 10', hết 45', qua 00:00, tuần mới).
 
@@ -165,6 +166,8 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/parent-pin/override` | máy con + PIN phụ huynh | `open_until` / `lock_until` / **cộng N phút** = tạo `open_until` mới tính từ `max(openUntil hiện tại, now)` (cắt ở 00:00) |
 | `POST /api/parent-pin/verify` | máy con + PIN phụ huynh | Mở nhanh cài đặt nhẹ trên máy con (vd ghép extension) |
 | `GET/POST /api/admin/*` | phụ huynh | Tài khoản con, cài đặt, allowlist, mẫu việc, slot, ngày đặc biệt, chế độ Tin tưởng, verdict |
+| `POST /api/admin/trust` | phụ huynh | *(S3d)* `{childId, mode: lock\|trust, via}` → upsert `trust_state` + log `trust.set`; `{childId, later: lock\|trust}` → chỉ log `trust.dismissed` (ẩn gợi ý tuần này). Con: 403 |
+| `GET /parent/log` (trang) | phụ huynh | *(S3d)* **Nhật ký**: `audit_log` của gia đình (RLS `parent_select`), mới nhất trước, 50 dòng/lần (`?so=`, tối đa 1000), lọc `?con=` (`actor_id` hoặc `payload->>child_id`) và `?nhom=`; mỗi dòng là 1 câu tiếng Việt từ `lib/admin/auditText.ts` (render ở server, **không gửi payload thô** xuống trình duyệt; hành động lạ → câu trung tính) |
 | `POST /api/admin/special-days` | phụ huynh | *(S3d)* `{childId, date, dayType, disabledTemplateIds}` → upsert `day_sessions.day_type` + `disabled_template_ids` (hôm nay … +60 ngày) |
 | `POST /api/push/subscribe` | mọi profile | Lưu subscription |
 | `POST /api/ext/pair` | máy con + PIN phụ huynh | Tạo token thiết bị (trả 1 lần, lưu hash) |

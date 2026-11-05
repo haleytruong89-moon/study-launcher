@@ -25,13 +25,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .update({ parent_verdict: verdict, verdict_at: verdict ? new Date().toISOString() : null })
     .eq("id", id.data)
     .not("done_at", "is", null)
-    .select("id");
+    .select("id, child_id");
   if (error) {
     console.error("run.verdict failed", error.message);
     return jsonError("Không lưu được.", 500);
   }
   if (!data || data.length === 0) return jsonError("Không tìm thấy việc đã xong này.", 404);
 
-  await writeAudit(ctx, "run.verdict", { run_id: id.data, verdict });
+  await writeAudit(ctx, "run.verdict", { run_id: id.data, child_id: data[0]?.child_id ?? null, verdict });
   return NextResponse.json({ ok: true });
 }
