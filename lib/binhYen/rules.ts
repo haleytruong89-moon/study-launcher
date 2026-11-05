@@ -17,7 +17,10 @@ export const BY_PIN_LOCK_MINUTES = 15;
 
 /** "Con muốn nói chuyện": at most one per child (per kind) every 2 minutes. */
 export const TALK_GAP_SECONDS = 120;
-/** Not seen after 10 minutes → re-push once + the child is told to find a parent / call 111 (Q5). */
+/**
+ * Not seen after 10 minutes. Parent decision 05/11/2026: for "Con muốn nói chuyện" NO re-push —
+ * the child is only told to find a parent in person. (needs_care, S-BY2: re-push to every parent, R3.)
+ */
 export const ESCALATE_AFTER_MINUTES = 10;
 /** Only fairly recent signals are escalated (never a forgotten one days later, in the night). */
 export const ESCALATE_WINDOW_HOURS = 6;
@@ -113,8 +116,9 @@ export function rateLimited(lastCreatedAt: string | null, now: Date): boolean {
   return !!lastCreatedAt && now.getTime() - Date.parse(lastCreatedAt) < TALK_GAP_SECONDS * 1000;
 }
 
-/** Unseen, never escalated, older than 10 minutes but younger than the window → re-push once. */
-export function shouldEscalate(s: Pick<SignalRow, "created_at" | "seen_at" | "escalated_at">, now: Date): boolean {
+/** needs_care only: unseen, never escalated, older than 10 minutes but younger than the window → re-push once. */
+export function shouldEscalate(s: Pick<SignalRow, "kind" | "created_at" | "seen_at" | "escalated_at">, now: Date): boolean {
+  if (s.kind !== "needs_care") return false; // want_talk: no re-push (parent decision 05/11/2026)
   if (s.seen_at || s.escalated_at) return false;
   const age = now.getTime() - Date.parse(s.created_at);
   return age >= ESCALATE_AFTER_MINUTES * 60_000 && age <= ESCALATE_WINDOW_HOURS * 3600_000;
@@ -146,12 +150,12 @@ export function talkStatus(s: SignalRow | null, now: Date): TalkStatus | null {
   if (age > STATUS_SHOW_HOURS * 3600_000 || age < -60_000) return null;
   if (s.seen_at) return { phase: "seen", text: `Bố/mẹ đã thấy lúc ${vnTime(s.seen_at)}. Bố/mẹ sẽ tìm con.`, createdAt: s.created_at };
   if (age >= ESCALATE_AFTER_MINUTES * 60_000) {
-    return { phase: "unseen_long", text: `Chưa ai thấy. Con hãy tìm bố mẹ trực tiếp hoặc ${HOTLINE_TEXT}.`, createdAt: s.created_at };
+    return { phase: "unseen_long", text: "Bố mẹ chưa thấy tin. Con tìm bố mẹ trực tiếp để nói chuyện nhé.", createdAt: s.created_at };
   }
   return { phase: "sent", text: `Đã gửi lúc ${vnTime(s.created_at)}. Đợi bố mẹ thấy nhé.`, createdAt: s.created_at };
 }
 
 /** Shown right after sending when no phone accepted the push (R3: never fail silently). */
-export const NOT_DELIVERED_TEXT = `Chưa báo được tới điện thoại của bố mẹ. Con hãy tìm bố mẹ trực tiếp hoặc ${HOTLINE_TEXT}.`;
+export const NOT_DELIVERED_TEXT = "Chưa báo được tới điện thoại của bố mẹ. Con tìm bố mẹ trực tiếp để nói chuyện nhé.";
 /** Shown when the request itself did not reach the server. */
-export const OFFLINE_TEXT = `Chưa gửi được (mất mạng?). Con hãy tìm bố mẹ trực tiếp hoặc ${HOTLINE_TEXT}.`;
+export const OFFLINE_TEXT = "Chưa gửi được (mất mạng?). Con tìm bố mẹ trực tiếp để nói chuyện nhé.";

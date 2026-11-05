@@ -100,12 +100,15 @@ describe("rate limit: 1 per child per 2 minutes", () => {
   it("2 minutes after → allowed again", () => expect(rateLimited(minutesAgo(2), NOW)).toBe(false));
 });
 
-describe("escalation after 10 minutes unseen (Q5)", () => {
-  it("9 minutes → not yet", () => expect(shouldEscalate(signal({ created_at: minutesAgo(9) }), NOW)).toBe(false));
-  it(`${ESCALATE_AFTER_MINUTES} minutes unseen → re-push`, () => expect(shouldEscalate(signal({ created_at: minutesAgo(10) }), NOW)).toBe(true));
-  it("seen → never", () => expect(shouldEscalate(signal({ created_at: minutesAgo(30), seen_at: minutesAgo(20) }), NOW)).toBe(false));
-  it("only once", () => expect(shouldEscalate(signal({ created_at: minutesAgo(30), escalated_at: minutesAgo(15) }), NOW)).toBe(false));
-  it("not a forgotten one from yesterday", () => expect(shouldEscalate(signal({ created_at: minutesAgo(7 * 60) }), NOW)).toBe(false));
+describe("re-push after 10 minutes unseen", () => {
+  // Parent decision 05/11/2026: "Con muốn nói chuyện" is NEVER re-pushed; only needs_care (S-BY2).
+  const care = (o: Partial<Parameters<typeof signal>[0]> = {}) => signal({ kind: "needs_care", ...o });
+  it("want_talk → never re-pushed", () => expect(shouldEscalate(signal({ created_at: minutesAgo(30) }), NOW)).toBe(false));
+  it("needs_care 9 minutes → not yet", () => expect(shouldEscalate(care({ created_at: minutesAgo(9) }), NOW)).toBe(false));
+  it(`needs_care ${ESCALATE_AFTER_MINUTES} minutes unseen → re-push`, () => expect(shouldEscalate(care({ created_at: minutesAgo(10) }), NOW)).toBe(true));
+  it("seen → never", () => expect(shouldEscalate(care({ created_at: minutesAgo(30), seen_at: minutesAgo(20) }), NOW)).toBe(false));
+  it("only once", () => expect(shouldEscalate(care({ created_at: minutesAgo(30), escalated_at: minutesAgo(15) }), NOW)).toBe(false));
+  it("not a forgotten one from yesterday", () => expect(shouldEscalate(care({ created_at: minutesAgo(7 * 60) }), NOW)).toBe(false));
   it("sent to both → every parent; sent to one → that parent only (child's choice, §6)", () => {
     expect(escalationTarget(signal())).toEqual({ all: true });
     expect(escalationTarget(signal({ to_parent_id: "p2" }))).toEqual({ all: false, parentId: "p2" });
@@ -123,13 +126,13 @@ describe("what the child sees after sending", () => {
   it("10 minutes and nobody saw it → find a parent or call 111", () => {
     expect(talkStatus(signal({ created_at: minutesAgo(10) }), NOW)).toMatchObject({
       phase: "unseen_long",
-      text: "Chưa ai thấy. Con hãy tìm bố mẹ trực tiếp hoặc gọi 111 (miễn phí, 24/7).",
+      text: "Bố mẹ chưa thấy tin. Con tìm bố mẹ trực tiếp để nói chuyện nhé.",
     });
   });
   it("an old signal is not shown any more", () => expect(talkStatus(signal({ created_at: minutesAgo(4 * 60) }), NOW)).toBeNull());
-  it("never fails silently: not delivered / offline both point to a parent and 111", () => {
-    expect(NOT_DELIVERED_TEXT).toContain("111");
-    expect(OFFLINE_TEXT).toContain("111");
+  it("never fails silently: not delivered / offline both tell the child to find a parent (05/11/2026)", () => {
+    expect(NOT_DELIVERED_TEXT).toContain("tìm bố mẹ trực tiếp");
+    expect(OFFLINE_TEXT).toContain("tìm bố mẹ trực tiếp");
   });
 });
 

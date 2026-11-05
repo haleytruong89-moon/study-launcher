@@ -114,7 +114,9 @@ export async function sendTalk(ctx: ChildContext, kind: SignalKind, to: string |
 }
 
 /**
- * Re-pushes every signal nobody marked "Đã thấy" after 10 minutes, ONCE (escalated_at is set
+ * Re-pushes every needs_care signal nobody marked "Đã thấy" after 10 minutes, ONCE. "Con muốn
+ * nói chuyện" (want_talk) is never re-pushed: parent decision 05/11/2026 — the child is told to
+ * find a parent in person instead (talkStatus). (escalated_at is set
  * in the same UPDATE that picks the rows, so two runs at the same time cannot both send).
  * Called by the cron job and opportunistically by the children's requests. Never throws.
  */
@@ -126,6 +128,7 @@ export async function escalateDue(now = new Date(), familyId?: string): Promise<
     let q = admin
       .from("by_signals")
       .update({ escalated_at: now.toISOString() })
+      .eq("kind", "needs_care")
       .is("seen_at", null)
       .is("escalated_at", null)
       .lte("created_at", cutoff)

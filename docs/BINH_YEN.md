@@ -180,9 +180,9 @@ Câu 1 bình thường hóa cảm xúc. Câu 2 là bài học theo nguyên nhân
 | **Hỏi lại** | Cụm dễ trùng nghĩa | "Con có đang nghĩ đến việc làm đau mình không?" — **Có**: như mức Mạnh · **Không**: tiếp tục | Chỉ khi con chọn "Có" |
 
 **Tín hiệu không được lặng lẽ thất bại** *(review)*:
-1. Gửi không được (mất mạng) thì thử lại. Nói với con: "Chưa gửi được cho bố mẹ, hãy tìm bố mẹ trực tiếp hoặc gọi 111."
+1. Gửi không được (mất mạng) thì thử lại. Nói với con: "Chưa gửi được. Con tìm bố mẹ trực tiếp để nói chuyện nhé." (với `needs_care`: thêm 111.)
 2. Con thấy trạng thái tín hiệu: *đã gửi* / *bố mẹ đã thấy*.
-3. Bố mẹ chưa bấm "Đã thấy" sau 10 phút (Q5): nhắc lại, gửi cho cả hai bố mẹ.
+3. Bố mẹ chưa bấm "Đã thấy" sau 10 phút (Q5): với **`needs_care`** nhắc lại cho cả hai bố mẹ. Với **"Con muốn nói chuyện"** *(phụ huynh chốt 05/11/2026)*: **không nhắc lại**, con chỉ thấy "Bố mẹ chưa thấy tin. Con tìm bố mẹ trực tiếp để nói chuyện nhé."
    - ⚠️ Thông báo đẩy (S5) **chưa làm**. Trước khi bật Góc bình yên cần có ít nhất **một kênh chắc chắn tới bố mẹ**.
 
 **Dấu hiệu lặp lại, không cần chữ** *(review)*: 3 lần mức 5 trong 7 ngày thì hiện cho **con** lời nhắn 111 + "nói với bố mẹ". Quy tắc này chạy trên máy con và không tự báo bố mẹ (Q4).
@@ -320,14 +320,14 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 - `/binh-yen`: tắt → "Góc bình yên chưa mở. Bố mẹ sẽ bật cùng con."; bật → con tự đặt PIN (khác PIN đăng nhập, máy chủ kiểm) → trang chờ có "🔒 Ai thấy gì?" (`lib/binhYen/copy.ts`), nút nói chuyện, "Sắp có: chọn cảm xúc". Không script bên thứ ba (Content-Security-Policy chỉ cho phép chính trang).
 - Hôm nay: nút **💬 Muốn nói chuyện** ở đầu trang (+ lối vào **🌿 Góc bình yên** khi bật).
 - Bố mẹ: dải đỏ trên mọi trang khi có tín hiệu chưa xem → `/parent/talk` → **Đã thấy**. Thêm › Các con: **Xóa PIN Góc bình yên** (có giải thích). Thêm › Luật trong nhà: bật/tắt + 2 giới hạn phút.
-- Nhắc lại sau 10': `/api/cron/by-escalate` (GitHub mỗi 5', có thể trễ) **và** mỗi lần máy con hỏi máy chủ (`/api/today` 30 giây/lần, `/api/by/*`).
+- Nhắc lại sau 10' **chỉ cho `needs_care`** (S-BY2): `/api/cron/by-escalate` (GitHub mỗi 5', có thể trễ) **và** mỗi lần máy con hỏi máy chủ. "Con muốn nói chuyện" **không** nhắc lại (chốt 05/11/2026).
 
 **Khác / thêm so với bản quy tắc (cần bố mẹ biết):**
 | # | Điểm | Đã làm | Vì sao |
 |---|---|---|---|
 | K1 | Nút "Con muốn nói chuyện" khi chưa có điện thoại bố mẹ bật thông báo | **Ẩn** | Không để con thấy "đã báo bố mẹ" khi không có gì tới được (R3 "không lặng lẽ thất bại") |
-| K2 | Con chỉ gửi cho **một** bố/mẹ | Người kia **không thấy** tín hiệu (RLS), và lần **nhắc lại sau 10'** cũng **chỉ** gửi lại người con chọn | Tôn trọng lựa chọn của con (§6). Với `needs_care` (S-BY2) luôn gửi cả hai (R3.3). **Cần bố mẹ chốt** |
-| K3 | Push tới được hay không | Gửi xong mà không điện thoại nào nhận → con thấy ngay "Chưa báo được tới điện thoại của bố mẹ. Con hãy tìm bố mẹ trực tiếp hoặc gọi 111" | R3 |
+| K2 | Con chỉ gửi cho **một** bố/mẹ | Người kia **không thấy** tín hiệu (RLS). Sau 10' **không nhắc lại** ai cả *(chốt 05/11/2026)*; con được nhắc tìm bố mẹ trực tiếp | Tôn trọng lựa chọn của con (§6) |
+| K3 | Push tới được hay không | Gửi xong mà không điện thoại nào nhận → con thấy ngay "Chưa báo được tới điện thoại của bố mẹ. Con tìm bố mẹ trực tiếp để nói chuyện nhé." | R3 |
 | K4 | `kind` của `by_signals` | Có CHECK **định dạng** (`^[a-z_]{1,32}$`), không phải danh sách cố định | Thêm loại mới không cần sửa ràng buộc; chặn chữ tự do lọt vào |
 | K5 | Bố mẹ có biết con đã đặt PIN chưa? | **Không** — nút xóa luôn hiện, không nói có PIN hay chưa | Q4 (bố mẹ không thấy số liệu) |
 | K6 | Bố mẹ đặt PIN đăng nhập **trùng** PIN Góc bình yên của con | **Không chặn** được: chặn thì lộ PIN của con cho bố mẹ | Giới hạn đã biết; con được nhắc chọn PIN khác PIN đăng nhập lúc đặt |
@@ -335,3 +335,4 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 | K8 | Spike S1 (iPad thật, app chạy nền) | Chưa thử trên iPad; e2e mô phỏng "6 phút không chạm" bằng giờ máy chủ | Cần máy thật |
 | K9 | `audit_log` | Không ghi lần thử / mở PIN của con (D5); **có** ghi việc bố mẹ xóa PIN (`child.by_pin_wiped`, không nội dung) | D5 |
 
+> *05/11/2026, phụ huynh chốt:* con **được tự đổi PIN Góc bình yên** khi nhập đúng PIN cũ (chữ đã viết được khóa lại bằng PIN mới) — làm ở S-BY2 cùng phần mã hóa.

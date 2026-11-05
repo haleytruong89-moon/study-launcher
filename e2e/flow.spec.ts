@@ -1834,33 +1834,21 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   await k.getByRole("button", { name: "💬 Muốn nói chuyện" }).click();
   await expect(talk.getByRole("status")).toContainText("Bố/mẹ đã thấy lúc");
 
-  // 10 minutes and nobody saw it: the cron (needs the secret) re-pushes ONCE …
-  await k.goto("about:blank"); // (no child request may run the check before the cron does)
+  // 10 minutes and nobody saw it. Parent decision 05/11/2026: "Con muốn nói chuyện" is NOT
+  // re-pushed; the child is told to find a parent in person. The cron still needs the secret.
+  await k.goto("about:blank");
   await db.from("by_signals").update({ seen_at: null, seen_by: null, created_at: new Date(Date.now() - 11 * 60_000).toISOString() }).eq("id", signalId);
   expect((await request.get("/api/cron/by-escalate")).status()).toBe(401);
   expect((await request.get("/api/cron/by-escalate", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
   const auth = { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` };
   const first = await request.get("/api/cron/by-escalate", { headers: auth });
   expect(first.status()).toBe(200);
-  expect((await first.json()).escalated).toBe(1);
+  expect((await first.json()).escalated).toBe(0);
   const { data: esc } = await db.from("by_signals").select("escalated_at").eq("id", signalId).single();
-  expect(esc?.escalated_at).not.toBeNull();
-  expect((await (await request.get("/api/cron/by-escalate", { headers: auth })).json()).escalated).toBe(0);
-  // … and the child is told to find a parent or call 111.
+  expect(esc?.escalated_at).toBeNull();
   await k.goto("/today");
   await k.getByRole("button", { name: /Đã gửi bố mẹ/ }).click();
-  await expect(talk.getByRole("status")).toContainText("Chưa ai thấy. Con hãy tìm bố mẹ trực tiếp hoặc gọi 111");
-
-  // Without GitHub: the child's own /api/today request runs the same check for the family.
-  const { data: other } = await db
-    .from("by_signals")
-    .insert({ family_id: familyId, child_id: childId, kind: "want_talk", created_at: new Date(Date.now() - 12 * 60_000).toISOString() })
-    .select("id")
-    .single();
-  expect(await byCall(k, "GET", "/api/today")).toBe(200);
-  await expect
-    .poll(async () => (await db.from("by_signals").select("escalated_at").eq("id", other?.id as string).single()).data?.escalated_at ?? null, { timeout: 10_000 })
-    .not.toBeNull();
+  await expect(talk.getByRole("status")).toContainText("Bố mẹ chưa thấy tin. Con tìm bố mẹ trực tiếp để nói chuyện nhé.");
 
   // Góc bình yên turned off: the corner hides, "Con muốn nói chuyện" stays.
   await db.from("family_settings").update({ by_enabled: false }).eq("family_id", familyId);
