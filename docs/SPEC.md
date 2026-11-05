@@ -171,7 +171,7 @@ Quy tắc:
 | Về lại Khóa | Hệ thống **gợi ý** khi 1 tuần < 70% ngày đạt; **phụ huynh xác nhận** (hoặc tự chuyển bất kỳ lúc nào) | — |
 
 - **"Ngày đạt"** = xong cả 2 phần trước giờ ngủ (phụ huynh đặt, vd 21:30), hoặc ngày dùng thẻ miễn, ngày ốm, ngày lễ. **Ngày thi không tự tính đạt** — con vẫn phải xong danh sách đã rút gọn.
-- Ngưỡng 90% / 3 tuần / 70% là **giá trị đề xuất**, chốt trong họp gia đình.
+- *Chốt 05/11/2026:* lên Tin tưởng khi **≥ 90% ngày đạt trong 3 tuần liên tiếp**. Ngưỡng gợi ý quay lại Khóa (**70%**) vẫn là giá trị đề xuất. Cả ba sửa được ở Luật trong nhà.
 - Hiển thị tiến độ tới chế độ Tin tưởng ngay trên màn Hôm nay — đây là động lực chính với tuổi teen: **quyền tự quyết**, không phải giờ chơi.
 
 ## 8. Linh hoạt (mới)
@@ -328,7 +328,8 @@ Quy tắc:
 | 17/10/2026 | Thứ tự tiếp theo (phụ huynh chọn): **S3c-1 mở/khóa từ iPhone bố mẹ** (lối thoát khi kẹt) → **S4b nối extension** (khóa thật) → **S3d ngày đặc biệt + allowlist** → S3b/S3c-2 PIN trên máy con → S3e |
 | 15/10/2026 | Chốt kế hoạch S3: chia S3a (xem gộp) → S3b (PIN phụ huynh **6 số**) → S3c (mở/khóa/cộng phút bằng tay **từ cả máy con bằng PIN lẫn iPhone phụ huynh**) → S3d (ngày đặc biệt, gợi ý Tin tưởng, sửa allowlist, nhật ký) → S3e (**tự xóa ảnh** quá `photo_retention_days`, phụ huynh đồng ý). **Màn chọn hồ sơ + PIN 4 số của con để sau v1** (mỗi laptop đăng nhập sẵn tài khoản của 1 con) |
 | 01/11/2026 | **Thông báo đẩy (S5)**: báo iPhone bố mẹ khi con **Xin mở trang** và **Nhờ bố mẹ xem trực tiếp**; **21:45** nhắc xem gộp chỉ khi còn bài chưa xem hoặc việc con đang nhờ. Không báo cho khung bị chặn tự phát hiện. **Không** có giờ yên lặng. |
-| 04/11/2026 | **Chế độ Tin tưởng + Nhật ký (S3d, PR `feature/s3d-tin-tuong`)**: gợi ý hiện trên thẻ của con ở Hôm nay (bố mẹ bấm "Chuyển…" hoặc "Để sau"), công tắc tay có xác nhận ở Thêm › Các con, trang Thêm › Nhật ký (lọc theo con + nhóm). *Đề xuất, chờ bố mẹ chốt:* sau khi bố mẹ đã chuyển hoặc bấm "Để sau" trong tuần, **gợi ý ẩn đến thứ Hai tuần sau** (gợi ý chỉ tính từ tuần đã trọn nên trong tuần không đổi) |
+| 04/11/2026 | **Chế độ Tin tưởng + Nhật ký (S3d, PR `feature/s3d-tin-tuong`)**: gợi ý hiện trên thẻ của con ở Hôm nay (bố mẹ bấm "Chuyển…" hoặc "Để sau"), công tắc tay có xác nhận ở Thêm › Các con, trang Thêm › Nhật ký (lọc theo con + nhóm). *Phụ huynh chốt 05/11/2026:* sau khi bố mẹ đã chuyển hoặc bấm "Để sau" trong tuần, **gợi ý ẩn đến thứ Hai tuần sau** (gợi ý chỉ tính từ tuần đã trọn nên trong tuần không đổi) |
+| 05/11/2026 | **Chế độ Tin tưởng**: phụ huynh chốt ngưỡng lên **90% ngày đạt / 3 tuần liên tiếp** (trả lời §16 Q4 phần lên chế độ; 70% về Khóa vẫn đề xuất). Gợi ý ẩn đến thứ Hai tuần sau khi bố mẹ đã chuyển hoặc bấm "Để sau" (chốt). |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 
