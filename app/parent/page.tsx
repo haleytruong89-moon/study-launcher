@@ -2,6 +2,7 @@ import Link from "next/link";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { loadChildrenToday, type ChildToday } from "@/lib/parent/load";
 import { DAY_TYPE_INFO, specialDayWindow, type TemplateForDay } from "@/lib/admin/specialDay";
+import { suggestionText, TRUST_DISMISSED, TRUST_SET, trustSuggestion, weekStartIso, type TrustDecisionRow } from "@/lib/admin/trust";
 import { localDate } from "@/lib/time";
 import { dayMonth, longDate, vnTime } from "@/lib/today/view";
 import { OverrideSheet } from "./override-sheet";
@@ -9,6 +10,7 @@ import { ParentHeader } from "./parent-header";
 import { RefreshEvery } from "./refresh-every";
 import { SpecialDaySheet, type SpecialDayRow } from "./special-day-sheet";
 import { TaskGroup } from "./task-rows";
+import { TrustCard } from "./trust-card";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +37,7 @@ export default async function ParentHome() {
   }
 
   const range = specialDayWindow(now);
-  const [kids, { count: pending }, templateRes, specialRes] = await Promise.all([
+  const [kids, { count: pending }, templateRes, specialRes, rulesRes, decisionsRes] = await Promise.all([
     loadChildrenToday(db, me.profile.family_id, children, today, now),
     db.from("unlock_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     db.from("task_templates").select("id, child_id, part, title, weekdays, sort, active").eq("active", true),
@@ -46,12 +48,20 @@ export default async function ParentHome() {
       .lte("local_date", range.to)
       .neq("day_type", "normal")
       .order("local_date"),
+    db.from("family_settings").select("trust_up_pct, trust_down_pct").maybeSingle(),
+    // Trust decisions already made this week (switch or "Để sau") hide the suggestion until Monday.
+    db.from("audit_log").select("action, payload, created_at").in("action", [TRUST_SET, TRUST_DISMISSED]).gte("created_at", weekStartIso(today)),
   ]);
+  const trustRules = {
+    trustUpPct: (rulesRes.data?.trust_up_pct as number | undefined) ?? 90,
+    trustDownPct: (rulesRes.data?.trust_down_pct as number | undefined) ?? 70,
+  };
+  const decisions = (decisionsRes.data ?? []) as TrustDecisionRow[];
   type TemplateRow = TemplateForDay & { child_id: string };
   type SpecialRow = { child_id: string; local_date: string; day_type: SpecialDayRow["dayType"]; disabled_template_ids: string[] | null };
   const templateRows = (templateRes.data ?? []) as TemplateRow[];
   const specialRows = (specialRes.data ?? []) as SpecialRow[];
-  const special = { today, maxDate: range.to, templateRows, specialRows };
+  const special = { today, maxDate: range.to, templateRows, specialRows, trustRules, decisions };
   const awaiting = kids.reduce((n, k) => n + (k.overview?.awaiting ?? 0), 0);
   const overdue = kids.reduce((n, k) => n + (k.overview?.overdue.length ?? 0), 0);
   const firstAwaiting = kids.find((k) => (k.overview?.awaiting ?? 0) > 0)?.child.id;
@@ -114,6 +124,8 @@ interface SpecialData {
   maxDate: string;
   templateRows: (TemplateForDay & { child_id: string })[];
   specialRows: { child_id: string; local_date: string; day_type: SpecialDayRow["dayType"]; disabled_template_ids: string[] | null }[];
+  trustRules: { trustUpPct: number; trustDownPct: number };
+  decisions: TrustDecisionRow[];
 }
 
 function ChildCard({ kid, special }: { kid: ChildToday; special: SpecialData }) {
@@ -126,6 +138,8 @@ function ChildCard({ kid, special }: { kid: ChildToday; special: SpecialData }) 
   const todayLabel = todayType === "normal" ? null : DAY_TYPE_INFO[todayType].label;
   const nextSpecial = days.find((d) => d.date > special.today);
   const color = child.color ?? "#2B5D4F";
+  const suggestion = state ? trustSuggestion(child.id, state.trust, special.decisions) : null;
+  const suggestionCopy = suggestion && state ? suggestionText(suggestion, child.display_name, state.trust, special.trustRules) : null;
   const override =
     state?.status === "OPEN_OVERRIDE" ? `đang mở${state.openUntil ? ` đến ${vnTime(state.openUntil)}` : ""}` : state?.status === "LOCK_OVERRIDE" ? "đang khóa" : null;
   return (
@@ -186,6 +200,7 @@ function ChildCard({ kid, special }: { kid: ChildToday; special: SpecialData }) 
           </p>
         )}
       </div>
+      {suggestion && suggestionCopy && <TrustCard childId={child.id} suggestion={suggestion} {...suggestionCopy} />}
       {o && (
         <div className="px-4 pb-3">
           <TaskGroup title="Quá hạn" rows={o.overdue} danger />
