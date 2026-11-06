@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { whoSeesWhat } from "@/lib/binhYen/copy";
 import { ackFor, enoughLine, homeCopy, mentorLine, voiceFor } from "@/lib/binhYen/catalog";
-import { checkinBodySchema, checkinProblem, checkinView, deleteBodySchema, heavyRepeat, type CheckinBody } from "@/lib/binhYen/checkin";
+import { checkinBodySchema, checkinProblem, checkinView, deleteBodySchema, heavyRepeat, HEAVY_REPEAT_TEXT, type CheckinBody } from "@/lib/binhYen/checkin";
 import { STUDY_CAP_TEXT, isStudyTime, studyCap, studyChip } from "@/lib/binhYen/studyCap";
 
 // Góc bình yên S-BY1 (docs/BINH_YEN.md §2.2, §4, R5, D1, Q6, Q7).
@@ -137,4 +137,11 @@ describe("🔒 Ai thấy gì? (S-BY1 wording)", () => {
     ["a wiped PIN keeps the server check-ins", "đặt PIN mới là thấy lại"],
   ])("%s", (_l, phrase) => expect(text).toContain(phrase));
   it("no longer claims the server records nothing of what the child does", () => expect(text).not.toContain("không ghi con làm gì"));
+});
+
+describe("repeated level 5 note (parent 06/11/2026)", () => {
+  it("points to parents / a trusted teacher, with no hotline number", () => {
+    expect(HEAVY_REPEAT_TEXT).toContain("bố mẹ");
+    expect(HEAVY_REPEAT_TEXT).not.toMatch(/111|115/);
+  });
 });

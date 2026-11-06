@@ -360,13 +360,13 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 | c | "chán" vận động 2 → 3 **chỉ cho Nguyên** (áp cho An thì #11 sai); thêm ưu tiên "Nhảy 1 bài" +3 và "Giữ khoảnh khắc" +1 khi chọn "chán" | #6 |
 | d | "tự hào" giữ lại 2 → 3 (§B) + ưu tiên "Giữ khoảnh khắc" +4; "3 bằng chứng hôm nay không tệ" chỉ cho ô đỏ / lam | #7 |
 
-**R5 — giờ học:** "giờ học" = `computeDayState` (giờ máy chủ) cho thấy máy đang khóa, bài chưa xong, chưa tới giờ tự do (LOCK_P1, BREAK_OFFER, LOCK_P2, hoặc bố mẹ khóa khi bài chưa xong). Nghỉ 10', giờ tự do, ngày ốm, Tin tưởng, bố mẹ mở, đã xong bài → **không giới hạn**. Mỗi lần mở bằng PIN tối đa `by_study_minutes` tính từ lúc mở; tới giờ máy chủ **kết thúc phiên**, màn hình hiện "Quay lại học nhé, lúc nào cần thì vào lại." rồi về Hôm nay sau 3 giây; vào lại ngay bằng PIN được (Q6). Không đọc được trạng thái ngày → coi như giờ học (an toàn). Đang ở "Nhắn bố mẹ" lúc hết giờ: không tự chuyển trang, thẻ nói chuyện vẫn còn. Không đổi luật khóa/mở, không đổi allowlist.
+**R5 — giờ học:** "giờ học" = `computeDayState` (giờ máy chủ) cho thấy máy đang khóa, bài chưa xong, chưa tới giờ tự do (LOCK_P1, BREAK_OFFER, LOCK_P2, hoặc bố mẹ khóa khi bài chưa xong — **bố mẹ chốt 06/11/2026: bố mẹ khóa = giờ học**). Nghỉ 10', giờ tự do, ngày ốm, Tin tưởng, bố mẹ mở, đã xong bài → **không giới hạn**. Mỗi lần mở bằng PIN tối đa `by_study_minutes` tính từ lúc mở; tới giờ máy chủ **kết thúc phiên**, màn hình hiện "Quay lại học nhé, lúc nào cần thì vào lại." rồi về Hôm nay sau 3 giây; vào lại ngay bằng PIN được (Q6). Không đọc được trạng thái ngày → coi như giờ học (an toàn). Đang ở "Nhắn bố mẹ" lúc hết giờ: không tự chuyển trang, thẻ nói chuyện vẫn còn. Không đổi luật khóa/mở, không đổi allowlist.
 
 **Thêm (cần bố mẹ biết):**
 | # | Điểm | Đã làm | Vì sao |
 |---|---|---|---|
 | L1 | Danh sách cố định (từ, hoạt động, trọng số) | Để trong `lib/binhYen/catalog.ts` (có kiểu, có test), **chưa** tạo bảng `by_catalog` | Chưa có trang cho bố mẹ sửa; test đáp án R1 phải kiểm đúng thứ chạy thật. Chuyển sang `by_catalog` khi làm trang sửa (cùng S-BY3: nguyên nhân + bài học). Mã đã dùng không bao giờ đổi; bỏ thì đánh dấu `retired` |
-| L2 | Lặp lại "rất to" (R3, không cần chữ) | 3 lần mức 5 trong 7 ngày → **chỉ con** thấy lời nhắn 111 + nói với bố mẹ ở màn kết. Không báo bố mẹ (Q4) | Có sẵn dữ liệu từ lượt ghé; an toàn cho con. Tính ở máy chủ thay vì trên máy con (cùng kết quả, không gửi đi đâu) |
+| L2 | Lặp lại "rất to" (R3, không cần chữ) | 3 lần mức 5 trong 7 ngày → **chỉ con** thấy lời nhắn "tìm bố mẹ hoặc thầy cô con tin để nói chuyện" ở màn kết (**không có số 111** — bố mẹ chốt 06/11/2026). Không báo bố mẹ (Q4) | Có sẵn dữ liệu từ lượt ghé; an toàn cho con. Tính ở máy chủ thay vì trên máy con (cùng kết quả, không gửi đi đâu) |
 | L3 | Tự xóa sau 12 tháng (Q7) | **Chưa làm** (có chỉ mục `created_at` sẵn); màn "Ai thấy gì?" nói rõ là sẽ có | Cần cron riêng; làm ở lát sau |
 | L4 | Giọng theo lớp | Lớp ≤ 7 → nhà khoa học, còn lại → thám tử | Không ghi cứng tên con |
 | L5 | `pin_devices.shared` (iPad dùng chung), xuất dữ liệu | Chưa làm | Chỉ cần khi có chữ lưu trên máy (S-BY2) |

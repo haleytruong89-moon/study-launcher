@@ -4,7 +4,6 @@
  * before any database write, so Postgres never has a reason to quote a row in an error (D5).
  */
 import { z } from "zod";
-import { HOTLINE_TEXT } from "./rules";
 import { activityAllowed, activityText, findActivity, findWord, isPleasant, isQuad, type Quad, type Voice } from "./catalog";
 
 /** How many recent visits the child's home lists ("Lần ghé gần đây"). */
@@ -81,8 +80,8 @@ export function heavyRepeat(rows: Pick<CheckinRow, "intensity" | "created_at">[]
   return rows.filter((r) => r.intensity === 5 && Date.parse(r.created_at) >= since).length >= HEAVY_REPEAT_COUNT;
 }
 
-/** Shown ONLY to the child (Q4: never reported to the parents). */
-export const HEAVY_REPEAT_TEXT = `Mấy ngày nay con đã thấy “rất to” nhiều lần. Con không phải mang nó một mình: nói với bố mẹ hoặc thầy cô con tin, hoặc ${HOTLINE_TEXT} để có người lắng nghe.`;
+/** Shown ONLY to the child (Q4: never reported to the parents). No hotline number (parent 06/11/2026). */
+export const HEAVY_REPEAT_TEXT = "Mấy ngày nay con đã thấy “rất to” nhiều lần. Con không phải mang nó một mình: tìm bố mẹ hoặc thầy cô con tin để nói chuyện nhé.";
 
 export const NOT_SAVED_TEXT = "Chưa lưu được, thử lại nhé.";
 export const LOCKED_TEXT = "Góc bình yên đã tự khóa. Gõ PIN để vào lại.";
