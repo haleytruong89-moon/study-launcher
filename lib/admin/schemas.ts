@@ -122,6 +122,10 @@ export const settingsSchema = z
     photoRetentionDays: int(7, 365),
     /** 0007: saved .html/.htm/.pdf files may open in study time. Optional (absent before 0007). */
     allowLocalFiles: z.boolean().optional(),
+    /** 0008 Góc bình yên: switch (off by default) + limits. Optional (absent before 0008). */
+    byEnabled: z.boolean().optional(),
+    byStudyMinutes: int(5, 60).optional(),
+    byIdleLockMinutes: int(2, 15).optional(),
     bedtimes: z.array(z.object({ childId: z.uuid(), bedtime: timeOfDay })).max(10).default([]),
   })
   .refine((s) => s.trustDownPct <= s.trustUpPct, {
@@ -145,6 +149,9 @@ export function settingsToRow(s: SettingsInput) {
     photo_retention_days: s.photoRetentionDays,
     ...(s.homeworkMinUpcoming === undefined ? {} : { homework_min_upcoming: s.homeworkMinUpcoming }),
     ...(s.allowLocalFiles === undefined ? {} : { allow_local_files: s.allowLocalFiles }),
+    ...(s.byEnabled === undefined ? {} : { by_enabled: s.byEnabled }),
+    ...(s.byStudyMinutes === undefined ? {} : { by_study_minutes: s.byStudyMinutes }),
+    ...(s.byIdleLockMinutes === undefined ? {} : { by_idle_lock_minutes: s.byIdleLockMinutes }),
   };
 }
 

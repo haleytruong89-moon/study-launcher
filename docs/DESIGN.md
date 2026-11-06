@@ -86,6 +86,8 @@ Tất cả bảng có `id uuid default gen_random_uuid()` (trừ khi ghi khác),
 - **Con:** chỉ **select** dòng của chính mình (`child_id = auth.uid()`) + `family_settings`, `app_slots`, `allowlist_entries` của gia đình. **Không có quyền ghi** bảng nghiệp vụ; mọi thao tác của con đi qua route server (mục 6), route kiểm luật rồi ghi bằng `service_role`.
 - `service_role` **chỉ** dùng trong route server, không bao giờ xuất hiện ở client hay extension.
 
+**Góc bình yên (0008, S-BY0)** — chi tiết ở `docs/BINH_YEN.md` §2–§3, §11: `profiles.by_pin_*` (trình duyệt không đọc / ghi), `family_settings.by_enabled` (mặc định **false**) + `by_study_minutes`, `by_idle_lock_minutes`, `by_daily_rewards`; `by_sessions` (chỉ máy chủ); `by_signals` (con xem của mình; bố mẹ xem tín hiệu gửi cả hai hoặc gửi mình, chỉ sửa `seen_at`/`seen_by` = mình; không ai thêm / xóa từ trình duyệt). Bản sao lưu bỏ dữ liệu `by_*`.
+
 **Seed (sau khi tạo gia đình):** allowlist mặc định — domain Launcher, `math-app-gules.vercel.app`, `translate.google.com`, `dictionary.cambridge.org`, `tratu.soha.vn`, `accounts.google.com`; 2 profile con; `family_settings` mặc định.
 
 ## 5. Máy trạng thái — `lib/dayState.ts`
@@ -173,6 +175,12 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `GET /api/cron/evening` | Vercel Cron (1 lần/ngày ~20:30 VN) | Push nhắc phụ huynh "xem gộp buổi tối" |
 | `GET /api/cron/cleanup` | GitHub Actions hằng tuần (`Authorization: Bearer CRON_SECRET`) | *(S3e)* Xóa **tệp** quá `photo_retention_days`; `?dryRun=1` chỉ đếm; ≤ 500 tệp/lần; log chỉ số đếm |
 | `GET /api/admin/photo-cleanup` | phụ huynh | *(S3e)* "Xem trước sẽ xóa gì" — đếm (không xóa) cho gia đình mình, bằng phiên phụ huynh (RLS) |
+| `GET /api/by/state` · `POST /api/by/ping` · `POST /api/by/lock` | con | *(S-BY0)* Trạng thái Góc bình yên (bật?, có PIN?, phiên còn mở?). `state` chỉ **xem** (không tính là chạm); `ping` = con vừa chạm → `last_seen_at = now`; quá `by_idle_lock_minutes` theo **giờ máy chủ** → phiên kết thúc |
+| `POST /api/by/pin/set` · `POST /api/by/pin/verify` | con | *(S-BY0)* Con tự đặt PIN Góc bình yên (chỉ khi chưa có; khác PIN đăng nhập) / mở bằng PIN (`by_pin_try` đếm trước khi so, sai 5 → khóa 15'). Đúng → dòng `by_sessions` + cookie httpOnly, Secure, SameSite=Strict (`sl_by_page` path `/binh-yen`, `sl_by_api` path `/api/by`). **Không** ghi `audit_log` |
+| `GET/POST /api/by/signal` | con (phiên thường, **không** cần PIN Góc bình yên) | *(S-BY0)* "Con muốn nói chuyện": `{kind: "want_talk", to: parentId \| null}` → `by_signal_create` (1 lần / 2' / con) → push chung chung `wantTalkMessage`. Chỉ nhận khi có điện thoại bố mẹ bật thông báo (không thì 409, nút ẩn). GET = có gửi được không + trạng thái lần gửi gần nhất |
+| `GET /api/cron/by-escalate` | GitHub Actions mỗi 5' (`Bearer CRON_SECRET`) | *(S-BY0)* Tín hiệu chưa ai "Đã thấy" sau 10' → nhắc lại **1 lần** (`escalated_at` đặt trong cùng câu UPDATE). Cũng chạy sau mỗi `/api/today`, `/api/by/*` của con (`after()`), không chỉ dựa vào GitHub |
+| `POST /api/admin/talk/:id/seen` · `GET /api/admin/talk/count` | phụ huynh | *(S-BY0)* "Đã thấy" bằng phiên của phụ huynh (RLS: chỉ `seen_at`, `seen_by` = mình) · số tín hiệu chưa xem (dải đỏ trên mọi trang) |
+| `POST /api/admin/children/:id/by-pin` | phụ huynh | *(S-BY0)* **Xóa** PIN Góc bình yên của con (việc duy nhất bố mẹ làm được với PIN đó): xóa hash, đặt `by_pin_reset_at`, kết thúc mọi phiên; ghi `audit_log` `child.by_pin_wiped` |
 
 ## 7. Extension (thư mục `extension/`)
 

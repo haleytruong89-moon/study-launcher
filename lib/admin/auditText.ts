@@ -70,6 +70,7 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "pin.login": "login",
   "pin.login_failed": "login",
   "child.pin_set": "login",
+  "child.by_pin_wiped": "login",
   "child.password_reset": "login",
   "child.sign_out_all": "login",
   "child.sessions_revoked": "login",
@@ -284,6 +285,8 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
     }
     case "child.pin_set":
       return say(`Đặt PIN mới cho ${kid}`);
+    case "child.by_pin_wiped":
+      return say(`Xóa PIN Góc bình yên của ${kid} (chữ con viết trên máy bị xóa, con được báo)`);
     case "child.password_reset":
       return say(`Đặt lại mật khẩu của ${kid} (đăng xuất khỏi mọi máy)`);
     case "child.sign_out_all":

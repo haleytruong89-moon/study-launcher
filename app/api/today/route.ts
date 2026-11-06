@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { escalateSoon } from "@/lib/binhYen/talk";
 import { requireChild, serverError, todayView } from "@/lib/today/service";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const guard = await requireChild();
   if (!guard.ok) return guard.response;
+  // Góc bình yên: re-push an unseen "Con muốn nói chuyện" after the answer is sent (never blocks it).
+  escalateSoon(guard.ctx.familyId);
   try {
     return NextResponse.json(await todayView(guard.ctx), { headers: { "Cache-Control": "no-store" } });
   } catch (e) {

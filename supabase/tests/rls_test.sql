@@ -444,6 +444,214 @@ begin
 end $$;
 reset role;
 
+-- 0008: Góc bình yên base (S-BY0) ------------------------------------------------
+reset role;
+-- A second parent in family A (the child may send a signal to ONE parent only).
+insert into auth.users (id) values ('00000000-0000-0000-0000-0000000000a2') on conflict do nothing;
+insert into public.profiles (id, family_id, role, display_name) values
+  ('00000000-0000-0000-0000-0000000000a2', '10000000-0000-0000-0000-00000000000a', 'parent', 'Parent A2')
+on conflict do nothing;
+update public.profiles set by_pin_hash = 'scrypt$by$c1', by_pin_reset_at = now() where id = '00000000-0000-0000-0000-0000000000c1';
+insert into public.by_sessions (family_id, child_id, token_hash) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'by-hash-c1');
+insert into public.by_signals (id, family_id, child_id, kind, to_parent_id) values
+  ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'want_talk', null),
+  ('30000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'want_talk', '00000000-0000-0000-0000-0000000000a2'),
+  ('30000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c2', 'want_talk', null),
+  ('30000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', 'want_talk', null);
+
+select test_helpers.expect_count('by_enabled defaults to off',
+  (select count(*) from public.family_settings where by_enabled = false and by_study_minutes = 10 and by_idle_lock_minutes = 5 and by_daily_rewards = 1), 2);
+do $$
+begin
+  begin
+    update public.family_settings set by_idle_lock_minutes = 1;
+    raise exception 'FAIL: by_idle_lock_minutes = 1 accepted';
+  exception when check_violation then raise notice 'ok: by_idle_lock_minutes limited to 2..15';
+  end;
+  begin
+    update public.family_settings set by_study_minutes = 4;
+    raise exception 'FAIL: by_study_minutes = 4 accepted';
+  exception when check_violation then raise notice 'ok: by_study_minutes >= 5';
+  end;
+  begin
+    insert into public.by_signals (family_id, child_id, kind) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'Con buồn lắm');
+    raise exception 'FAIL: free text accepted as a signal kind';
+  exception when check_violation then raise notice 'ok: signal kind is a short key, never free text';
+  end;
+  begin
+    insert into public.by_signals (family_id, child_id, kind, to_parent_id) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'want_talk', '00000000-0000-0000-0000-0000000000b1');
+    raise exception 'FAIL: signal addressed to another family parent accepted';
+  exception when foreign_key_violation then raise notice 'ok: a signal goes only to a parent of the same family';
+  end;
+end $$;
+
+-- Child 1: own signals only, no sessions, no PIN columns, no writes.
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees only own signals (2)', (select count(*) from public.by_signals), 2);
+select test_helpers.expect_count('child1 cannot see sibling signals', (select count(*) from public.by_signals where child_id = '00000000-0000-0000-0000-0000000000c2'), 0);
+do $$
+begin
+  begin
+    perform 1 from public.by_sessions;
+    raise exception 'FAIL: child read by_sessions';
+  exception when insufficient_privilege then raise notice 'ok: child cannot read by_sessions';
+  end;
+  begin
+    insert into public.by_signals (family_id, child_id, kind) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'want_talk');
+    raise exception 'FAIL: child inserted a signal directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot insert signals directly';
+  end;
+  update public.by_signals set seen_at = now(), seen_by = '00000000-0000-0000-0000-0000000000c1';
+  if found then raise exception 'FAIL: child marked a signal as seen'; end if;
+  raise notice 'ok: child cannot mark signals seen (0 rows)';
+  begin
+    delete from public.by_signals;
+    raise exception 'FAIL: child deleted signals';
+  exception when insufficient_privilege then raise notice 'ok: child cannot delete signals';
+  end;
+  begin
+    perform by_pin_hash from public.profiles;
+    raise exception 'FAIL: child read by_pin_hash';
+  exception when insufficient_privilege then raise notice 'ok: child cannot read by_pin_hash';
+  end;
+  begin
+    perform by_pin_reset_at from public.profiles;
+    raise exception 'FAIL: child read by_pin_reset_at';
+  exception when insufficient_privilege then raise notice 'ok: child cannot read by_pin_reset_at';
+  end;
+  begin
+    update public.profiles set by_pin_hash = null where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: child wrote by_pin_hash';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write by_pin_hash';
+  end;
+  update public.family_settings set by_enabled = true;
+  if found then raise exception 'FAIL: child turned on Góc bình yên'; end if;
+  raise notice 'ok: child cannot turn on Góc bình yên (0 rows)';
+  begin
+    perform public.by_pin_try('00000000-0000-0000-0000-0000000000c1');
+    raise exception 'FAIL: child called by_pin_try';
+  exception when insufficient_privilege then raise notice 'ok: child cannot call by_pin_try';
+  end;
+  begin
+    perform public.by_signal_create('00000000-0000-0000-0000-0000000000c1', 'want_talk', null, 0);
+    raise exception 'FAIL: child called by_signal_create';
+  exception when insufficient_privilege then raise notice 'ok: child cannot call by_signal_create';
+  end;
+end $$;
+select test_helpers.expect_count('child1 still reads by_enabled', (select count(*) from public.family_settings where by_enabled = false), 1);
+
+-- Parent A1: family signals (not the one sent only to A2); may set ONLY seen_at / seen_by = self.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA1 sees family signals for both parents (2)', (select count(*) from public.by_signals), 2);
+select test_helpers.expect_count('parentA1 does not see the signal sent only to A2', (select count(*) from public.by_signals where to_parent_id = '00000000-0000-0000-0000-0000000000a2'), 0);
+do $$
+begin
+  begin
+    perform 1 from public.by_sessions;
+    raise exception 'FAIL: parent read by_sessions';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot read by_sessions';
+  end;
+  begin
+    perform by_pin_hash from public.profiles;
+    raise exception 'FAIL: parent read by_pin_hash';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot read by_pin_hash';
+  end;
+  begin
+    perform by_pin_failed_count from public.profiles;
+    raise exception 'FAIL: parent read by_pin_failed_count';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot read by_pin_failed_count';
+  end;
+  begin
+    update public.profiles set by_pin_hash = null where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: parent wrote by_pin_hash';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot write by_pin_hash';
+  end;
+  begin
+    insert into public.by_signals (family_id, child_id, kind) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'want_talk');
+    raise exception 'FAIL: parent inserted a signal';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot insert signals';
+  end;
+  begin
+    delete from public.by_signals;
+    raise exception 'FAIL: parent deleted signals';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot delete signals';
+  end;
+  begin
+    update public.by_signals set kind = 'x';
+    raise exception 'FAIL: parent changed a signal kind';
+  exception when insufficient_privilege then raise notice 'ok: parent can only set seen_at / seen_by';
+  end;
+  begin
+    update public.by_signals set escalated_at = now();
+    raise exception 'FAIL: parent changed escalated_at';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot change escalated_at';
+  end;
+  begin
+    update public.by_signals set seen_at = now(), seen_by = '00000000-0000-0000-0000-0000000000a2' where id = '30000000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: parent marked seen in the other parent''s name';
+  exception when insufficient_privilege then raise notice 'ok: seen_by must be the parent themself';
+  end;
+  update public.by_signals set seen_at = now(), seen_by = '00000000-0000-0000-0000-0000000000a1' where id = '30000000-0000-0000-0000-000000000002';
+  if found then raise exception 'FAIL: parent marked a signal sent only to the other parent'; end if;
+  raise notice 'ok: parent cannot touch a signal sent only to the other parent';
+  update public.by_signals set seen_at = now(), seen_by = '00000000-0000-0000-0000-0000000000a1' where id = '30000000-0000-0000-0000-000000000001';
+  if not found then raise exception 'FAIL: parent could not mark a signal seen'; end if;
+  raise notice 'ok: parent marks a signal seen in their own name';
+  update public.by_signals set seen_at = now(), seen_by = '00000000-0000-0000-0000-0000000000a1' where id = '30000000-0000-0000-0000-000000000004';
+  if found then raise exception 'FAIL: parent marked another family signal'; end if;
+  raise notice 'ok: parent cannot mark another family signal';
+end $$;
+
+-- Parent A2 sees the one addressed to them too; parent B sees only family B.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', false);
+select test_helpers.expect_count('parentA2 sees both-parent + own signals (3)', (select count(*) from public.by_signals), 3);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees only family B signals (1)', (select count(*) from public.by_signals), 1);
+reset role;
+set role anon;
+do $$
+begin
+  begin
+    perform 1 from public.by_signals;
+    raise exception 'FAIL: anon read by_signals';
+  exception when insufficient_privilege then raise notice 'ok: anon cannot read by_signals';
+  end;
+end $$;
+
+-- service_role: atomic PIN tries and the rate-limited signal insert.
+reset role;
+set role service_role;
+select test_helpers.expect_count('BY PIN try 1', (select public.by_pin_try('00000000-0000-0000-0000-0000000000c1')), 1);
+select public.by_pin_try('00000000-0000-0000-0000-0000000000c1');
+select public.by_pin_try('00000000-0000-0000-0000-0000000000c1');
+select public.by_pin_try('00000000-0000-0000-0000-0000000000c1');
+select test_helpers.expect_count('BY PIN try 5 still allowed', (select public.by_pin_try('00000000-0000-0000-0000-0000000000c1')), 5);
+select test_helpers.expect_count('BY PIN locked after 5 tries', (select count(*) from public.by_pin_try('00000000-0000-0000-0000-0000000000c1') t where t is not null), 0);
+select test_helpers.expect_count('BY PIN lock lasts ~15 minutes',
+  (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1' and by_pin_locked_until > now() + interval '14 minutes'), 1);
+select test_helpers.expect_count('no BY PIN set = no tries', (select count(*) from public.by_pin_try('00000000-0000-0000-0000-0000000000c2') t where t is not null), 0);
+select test_helpers.expect_count('BY PIN tries leave the login PIN alone',
+  (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c2' and pin_locked_until is null and by_pin_failed_count = 0), 1);
+select test_helpers.expect_count('rate limit: child2 sent want_talk less than 2 minutes ago', (select count(*) from public.by_signal_create('00000000-0000-0000-0000-0000000000c2', 'want_talk', '00000000-0000-0000-0000-0000000000a2', 120)), 0);
+select test_helpers.expect_count('first signal of another kind passes', (select count(*) from public.by_signal_create('00000000-0000-0000-0000-0000000000c2', 'needs_care', null, 120)), 1);
+select test_helpers.expect_count('second one within the gap is refused', (select count(*) from public.by_signal_create('00000000-0000-0000-0000-0000000000c2', 'needs_care', null, 120)), 0);
+select test_helpers.expect_count('no gap = allowed again', (select count(*) from public.by_signal_create('00000000-0000-0000-0000-0000000000c2', 'needs_care', '00000000-0000-0000-0000-0000000000a1', 0)), 1);
+do $$
+begin
+  begin
+    perform public.by_signal_create('00000000-0000-0000-0000-0000000000c2', 'want_talk', '00000000-0000-0000-0000-0000000000b1', 0);
+    raise exception 'FAIL: by_signal_create sent to another family parent';
+  exception when invalid_parameter_value then raise notice 'ok: by_signal_create refuses a parent of another family';
+  end;
+  begin
+    perform public.by_signal_create('00000000-0000-0000-0000-0000000000a1', 'want_talk', null, 0);
+    raise exception 'FAIL: by_signal_create for a parent';
+  exception when invalid_parameter_value then raise notice 'ok: by_signal_create only for a child';
+  end;
+end $$;
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

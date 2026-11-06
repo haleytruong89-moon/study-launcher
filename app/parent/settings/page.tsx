@@ -1,4 +1,5 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
+import { talkRecipients } from "@/lib/binhYen/talk";
 import { ParentHeader } from "../parent-header";
 import { PhotoCleanup } from "./photo-cleanup";
 import { SettingsForm, type SettingsValues } from "./settings-form";
@@ -33,8 +34,12 @@ export default async function SettingsPage() {
                 ...(typeof s.homework_min_upcoming === "number" ? { homeworkMinUpcoming: s.homework_min_upcoming } : {}),
                 photoRetentionDays: s.photo_retention_days,
                 ...(typeof s.allow_local_files === "boolean" ? { allowLocalFiles: s.allow_local_files } : {}),
+                ...(typeof s.by_enabled === "boolean"
+                  ? { byEnabled: s.by_enabled, byStudyMinutes: s.by_study_minutes, byIdleLockMinutes: s.by_idle_lock_minutes }
+                  : {}),
               } satisfies SettingsValues
             }
+            byPushReady={(await talkRecipients(me.profile.family_id)).length > 0}
             kids={children.map((c) => ({ id: c.id, name: c.display_name, bedtime: c.bedtime.slice(0, 5) }))}
           />
         ) : (
