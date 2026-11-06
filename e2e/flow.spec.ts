@@ -2015,6 +2015,8 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   const { data: hw } = await db.from("homework_items").insert({ family_id: familyId, child_id: childId, subject: "Toán", due_date: today, note: "BY1" }).select("id").single();
   // Sessions left open by the earlier tests' closed browsers: end them, so only this visit counts.
   await db.from("by_sessions").update({ ended_at: new Date().toISOString() }).eq("child_id", childId).is("ended_at", null);
+  // The earlier test wiped the PIN minutes ago; a session aged past that wipe would read as "wiped".
+  await db.from("profiles").update({ by_pin_reset_at: new Date(Date.now() - 86_400_000).toISOString() }).eq("id", childId);
 
   const kCtx = await browser.newContext();
   const k = await kCtx.newPage();
