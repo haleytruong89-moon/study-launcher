@@ -2013,6 +2013,8 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
     .eq("child_id", childId)
     .eq("local_date", today);
   const { data: hw } = await db.from("homework_items").insert({ family_id: familyId, child_id: childId, subject: "Toán", due_date: today, note: "BY1" }).select("id").single();
+  // Sessions left open by the earlier tests' closed browsers: end them, so only this visit counts.
+  await db.from("by_sessions").update({ ended_at: new Date().toISOString() }).eq("child_id", childId).is("ended_at", null);
 
   const kCtx = await browser.newContext();
   const k = await kCtx.newPage();
