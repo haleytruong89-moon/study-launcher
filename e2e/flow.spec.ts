@@ -2024,7 +2024,8 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
   await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
   const home = k.getByRole("region", { name: "Góc của con" });
-  await expect(home.getByRole("heading", { name: "Chào Nguyên." })).toBeVisible(); // lớp 9 → the detective voice
+  const firstName = (kid?.display_name ?? "").trim().split(/\s+/).pop() ?? "";
+  await expect(home.getByRole("heading", { name: `Chào ${firstName}.`, exact: true })).toBeVisible(); // lớp 9 → the detective voice
   await expect(home.getByRole("status")).toContainText("Giờ học: mỗi lần tối đa 10 phút");
   await expect(k.getByRole("region", { name: "Lần ghé gần đây" })).toContainText("Chưa có lần nào");
 
