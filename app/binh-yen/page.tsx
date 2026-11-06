@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { voiceFor } from "@/lib/binhYen/catalog";
 import { byState, type ByState } from "@/lib/binhYen/session";
 import { escalateSoon, talkInfo, type TalkInfo } from "@/lib/binhYen/talk";
 import { requireChild } from "@/lib/today/service";
@@ -37,5 +38,5 @@ export default async function BinhYenPage() {
     console.error("by.page failed");
   }
 
-  return <BinhYenScreen child={{ id: ctx.childId, name: ctx.displayName, color: ctx.color }} initial={state} initialTalk={talk} />;
+  return <BinhYenScreen child={{ id: ctx.childId, name: ctx.displayName, color: ctx.color }} voice={voiceFor(ctx.grade)} initial={state} initialTalk={talk} />;
 }

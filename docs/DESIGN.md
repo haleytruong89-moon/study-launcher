@@ -88,6 +88,8 @@ Tất cả bảng có `id uuid default gen_random_uuid()` (trừ khi ghi khác),
 
 **Góc bình yên (0008, S-BY0)** — chi tiết ở `docs/BINH_YEN.md` §2–§3, §11: `profiles.by_pin_*` (trình duyệt không đọc / ghi), `family_settings.by_enabled` (mặc định **false**) + `by_study_minutes`, `by_idle_lock_minutes`, `by_daily_rewards`; `by_sessions` (chỉ máy chủ); `by_signals` (con xem của mình; bố mẹ xem tín hiệu gửi cả hai hoặc gửi mình, chỉ sửa `seen_at`/`seen_by` = mình; không ai thêm / xóa từ trình duyệt). Bản sao lưu bỏ dữ liệu `by_*`.
 
+**Góc bình yên (0009, S-BY1)** — `BINH_YEN.md` §12: `by_checkins` (family_id, child_id, local_date, quad, word_key, intensity 1–5, activity_key, cause_key, understood_at, **client_run_id unique**, created_at). Chỉ mã cố định, không cột chữ tự do. **Không grant, không policy** cho trình duyệt (con / bố mẹ / anon); chỉ `/api/by/checkins` (service_role) sau khi mở bằng PIN. Danh sách từ / hoạt động / trọng số R1 ở `lib/binhYen/catalog.ts` (bảng `by_catalog` để lát sau).
+
 **Seed (sau khi tạo gia đình):** allowlist mặc định — domain Launcher, `math-app-gules.vercel.app`, `translate.google.com`, `dictionary.cambridge.org`, `tratu.soha.vn`, `accounts.google.com`; 2 profile con; `family_settings` mặc định.
 
 ## 5. Máy trạng thái — `lib/dayState.ts`
@@ -180,6 +182,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `GET/POST /api/by/signal` | con (phiên thường, **không** cần PIN Góc bình yên) | *(S-BY0)* "Con muốn nói chuyện": `{kind: "want_talk", to: parentId \| null}` → `by_signal_create` (1 lần / 2' / con) → push chung chung `wantTalkMessage`. Chỉ nhận khi có điện thoại bố mẹ bật thông báo (không thì 409, nút ẩn). GET = có gửi được không + trạng thái lần gửi gần nhất |
 | `GET /api/cron/by-escalate` | GitHub Actions mỗi 5' (`Bearer CRON_SECRET`) | *(S-BY0)* Tín hiệu chưa ai "Đã thấy" sau 10' → nhắc lại **1 lần** (`escalated_at` đặt trong cùng câu UPDATE). Cũng chạy sau mỗi `/api/today`, `/api/by/*` của con (`after()`), không chỉ dựa vào GitHub |
 | `POST /api/admin/talk/:id/seen` · `GET /api/admin/talk/count` | phụ huynh | *(S-BY0)* "Đã thấy" bằng phiên của phụ huynh (RLS: chỉ `seen_at`, `seen_by` = mình) · số tín hiệu chưa xem (dải đỏ trên mọi trang) |
+| `GET/POST /api/by/checkins` · `POST /api/by/checkins/delete` | con, **cần phiên Góc bình yên** | *(S-BY1)* GET = 7 lượt gần nhất của chính con. POST `{clientRunId, quad, word, intensity, activity}` (activity null = "Vậy là đủ") → kiểm theo danh sách **trước** khi ghi; cùng `clientRunId` chỉ 1 dòng. Delete `{id}` hoặc `{all: true}` → xóa hẳn, chỉ của con. Không `audit_log`. **R5:** mọi route `/api/by/*` + trang tính giới hạn giờ học (`computeDayState`, giờ máy chủ): quá `by_study_minutes` kể từ lúc mở → phiên kết thúc, trả 409 `capped` |
 | `POST /api/admin/children/:id/by-pin` | phụ huynh | *(S-BY0)* **Xóa** PIN Góc bình yên của con (việc duy nhất bố mẹ làm được với PIN đó): xóa hash, đặt `by_pin_reset_at`, kết thúc mọi phiên; ghi `audit_log` `child.by_pin_wiped` |
 
 ## 7. Extension (thư mục `extension/`)

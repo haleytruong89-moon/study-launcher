@@ -3,8 +3,9 @@ import { cookies } from "next/headers";
 import { hashToken, newDeviceToken } from "@/lib/ext/secrets";
 import { deviceToken } from "@/lib/pin/device";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { ChildContext } from "@/lib/today/service";
+import { readToday, type ChildContext } from "@/lib/today/service";
 import { sessionVerdict, type SessionRow } from "./rules";
+import { isStudyTime, studyCap } from "./studyCap";
 
 /**
  * Góc bình yên sessions (BINH_YEN.md §3, R6). The SERVER holds them: a random token in an
@@ -83,7 +84,25 @@ export interface ByState {
   /** Last time a parent wiped the PIN (the browser wipes its vault once per value). */
   resetAt: string | null;
   idleMinutes: number;
+  studyMinutes: number;
+  /** R5: while the corner is open in study time, when this visit ends (server clock). */
+  study: { minutes: number; endsAt: string } | null;
+  /** R5: this request found the visit at its study-time limit and ended the session. */
+  capped: boolean;
   serverNow: string;
+}
+
+/**
+ * R5: is it study time for this child right now? computeDayState (server clock) decides.
+ * If the day cannot be read, the limit applies (fail-closed: when unsure, back to study).
+ */
+async function studyTimeNow(ctx: ChildContext, now: Date): Promise<boolean> {
+  try {
+    const { state } = await readToday(ctx, now);
+    return isStudyTime(state);
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -93,6 +112,8 @@ export interface ByState {
 export async function byState(ctx: ChildContext, which: "page" | "api", touch: boolean, now = new Date()): Promise<ByState> {
   const [settings, pin] = await Promise.all([bySettings(ctx.familyId), pinInfo(ctx.childId, now)]);
   let unlocked = false;
+  let capped = false;
+  let study: ByState["study"] = null;
   const token = await byToken(which);
   if (settings.enabled && pin.hasPin && token) {
     const admin = createAdminClient();
@@ -107,8 +128,16 @@ export async function byState(ctx: ChildContext, which: "page" | "api", touch: b
     if (row && (verdict === "idle" || verdict === "wiped")) {
       await admin.from("by_sessions").update({ ended_at: now.toISOString() }).eq("id", row.id).is("ended_at", null);
     } else if (row && verdict === "open") {
-      unlocked = true;
-      if (touch) await admin.from("by_sessions").update({ last_seen_at: now.toISOString() }).eq("id", row.id).is("ended_at", null);
+      // R5: in study time each visit lasts at most by_study_minutes from the PIN (server clock).
+      const cap = studyCap(await studyTimeNow(ctx, now), row.started_at as string, settings.studyMinutes, now);
+      if (cap.capped) {
+        capped = true;
+        await admin.from("by_sessions").update({ ended_at: now.toISOString() }).eq("id", row.id).is("ended_at", null);
+      } else {
+        unlocked = true;
+        study = cap.endsAt ? { minutes: cap.minutes, endsAt: cap.endsAt } : null;
+        if (touch) await admin.from("by_sessions").update({ last_seen_at: now.toISOString() }).eq("id", row.id).is("ended_at", null);
+      }
     }
   }
   return {
@@ -118,6 +147,9 @@ export async function byState(ctx: ChildContext, which: "page" | "api", touch: b
     lockedUntil: pin.lockedUntil,
     resetAt: pin.resetAt,
     idleMinutes: settings.idleMinutes,
+    studyMinutes: settings.studyMinutes,
+    study,
+    capped,
     serverNow: now.toISOString(),
   };
 }

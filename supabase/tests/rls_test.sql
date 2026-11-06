@@ -652,6 +652,127 @@ begin
   end;
 end $$;
 
+-- 0009: Góc bình yên check-ins (S-BY1) — server only (BINH_YEN.md §3) -------------
+reset role;
+insert into public.by_checkins (family_id, child_id, local_date, quad, word_key, intensity, activity_key, client_run_id) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'red', 'lo_lang', 5, 'breath', '40000000-0000-0000-0000-000000000001'),
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c2', current_date, 'yellow', 'vui', null, null, '40000000-0000-0000-0000-000000000002');
+
+-- The required tests of §3: no policy at all (so none mentions parent), no browser grant.
+select test_helpers.expect_count('by_checkins has no policy at all',
+  (select count(*) from pg_policies where schemaname = 'public' and tablename = 'by_checkins'), 0);
+select test_helpers.expect_count('no by_checkins policy mentions parent',
+  (select count(*) from pg_policies where schemaname = 'public' and tablename = 'by_checkins'
+     and (coalesce(qual, '') ilike '%parent%' or coalesce(with_check, '') ilike '%parent%')), 0);
+select test_helpers.expect_count('by_checkins has RLS on',
+  (select count(*) from pg_class where oid = 'public.by_checkins'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('authenticated has no privilege on by_checkins / by_sessions',
+  (select count(*) from (values ('public.by_checkins'), ('public.by_sessions')) t(tbl), (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) p(priv)
+    where has_table_privilege('authenticated', t.tbl, p.priv)), 0);
+select test_helpers.expect_count('anon has no privilege on by_checkins',
+  (select count(*) from (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) p(priv) where has_table_privilege('anon', 'public.by_checkins', p.priv)), 0);
+select test_helpers.expect_count('authenticated has no column privilege on by_checkins',
+  (select count(*) from information_schema.column_privileges where table_schema = 'public' and table_name = 'by_checkins' and grantee in ('authenticated', 'anon', 'PUBLIC')), 0);
+-- D1: only fixed-key columns exist (no column for anything the child types).
+select test_helpers.expect_count('by_checkins columns are exactly the fixed-key ones',
+  (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'by_checkins'
+     and column_name not in ('id', 'family_id', 'child_id', 'local_date', 'quad', 'word_key', 'intensity', 'activity_key', 'cause_key', 'understood_at', 'client_run_id', 'created_at')), 0);
+
+do $$
+begin
+  begin
+    insert into public.by_checkins (family_id, child_id, local_date, quad, word_key, client_run_id)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'red', 'Con buồn lắm vì bạn', gen_random_uuid());
+    raise exception 'FAIL: free text accepted as a word key';
+  exception when check_violation then raise notice 'ok: word_key is a short key, never free text';
+  end;
+  begin
+    insert into public.by_checkins (family_id, child_id, local_date, quad, word_key, activity_key, client_run_id)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'red', 'lo_lang', 'Viết rồi buông: hôm nay', gen_random_uuid());
+    raise exception 'FAIL: free text accepted as an activity key';
+  exception when check_violation then raise notice 'ok: activity_key is a short key, never free text';
+  end;
+  begin
+    insert into public.by_checkins (family_id, child_id, local_date, quad, word_key, intensity, client_run_id)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'red', 'lo_lang', 6, gen_random_uuid());
+    raise exception 'FAIL: intensity 6 accepted';
+  exception when check_violation then raise notice 'ok: intensity is 1..5';
+  end;
+  begin
+    insert into public.by_checkins (family_id, child_id, local_date, quad, word_key, client_run_id)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'red', 'lo_lang', '40000000-0000-0000-0000-000000000001');
+    raise exception 'FAIL: the same client_run_id stored twice';
+  exception when unique_violation then raise notice 'ok: one row per client_run_id (double tap on Xong)';
+  end;
+  begin
+    insert into public.by_checkins (family_id, child_id, local_date, quad, word_key, client_run_id)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000d1', current_date, 'red', 'lo_lang', gen_random_uuid());
+    raise exception 'FAIL: check-in of another family child accepted';
+  exception when foreign_key_violation then raise notice 'ok: a check-in belongs to a child of the same family';
+  end;
+end $$;
+
+-- Child 1, the sibling and a parent, straight through the browser API: nothing at all.
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  begin
+    perform 1 from public.by_checkins;
+    raise exception 'FAIL: child read by_checkins directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot read by_checkins directly (only via /api/by)';
+  end;
+  begin
+    insert into public.by_checkins (family_id, child_id, local_date, quad, word_key, client_run_id)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'red', 'lo_lang', gen_random_uuid());
+    raise exception 'FAIL: child inserted into by_checkins directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write by_checkins directly';
+  end;
+  begin
+    delete from public.by_checkins;
+    raise exception 'FAIL: child deleted by_checkins directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot delete by_checkins directly';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c2', false);
+do $$
+begin
+  perform 1 from public.by_checkins;
+  raise exception 'FAIL: sibling read by_checkins';
+exception when insufficient_privilege then raise notice 'ok: sibling cannot read by_checkins';
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+do $$
+begin
+  begin
+    perform 1 from public.by_checkins;
+    raise exception 'FAIL: parent read by_checkins';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot read by_checkins';
+  end;
+  begin
+    update public.by_checkins set intensity = 1;
+    raise exception 'FAIL: parent updated by_checkins';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot change by_checkins';
+  end;
+  begin
+    delete from public.by_checkins;
+    raise exception 'FAIL: parent deleted by_checkins';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot delete by_checkins (only the child can, via the corner)';
+  end;
+end $$;
+reset role;
+set role anon;
+do $$
+begin
+  perform 1 from public.by_checkins;
+  raise exception 'FAIL: anon read by_checkins';
+exception when insufficient_privilege then raise notice 'ok: anon cannot read by_checkins';
+end $$;
+reset role;
+set role service_role;
+select test_helpers.expect_count('service_role (server routes) reads the check-ins', (select count(*) from public.by_checkins), 2);
+reset role;
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;
