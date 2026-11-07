@@ -274,6 +274,91 @@ function Shape({ s }: { s: SvgIcon }) {
           <path d="M2 40 Q14 18 26 32 Q38 44 46 24" stroke={a} strokeWidth="5" fill="none" strokeLinecap="round" opacity=".7" />
         </>
       );
+    case "crystal": {
+      // n = 4: a block (muối; lưu huỳnh drawn the same, simplified); 5–6: a cluster of points.
+      if (s.n === 4)
+        return (
+          <>
+            <path d="M12 18 L24 12 L36 18 L36 34 L24 40 L12 34 Z" fill={c} />
+            <path d="M12 18 L24 24 L36 18 M24 24 L24 40" stroke={a} strokeWidth="2" fill="none" />
+          </>
+        );
+      return (
+        <>
+          <path d="M20 44 L14 18 L20 6 L26 18 Z" fill={c} />
+          <path d="M28 44 L24 22 L30 12 L36 22 Z" fill={c} opacity=".85" />
+          <path d="M14 44 L8 28 L12 22 L18 30 Z" fill={a} />
+          <path d="M20 6 L20 44" stroke={a} strokeWidth="1.2" />
+        </>
+      );
+    }
+    case "volcano":
+      // n = 1: shield (flat); n = 2: under the sea.
+      return (
+        <>
+          {s.n === 2 && <rect x="0" y="6" width="48" height="42" fill="#BFE3F2" opacity=".5" />}
+          <path d={s.n === 1 ? "M2 42 Q24 22 46 42 Z" : "M4 44 L20 12 L28 12 L44 44 Z"} fill={c} />
+          {s.n === 1 ? <path d="M22 30 Q24 36 20 42" stroke={a} strokeWidth="3" fill="none" /> : <path d="M20 12 L22 18 L24 14 L26 19 L28 12 Z" fill={a} />}
+          {s.n !== 1 && <path d="M22 8 Q20 2 26 4 Q30 0 32 6" stroke="#B9B0A8" strokeWidth="3" fill="none" strokeLinecap="round" />}
+        </>
+      );
+    case "rock":
+      // n = 1: holes (đá bọt); n = 2: speckles (hoa cương).
+      return (
+        <>
+          <path d="M6 36 L12 18 L26 12 L40 20 L44 36 L30 42 L14 42 Z" fill={c} />
+          <path d="M12 18 L22 26 L40 20 M22 26 L30 42" stroke={a} strokeWidth="1.5" fill="none" />
+          {s.n === 1 && [16, 24, 32, 20, 34].map((x, i) => <circle key={i} cx={x} cy={22 + (i % 3) * 6} r="1.8" fill={a} />)}
+          {s.n === 2 && [14, 20, 28, 34, 24, 38].map((x, i) => <rect key={i} x={x} y={24 + (i % 3) * 5} width="2.5" height="2.5" fill={i % 2 ? a : "#FFFFFF"} />)}
+        </>
+      );
+    case "geyser":
+      return (
+        <>
+          <path d="M18 44 Q20 20 16 8 Q24 14 24 4 Q28 14 32 8 Q28 20 30 44 Z" fill={c} />
+          <path d="M6 44 Q24 36 42 44 Z" fill={a} />
+        </>
+      );
+    case "columns":
+      return (
+        <>
+          {[8, 16, 24, 32].map((x, i) => (
+            <rect key={x} x={x} y={14 + (i % 2) * 6} width="7" height={30 - (i % 2) * 6} fill={i % 2 ? a : c} />
+          ))}
+          {[8, 16, 24, 32].map((x, i) => (
+            <path key={`t${x}`} d={`M${x} ${14 + (i % 2) * 6} l3.5 -3 l3.5 3 Z`} fill={i % 2 ? c : a} />
+          ))}
+        </>
+      );
+    case "lake":
+      // n = 1: a crater lake with trees around.
+      return (
+        <>
+          {s.n === 1 && <ellipse cx="24" cy="28" rx="21" ry="14" fill={a} />}
+          <ellipse cx="24" cy="28" rx="16" ry="9" fill={c} />
+          {s.n !== 1 && <ellipse cx="24" cy="28" rx="16" ry="9" fill="none" stroke={a} strokeWidth="4" />}
+          <path d="M14 26 Q20 24 26 27" stroke="#FFFFFF" strokeWidth="1.5" fill="none" opacity=".7" />
+        </>
+      );
+    case "quake":
+      return (
+        <>
+          <rect x="2" y="30" width="44" height="14" fill={c} />
+          <path d="M22 30 L26 36 L21 40 L25 44" stroke={a} strokeWidth="2.5" fill="none" />
+          <path d="M6 22 Q10 16 14 22 T22 22 T30 22 T38 22 T46 22" stroke={a} strokeWidth="2" fill="none" />
+        </>
+      );
+    case "tubes":
+      return (
+        <>
+          {[12, 20, 28, 36].map((x, i) => (
+            <g key={x}>
+              <rect x={x - 2} y={14 + (i % 2) * 6} width="4" height={32 - (i % 2) * 6} fill={c} />
+              <circle cx={x} cy={14 + (i % 2) * 6} r="4" fill={a} />
+            </g>
+          ))}
+        </>
+      );
     case "star": {
       const n = s.n ?? 8;
       return (

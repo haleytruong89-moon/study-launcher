@@ -58,7 +58,10 @@ export function defaultWorld(month: string, used: readonly { month: string; worl
 export function worldOptions(month: string, used: readonly { month: string; worldKey: string }[]): string[] {
   // Months on both sides count: an ended month never takes the world already picked for the next one.
   const near = used.filter((u) => u.month !== month && Math.abs(monthsBetween(u.month, month)) <= 11);
-  return WORLD_ORDER.filter((k) => WORLDS[k] && !near.some((u) => u.worldKey === k));
+  return WORLD_ORDER.filter((k) => {
+    const w = WORLDS[k];
+    return w !== undefined && (w.from === undefined || month >= w.from) && !near.some((u) => u.worldKey === k);
+  });
 }
 
 /**
