@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ackFor, enoughLine, homeCopy, mentorLine, voiceFor } from "@/lib/binhYen/catalog";
+import { ACTIVITY_EMOJI, WORD_EMOJI } from "@/lib/binhYen/emoji";
 import { DELETE_ALL_WORD, checkinBodySchema, checkinProblem, checkinView, deleteBodySchema, heavyRepeat, HEAVY_REPEAT_TEXT, typedDeleteWord, type CheckinBody } from "@/lib/binhYen/checkin";
 import { STUDY_CAP_TEXT, isStudyTime, studyCap, studyChip } from "@/lib/binhYen/studyCap";
 
@@ -45,7 +46,7 @@ describe("check-in validation (keys only, D1)", () => {
 describe("Lần ghé gần đây", () => {
   const row = { id: RUN, local_date: "2026-11-06", quad: "red", word_key: "lo_lang", intensity: 5, activity_key: "breath", created_at: "2026-11-06T12:00:00Z" };
   it("shows date, word and activity in the child's voice", () => {
-    expect(checkinView(row, "detective")).toEqual({ id: RUN, date: "06/11", quad: "red", word: "lo lắng", activity: "Thở cho dịu lại" });
+    expect(checkinView(row, "detective")).toEqual({ id: RUN, date: "06/11", quad: "red", word: "lo lắng", activity: "Thở cho dịu lại", wordIcon: WORD_EMOJI.lo_lang, activityIcon: ACTIVITY_EMOJI.breath });
   });
   it("'Vậy là đủ' has no activity; an old key still shows something", () => {
     expect(checkinView({ ...row, activity_key: null }, "detective").activity).toBeNull();

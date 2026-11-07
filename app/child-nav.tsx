@@ -25,7 +25,8 @@ export function ChildNav({
   color,
   onSelect,
 }: {
-  active: ChildTab;
+  /** null: a page that is not one of the tabs (e.g. /nhan-vat). */
+  active: ChildTab | null;
   byEnabled: boolean;
   color: string;
   /** Inside /today: switch the tab without reloading (the link still works without script). */

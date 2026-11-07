@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { TaskView } from "@/lib/dayState";
 import type { WeekStats } from "@/lib/today/week";
@@ -209,6 +210,10 @@ export function IconPicker({
         ))}
       </div>
       <p className="text-xs text-ink/65">Màu của con do bố mẹ chọn, biểu tượng thì con tự chọn.</p>
+      {/* R3a: the character lives on its own page (docs/BINH_YEN_BIEU_TUONG.md §A). */}
+      <Link href="/nhan-vat" className="inline-flex min-h-11 items-center self-start font-semibold underline" style={{ color }}>
+        🧑‍🎨 Tạo / đổi nhân vật của con
+      </Link>
     </Modal>
   );
 }
