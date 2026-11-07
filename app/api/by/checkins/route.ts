@@ -39,9 +39,10 @@ export async function POST(request: Request) {
     if (!result) return byJson({ error: "Yêu cầu không hợp lệ." }, 409);
     // R4: a finished visit grows a flower in An's world right away (best effort; the world also
     // catches up when it is opened). The plant is the same whatever the child felt.
-    await syncWorldQuietly(guard.ctx);
+    const now = new Date();
+    const planted = await syncWorldQuietly(guard.ctx, now);
     // R6a: tell the "Xong rồi" screen what grew (null for Nguyên, before migration 0013, on error).
-    return byJson({ ...result, world: await feelGrowthToday(guard.ctx) });
+    return byJson({ ...result, world: await feelGrowthToday(guard.ctx, planted, now) });
   } catch {
     return byFailed("checkins.save");
   }

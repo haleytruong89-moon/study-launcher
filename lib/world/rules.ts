@@ -214,8 +214,10 @@ export type FeelGrowth =
   | { kind: "grew"; name: string; icon: Icon; world: string; isNew: boolean; fact: string | null; animal: { name: string; icon: Icon } | null; again: boolean }
   | { kind: "choose" };
 
-/** Today's Góc bình yên plant in a month view (null if it has not grown, e.g. not synced yet). */
-/** `again`: not the first visit today — the day's plant already grew (one per area per day), nothing new opens. */
+/**
+ * Today's Góc bình yên plant in a month view (null if it has not grown, e.g. not synced yet).
+ * `again`: it was not planted by this visit (one plant per area per day): nothing new opens.
+ */
 export function feelGrowthOf(view: MonthView, again = false): FeelGrowth | null {
   const thing = view.things.find((t) => t.pillar === "feel" && t.today);
   if (!thing) return null;

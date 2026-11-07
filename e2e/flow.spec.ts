@@ -2633,6 +2633,9 @@ test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that r
   await db.from("world_items").delete().eq("child_id", childId);
   await db.from("world_months").delete().eq("child_id", childId);
   await db.from("by_sessions").update({ ended_at: new Date().toISOString() }).eq("child_id", childId).is("ended_at", null);
+  // A fresh day for the corner: the visit below is the first today (its plant is "new").
+  await db.from("by_checkins").delete().eq("child_id", childId);
+  const { data: settings } = await db.from("family_settings").select("by_enabled").eq("family_id", familyId).single();
   try {
     expect((await db.from("world_months").insert({ family_id: familyId, child_id: childId, month: first, world_key: "rung" })).error).toBeNull();
     const kCtx = await browser.newContext();
@@ -2671,6 +2674,8 @@ test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that r
   } finally {
     await db.from("world_items").delete().eq("child_id", childId);
     await db.from("world_months").delete().eq("child_id", childId);
+    await db.from("by_checkins").delete().eq("child_id", childId);
+    await db.from("family_settings").update({ by_enabled: settings?.by_enabled ?? false }).eq("family_id", familyId);
     await db.from("profiles").update({ grade }).eq("id", childId);
   }
 });

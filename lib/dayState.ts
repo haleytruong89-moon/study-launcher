@@ -458,7 +458,7 @@ function templateViews(
         proofCount: run?.proofPaths.length ?? 0,
         placeholder,
         deepLink: placeholder ? null : (t.deepLink ?? slot?.url ?? null),
-        appLabel: placeholder ? null : appLabelOf(slot?.label ?? null, t.deepLink ?? slot?.url ?? null),
+        appLabel: placeholder ? null : appLabelOf(t.deepLink && slot?.url && hostOf(t.deepLink) !== hostOf(slot.url) ? null : (slot?.label ?? null), t.deepLink ?? slot?.url ?? null),
         addedAfterPart1Done: false,
         group: null,
         early: false,
@@ -552,15 +552,19 @@ function weekResult(s: DaySessionInput | undefined, bedtime: string, isToday: bo
 }
 
 /** R6a: the app's name for a link: the slot label, else the site without "www." (null without a link). */
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
 export function appLabelOf(slotLabel: string | null, url: string | null): string | null {
   if (!url) return null;
   const label = slotLabel?.trim();
   if (label) return label;
-  try {
-    return new URL(url).hostname.replace(/^www\./, "") || null;
-  } catch {
-    return null;
-  }
+  return hostOf(url) || null;
 }
 
 /**

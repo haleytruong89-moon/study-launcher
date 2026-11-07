@@ -1,13 +1,23 @@
 import type { NextConfig } from "next";
 
+// Our own Supabase (R6a review): the CSP of the page loaded first stays for pages opened from it
+// without a reload, so leaving Góc bình yên for Hôm nay must still allow photo uploads there.
+const SUPABASE_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin;
+  } catch {
+    return "";
+  }
+})();
+
 // Next.js needs inline scripts for hydration; `next dev` also needs eval (never in production).
 const BY_CSP = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob:${SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ""}`,
   "font-src 'self'",
-  "connect-src 'self'",
+  `connect-src 'self'${SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ""}`,
   "media-src 'none'",
   "object-src 'none'",
   "frame-src 'none'",

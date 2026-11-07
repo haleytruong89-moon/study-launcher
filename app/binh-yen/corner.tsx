@@ -81,14 +81,14 @@ function Growth({ growth }: { growth: FeelGrowth }) {
     );
   }
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-[#EAF2E3] p-4" role="group" aria-label="Thế giới của con">
+    <div className="flex flex-col gap-3 rounded-2xl bg-[#EAF2E3] p-4" role="group" aria-label="Thế giới của con" aria-live="polite">
       <div className="flex items-center gap-3">
         <span className="pop shrink-0">
           <WorldIcon icon={growth.icon} size={64} />
         </span>
         <p className="text-lg font-bold">
           {growth.again
-            ? `Hôm nay ${growth.name} đã mọc trong ${growth.world} của con rồi. Mai ghé lại là có thứ mới.`
+            ? `Hôm nay ${growth.name} đã mọc trong ${growth.world} của con rồi. Mai ghé lại, thế giới của con lại lớn thêm.`
             : growth.isNew
               ? `Mới! ${growth.name} vừa mọc trong ${growth.world} của con.`
               : `${growth.name} lớn thêm trong ${growth.world} của con.`}
@@ -103,7 +103,7 @@ function Growth({ growth }: { growth: FeelGrowth }) {
       {growth.animal && (
         <p className="flex items-center gap-2 text-sm font-semibold">
           <WorldIcon icon={growth.animal.icon} size={32} />
-          {growth.animal.name} vừa dọn đến ở!
+          {growth.animal.name} vừa ghé {growth.world} của con!
         </p>
       )}
       <Link href="/today?tab=tuan" className="btn self-start bg-[#2B5D4F] text-white">
@@ -173,7 +173,7 @@ export function Corner({
   const [step, setStepRaw] = useState<Step>(startQuad ? { k: "words", quad: startQuad } : { k: "home" });
   useEffect(() => {
     // Used once: a reload or "Về góc của con" starts from the corner's home, not the region again.
-    if (startQuad && window.location.search) window.history.replaceState(window.history.state, "", "/binh-yen");
+    if (startQuad && window.location.search) window.history.replaceState(null, "", "/binh-yen");
   }, [startQuad]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

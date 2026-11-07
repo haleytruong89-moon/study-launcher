@@ -13,7 +13,6 @@ import type { WeekDay, WeekDaysView, WeekFeel } from "@/lib/today/weekDays";
 import { QuadMark } from "../quad-icon";
 import { NextTask, TaskRow, WeekStrip, type TaskCtx } from "./today-parts";
 
-/** How a feeling is drawn for this child (R6a): An's regions, Nguyên's own faces. */
 /**
  * R6a (artifact, item I): the invite to Góc bình yên at the top of Hôm nay, with the 4 regions.
  * A tile opens the corner straight at that region's words (/binh-yen?quad=…). Only an invite:
@@ -27,7 +26,7 @@ export function FeelInvite({ voice, feelLook, today }: { voice: Voice; feelLook:
           Hôm nay con thấy thế nào?
         </strong>
         <span className="text-sm text-ink/70">
-          {today ? `Hôm nay con đã ghé Góc bình yên: ${today.label}. Muốn ghé lại thì chạm một vùng.` : "Chạm vào vùng giống con nhất — trước khi học, nếu con muốn."}
+          {today ? `Hôm nay con đã ghé Góc bình yên${today.label ? `: ${today.label}` : ""}. Muốn ghé lại thì chạm một vùng.` : "Chạm vào vùng giống con nhất — trước khi học, nếu con muốn."}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -51,6 +50,7 @@ export function FeelInvite({ voice, feelLook, today }: { voice: Voice; feelLook:
   );
 }
 
+/** How a feeling is drawn for this child (R6a): An's regions, Nguyên's own faces. */
 export interface FeelLook {
   voice: Voice;
   look: Avatar | null;
