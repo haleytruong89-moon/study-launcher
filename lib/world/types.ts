@@ -73,7 +73,8 @@ export interface Thing {
   teach: string;
 }
 
-export type Move = "fly" | "hop" | "swim" | "float";
+/** "still": stays in place (a tube worm, a seismometer). */
+export type Move = "fly" | "hop" | "swim" | "float" | "still";
 
 /** An animal comes (and stays) once the world has at least `n` different things with `tag`, for every need. */
 export interface Animal {

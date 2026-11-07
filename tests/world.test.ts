@@ -199,8 +199,7 @@ describe("R6b living scene data", () => {
       expect(v.animals.some((a) => a.key === c.key)).toBe(false);
     }
     // Ong mật needs 2 flowers: one is there, one is missing.
-    const ong = v.coming.find((c) => c.key === "ong_mat");
-    if (ong) expect(ong.missing).toBe(1);
+    expect(v.coming.find((c) => c.key === "ong_mat")?.missing).toBe(1);
   });
   it("visitors move by the pack or by the world", () => {
     const bee = RUNG.animals.find((a) => a.key === "ong_mat")!;
@@ -209,5 +208,24 @@ describe("R6b living scene data", () => {
     expect(moveOf(RUNG, frog)).toBe("hop");
     expect(moveOf(WORLDS.bien!, WORLDS.bien!.animals[0]!)).toBe("swim");
     expect(moveOf(WORLDS.vu_tru!, WORLDS.vu_tru!.animals[0]!)).toBe("float");
+  });
+});
+
+describe("R6b scene placement (360 px screen: scene 288×216)", () => {
+  // Worst case: every thing grown to its biggest (48 px), visitors 44 px.
+  it("a visitor never covers more than 30% of a thing", async () => {
+    const { thingPlace, animalPlace, ROWS } = await import("@/app/today/world-scene");
+    for (const key of ["rung", "bien", "vu_tru", "nui_lua"] as const) {
+      const w = WORLDS[key]!;
+      const things = PILLARS.flatMap((p) => w.things[p].map((_, slot) => thingPlace({ pillar: p, slot }, ROWS[key])));
+      for (const [slot, a] of w.animals.entries()) {
+        const at = animalPlace({ slot, move: moveOf(w, a) }, key);
+        for (const t of things) {
+          const ox = Math.max(0, 46 - Math.abs(((at.left - t.left) / 100) * 288));
+          const oy = Math.max(0, 46 - Math.abs(((at.top - t.top) / 100) * 216));
+          expect((Math.min(ox, 44) * Math.min(oy, 44)) / (48 * 48), `${key}/${a.key}`).toBeLessThanOrEqual(0.3);
+        }
+      }
+    }
   });
 });

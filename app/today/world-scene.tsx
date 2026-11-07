@@ -11,41 +11,55 @@ import { WorldIcon } from "../world-icon";
  * Motion stops for people who ask for less (globals.css). Only shows what the server sent.
  */
 
-type SceneKey = "rung" | "bien" | "vu_tru" | "nui_lua";
+export type SceneKey = "rung" | "bien" | "vu_tru" | "nui_lua";
 const sceneOf = (key: string): SceneKey | null => (key === "rung" || key === "bien" || key === "vu_tru" || key === "nui_lua" ? key : null);
 
 /** Height of each area's layer (% from the top), per world. */
 const ROWS: Record<SceneKey, Record<Pillar, number>> = {
-  rung: { study: 30, skill: 52, feel: 71, play: 87 },
+  rung: { study: 28, skill: 48, feel: 73, play: 88 },
   bien: { play: 36, study: 64, feel: 77, skill: 89 },
-  vu_tru: { feel: 17, study: 39, skill: 61, play: 82 },
+  vu_tru: { feel: 15, study: 36, skill: 57, play: 85 },
   nui_lua: { study: 42, play: 59, skill: 74, feel: 89 },
 };
 const DEFAULT_ROWS: Record<Pillar, number> = { study: 30, skill: 52, feel: 71, play: 87 };
 
-/** Heights where visitors live, by how they move. */
-const MOVE_ROWS: Record<Move, readonly number[]> = { fly: [14, 23], float: [11, 25], swim: [26, 50], hop: [62, 79] };
+/**
+ * Heights where visitors live, per world and by how they move: in the bands between the
+ * things' rows, so a visitor never sits on a thing and takes its tap (R6b review).
+ */
+const MOVE_ROWS: Record<SceneKey, Record<Move, readonly number[]>> = {
+  rung: { fly: [12], float: [12], swim: [38], hop: [61], still: [61] },
+  bien: { fly: [16], float: [16], swim: [16, 50], hop: [50], still: [50] },
+  vu_tru: { fly: [26, 47], float: [26, 47], swim: [26, 47], hop: [71], still: [71] },
+  nui_lua: { fly: [14, 26], float: [14, 26], swim: [26], hop: [24, 14], still: [26] },
+};
+const DEFAULT_MOVE_ROWS: Record<Move, readonly number[]> = { fly: [14], float: [14], swim: [41], hop: [61], still: [61] };
 
 const THING_MOTION: Record<SceneKey, string> = { rung: "w-sway", bien: "w-sway", vu_tru: "w-twinkle", nui_lua: "" };
-const MOVE_CLASS: Record<Move, string> = { fly: "w-fly", hop: "w-hop", swim: "w-swim", float: "w-float" };
+const MOVE_CLASS: Record<Move, string> = { fly: "w-fly", hop: "w-hop", swim: "w-swim", float: "w-float", still: "" };
 
-/** 6 things per area: spread across, every other layer shifted so they do not stack. */
-function thingPlace(t: ThingView, rows: Record<Pillar, number>): { left: number; top: number } {
-  const row = (["study", "skill", "feel", "play"] as const).indexOf(t.pillar);
-  const left = 9 + (t.slot % 6) * 16.4 + (row % 2 === 1 ? 4 : 0);
+/**
+ * 6 things per area in fixed columns; the top-right corner stays clear for nothing (the count
+ * is in the heading). Kept inside the frame so a grown (48 px) thing is not cut at the edge.
+ */
+export function thingPlace(t: Pick<ThingView, "pillar" | "slot">, rows: Record<Pillar, number>): { left: number; top: number } {
+  const left = 9 + (t.slot % 6) * 16.4;
   const top = rows[t.pillar] + (t.slot % 2 === 0 ? -2 : 2);
-  return { left: Math.min(left, 93), top };
+  return { left: Math.min(left, 90), top: Math.min(top, 87) };
 }
 
-function animalPlace(a: AnimalView): { left: number; top: number } {
-  const ys = MOVE_ROWS[a.move];
-  return { left: 17 + (a.slot % 5) * 16.4, top: ys[Math.floor(a.slot / 5) % ys.length] ?? ys[0] ?? 50 };
+/** Visitors sit between the things' columns, in their world's free bands. */
+export function animalPlace(a: Pick<AnimalView, "slot" | "move">, scene: SceneKey | null): { left: number; top: number } {
+  const ys = (scene ? MOVE_ROWS[scene] : DEFAULT_MOVE_ROWS)[a.move];
+  return { left: 17.2 + (a.slot % 5) * 16.4, top: ys[Math.floor(a.slot / 5) % ys.length] ?? ys[0] ?? 50 };
 }
 
 /** Size grows with how many times it grew (1 → 4+), never shrinks. */
 const sizeOf = (count: number) => 30 + Math.min(count - 1, 3) * 6;
 
 export type Picked = { kind: "thing"; key: string } | { kind: "animal"; key: string };
+
+export { ROWS, sceneOf };
 
 export function LivingScene({ view, picked, onPick, compact = false }: { view: MonthView; picked?: Picked | null; onPick?: (p: Picked) => void; compact?: boolean }) {
   const scene = sceneOf(view.world.key);
@@ -67,6 +81,7 @@ export function LivingScene({ view, picked, onPick, compact = false }: { view: M
           return (
             <li key={t.key} className="absolute" style={{ left: `${at.left}%`, top: `${at.top}%`, transform: "translate(-50%, -50%)", zIndex: Math.round(at.top) }}>
               <Spot
+                spot={`thing:${t.key}`}
                 live={live}
                 label={`${t.name}, đã mọc ${t.count} lần${t.today ? ", có mọc hôm nay" : ""}`}
                 pressed={on}
@@ -83,11 +98,12 @@ export function LivingScene({ view, picked, onPick, compact = false }: { view: M
       </ul>
       <ul aria-label={`Các ${view.world.visitorWord} ghé thăm`} className="absolute inset-0" aria-hidden={live ? undefined : true}>
         {view.animals.map((a, i) => {
-          const at = animalPlace(a);
+          const at = animalPlace(a, scene);
           const on = picked?.kind === "animal" && picked.key === a.key;
           return (
             <li key={a.key} className="absolute" style={{ left: `${at.left}%`, top: `${at.top}%`, transform: "translate(-50%, -50%)", zIndex: 100 }}>
               <Spot
+                spot={`animal:${a.key}`}
                 live={live}
                 label={`${a.name}, đến ngày ${a.arrived}${a.today ? ", mới đến hôm nay" : ""}`}
                 pressed={on}
@@ -107,21 +123,11 @@ export function LivingScene({ view, picked, onPick, compact = false }: { view: M
           Còn trống. Xong mảng đầu tiên hôm nay là có thứ mới!
         </p>
       )}
-      {!compact && (
-        <span
-          className="absolute top-2 right-2 grid size-11 place-items-center rounded-full text-base font-extrabold shadow"
-          style={{ background: "#F4C430", color: "#5A3E24", zIndex: 200 }}
-          aria-label={`${view.things.length} thứ đã mọc`}
-          role="img"
-        >
-          {view.things.length}
-        </span>
-      )}
     </div>
   );
 }
 
-function Spot({ live, label, pressed, glow, motion, delay, onClick, children }: { live: boolean; label: string; pressed: boolean; glow: boolean; motion: string; delay: number; onClick: () => void; children: React.ReactNode }) {
+function Spot({ spot, live, label, pressed, glow, motion, delay, onClick, children }: { spot: string; live: boolean; label: string; pressed: boolean; glow: boolean; motion: string; delay: number; onClick: () => void; children: React.ReactNode }) {
   const inner = (
     <span className={`block ${motion} ${glow ? "w-glow" : ""}`} style={{ animationDelay: `${delay}s`, filter: glow ? undefined : "drop-shadow(0 2px 2px rgba(0,0,0,.28))" }}>
       {children}
@@ -131,10 +137,11 @@ function Spot({ live, label, pressed, glow, motion, delay, onClick, children }: 
   return (
     <button
       type="button"
+      data-spot={spot}
       aria-label={label}
       aria-pressed={pressed}
       onClick={onClick}
-      className={`flex min-h-11 min-w-11 items-center justify-center rounded-xl focus-visible:outline-3 focus-visible:outline-white ${pressed ? "bg-white/55 ring-2 ring-white" : "hover:bg-white/30"}`}
+      className={`flex min-h-11 min-w-11 items-center justify-center rounded-xl focus-visible:outline-3 focus-visible:outline-[#1C1F1D] focus-visible:ring-2 focus-visible:ring-white ${pressed ? "bg-white/55 ring-2 ring-white" : "hover:bg-white/30"}`}
     >
       {inner}
     </button>

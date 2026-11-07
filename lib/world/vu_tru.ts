@@ -404,6 +404,7 @@ export const VU_TRU: World = {
     },
     {
       key: "perseverance",
+      move: "still",
       name: "Xe tự hành Perseverance",
       icon: { svg: { shape: "rover", color: "#D9D3C4", accent: "#6E6A60" } },
       needs: [{ tag: "mars", n: 1 }],
