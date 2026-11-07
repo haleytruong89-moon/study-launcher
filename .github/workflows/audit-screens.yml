@@ -1,0 +1,60 @@
+name: Audit screenshots (temporary, never merged)
+
+on:
+  push:
+    branches: ["audit/screens"]
+
+permissions:
+  contents: write
+
+jobs:
+  e2e:
+    name: audit screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Start local Supabase (applies supabase/migrations on the real Supabase stack)
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,mailpit,postgres-meta,supavisor,realtime
+      - name: Export local connection values
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/sb.env"
+          get() { grep "^$1=" "$RUNNER_TEMP/sb.env" | head -1 | cut -d= -f2- | tr -d '"'; }
+          echo "NEXT_PUBLIC_SUPABASE_URL=$(get API_URL)" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(get ANON_KEY)" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(get SERVICE_ROLE_KEY)" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_APP_URL=http://localhost:3100" >> "$GITHUB_ENV"
+          echo "FIRST_PARENT_EMAIL=parent@example.com" >> "$GITHUB_ENV"
+          # S5: throwaway Web Push keys + cron secret, so push routes run for real in e2e.
+          keys=$(npx --no-install web-push generate-vapid-keys --json)
+          echo "VAPID_PUBLIC_KEY=$(echo "$keys" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).publicKey')" >> "$GITHUB_ENV"
+          echo "VAPID_PRIVATE_KEY=$(echo "$keys" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).privateKey')" >> "$GITHUB_ENV"
+          echo "VAPID_SUBJECT=mailto:ci@example.com" >> "$GITHUB_ENV"
+          echo "CRON_SECRET=e2e-cron-secret-$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          # S3e: local database URL (the cleanup test ages its own files). CRON_SECRET comes from S5 above.
+          echo "E2E_DB_URL=$(get DB_URL)" >> "$GITHUB_ENV"
+      - run: npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Run end-to-end tests + audit screenshots
+        run: npm run e2e 2>&1 | tee audit-e2e.log || true
+      - name: Push screenshots to branch audit/screens-out
+        if: always()
+        run: |
+          mkdir -p audit-shots
+          sed 's/\x1b\[[0-9;]*m//g' audit-e2e.log > audit-shots/e2e.log || true
+          git config user.name "audit-bot"
+          git config user.email "audit-bot@users.noreply.github.com"
+          git checkout --orphan audit/screens-out
+          git rm -rq --cached . || true
+          git add -f audit-shots
+          git commit -qm "audit screenshots"
+          git push -f origin audit/screens-out
