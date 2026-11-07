@@ -35,7 +35,8 @@ Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái th
 - **Giờ tự do** bắt đầu khi **cả hai phần xong**, hoặc khi con dùng thẻ miễn. Vẫn 45', 1 lần/ngày, dừng ở 00:00.
 - **Nghỉ 10'**:
   - Mở khi con **xong Phần 1 hoặc xong Phần 2** (phần nào trước cũng được) và **chưa có giờ tự do**. Vẫn 1 lần/ngày. Trong 10' đó máy mở mọi trang.
-  - Phần không có việc nào tính là đã xong (như cũ): ngày không có bài tập và bài bổ sung thì nghỉ được ngay.
+  - Ngày không có bài tập và bài bổ sung (Phần 1 rỗng) thì nghỉ được ngay, như cũ.
+  - Ngày không có kỹ năng (Phần 2 rỗng) thì vẫn nghỉ **sau khi xong bài tập**, như cũ. Phần 2 rỗng không tự mở nghỉ.
   - Không nghỉ cũng không sao: không còn bước "mời nghỉ" chặn đường.
   - Nút Nghỉ ẩn khi `break_minutes = 0`.
 - **Giữ nguyên:**
@@ -96,6 +97,7 @@ Không cần luật riêng cho ngày cũ: đã kiểm lịch sử code, từ l�
 | E5b | 17:40 xong cả 2 kỹ năng, bài tập chưa xong, bấm Nghỉ | Mở mọi trang 17:40–17:50. Đúng 17:50:00 khóa lại (LOCK_P1) |
 | E5c | 18:30 xong Phần 1, kỹ năng chưa xong, bấm Nghỉ | Mở 18:30–18:40, rồi khóa (LOCK_P2) — giống hiện nay |
 | E5d | Ngày không có bài trên lớp, không có bài bổ sung | Nghỉ được ngay từ đầu ngày (Phần 1 rỗng = xong), như hiện nay |
+| E5e | Ngày không có kỹ năng, 06:00 bài tập chưa xong | **Chưa** nghỉ được; xong bài tập là có giờ tự do luôn (như hiện nay) |
 | E6 | Đã nghỉ rồi, bấm Nghỉ lần 2 | Từ chối: "Hôm nay con đã nghỉ rồi" |
 | E7 | Đã xong Phần 1, đang chạy đồng hồ kỹ năng, bấm Nghỉ | **Từ chối**: "Bấm Xong việc đang làm trước". Để 10' nghỉ không tính vào 20' của kỹ năng (áp dụng mặc định, bố mẹ đổi được) |
 | E8 | Đang nghỉ, con bấm Bắt đầu, Xong, nộp ảnh (cả nộp qua QR bằng điện thoại) hoặc nhờ bố mẹ xem | **Từ chối**: "Đang nghỉ — bấm Học tiếp để làm tiếp". Bấm Học tiếp thì hết nghỉ ngay và làm tiếp được. Xếp thứ tự bài vẫn được (áp dụng mặc định, bố mẹ đổi được) |
@@ -115,7 +117,7 @@ Không cần luật riêng cho ngày cũ: đã kiểm lịch sử code, từ l�
 | E22 | Con đang nghỉ, bố mẹ bấm xác nhận bài cuối cùng (cả 2 phần thành xong) | Giờ tự do bắt đầu ngay; phần nghỉ còn lại bỏ, không cộng thêm (FREE ở dòng 6, trên BREAK) |
 | E23 | Ngày không có kỹ năng, 20:00 xong Phần 1, bố mẹ khóa tay đến 22:00 | Mốc Phần 1 / Phần 2 ghi lúc 20:00, nên **vẫn đạt**. Giờ tự do hoãn, 22:00–22:45 |
 | E24 | Ngày cũ có `break_skipped = true` | Hết lượt nghỉ hôm đó. Ngày đạt tính như trước |
-| E25 | Ngày không có việc nào; 00:00 extension hỏi máy chủ | Vẫn khóa (FREE_READY), không tự bắt đầu giờ tự do. Con bấm "Bắt đầu giờ tự do" lúc 15:00 → 15:00–15:45. Bố mẹ giao bài trước lúc con bấm → khóa lại đến khi xong bài |
+| E25 | Ngày không có việc nào; 00:00 extension hỏi máy chủ | Vẫn khóa (FREE_READY), không tự bắt đầu giờ tự do. Con bấm "Bắt đầu giờ tự do" lúc 15:00 → 15:00–15:45. Bố mẹ giao bài trước lúc con bấm → khóa lại đến khi xong bài. Nút này không hiện khi bố mẹ đang mở/khóa tay hay ngày ốm; ngày này không mời dùng thẻ miễn |
 
 ### 1.5 Đã chốt / mặc định (07/11)
 
