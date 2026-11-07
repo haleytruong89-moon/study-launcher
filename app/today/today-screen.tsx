@@ -428,7 +428,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
           <div className="flex items-center gap-3">
             {child.look && (
               // R6b (artifact, item J): the child's own character greets them; a tap opens the creator.
-              <Link href="/nhan-vat" aria-label="Nhân vật của con" className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+              <Link href="/nhan-vat" aria-label="Nhân vật của con" className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
                 <Character look={child.look} pics={child.pics} expr="smile" className="size-full" />
               </Link>
             )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AnimalView, MonthView, ThingView, WorldChoice, WorldResponse } from "@/lib/world/rules";
 import { PILLARS, type Pillar } from "@/lib/world/types";
 import { WorldIcon } from "../world-icon";
@@ -71,6 +71,9 @@ const vnToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_
 
 /** The card of what An tapped, right under the scene (artifact: no pop-up). */
 function Detail({ card, month, onClose }: { card: Card; month: string; onClose: () => void }) {
+  // Opening a card moves focus to its name (keyboard and screen readers land on it).
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => title.current?.focus(), []);
   const v = card.v;
   const questKey = `${month}:${v.key}`;
   const [done, setDone] = useState(() => readSet("world-quests").has(questKey));
@@ -94,7 +97,9 @@ function Detail({ card, month, onClose }: { card: Card; month: string; onClose: 
             {card.kind === "thing" ? card.area : `Đến vì ${card.v.because}`}
             {v.today ? " · mới hôm nay" : ""}
           </span>
-          <h3 className="text-lg font-bold">{v.name}</h3>
+          <h3 ref={title} tabIndex={-1} className="text-lg font-bold outline-none">
+            {v.name}
+          </h3>
           <span className="text-sm text-ink/70">
             {card.kind === "thing" ? (
               <>
@@ -185,7 +190,7 @@ function Coming({ view }: { view: MonthView }) {
               <WorldIcon icon={c.icon} size={24} />
             </span>
             <span>
-              <b>{c.name}</b> đến khi {c.because}
+              <b>{c.name}</b> sẽ đến khi {c.because}
               {c.missing > 0 ? ` (còn thiếu ${c.missing} thứ)` : ""}
             </span>
           </li>
@@ -318,9 +323,14 @@ export function WorldTab({ color }: { color: string }) {
     <>
       <section aria-labelledby="world-h" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="world-h" className="text-lg font-bold">
-            <span aria-hidden>{view.world.emoji} </span>
-            {view.world.name} · {monthLabel(view.month)}
+          <h2 id="world-h" className="flex items-center gap-2 text-lg font-bold">
+            <span>
+              <span aria-hidden>{view.world.emoji} </span>
+              {view.world.name} · {monthLabel(view.month)}
+            </span>
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#F4C430] text-base font-extrabold text-[#5A3E24]" role="img" aria-label={`${view.things.length} thứ đã mọc`}>
+              {view.things.length}
+            </span>
           </h2>
           {!current && (
             <button type="button" onClick={() => openMonth(null)} className="min-h-11 text-sm font-semibold underline" style={{ color }}>
@@ -331,9 +341,19 @@ export function WorldTab({ color }: { color: string }) {
         {current && <p className="text-sm text-ink/75">{view.world.intro}</p>}
         {current && <TodayChips view={view} />}
         <LivingScene view={view} picked={picked2} onPick={(p) => setPicked2(p)} />
-        <div aria-live="polite">
+        <div>
           {card ? (
-            <Detail key={`${view.month}:${card.v.key}`} card={card} month={view.month} onClose={() => setPicked2(null)} />
+            <Detail
+              key={`${view.month}:${card.v.key}`}
+              card={card}
+              month={view.month}
+              onClose={() => {
+                // Back to the thing in the scene (the card leaves the page).
+                const spot = picked2 ? `${picked2.kind}:${picked2.key}` : null;
+                setPicked2(null);
+                if (spot) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-spot="${spot}"]`)?.focus());
+              }}
+            />
           ) : (
             <p className="text-sm text-ink/70">Chạm vào một thứ hoặc một {view.world.visitorWord} trong cảnh để xem thẻ.</p>
           )}
