@@ -1989,3 +1989,170 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   await kCtx.close();
   await db.from("push_subscriptions").delete().eq("endpoint", endpoint);
 });
+
+// ---------------------------------------------------------------------------
+// Góc bình yên S-BY1 (docs/BINH_YEN.md §4, R1, R5, D1, Q6, Q7): one visit stores keys only, once;
+// the child deletes; nobody else can read; in study time each visit lasts by_study_minutes.
+// ---------------------------------------------------------------------------
+
+test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' first; breathing → Xong stores keys only, once; child deletes; nobody else reads; study-time limit", async ({ page, browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const today = localDate(new Date());
+  await db.from("family_settings").update({ by_enabled: true, by_study_minutes: 10, by_idle_lock_minutes: 5 }).eq("family_id", familyId);
+
+  // Study time (LOCK_P1): one homework due today, a normal day, lock mode, no parent override.
+  await db.from("overrides").delete().eq("child_id", childId).eq("local_date", today);
+  await db.from("trust_state").update({ mode: "lock" }).eq("child_id", childId);
+  await db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, local_date: today }, { onConflict: "child_id,local_date", ignoreDuplicates: true });
+  await db
+    .from("day_sessions")
+    .update({ day_type: "normal", disabled_template_ids: [], part1_done_at: null, part2_done_at: null, free_started_at: null, pass_used_at: null, break_started_at: null, break_ended_at: null, break_skipped: false })
+    .eq("child_id", childId)
+    .eq("local_date", today);
+  const { data: hw } = await db.from("homework_items").insert({ family_id: familyId, child_id: childId, subject: "Toán", due_date: today, note: "BY1" }).select("id").single();
+  // Sessions left open by the earlier tests' closed browsers: end them, so only this visit counts.
+  await db.from("by_sessions").update({ ended_at: new Date().toISOString() }).eq("child_id", childId).is("ended_at", null);
+  // The earlier test wiped the PIN minutes ago; a session aged past that wipe would read as "wiped".
+  await db.from("profiles").update({ by_pin_reset_at: new Date(Date.now() - 86_400_000).toISOString() }).eq("id", childId);
+
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  expect((await (await k.request.get("/api/today")).json()).state.status).toBe("LOCK_P1");
+
+  await k.goto("/binh-yen");
+  const pinForm = k.getByRole("form", { name: "Mở Góc bình yên" });
+  await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
+  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
+  const home = k.getByRole("region", { name: "Góc của con" });
+  const firstName = (kid?.display_name ?? "").trim().split(/\s+/).pop() ?? "";
+  await expect(home.getByRole("heading", { name: `Chào ${firstName}.`, exact: true })).toBeVisible(); // lớp 9 → the detective voice
+  await expect(home.getByRole("status")).toContainText("Giờ học: mỗi lần tối đa 10 phút");
+  await expect(k.getByRole("region", { name: "Lần ghé gần đây" })).toContainText("Chưa có lần nào");
+
+  // Một lượt: Hồ sơ đỏ → lo lắng (with its meaning) → "Ổn thôi, mình ở đây" → mức 5.
+  await home.getByRole("button", { name: /^Hồ sơ đỏ/ }).click();
+  const words = k.getByRole("region", { name: "Chọn từ" });
+  await words.getByRole("button", { name: "lo lắng" }).click();
+  await expect(words).toContainText("Đầu nghĩ mãi về điều có thể xảy ra.");
+  await words.getByRole("button", { name: "Tiếp →" }).click();
+  const ack = k.getByRole("region", { name: "Công nhận" });
+  await expect(ack.getByRole("heading", { name: "Ổn thôi, mình ở đây" })).toBeVisible();
+  await ack.getByRole("group", { name: "Mức độ" }).getByRole("button", { name: /^5/ }).click();
+  await ack.getByRole("button", { name: "Làm dịu một chút →" }).click();
+
+  // R1: unpleasant + 5 → "Nhắn bố mẹ" first. No text box anywhere (D1, S-BY1).
+  const ideas = k.getByRole("region", { name: "Gợi ý cho con" }).getByRole("list", { name: "3 gợi ý" }).getByRole("button");
+  await expect(ideas).toHaveCount(3);
+  await expect(ideas.first()).toContainText("Nhắn bố mẹ");
+  await expect(k.locator("main textarea, main input:not([type]), main input[type=text]")).toHaveCount(0);
+  // "Nhắn bố mẹ" shows the talk card inside the visit (no parent phone here → find them in person); one card only.
+  await ideas.first().click();
+  const talkAct = k.getByRole("region", { name: "Nhắn bố mẹ" });
+  await expect(talkAct.getByRole("region", { name: "Cần bố mẹ?" })).toContainText("Con tìm bố mẹ trực tiếp");
+  await expect(k.getByRole("region", { name: "Cần bố mẹ?" })).toHaveCount(1);
+  await talkAct.getByRole("button", { name: "← Gợi ý khác" }).click();
+
+  // Breathing → Xong → one row with keys only.
+  await ideas.filter({ hasText: "Thở cho dịu lại" }).click();
+  const act = k.getByRole("region", { name: "Thở cho dịu lại" });
+  await act.getByRole("button", { name: "Xong", exact: true }).click();
+  await expect(k.getByRole("region", { name: "Xong rồi" }).getByRole("status")).toContainText("Đầu đã nguội bớt");
+  const { data: rows } = await db.from("by_checkins").select("*").eq("child_id", childId);
+  expect(rows).toHaveLength(1);
+  expect(rows?.[0]).toMatchObject({ family_id: familyId, local_date: today, quad: "red", word_key: "lo_lang", intensity: 5, activity_key: "breath", cause_key: null, understood_at: null });
+  expect(byPsql("select string_agg(column_name, ',' order by column_name) from information_schema.columns where table_schema = 'public' and table_name = 'by_checkins'")).toBe(
+    "activity_key,cause_key,child_id,client_run_id,created_at,family_id,id,intensity,local_date,quad,understood_at,word_key",
+  );
+
+  // Two "Xong" with the same client_run_id → one row; free text and wrong keys are refused before the database.
+  const run = randomUUID();
+  const twice = await k.evaluate(async (id) => {
+    const send = () => fetch("/api/by/checkins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientRunId: id, quad: "yellow", word: "vui", intensity: null, activity: "share" }) }).then(async (r) => [r.status, (await r.json()).repeated]);
+    return [await send(), await send()];
+  }, run);
+  expect(twice).toEqual([
+    [200, false],
+    [200, true],
+  ]);
+  const { count: once } = await db.from("by_checkins").select("id", { count: "exact", head: true }).eq("client_run_id", run);
+  expect(once).toBe(1);
+  expect(await byCall(k, "POST", "/api/by/checkins", { clientRunId: randomUUID(), quad: "red", word: "con buồn lắm", intensity: 3, activity: null })).toBe(400);
+  expect(await byCall(k, "POST", "/api/by/checkins", { clientRunId: randomUUID(), quad: "red", word: "lo_lang", intensity: 3, activity: null, note: "x" })).toBe(400);
+  expect(await byCall(k, "POST", "/api/by/checkins", { clientRunId: randomUUID(), quad: "red", word: "lo_lang", intensity: 3, activity: "heart" })).toBe(400); // An's activity
+  const { count: logs } = await db.from("audit_log").select("id", { count: "exact", head: true }).like("action", "%checkin%");
+  expect(logs).toBe(0); // D5
+
+  // Nobody else reads it: not the child's own browser login, not the parent, not a sibling, not the API without the PIN.
+  const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  expect((await asChild.from("by_checkins").select("id")).error).not.toBeNull();
+  expect((await asChild.from("by_checkins").insert({ family_id: familyId, child_id: childId, local_date: today, quad: "red", word_key: "lo_lang", client_run_id: randomUUID() })).error).not.toBeNull();
+  const asParent = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await asParent.auth.signInWithPassword({ email: env.parentEmail, password: env.parentPassword });
+  expect((await asParent.from("by_checkins").select("id")).error).not.toBeNull();
+  expect((await asParent.from("by_checkins").delete().eq("child_id", childId)).error).not.toBeNull();
+  await login(page, env.parentEmail, env.parentPassword);
+  expect(await byCall(page, "GET", "/api/by/checkins")).toBe(403);
+  const sibEmail = `sibling-${randomBytes(4).toString("hex")}@example.com`;
+  const sibPassword = `Sib-${randomBytes(12).toString("hex")}`;
+  const { data: sibUser } = await db.auth.admin.createUser({ email: sibEmail, password: sibPassword, email_confirm: true });
+  const sibId = sibUser.user?.id as string;
+  try {
+    expect((await db.from("profiles").insert({ id: sibId, family_id: familyId, role: "child", display_name: "Em thử", grade: 6 })).error).toBeNull();
+    const asSib = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asSib.auth.signInWithPassword({ email: sibEmail, password: sibPassword });
+    expect((await asSib.from("by_checkins").select("id")).error).not.toBeNull();
+    const sCtx = await browser.newContext();
+    const s = await sCtx.newPage();
+    await login(s, sibEmail, sibPassword);
+    expect(await byCall(s, "GET", "/api/by/checkins")).toBe(401); // no Góc bình yên session of their own
+    expect(await byCall(s, "POST", "/api/by/checkins/delete", { all: true })).toBe(401);
+    await sCtx.close();
+  } finally {
+    await db.auth.admin.deleteUser(sibId);
+  }
+
+  // The child deletes the breathing visit (a real delete, Q7); the other one stays.
+  await k.getByRole("region", { name: "Xong rồi" }).getByRole("button", { name: "Về góc của con" }).click();
+  const recent = k.getByRole("region", { name: "Lần ghé gần đây" });
+  await expect(recent.getByRole("listitem")).toHaveCount(2);
+  await expect(recent).toContainText("lo lắng · Thở cho dịu lại");
+  await recent.getByRole("button", { name: /^Xóa lượt .* lo lắng$/ }).click();
+  await expect(recent.getByRole("listitem")).toHaveCount(1);
+  const { data: left } = await db.from("by_checkins").select("word_key").eq("child_id", childId);
+  expect(left).toEqual([{ word_key: "vui" }]);
+
+  // R5: in study time a visit lasts 10 minutes (server clock). Age it → back to Hôm nay.
+  expect(byPsql(`with u as (update public.by_sessions set started_at = now() - interval '11 minutes' where child_id = '${childId}' and ended_at is null returning 1) select count(*) from u`)).toBe("1");
+  await k.goto("/binh-yen");
+  await expect(k.getByRole("heading", { name: "Quay lại học nhé, lúc nào cần thì vào lại." })).toBeVisible();
+  await k.waitForURL(/\/today$/);
+  const { count: open } = await db.from("by_sessions").select("id", { count: "exact", head: true }).eq("child_id", childId).is("ended_at", null);
+  expect(open).toBe(0);
+  expect(await byCall(k, "POST", "/api/by/checkins", { clientRunId: randomUUID(), quad: "yellow", word: "vui", intensity: null, activity: null })).toBe(401);
+
+  // Q6: back in at once with the PIN. Outside study time (free time) there is no limit.
+  await db.from("day_sessions").update({ free_started_at: new Date().toISOString() }).eq("child_id", childId).eq("local_date", today);
+  await k.goto("/binh-yen");
+  await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
+  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
+  await expect(home).toBeVisible();
+  await expect(home.getByText(/Giờ học: mỗi lần tối đa/)).toHaveCount(0);
+  expect(byPsql(`with u as (update public.by_sessions set started_at = now() - interval '11 minutes' where child_id = '${childId}' and ended_at is null returning 1) select count(*) from u`)).toBe("1");
+  await k.reload();
+  await expect(home).toBeVisible();
+
+  // "Xóa hết của con".
+  await recent.getByRole("button", { name: "Xóa hết của con" }).click();
+  await recent.getByRole("group", { name: "Xóa hết" }).getByRole("button", { name: "Xóa hết" }).click();
+  await expect(recent).toContainText("Chưa có lần nào");
+  const { count: none } = await db.from("by_checkins").select("id", { count: "exact", head: true }).eq("child_id", childId);
+  expect(none).toBe(0);
+
+  await kCtx.close();
+  await db.from("homework_items").update({ archived_at: new Date().toISOString() }).eq("id", hw?.id as string);
+});

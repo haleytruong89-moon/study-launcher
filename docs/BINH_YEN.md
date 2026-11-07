@@ -1,6 +1,6 @@
 # Góc bình yên — Quy tắc & dữ liệu (Phase 1.5)
 
-> **Trạng thái:** bản nháp 01/11/2026. **05/11/2026: lát S-BY0 đã có PR** (PIN riêng của con, phiên do máy chủ giữ, "Con muốn nói chuyện" + trang bố mẹ "Đã thấy", SQL `0008_binh_yen_base.sql`) — xem §11. Chưa có phần cảm xúc.
+> **Trạng thái:** bản nháp 01/11/2026. **05/11/2026: lát S-BY0 đã merge** (PIN riêng của con, phiên do máy chủ giữ, "Con muốn nói chuyện" + trang bố mẹ "Đã thấy", SQL `0008_binh_yen_base.sql`) — xem §11. **06/11/2026: lát S-BY1 có PR** (chọn cảm xúc → gợi ý → hoạt động → lưu lượt ghé, giới hạn giờ học R5, SQL `0009_binh_yen_checkins.sql`) — xem §12.
 > Bản này đã qua một vòng review độc lập; các điểm review sửa được đánh dấu *(review)*.
 > Các câu hỏi ở §7 đã được phụ huynh chốt ngày 01/11/2026.
 >
@@ -301,7 +301,7 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 ## 10. Lát build dự kiến
 
 1. **S-BY0:** PIN Góc bình yên + `by_sessions` + `by_signals` + trang bố mẹ "Đã thấy" + kênh báo (S4). Có nút "Con muốn nói chuyện" ở màn Hôm nay. Cần có trước mọi thứ khác. → **PR mở 05/11/2026** (§11).
-2. **S-BY1:** chọn ô → từ → mức → 3 gợi ý (R1) → hoạt động → Xong → `by_checkins` + test quyền. Chưa có ô gõ chữ.
+2. **S-BY1:** chọn ô → từ → mức → 3 gợi ý (R1) → hoạt động → Xong → `by_checkins` + test quyền. Chưa có ô gõ chữ. → **PR mở 06/11/2026** (§12).
 3. **S-BY2:** ô gõ chữ + R3 (cùng lát, bắt buộc) + chữ mã hóa trên máy.
 4. **S-BY3:** hiểu nguyên nhân + bài học R2 + Bảng điều tra / Bàn pha chế.
 5. **S-BY4:** phần thưởng R4 (khu rừng An, trang manga Nguyên).
@@ -336,3 +336,37 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 | K9 | `audit_log` | Không ghi lần thử / mở PIN của con (D5); **có** ghi việc bố mẹ xóa PIN (`child.by_pin_wiped`, không nội dung) | D5 |
 
 > *05/11/2026, phụ huynh chốt:* con **được tự đổi PIN Góc bình yên** khi nhập đúng PIN cũ (chữ đã viết được khóa lại bằng PIN mới) — làm ở S-BY2 cùng phần mã hóa.
+
+## 12. S-BY1 — đã làm gì (06/11/2026)
+
+**SQL `0009_binh_yen_checkins.sql`** (chỉ thêm, tự chạy khi merge):
+- Bảng `by_checkins`: `family_id`, `child_id`, `local_date`, `quad`, `word_key`, `intensity` (1–5 hoặc trống), `activity_key` (trống = "Vậy là đủ cho hôm nay"), `cause_key` + `understood_at` (để sẵn cho S-BY3, chưa dùng), `client_run_id` **unique**, `created_at`. **Không có cột nào chứa chữ con gõ** (D1). `quad` / `word_key` / `activity_key` / `cause_key` chỉ có CHECK **định dạng** (mã ngắn chữ thường), giá trị do máy chủ kiểm theo danh sách (như K4).
+- **Không cấp quyền gì** cho trình duyệt (con, bố mẹ, anon); RLS bật, **không policy**. Con đọc / lưu / xóa của mình **chỉ** qua `/api/by/checkins` khi đang mở Góc bình yên bằng PIN. Test trong `supabase/tests/rls_test.sql`: không policy, không policy nào nhắc `parent`, `authenticated` / `anon` không có quyền trên `by_checkins` và `by_sessions`, cột đúng danh sách, chữ tự do bị CHECK chặn.
+- Bản sao lưu A9 đã bỏ **dữ liệu** mọi bảng `by_*` (D6) — bảng mới tự được bỏ theo.
+
+**Màn hình (`/binh-yen`, sau PIN):**
+- Trang chủ của con: lời chào theo giọng (An = nhà khoa học, Nguyên = thám tử; chọn theo **lớp**: lớp ≤ 7 → nhà khoa học), 4 ô (tên riêng mỗi con), chip "⏱ Giờ học: mỗi lần tối đa 10 phút · đến 19:10" khi đang giờ học, thẻ **Cần bố mẹ?** (thẻ "Con muốn nói chuyện" của S-BY0, hoặc "tìm bố mẹ trực tiếp + 111 / 115" khi chưa có điện thoại bố mẹ bật thông báo), **🔒 Ai thấy gì?** (đã sửa: máy chủ lưu lượt ghé, không trang nào cho bố mẹ xem, con xóa được), **Lần ghé gần đây** (7 lượt: ngày · từ · hoạt động, nút Xóa từng lượt + "Xóa hết của con" có bước xác nhận). Không biểu đồ, không đếm, không chuỗi ngày.
+- Một lượt: chọn ô → chọn từ (chạm để xem nghĩa) → bước công nhận ("Ổn thôi, mình ở đây" / "Dừng lại một chút nào"; khó chịu thì chọn mức 1–5) → lời mentor (+ "Bí mật của não" cho An) → **3 gợi ý (R1)** → làm hoạt động → **Xong** → lưu 1 dòng → 1 câu kết. Nút **Vậy là đủ cho hôm nay** ở màn gợi ý: gọi tên là xong, lưu không có hoạt động. Bỏ giữa chừng: không lưu gì.
+- Hoạt động có đồng hồ / tương tác: thở 4-4-6, thở cá voi, đo nhịp tim (chạm theo nhịp, không gõ số), lọ kim tuyến, bong bóng (giữ nút), nhảy 2', nhảy như con vật, nghỉ 3', quan sát 1', bản đồ cơ thể, Mặt Trăng, kể cho một người. Nút **Xong** bấm được bất cứ lúc nào (đồng hồ chỉ để dẫn). Tôn trọng "giảm chuyển động" của máy.
+- **Nhắn bố mẹ** mở thẻ "Con muốn nói chuyện" ngay trong lượt (dùng đúng luồng `want_talk` của S-BY0; chỉ 1 thẻ trên màn hình).
+
+**Các hoạt động cần gõ chữ — chọn "làm trong đầu / ra giấy", không bỏ:** Hỏi lại cái đầu (3 bước nghĩ thầm), 3 bằng chứng, 3 điều biết ơn (chạm ✓ khi đã nghĩ ra), Giữ khoảnh khắc (nhắm mắt nhớ lại; muốn thì vẽ/viết ra giấy), Viết ra giấy rồi buông (An), Câu hỏi tò mò (nghĩ trong đầu, tối hỏi bố mẹ). Lý do: các hoạt động này nằm trong **đáp án R1** (#1–#3, #7, #11, #12); bỏ đi thì gợi ý sai đáp án và S-BY2 lại phải đổi. Màn hình ghi rõ "Làm trong đầu · không cần gõ gì" / "Làm ra giấy · app không lưu gì". **Không có ô gõ chữ nào** trong lát này (e2e kiểm). Không lấy từ bản mẫu: hồ sơ thám tử (FILES), Picrew, bộ manga, 4 khung, nhân vật, vụ án nhỏ.
+
+**R1 — cách tính (`lib/binhYen/suggest.ts`, test đủ 12 dòng đáp án, đúng thứ tự):** trọng số của bản mẫu + CATALOG §B, thêm 4 điều chỉnh vì riêng "+1" của §B **không đủ** đổi thứ tự như đáp án:
+| # | Điều chỉnh | Để đạt |
+|---|---|---|
+| a | "Nhắn bố mẹ" chỉ được gợi ý theo trọng số khi nhu cầu "người thân" mạnh (điểm ≥ 6); mức 4–5 khó chịu thì **luôn** đứng đầu | #6 (chán không bị đẩy sang bố mẹ), #4, #10 vẫn có |
+| b | "Nghỉ một chút / ngủ sớm" (mới, thẻ body + calm) chỉ cho ô lam, và **không đứng đầu** khi có việc làm được ngay | #5: Thở → Nghỉ/ngủ sớm → Kể |
+| c | "chán" vận động 2 → 3 **chỉ cho Nguyên** (áp cho An thì #11 sai); thêm ưu tiên "Nhảy 1 bài" +3 và "Giữ khoảnh khắc" +1 khi chọn "chán" | #6 |
+| d | "tự hào" giữ lại 2 → 3 (§B) + ưu tiên "Giữ khoảnh khắc" +4; "3 bằng chứng hôm nay không tệ" chỉ cho ô đỏ / lam | #7 |
+
+**R5 — giờ học:** "giờ học" = `computeDayState` (giờ máy chủ) cho thấy máy đang khóa, bài chưa xong, chưa tới giờ tự do (LOCK_P1, BREAK_OFFER, LOCK_P2, hoặc bố mẹ khóa khi bài chưa xong — **bố mẹ chốt 06/11/2026: bố mẹ khóa = giờ học**). Nghỉ 10', giờ tự do, ngày ốm, Tin tưởng, bố mẹ mở, đã xong bài → **không giới hạn**. Mỗi lần mở bằng PIN tối đa `by_study_minutes` tính từ lúc mở; tới giờ máy chủ **kết thúc phiên**, màn hình hiện "Quay lại học nhé, lúc nào cần thì vào lại." rồi về Hôm nay sau 3 giây; vào lại ngay bằng PIN được (Q6). Không đọc được trạng thái ngày → coi như giờ học (an toàn). Đang ở "Nhắn bố mẹ" lúc hết giờ: không tự chuyển trang, thẻ nói chuyện vẫn còn. Không đổi luật khóa/mở, không đổi allowlist.
+
+**Thêm (cần bố mẹ biết):**
+| # | Điểm | Đã làm | Vì sao |
+|---|---|---|---|
+| L1 | Danh sách cố định (từ, hoạt động, trọng số) | Để trong `lib/binhYen/catalog.ts` (có kiểu, có test), **chưa** tạo bảng `by_catalog` | Chưa có trang cho bố mẹ sửa; test đáp án R1 phải kiểm đúng thứ chạy thật. Chuyển sang `by_catalog` khi làm trang sửa (cùng S-BY3: nguyên nhân + bài học). Mã đã dùng không bao giờ đổi; bỏ thì đánh dấu `retired` |
+| L2 | Lặp lại "rất to" (R3, không cần chữ) | 3 lần mức 5 trong 7 ngày → **chỉ con** thấy lời nhắn "tìm bố mẹ hoặc thầy cô con tin để nói chuyện" ở màn kết (**không có số 111** — bố mẹ chốt 06/11/2026). Không báo bố mẹ (Q4) | Có sẵn dữ liệu từ lượt ghé; an toàn cho con. Tính ở máy chủ thay vì trên máy con (cùng kết quả, không gửi đi đâu) |
+| L3 | Tự xóa sau 12 tháng (Q7) | **Chưa làm** (có chỉ mục `created_at` sẵn); màn "Ai thấy gì?" nói rõ là sẽ có | Cần cron riêng; làm ở lát sau |
+| L4 | Giọng theo lớp | Lớp ≤ 7 → nhà khoa học, còn lại → thám tử | Không ghi cứng tên con |
+| L5 | `pin_devices.shared` (iPad dùng chung), xuất dữ liệu | Chưa làm | Chỉ cần khi có chữ lưu trên máy (S-BY2) |
