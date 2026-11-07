@@ -140,7 +140,7 @@ export function TalkPanel({ initial, color, variant = "card" }: { initial?: Talk
         {info.status && info.status.phase !== "seen" ? "💬 Đã gửi bố mẹ" : "💬 Muốn nói chuyện"}
       </button>
       {open && (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-md px-4 pb-4 lg:bottom-0 lg:pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="flex flex-col gap-2 rounded-2xl shadow-[0_8px_30px_rgba(28,31,29,0.25)]">
             {body}
           </div>

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { bySettings } from "@/lib/binhYen/session";
 import { requireChild, todayView } from "@/lib/today/service";
-import { isChildTab } from "../child-nav";
+import { isChildTab } from "@/lib/childTabs";
 import { ExtensionCheck } from "./extension-check";
 import { TodayScreen } from "./today-screen";
 

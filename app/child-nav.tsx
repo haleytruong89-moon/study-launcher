@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TAB_LABELS, tabHref, type ChildTab } from "@/lib/childTabs";
 
 /**
  * The child's 5 tabs (R2, docs/MAN_CHINH_MOI.md §2.1): a bar at the bottom on the phone, a
@@ -8,15 +9,7 @@ import Link from "next/link";
  * screen, one state: switching does not reload); Góc bình yên is its own page (/binh-yen,
  * server-gated) and is hidden when the family has not turned it on.
  */
-export type ChildTab = "hom-nay" | "hoc-tap" | "binh-yen" | "tuan" | "gop-y";
-
-export const TAB_LABELS: Record<ChildTab, string> = {
-  "hom-nay": "Hôm nay",
-  "hoc-tap": "Góc học tập",
-  "binh-yen": "Góc bình yên",
-  tuan: "Tuần của con",
-  "gop-y": "Góp ý",
-};
+export { TAB_LABELS, isChildTab, tabHref, type ChildTab } from "@/lib/childTabs";
 
 const ICONS: Record<ChildTab, string> = {
   "hom-nay": "☀️",
@@ -25,15 +18,6 @@ const ICONS: Record<ChildTab, string> = {
   tuan: "🗓️",
   "gop-y": "💡",
 };
-
-export function tabHref(tab: ChildTab): string {
-  if (tab === "binh-yen") return "/binh-yen";
-  return tab === "hom-nay" ? "/today" : `/today?tab=${tab}`;
-}
-
-export function isChildTab(v: unknown): v is Exclude<ChildTab, "binh-yen"> {
-  return v === "hom-nay" || v === "hoc-tap" || v === "tuan" || v === "gop-y";
-}
 
 export function ChildNav({
   active,
