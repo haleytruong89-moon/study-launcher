@@ -95,7 +95,7 @@ Dòng cũ có `part2_done_at` nhưng `part1_done_at` trống thì tính theo lu�
 | E5c | 18:30 xong Phần 1, kỹ năng chưa xong, bấm Nghỉ | Mở 18:30–18:40, rồi khóa (LOCK_P2) — giống hiện nay |
 | E5d | Ngày không có bài trên lớp, không có bài bổ sung | Nghỉ được ngay từ đầu ngày (Phần 1 rỗng = xong), như hiện nay |
 | E6 | Đã nghỉ rồi, bấm Nghỉ lần 2 | Từ chối: "Hôm nay con đã nghỉ rồi" |
-| E7 | Đang chạy đồng hồ kỹ năng, bấm Nghỉ | **Từ chối**: "Bấm Xong việc đang làm trước". Để 10' nghỉ không tính vào 20' của kỹ năng (áp dụng mặc định, bố mẹ đổi được) |
+| E7 | Đã xong Phần 1, đang chạy đồng hồ kỹ năng, bấm Nghỉ | **Từ chối**: "Bấm Xong việc đang làm trước". Để 10' nghỉ không tính vào 20' của kỹ năng (áp dụng mặc định, bố mẹ đổi được) |
 | E8 | Đang nghỉ, con bấm Bắt đầu, Xong, nộp ảnh (cả nộp qua QR bằng điện thoại) hoặc nhờ bố mẹ xem | **Từ chối**: "Đang nghỉ — bấm Học tiếp để làm tiếp". Bấm Học tiếp thì hết nghỉ ngay và làm tiếp được. Xếp thứ tự bài vẫn được (áp dụng mặc định, bố mẹ đổi được) |
 | E9 | Cả ngày không nghỉ | Không sao; xong hết thì có giờ tự do luôn |
 | E10 | Đã có giờ tự do, bấm Nghỉ | Từ chối (nút ẩn) |
