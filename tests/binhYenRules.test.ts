@@ -118,19 +118,19 @@ describe("push to the parents: generic, no feelings", () => {
   });
 });
 
-describe("“🔒 Ai thấy gì?” tells the truth, in 4 short lines (§3, 07/11/2026)", () => {
+describe("“🔒 Ai thấy gì?” tells the truth, in at most 5 short lines (§3, 07/11/2026; R2 line 5)", () => {
   const lines = whoSeesWhat();
   const text = lines.join("\n");
   it("is short", () => {
     expect(lines.length).toBeGreaterThanOrEqual(3);
-    expect(lines.length).toBeLessThanOrEqual(4);
+    expect(lines.length).toBeLessThanOrEqual(5);
     for (const l of lines) expect(l.length).toBeLessThan(130);
   });
   it.each([
     ["no parent page for feelings or activities", "Bố mẹ không có trang nào xem cảm xúc hay hoạt động"],
     ["want_talk is a signal with name and time only", "tên con và giờ bấm"],
     ["anyone logged in as the child can open it (no PIN)", "Ai đăng nhập bằng tài khoản của con cũng vào được"],
-    ["R2: feelings also show on the child's Hôm nay and Tuần", "hiện ở trang Hôm nay và Tuần trên máy con"],
+    ["R2: feelings also show on the child's Hôm nay and Tuần, visible to anyone at the screen", "ai đứng cạnh màn hình cũng thấy được"],
     ["the child deletes; 12 months auto-delete", "lượt cũ hơn 12 tháng"],
   ])("%s", (_label, phrase) => expect(text).toContain(phrase));
   it("no longer talks about a Góc bình yên PIN or an idle lock", () => {

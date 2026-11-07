@@ -618,7 +618,8 @@ test("S3a review: a child cannot mark verdicts", async ({ page }) => {
   expect(status).toBe(403);
   await page.goto("/parent/review");
   await expect(page).toHaveURL(/\/today$/);
-  // The child sees that a parent looked at the work, never the verdict itself.
+  // The child sees that a parent looked at the work, never the verdict itself (R2: in Góc học tập).
+  await page.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc học tập" }).click();
   await expect(page.getByText("Bố mẹ đã xem ✓").first()).toBeVisible();
   await expect(page.getByText("Chưa đạt")).toHaveCount(0);
 });
@@ -778,7 +779,8 @@ test("S2e: the child picks an icon and plans today; the plan only reorders 'Vi�
   await banner.getByRole("button", { name: "Xếp lại ở Góc học tập" }).click();
   await expect(page).toHaveURL(/\/today\?tab=hoc-tap$/);
   await page.getByRole("button", { name: "Đưa “Vật lí” lên" }).click();
-  await expect(page.getByRole("button", { name: "Đưa “Vật lí” lên" })).toBeDisabled(); // now first
+  await expect(page.getByRole("button", { name: "Đưa “Hóa học” lên" })).toBeEnabled(); // saved: Vật lí is now first
+  await expect(page.getByRole("button", { name: "Đưa “Vật lí” lên" })).toBeDisabled();
   const { data: plan } = await db.from("day_plans").select("item_keys").eq("child_id", kid?.id ?? "").eq("local_date", today).single();
   expect(plan?.item_keys.slice(0, 2)).toEqual([keys[1], keys[0]]);
   await page.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Hôm nay" }).click();
@@ -1821,7 +1823,8 @@ test("Góc bình yên: off by default; the child opens it WITHOUT a PIN; one ser
   await expect(k.getByRole("button", { name: "Khóa lại" })).toHaveCount(0);
   await home.getByText("🔒 Ai thấy gì?").click();
   const who = home.getByRole("listitem");
-  await expect(who).toHaveCount(4);
+  await expect(who).toHaveCount(5);
+  await expect(home.getByText(/hiện ở trang Hôm nay và Tuần trên máy con: ai đứng cạnh màn hình cũng thấy được/)).toBeVisible();
   await expect(home.getByText("Bố mẹ không có trang nào xem cảm xúc hay hoạt động con chọn ở đây.")).toBeVisible();
   await expect(home.getByText(/Ai đăng nhập bằng tài khoản của con cũng vào được góc này/)).toBeVisible();
   await expect(home.getByText(/lượt cũ hơn 12 tháng sẽ tự xóa/)).toBeVisible();
@@ -2096,6 +2099,17 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   expect((await asParent.from("by_checkins").delete().eq("child_id", childId)).error).not.toBeNull();
   await login(page, env.parentEmail, env.parentPassword);
   expect(await byCall(page, "GET", "/api/by/checkins")).toBe(403);
+  // R2: the feelings reach the child's Hôm nay / Tuần through a child-only route; they are never
+  // part of /api/today (parent pages reuse that data) and never on a parent page.
+  expect(await byCall(page, "GET", "/api/week/days")).toBe(403);
+  await page.goto("/parent");
+  await expect(page.locator("body")).not.toContainText("lo lắng");
+  const childToday = await k.evaluate(async () => (await fetch("/api/today")).text());
+  expect(childToday).not.toContain("lo_lang");
+  expect(childToday).not.toContain('"quad"');
+  const childWeek = await k.evaluate(async () => (await (await fetch("/api/week/days")).json()) as { byEnabled: boolean; today: string; days: { date: string; feel: { word: string } | null }[] });
+  expect(childWeek.byEnabled).toBe(true);
+  expect(childWeek.days.find((d) => d.date === childWeek.today)?.feel).not.toBeNull();
   const sibEmail = `sibling-${randomBytes(4).toString("hex")}@example.com`;
   const sibPassword = `Sib-${randomBytes(12).toString("hex")}`;
   const { data: sibUser } = await db.auth.admin.createUser({ email: sibEmail, password: sibPassword, email_confirm: true });

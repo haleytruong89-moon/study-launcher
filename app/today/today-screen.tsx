@@ -55,19 +55,32 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const [view, setView] = useState<TodayView | null>(initial);
   // R2: the 5 tabs. Hôm nay / Góc học tập / Tuần / Góp ý share this screen (and its state).
   const [tab, setTab] = useState<Tab>(initialTab);
+  const tabRef = useRef<Tab>(initialTab);
+  const loadWeekRef = useRef<() => Promise<void>>(async () => {});
   const selectTab = useCallback((t: Tab) => {
+    if (t === tabRef.current) return;
+    tabRef.current = t;
     setTab(t);
     window.history.pushState(null, "", tabHref(t));
     window.scrollTo({ top: 0 });
+    void loadWeekRef.current();
   }, []);
   useEffect(() => {
-    const onPop = () => setTab(tabFromUrl());
+    const onPop = () => {
+      tabRef.current = tabFromUrl();
+      setTab(tabRef.current);
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
   // The child's own week (feelings + 4 areas): a child-only route, never part of TodayView.
   const [week, setWeek] = useState<WeekDaysView | null>(null);
-  const loadWeek = useCallback(async () => {
+  const weekAt = useRef(0);
+  // Fetched only where it is shown (Hôm nay, Tuần), at most once a minute unless forced.
+  const loadWeek = useCallback(async (force = false) => {
+    if (tabRef.current !== "hom-nay" && tabRef.current !== "tuan") return;
+    if (!force && Date.now() - weekAt.current < 60_000) return;
+    weekAt.current = Date.now();
     try {
       const res = await fetch("/api/week/days", { cache: "no-store" });
       if (res.ok) setWeek((await res.json()) as WeekDaysView);
@@ -118,7 +131,12 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   }, [accept, router, loadWeek]);
 
   useEffect(() => {
+    loadWeekRef.current = () => loadWeek();
+  }, [loadWeek]);
+
+  useEffect(() => {
     let alive = true;
+    weekAt.current = Date.now();
     fetch("/api/week/days", { cache: "no-store" })
       .then((res) => (res.ok ? (res.json() as Promise<WeekDaysView>) : null))
       .then((w) => {
@@ -181,6 +199,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
         return false;
       }
       accept(data);
+      void loadWeek(true);
       return true;
     } catch {
       setError("Mất kết nối mạng, thử lại sau.");
@@ -445,7 +464,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={tab === "hom-nay" ? [TAB_LABELS["hom-nay"]] : tab === "hoc-tap" && next ? [TAB_LABELS["hom-nay"], TAB_LABELS[tab], next.title] : [TAB_LABELS["hom-nay"], TAB_LABELS[tab]]} />
+        <Breadcrumb trail={tab === "hom-nay" ? [TAB_LABELS["hom-nay"]] : [TAB_LABELS["hom-nay"], TAB_LABELS[tab]]} />
         {error && !dialog && !proofOpen && (
           <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
             {error}
@@ -571,22 +590,13 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               busy={!!busy}
               paused={paused}
               onSavePlan={(keys) => act({ url: "/api/day/plan", body: { keys } })}
+              suggested={next}
             />
           </>
         )}
 
         {tab === "tuan" && (
           <>
-            {view.weekly && (
-              <WeeklyReviewCard
-                key={view.weekly.stats.weekStart}
-                stats={view.weekly.stats}
-                review={view.weekly.review}
-                color={color}
-                busy={!!busy}
-                onSave={(answers) => act({ url: "/api/week/review", body: answers })}
-              />
-            )}
             <section aria-labelledby="wk-own" className="flex flex-col gap-4 rounded-2xl border border-ink/10 bg-white p-4">
               <h2 id="wk-own" className="text-lg font-bold">
                 Tuần này của con

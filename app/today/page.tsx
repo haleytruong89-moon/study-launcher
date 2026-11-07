@@ -31,7 +31,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <ExtensionCheck />
+      {/* The laptop tab bar is a fixed left column (R2): keep the banner clear of it. */}
+      <div className="lg:pl-52">
+        <ExtensionCheck />
+      </div>
       <TodayScreen
         child={{ id: ctx.childId, familyId: ctx.familyId, name: ctx.displayName, grade: ctx.grade, color: ctx.color }}
         initial={initial}

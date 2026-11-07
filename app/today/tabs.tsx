@@ -32,6 +32,7 @@ export function FeelWeek({ week, color, big = false }: { week: WeekDaysView; col
               {dayLabel(d.date, week.today)}
             </span>
             <span
+              role="img"
               aria-label={`${dayMonth(d.date)}: ${label}`}
               title={label}
               className={`flex items-center justify-center rounded-full ${big ? "size-11" : "size-[34px]"} ${d.future ? "opacity-40" : ""}`}
@@ -153,9 +154,12 @@ export function StudyCorner({
   busy,
   paused,
   onSavePlan,
+  suggested,
 }: {
   s: DayState;
   view: TodayView;
+  /** What Hôm nay suggests next (plan, then the usual order — upcoming picks included). */
+  suggested: TaskView | null;
   ctx: TaskCtx;
   color: string;
   busy: boolean;
@@ -168,7 +172,7 @@ export function StudyCorner({
   const [focus, setFocus] = useState(false);
   const all = [...list, ...upcoming];
   const running = all.find((i) => i.state === "running") ?? null;
-  const current = all.find((i) => i.key === picked) ?? running ?? list.find((i) => i.state !== "done") ?? null;
+  const current = all.find((i) => i.key === picked) ?? running ?? suggested ?? list.find((i) => i.state !== "done") ?? null;
 
   function move(key: string, by: -1 | 1) {
     const keys = list.map((i) => i.key);
@@ -176,7 +180,9 @@ export function StudyCorner({
     const to = at + by;
     if (at < 0 || to < 0 || to >= keys.length) return;
     [keys[at], keys[to]] = [keys[to] as string, keys[at] as string];
-    void onSavePlan(keys);
+    // Keep what the plan already had that this list does not show (e.g. upcoming picks).
+    const kept = (view.plan ?? []).filter((k) => !keys.includes(k));
+    void onSavePlan([...keys, ...kept]);
   }
 
   return (
@@ -217,7 +223,7 @@ export function StudyCorner({
                       type="button"
                       onClick={() => setPicked(item.key)}
                       aria-pressed={current?.key === item.key}
-                      className="self-start rounded-full px-2.5 py-0.5 text-xs font-bold"
+                      className="inline-flex min-h-11 items-center self-start rounded-full px-3 text-xs font-bold"
                       style={current?.key === item.key ? { background: color, color: "#fff" } : { background: "#EEF0EC", color: "#4A4F4C" }}
                     >
                       {GROUP_LABEL(item)} · {current?.key === item.key ? "đang xem" : "xem chi tiết"}
@@ -254,10 +260,24 @@ export function StudyCorner({
       <section aria-label="Khung làm bài" className="flex flex-col gap-3 rounded-[20px] border-2 bg-white p-4 lg:sticky lg:top-4" style={{ borderColor: color }}>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => setFocus(!focus)} aria-pressed={focus} className="btn ml-auto border-[1.5px] bg-white text-sm" style={{ borderColor: color, color }}>
-            {focus ? "Hiện danh sách" : "Chế độ tập trung"}
+            {focus ? "Hiện danh sách" : "Chỉ hiện bài đang xem"}
           </button>
         </div>
-        {current ? <NextTask item={current} ctx={ctx} label={current.state === "running" ? "Con đang làm" : "Con đang xem"} /> : <p className="text-sm text-ink/70">Xong hết việc hôm nay rồi!</p>}
+        {current === null ? (
+          <p className="text-sm text-ink/70">Xong hết việc hôm nay rồi!</p>
+        ) : current.state === "done" ? (
+          <div className="flex flex-col gap-1">
+            <div className="text-xs font-bold tracking-[0.08em] uppercase" style={{ color }}>
+              Con đang xem
+            </div>
+            <div className="text-[23px] leading-tight font-bold">{current.title}</div>
+            <p className="font-semibold" style={{ color }}>
+              ✓ Xong rồi
+            </p>
+          </div>
+        ) : (
+          <NextTask item={current} ctx={ctx} label={current.state === "running" ? "Con đang làm" : "Con đang xem"} />
+        )}
       </section>
     </div>
   );
