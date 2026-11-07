@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Voice } from "@/lib/binhYen/catalog";
 import { HOTLINE_TEXT, VISIT_PING_MS } from "@/lib/binhYen/rules";
 import { STUDY_CAP_TEXT } from "@/lib/binhYen/studyCap";
+import { Breadcrumb, ChildNav } from "../child-nav";
 import { Corner } from "./corner";
 import { TalkPanel, type TalkInfoView } from "./talk-panel";
 
@@ -198,7 +199,7 @@ export function BinhYenScreen({ child, voice, initial, initialTalk }: { child: C
   }
 
   return (
-    <div className="min-h-dvh bg-bg">
+    <div className="min-h-dvh bg-bg pb-24 lg:pb-0 lg:pl-52">
       <header className="text-white" style={{ background: color }}>
         <div className="mx-auto flex max-w-md items-center gap-3 px-4 pt-5 pb-4">
           <Link href="/today" className="-ml-1 inline-flex min-h-11 items-center px-1 text-sm font-bold">
@@ -208,9 +209,12 @@ export function BinhYenScreen({ child, voice, initial, initialTalk }: { child: C
         </div>
       </header>
       <main className="mx-auto flex max-w-md flex-col gap-5 px-4 py-5">
+        <Breadcrumb trail={["Hôm nay", "Góc bình yên"]} />
         {content}
         {talk}
       </main>
+      {/* R2: the child's 5 tabs. This page exists only when the corner is on, so it is listed. */}
+      <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} />
     </div>
   );
 }

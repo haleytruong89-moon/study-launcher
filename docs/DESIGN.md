@@ -168,6 +168,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/tasks/proof` | con | Ghi đường dẫn ảnh đã tải lên Storage vào `task_run`. Chặn khi **đang nghỉ** (R1; cả "Nhờ bố mẹ xem" `confirm-request`) |
 | `POST /api/day/break` | con | `start` (khi `break.canStart`, R1); `end` (chỉ ở BREAK — nút "Học tiếp", ghi `break_ended_at`). `skip` bỏ ở R1 (trả 400) |
 | `POST /api/day/free` | con | Ngày không có việc nào (FREE_READY): ghi `part1_done_at` + `part2_done_at` + `free_started_at` trong 1 câu lệnh (R1, chốt 07/11/2026) |
+| `GET /api/week/days` | con | R2 "Tuần của con": 7 ngày T2–CN, mỗi ngày Cảm xúc (lượt ghé Góc bình yên **cuối cùng** của ngày: vùng + từ, chỉ khi Góc bình yên bật), Học tập / Kỹ năng (mốc phần), Vui chơi (`free_started_at`). **Chỉ phiên của con** (bố mẹ 403): cảm xúc không bao giờ nằm trong `DayState` / `todayView` / tổng kết tuần mà trang bố mẹ dùng lại (chốt 07/11/2026) |
 | `POST /api/day/pass` | con | Dùng thẻ miễn nếu còn; trả 409 nếu hôm nay đã có `free_started_at`, hoặc ngày không có việc nào (đã có nút "Bắt đầu giờ tự do", R1) |
 | `POST /api/unlock-requests` | con (hoặc trang khóa) | Tạo yêu cầu (bỏ qua nếu cùng domain đang `pending`) → gửi push cho phụ huynh |
 | `GET /api/unlock-requests/:id` | trang khóa | Trạng thái yêu cầu (hiện "đã duyệt" / "bị từ chối" / "bố mẹ chưa trả lời" sau 10 phút) |

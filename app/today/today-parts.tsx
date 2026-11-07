@@ -192,7 +192,7 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
 }
 
 /** Big "Việc tiếp theo" block inside the status card. */
-export function NextTask({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
+export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: TaskView; ctx: TaskCtx; label?: string }) {
   const files = ctx.files(item);
   const tone = item.dueDate ? TONE[dueTone(item.dueDate, ctx.today)] : null;
   const kind = item.source === "homework" ? (item.group === "upcoming" ? "Bài trên lớp · làm trước" : "Bài trên lớp") : item.part === 1 ? "Bài bổ sung" : "Kỹ năng";
@@ -200,7 +200,7 @@ export function NextTask({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="text-xs font-bold tracking-[0.08em] uppercase" style={{ color: ctx.color }}>
-        Việc tiếp theo
+        {label}
       </div>
       <div className="flex flex-col gap-1">
         <div className="text-[23px] leading-tight font-bold">{item.title}</div>

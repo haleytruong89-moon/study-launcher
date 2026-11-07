@@ -435,6 +435,16 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   // New screen (S2d): one "Việc tiếp theo" card suggests the overdue/near homework first.
   await expect(banner.getByText("Việc tiếp theo")).toBeVisible();
 
+  // R2 (07/11/2026): Hôm nay shows the four areas; the task lists live in Góc học tập.
+  const tabs = page.getByRole("navigation", { name: "Các mục của con" });
+  await expect(page.getByRole("list", { name: "Bốn mảng hôm nay" })).toContainText("Học tập");
+  await expect(page.getByRole("listitem", { name: "Đọc sách e2e" })).toHaveCount(0);
+  await expect(tabs.getByRole("link", { name: "Hôm nay" })).toHaveAttribute("aria-current", "page");
+  await tabs.getByRole("link", { name: "Góc học tập" }).click();
+  await expect(page).toHaveURL(/\/today\?tab=hoc-tap$/);
+  await expect(page.getByRole("navigation", { name: "Con đang ở" })).toContainText("Hôm nay › Góc học tập");
+  await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
+
   // R1 (07/11/2026): skills are open from the start, in parallel with homework.
   const skill = page.getByRole("listitem", { name: "Đọc sách e2e" });
   await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
@@ -512,7 +522,15 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   // Free time (40 minutes: the parent changed it in the S1 settings test).
   await expect(banner).toContainText("Xong cả hai phần");
   await expect(page.getByText(/Giờ tự do · còn \d\d:\d\d/)).toBeVisible();
+  // Back on Hôm nay: the four areas are ticked, no pass offered; the browser's Back button works too.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByRole("list", { name: "Bốn mảng hôm nay" }).getByLabel("Đã xong")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
+  // Tuần của con: today's three areas are ticked.
+  await tabs.getByRole("link", { name: "Tuần của con" }).click();
+  await expect(page.getByRole("heading", { name: "Tuần này của con" })).toBeVisible();
+  await expect(page.getByRole("table")).toContainText("Học tập");
 
   const { data: day } = await db.from("day_sessions").select("part1_done_at, part2_done_at, free_started_at, break_started_at, break_ended_at, break_skipped").eq("child_id", childId).eq("local_date", today).single();
   expect(day?.part1_done_at).toBeTruthy();
@@ -539,6 +557,9 @@ test("S2b today: the child cannot change the day directly, and parents have no /
   await login(page, env.parentEmail, env.parentPassword);
   const status = await page.evaluate(async () => (await fetch("/api/today")).status);
   expect(status).toBe(403);
+  // R2: the child's week (with feelings) is for the child only — parents have no route to it.
+  const weekStatus = await page.evaluate(async () => (await fetch("/api/week/days")).status);
+  expect(weekStatus).toBe(403);
   await page.goto("/today");
   await expect(page).toHaveURL(/\/parent$/);
 });
@@ -597,7 +618,8 @@ test("S3a review: a child cannot mark verdicts", async ({ page }) => {
   expect(status).toBe(403);
   await page.goto("/parent/review");
   await expect(page).toHaveURL(/\/today$/);
-  // The child sees that a parent looked at the work, never the verdict itself.
+  // The child sees that a parent looked at the work, never the verdict itself (R2: in Góc học tập).
+  await page.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc học tập" }).click();
   await expect(page.getByText("Bố mẹ đã xem ✓").first()).toBeVisible();
   await expect(page.getByText("Chưa đạt")).toHaveCount(0);
 });
@@ -684,7 +706,9 @@ test("S2c homework: parent attaches a PDF, then edits the deadline and note", as
 test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, and finishing early earns ★ sớm", async ({ page }) => {
   await login(page, childEmail, childPassword);
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("heading", { name: "Sắp tới — làm trước được" })).toBeVisible();
+  const tabs = page.getByRole("navigation", { name: "Các mục của con" });
+  await tabs.getByRole("link", { name: "Góc học tập" }).click();
+  await expect(page.getByRole("heading", { name: "Làm trước ★ — bài sắp tới" })).toBeVisible();
   // Due homework (Ngữ văn) was done today, so upcoming work is optional today.
   await expect(page.getByText("Không bắt buộc hôm nay")).toBeVisible();
 
@@ -707,8 +731,11 @@ test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, an
   await expect(page.getByRole("dialog", { name: "Đang tập trung" })).toHaveCount(0);
   await sheet.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
   await sheet.getByRole("button", { name: "Nộp 1 ảnh và xong" }).click();
-  await expect(page.getByRole("listitem", { name: "Tiếng Anh" }).getByText("✓ Xong · ★ sớm")).toBeVisible();
+  await expect(sheet).toHaveCount(0);
   await expect(page).toHaveURL(/\/today$/);
+  await tabs.getByRole("link", { name: "Góc học tập" }).click();
+  await expect(page.getByRole("listitem", { name: "Tiếng Anh" }).getByText("✓ Xong · ★ sớm")).toBeVisible();
+  await tabs.getByRole("link", { name: "Tuần của con" }).click();
   await expect(page.getByText("Tuần này làm sớm 1 bài")).toBeVisible();
 });
 
@@ -747,15 +774,17 @@ test("S2e: the child picks an icon and plans today; the plan only reorders 'Vi�
   await page.reload();
   const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
   await expect(banner.getByText("Hóa học", { exact: true })).toBeVisible();
-  await expect(banner.getByText("Theo kế hoạch của con · 0/2 xong")).toBeVisible();
-  await banner.getByRole("button", { name: "Sửa kế hoạch" }).click();
-  const planner = page.getByRole("dialog", { name: "Kế hoạch hôm nay" });
-  await planner.getByRole("button", { name: "Đưa Vật lí lên" }).click();
-  await planner.getByRole("button", { name: /^Lưu kế hoạch/ }).click();
-  await expect(planner).toHaveCount(0);
-  await expect(banner.getByText("Vật lí", { exact: true })).toBeVisible();
+  await expect(banner.getByText("Theo thứ tự của con · 0/2 xong")).toBeVisible();
+  // R2: the order is changed in Góc học tập with ↑ ↓ (saved at once).
+  await banner.getByRole("button", { name: "Xếp lại ở Góc học tập" }).click();
+  await expect(page).toHaveURL(/\/today\?tab=hoc-tap$/);
+  await page.getByRole("button", { name: "Đưa “Vật lí” lên" }).click();
+  await expect(page.getByRole("button", { name: "Đưa “Hóa học” lên" })).toBeEnabled(); // saved: Vật lí is now first
+  await expect(page.getByRole("button", { name: "Đưa “Vật lí” lên" })).toBeDisabled();
   const { data: plan } = await db.from("day_plans").select("item_keys").eq("child_id", kid?.id ?? "").eq("local_date", today).single();
-  expect(plan?.item_keys).toEqual([keys[1], keys[0]]);
+  expect(plan?.item_keys.slice(0, 2)).toEqual([keys[1], keys[0]]);
+  await page.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Hôm nay" }).click();
+  await expect(banner.getByText("Vật lí", { exact: true })).toBeVisible();
 
   // Keys that are not today's tasks are refused; the plan never touches the lock state.
   const bad = await page.evaluate(async () => (await fetch("/api/day/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: ["homework:00000000-0000-4000-8000-000000000000"] }) })).status);
@@ -1031,6 +1060,7 @@ test("Confirm: the child asks a parent to look; the parent confirms on the phone
   const childCtx = await browser.newContext();
   const child = await childCtx.newPage();
   await login(child, childEmail, childPassword);
+  await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc học tập" }).click();
   const row = child.getByRole("listitem", { name: "Mỹ thuật" });
   await row.getByRole("button", { name: "Xong rồi · nộp ảnh" }).click();
   const sheet = child.getByRole("dialog", { name: "Nộp ảnh bài Mỹ thuật" });
@@ -1659,8 +1689,9 @@ test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and 
   expect(s.open).toBe(true);
   expect(s.trust.mode).toBe("trust");
   await child.reload();
-  await expect(child.getByText("Đang ở chế độ Tin tưởng")).toBeVisible();
   await expect(child.getByText("Tin tưởng · mở mọi trang")).toBeVisible();
+  await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Tuần của con" }).click();
+  await expect(child.getByText("Đang ở chế độ Tin tưởng")).toBeVisible();
 
   // Child: no write path — not the route, not the database.
   const viaApi = await child.evaluate(
@@ -1792,7 +1823,8 @@ test("Góc bình yên: off by default; the child opens it WITHOUT a PIN; one ser
   await expect(k.getByRole("button", { name: "Khóa lại" })).toHaveCount(0);
   await home.getByText("🔒 Ai thấy gì?").click();
   const who = home.getByRole("listitem");
-  await expect(who).toHaveCount(4);
+  await expect(who).toHaveCount(5);
+  await expect(home.getByText(/hiện ở trang Hôm nay và Tuần trên máy con: ai đứng cạnh màn hình cũng thấy được/)).toBeVisible();
   await expect(home.getByText("Bố mẹ không có trang nào xem cảm xúc hay hoạt động con chọn ở đây.")).toBeVisible();
   await expect(home.getByText(/Ai đăng nhập bằng tài khoản của con cũng vào được góc này/)).toBeVisible();
   await expect(home.getByText(/lượt cũ hơn 12 tháng sẽ tự xóa/)).toBeVisible();
@@ -1854,7 +1886,7 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   const k = await kCtx.newPage();
   await login(k, childEmail, childPassword);
   await k.goto("/today");
-  await expect(k.getByRole("link", { name: "🌿 Góc bình yên" })).toBeVisible(); // the corner is on (previous test)
+  await expect(k.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc bình yên" })).toBeVisible(); // the corner is on (previous test)
   await expect(k.getByRole("button", { name: /Muốn nói chuyện|Đã gửi bố mẹ/ })).toHaveCount(0);
   expect(await byCall(k, "POST", "/api/by/signal", { kind: "want_talk", to: null })).toBe(409);
 
@@ -1960,7 +1992,7 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   await expect(k.getByRole("region", { name: "Con muốn nói chuyện" })).toBeVisible();
   await k.goto("/today");
   await expect(k.getByRole("button", { name: /Muốn nói chuyện|Đã gửi bố mẹ/ })).toBeVisible();
-  await expect(k.getByRole("link", { name: "🌿 Góc bình yên" })).toHaveCount(0);
+  await expect(k.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc bình yên" })).toHaveCount(0);
   await kCtx.close();
   await db.from("push_subscriptions").delete().eq("endpoint", endpoint);
 });
@@ -2067,6 +2099,17 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   expect((await asParent.from("by_checkins").delete().eq("child_id", childId)).error).not.toBeNull();
   await login(page, env.parentEmail, env.parentPassword);
   expect(await byCall(page, "GET", "/api/by/checkins")).toBe(403);
+  // R2: the feelings reach the child's Hôm nay / Tuần through a child-only route; they are never
+  // part of /api/today (parent pages reuse that data) and never on a parent page.
+  expect(await byCall(page, "GET", "/api/week/days")).toBe(403);
+  await page.goto("/parent");
+  await expect(page.locator("body")).not.toContainText("lo lắng");
+  const childToday = await k.evaluate(async () => (await fetch("/api/today")).text());
+  expect(childToday).not.toContain("lo_lang");
+  expect(childToday).not.toContain('"quad"');
+  const childWeek = await k.evaluate(async () => (await (await fetch("/api/week/days")).json()) as { byEnabled: boolean; today: string; days: { date: string; feel: { word: string } | null }[] });
+  expect(childWeek.byEnabled).toBe(true);
+  expect(childWeek.days.find((d) => d.date === childWeek.today)?.feel).not.toBeNull();
   const sibEmail = `sibling-${randomBytes(4).toString("hex")}@example.com`;
   const sibPassword = `Sib-${randomBytes(12).toString("hex")}`;
   const { data: sibUser } = await db.auth.admin.createUser({ email: sibEmail, password: sibPassword, email_confirm: true });
@@ -2140,7 +2183,7 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
 // parents read it on Thêm › Góp ý của con. Inserts only through POST /api/feedback.
 // ---------------------------------------------------------------------------
 
-test("Góp ý: the child sends from Hôm nay (told parents read it); limits; no direct writes; sibling and other roles refused; parent reads and marks Đã đọc", async ({ page, browser, request }) => {
+test("Góp ý: the child sends from the Góp ý tab (told parents read it); limits; no direct writes; sibling and other roles refused; parent reads and marks Đã đọc", async ({ page, browser, request }) => {
   const db = admin();
   const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
   const childId = kid?.id as string;
@@ -2151,8 +2194,10 @@ test("Góp ý: the child sends from Hôm nay (told parents read it); limits; no 
   const k = await kCtx.newPage();
   await login(k, childEmail, childPassword);
   await k.goto("/today");
-  await k.getByRole("button", { name: "💡 Góp ý" }).click();
-  const sheet = k.getByRole("dialog", { name: "Góp ý cho app" });
+  // R2: Góp ý is a tab of the child's screen.
+  await k.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góp ý" }).click();
+  await expect(k).toHaveURL(/\/today\?tab=gop-y$/);
+  const sheet = k.getByRole("region", { name: "Góp ý cho app" });
   await expect(sheet).toContainText("Bố mẹ sẽ đọc góp ý này.");
   const send = sheet.getByRole("button", { name: "Gửi", exact: true });
   await expect(send).toBeDisabled();
@@ -2162,7 +2207,6 @@ test("Góp ý: the child sends from Hôm nay (told parents read it); limits; no 
   await expect(sheet.getByRole("status")).toContainText("Đã gửi. Cảm ơn con!");
   const { data: rows } = await db.from("app_feedback").select("family_id, child_id, kind, body, seen_at").eq("child_id", childId);
   expect(rows).toEqual([{ family_id: familyId, child_id: childId, kind: "idea", body: "Cho con chọn màu nền tối", seen_at: null }]);
-  await sheet.getByRole("button", { name: "Đóng" }).click();
 
   // The server checks everything; the family and the child always come from the session.
   expect(await byCall(k, "POST", "/api/feedback", { kind: "angry", body: "x" })).toBe(400);

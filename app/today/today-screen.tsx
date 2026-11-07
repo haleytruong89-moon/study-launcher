@@ -8,11 +8,15 @@ import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
-import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, shade, statusPill, upcomingHint, weekSummary } from "@/lib/today/view";
+import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, shade, statusPill } from "@/lib/today/view";
 import { SignOutButton } from "../sign-out-button";
 import { TalkPanel } from "../binh-yen/talk-panel";
-import { FeedbackButton } from "./feedback";
-import { FocusView, NextTask, ProgressRing, TaskRow, WeekStrip, type Act, type TaskCtx } from "./today-parts";
+import { FeedbackForm } from "./feedback";
+import { FocusView, NextTask, ProgressRing, type Act, type TaskCtx } from "./today-parts";
+import { Breadcrumb, ChildNav } from "../child-nav";
+import { TAB_LABELS, isChildTab, tabHref, type ChildTab } from "@/lib/childTabs";
+import { FeelWeek, PillarCards, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
+import type { WeekDaysView } from "@/lib/today/weekDays";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
 import { nextFromPlan, plannable, planProgress } from "@/lib/today/week";
@@ -40,8 +44,50 @@ function readPlanLater(): string | null {
   }
 }
 
-export function TodayScreen({ child, initial }: { child: Child; initial: TodayView | null }) {
+type Tab = Exclude<ChildTab, "binh-yen">;
+
+function tabFromUrl(): Tab {
+  const t = new URLSearchParams(window.location.search).get("tab");
+  return isChildTab(t) ? t : "hom-nay";
+}
+
+export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: Child; initial: TodayView | null; initialTab: Tab; byEnabled: boolean }) {
   const [view, setView] = useState<TodayView | null>(initial);
+  // R2: the 5 tabs. Hôm nay / Góc học tập / Tuần / Góp ý share this screen (and its state).
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const tabRef = useRef<Tab>(initialTab);
+  const loadWeekRef = useRef<() => Promise<void>>(async () => {});
+  const selectTab = useCallback((t: Tab) => {
+    if (t === tabRef.current) return;
+    tabRef.current = t;
+    setTab(t);
+    window.history.pushState(null, "", tabHref(t));
+    window.scrollTo({ top: 0 });
+    void loadWeekRef.current();
+  }, []);
+  useEffect(() => {
+    const onPop = () => {
+      tabRef.current = tabFromUrl();
+      setTab(tabRef.current);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  // The child's own week (feelings + 4 areas): a child-only route, never part of TodayView.
+  const [week, setWeek] = useState<WeekDaysView | null>(null);
+  const weekAt = useRef(0);
+  // Fetched only where it is shown (Hôm nay, Tuần), at most once a minute unless forced.
+  const loadWeek = useCallback(async (force = false) => {
+    if (tabRef.current !== "hom-nay" && tabRef.current !== "tuan") return;
+    if (!force && Date.now() - weekAt.current < 60_000) return;
+    weekAt.current = Date.now();
+    try {
+      const res = await fetch("/api/week/days", { cache: "no-store" });
+      if (res.ok) setWeek((await res.json()) as WeekDaysView);
+    } catch {
+      /* the chart just waits for the next try */
+    }
+  }, []);
   const [error, setError] = useState<string | null>(initial ? null : "Chưa tải được việc hôm nay. Đang thử lại…");
   const [busy, setBusy] = useState<string | null>(null);
   // Focus mode opens for a running task unless the child minimised THAT task.
@@ -78,10 +124,29 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
       if (!res.ok) throw new Error(String(res.status));
       accept((await res.json()) as TodayView);
       setError(null);
+      void loadWeek();
     } catch {
       setError("Mất kết nối với máy chủ. Đang thử lại…");
     }
-  }, [accept, router]);
+  }, [accept, router, loadWeek]);
+
+  useEffect(() => {
+    loadWeekRef.current = () => loadWeek();
+  }, [loadWeek]);
+
+  useEffect(() => {
+    let alive = true;
+    weekAt.current = Date.now();
+    fetch("/api/week/days", { cache: "no-store" })
+      .then((res) => (res.ok ? (res.json() as Promise<WeekDaysView>) : null))
+      .then((w) => {
+        if (alive && w) setWeek(w);
+      })
+      .catch(() => null);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Remember this browser for the PIN sign-in (once per page load; best effort).
   useEffect(() => {
@@ -134,6 +199,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
         return false;
       }
       accept(data);
+      void loadWeek(true);
       return true;
     } catch {
       setError("Mất kết nối mạng, thử lại sau.");
@@ -245,8 +311,6 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const planItems = plannable(s).filter((i) => i.state !== "done");
   const showNudge = !view.plan && !s.part1.complete && planItems.length >= 2 && planLater !== s.localDate;
   const planDone = view.plan ? planProgress(s, view.plan) : null;
-  const mustToday = s.part1.items.filter((i) => i.group !== "upcoming");
-  const upcoming = s.part1.items.filter((i) => i.group === "upcoming");
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
   const focusItem = !paused && next?.state === "running" && minimized !== next.key ? next : null;
   const proofItem = proofKey ? (s.part1.items.find((i) => i.key === proofKey) ?? null) : null;
@@ -272,8 +336,46 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   };
   const firstName = child.name.trim().split(/\s+/).pop() ?? child.name;
 
+  // Shared by Hôm nay and Góc học tập (R2): the status line and the break / free-time buttons.
+  const statusTop = (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex min-w-0 grow basis-60 flex-col gap-0.5">
+        <strong className="text-lg">{banner.title}</strong>
+        <span className="text-sm text-ink/75">{banner.sub}</span>
+      </div>
+      {countdownTo && (
+        <span className="text-3xl font-bold tabular-nums" style={{ color }} aria-label="Thời gian còn lại">
+          {clock(new Date(countdownTo).getTime() - nowMs)}
+        </span>
+      )}
+    </div>
+  );
+  const controls = (
+    <>
+      {(s.break.canStart || s.free.canStart) && (
+        <div className="flex flex-wrap gap-2">
+          {s.free.canStart && (
+            <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/free" })} className="btn text-white disabled:opacity-60" style={{ background: color }}>
+              Bắt đầu giờ tự do
+            </button>
+          )}
+          {s.break.canStart && (
+            <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "start" } })} className="btn border-[1.5px] bg-white disabled:opacity-60" style={{ borderColor: color, color }}>
+              ☕ Nghỉ {view.rules.breakMinutes} phút (1 lần/ngày)
+            </button>
+          )}
+        </div>
+      )}
+      {s.break.state === "running" && (
+        <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "end" } })} className="btn self-start text-white disabled:opacity-60" style={{ background: color }}>
+          Học tiếp
+        </button>
+      )}
+    </>
+  );
+
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh pb-24 lg:pb-0 lg:pl-52">
       {dialog === "plan" && (
         <Planner
           items={planItems}
@@ -344,7 +446,6 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
             <span className="ml-auto flex flex-wrap items-center gap-2">
               {/* Góc bình yên (S-BY0): hidden unless a parent phone can receive it. */}
               <TalkPanel variant="header" color={color} />
-              <FeedbackButton variant="header" color={color} />
               <SignOutButton onDark />
             </span>
           </div>
@@ -362,227 +463,169 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-5xl gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-        <div className="flex min-w-0 flex-col gap-5">
-          {error && !dialog && !proofOpen && (
-            <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
+      <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
+        <Breadcrumb trail={tab === "hom-nay" ? [TAB_LABELS["hom-nay"]] : [TAB_LABELS["hom-nay"], TAB_LABELS[tab]]} />
+        {error && !dialog && !proofOpen && (
+          <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
+            {error}
+          </p>
+        )}
 
-          {view.weekly && (
-            <WeeklyReviewCard
-              key={view.weekly.stats.weekStart}
-              stats={view.weekly.stats}
-              review={view.weekly.review}
+        {tab === "hom-nay" && (
+          <>
+            {view.weekly && (
+              <WeeklyReviewCard
+                key={view.weekly.stats.weekStart}
+                stats={view.weekly.stats}
+                review={view.weekly.review}
+                color={color}
+                busy={!!busy}
+                onSave={(answers) => act({ url: "/api/week/review", body: answers })}
+              />
+            )}
+
+            {byEnabled && (
+              <section aria-labelledby="by-invite" className="flex flex-col gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}>
+                <a href="/binh-yen" className="flex min-h-16 items-center gap-3 rounded-2xl px-4 text-white no-underline" style={{ background: "#4E8C63" }}>
+                  <span aria-hidden className="text-3xl">
+                    🌿
+                  </span>
+                  <span className="flex flex-col">
+                    <strong id="by-invite" className="text-lg">
+                      Hôm nay con thấy thế nào?
+                    </strong>
+                    <span className="text-sm opacity-90">Vào Góc bình yên trước khi học, nếu con muốn</span>
+                  </span>
+                </a>
+                {week && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[13px] font-semibold text-ink/70">Cảm xúc tuần này của con</span>
+                    <FeelWeek week={week} color={color} />
+                  </div>
+                )}
+              </section>
+            )}
+
+            {showNudge && (
+              <PlanNudge
+                color={color}
+                onPlan={() => {
+                  setError(null);
+                  setDialog("plan");
+                }}
+                onLater={() => {
+                  setPlanLater(s.localDate);
+                  try {
+                    window.localStorage.setItem("plan-later", s.localDate);
+                  } catch {
+                    /* not remembered: fine */
+                  }
+                }}
+              />
+            )}
+
+            <PillarCards
+              s={s}
+              today={week?.days.find((d) => d.date === s.localDate) ?? null}
+              byEnabled={byEnabled}
+              color={color}
+              nowMs={nowMs}
+              freeMinutes={view.rules.freeMinutes}
+              onStudy={() => selectTab("hoc-tap")}
+            />
+
+            <section
+              aria-live="polite"
+              aria-label="Trạng thái hôm nay"
+              className="flex flex-col gap-4 rounded-[20px] border-2 bg-white px-4 py-4"
+              style={{ borderColor: color, boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}
+            >
+              {statusTop}
+              {controls}
+              {next && !paused && (
+                <div className="border-t border-ink/10 pt-4">
+                  <NextTask item={next} ctx={ctx} />
+                </div>
+              )}
+              {planDone && (
+                <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 pt-3 text-sm">
+                  <span className="font-semibold">
+                    Theo thứ tự của con · {planDone.done}/{planDone.total} xong
+                  </span>
+                  <button type="button" onClick={() => selectTab("hoc-tap")} className="ml-auto min-h-11 px-2 font-semibold underline" style={{ color }}>
+                    Xếp lại ở Góc học tập
+                  </button>
+                </div>
+              )}
+              <div className="flex flex-col items-start gap-1 border-t border-ink/10 pt-3">
+                <span className="text-[13px] text-ink/70">
+                  {s.passesLeft > 0 ? `Thẻ miễn: còn ${s.passesLeft} thẻ tuần này · dùng khi thật cần, ngày vẫn tính là đạt` : "Thẻ miễn: đã dùng hết — tuần sau có thẻ mới"}
+                </span>
+                {passOffered(s) && (
+                  <button
+                    type="button"
+                    disabled={!!busy}
+                    onClick={() => void act({ url: "/api/day/pass", confirm: "Dùng thẻ miễn hôm nay? Giờ tự do bắt đầu ngay, mỗi tuần chỉ có số thẻ giới hạn." })}
+                    className="min-h-11 text-sm font-semibold text-ink/75 underline disabled:opacity-60"
+                  >
+                    Dùng thẻ hôm nay
+                  </button>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
+        {tab === "hoc-tap" && (
+          <>
+            <section aria-label="Trạng thái hôm nay" aria-live="polite" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white px-4 py-3">
+              {statusTop}
+              {controls}
+            </section>
+            <StudyCorner
+              s={s}
+              view={view}
+              ctx={ctx}
               color={color}
               busy={!!busy}
-              onSave={(answers) => act({ url: "/api/week/review", body: answers })}
+              paused={paused}
+              onSavePlan={(keys) => act({ url: "/api/day/plan", body: { keys } })}
+              suggested={next}
             />
-          )}
+          </>
+        )}
 
-          {showNudge && (
-            <PlanNudge
-              color={color}
-              onPlan={() => {
-                setError(null);
-                setDialog("plan");
-              }}
-              onLater={() => {
-                setPlanLater(s.localDate);
-                try {
-                  window.localStorage.setItem("plan-later", s.localDate);
-                } catch {
-                  /* not remembered: fine */
-                }
-              }}
-            />
-          )}
-
-          <section
-            aria-live="polite"
-            aria-label="Trạng thái hôm nay"
-            className="flex flex-col gap-4 rounded-[20px] border-2 bg-white px-4 py-4"
-            style={{ borderColor: color, boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}
-          >
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex min-w-0 grow basis-60 flex-col gap-0.5">
-                <strong className="text-lg">{banner.title}</strong>
-                <span className="text-sm text-ink/75">{banner.sub}</span>
-              </div>
-              {countdownTo && (
-                <span className="text-3xl font-bold tabular-nums" style={{ color }} aria-label="Thời gian còn lại">
-                  {clock(new Date(countdownTo).getTime() - nowMs)}
-                </span>
-              )}
-            </div>
-            {(s.break.canStart || s.free.canStart) && (
-              <div className="flex flex-wrap gap-2">
-                {s.free.canStart && (
-                  <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/free" })} className="btn text-white disabled:opacity-60" style={{ background: color }}>
-                    Bắt đầu giờ tự do
-                  </button>
-                )}
-                {s.break.canStart && (
-                  <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "start" } })} className="btn border-[1.5px] bg-white disabled:opacity-60" style={{ borderColor: color, color }}>
-                    ☕ Nghỉ {view.rules.breakMinutes} phút (1 lần/ngày)
-                  </button>
-                )}
-              </div>
-            )}
-            {s.break.state === "running" && (
-              <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "end" } })} className="btn self-start text-white disabled:opacity-60" style={{ background: color }}>
-                Học tiếp
-              </button>
-            )}
-            {next && !paused && (
-              <div className="border-t border-ink/10 pt-4">
-                <NextTask item={next} ctx={ctx} />
-              </div>
-            )}
-            {planDone && (
-              <div className="flex flex-wrap items-center gap-2 border-t border-ink/10 pt-3 text-sm">
-                <span className="font-semibold">
-                  Theo kế hoạch của con · {planDone.done}/{planDone.total} xong
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setDialog("plan");
-                  }}
-                  className="ml-auto min-h-11 px-2 font-semibold underline"
-                  style={{ color }}
-                >
-                  Sửa kế hoạch
-                </button>
-              </div>
-            )}
-          </section>
-
-          <section aria-labelledby="p1h" className="flex flex-col gap-2.5">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 id="p1h" className="text-lg font-bold">
-                Phải xong hôm nay
+        {tab === "tuan" && (
+          <>
+            <section aria-labelledby="wk-own" className="flex flex-col gap-4 rounded-2xl border border-ink/10 bg-white p-4">
+              <h2 id="wk-own" className="text-lg font-bold">
+                Tuần này của con
               </h2>
-              <span className="text-[13px] font-semibold text-ink/70">
-                Phần 1 · {s.part1.done}/{s.part1.total} xong
-              </span>
-            </div>
-            {mustToday.length === 0 ? (
-              <p className="text-sm text-ink/70">Không có bài đến hạn hôm nay.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {mustToday.map((item) => (
-                  <TaskRow key={item.key} item={item} ctx={ctx} locked={paused} />
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section aria-labelledby="uph" className="flex flex-col gap-2.5">
-            <div className="flex flex-col gap-0.5">
-              <h2 id="uph" className="text-lg font-bold">
-                Sắp tới — làm trước được
-              </h2>
-              {upcoming.length > 0 && <span className="text-[13px] font-semibold" style={{ color: s.part1.pick.done < s.part1.pick.needed ? color : "#4A4F4C" }}>{upcomingHint(s)}</span>}
-            </div>
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-ink/70">Chưa có bài nào sắp tới.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {upcoming.map((item) => (
-                  <TaskRow key={item.key} item={item} ctx={ctx} locked={paused} />
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-5">
-          <section aria-labelledby="p2h" className="flex flex-col gap-2.5">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <h2 id="p2h" className="text-lg font-bold">
-                Phần 2 · Kỹ năng
-              </h2>
-              <span className="ml-auto text-[13px] font-semibold text-ink/70">
-                {`${s.part2.done}/${s.part2.total} xong · làm song song với bài tập`}
-              </span>
-            </div>
-            {s.part2.items.length === 0 ? (
-              <p className="text-sm text-ink/70">Hôm nay không có kỹ năng.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {s.part2.items.map((item) => (
-                  <TaskRow key={item.key} item={item} ctx={ctx} locked={paused} />
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section aria-labelledby="wkh" className="flex flex-col gap-3.5 rounded-2xl border border-ink/10 bg-white p-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 id="wkh" className="text-lg font-bold">
-                Tuần này
-              </h2>
-              <span className="text-[13px] font-semibold text-ink/70">{weekSummary(s.week)}</span>
-            </div>
-            <WeekStrip week={s.week} today={s.localDate} firstDay={view.firstDay} color={color} />
-            {s.earlyThisWeek > 0 ? (
-              <p className="flex items-center gap-2 rounded-xl bg-[#FBF0D6] px-3 py-2.5 text-sm font-semibold text-[#5E3D00]">
-                <span aria-hidden>★</span> Tuần này làm sớm {s.earlyThisWeek} bài
-              </p>
-            ) : (
-              <p className="text-sm text-ink/70">Làm xong bài trước hạn ít nhất 2 ngày để được ★ sớm.</p>
-            )}
-            <div className="flex flex-col gap-2 border-t border-ink/10 pt-3.5">
-              <div className="flex flex-wrap justify-between gap-2">
-                <span className="font-bold">{s.trust.mode === "trust" ? "Đang ở chế độ Tin tưởng" : "Tiến tới chế độ Tin tưởng"}</span>
-                {s.trust.mode === "lock" && (
-                  <span className="text-sm font-bold text-accent">
-                    {s.trust.weeksMet}/{s.trust.weeksNeeded} tuần
-                  </span>
-                )}
-              </div>
-              {s.trust.mode === "trust" && (
-                <span className="text-[13px] text-ink/70">Máy không chặn trang nào — con tự quản giờ học. Việc hôm nay vẫn ở trên, làm xong vẫn tính ngày đạt như thường.</span>
-              )}
-              {s.trust.mode === "lock" && (
+              {week ? (
                 <>
-                  <div
-                    className="h-2.5 overflow-hidden rounded-full bg-[#E3E6E0]"
-                    role="progressbar"
-                    aria-label="Số tuần đạt"
-                    aria-valuemin={0}
-                    aria-valuemax={s.trust.weeksNeeded}
-                    aria-valuenow={s.trust.weeksMet}
-                  >
-                    <div className="h-2.5 rounded-full bg-accent" style={{ width: `${Math.round((s.trust.weeksMet / Math.max(1, s.trust.weeksNeeded)) * 100)}%` }} />
-                  </div>
-                  <span className="text-[13px] text-ink/70">
-                    Đủ {s.trust.weeksNeeded} tuần liên tiếp đạt ≥ {view.rules.trustUpPct}% ngày → bố mẹ cùng con xem chuyển sang Tin tưởng: máy không chặn web, con tự quản giờ học.
-                  </span>
+                  {week.byEnabled && <FeelWeek week={week} color={color} big />}
+                  <WeekAreas week={week} color={color} />
                 </>
+              ) : (
+                <p className="text-sm text-ink/70">Đang tải…</p>
               )}
-            </div>
-            <div className="flex flex-col items-start gap-1 border-t border-ink/10 pt-3">
-              <span className="text-[13px] text-ink/70">
-                {s.passesLeft > 0 ? `Thẻ miễn: còn ${s.passesLeft} thẻ tuần này · dùng khi thật cần, ngày vẫn tính là đạt` : "Thẻ miễn: đã dùng hết — tuần sau có thẻ mới"}
-              </span>
-              {passOffered(s) && (
-                <button
-                  type="button"
-                  disabled={!!busy}
-                  onClick={() => void act({ url: "/api/day/pass", confirm: "Dùng thẻ miễn hôm nay? Giờ tự do bắt đầu ngay, mỗi tuần chỉ có số thẻ giới hạn." })}
-                  className="min-h-11 text-sm font-semibold text-ink/75 underline disabled:opacity-60"
-                >
-                  Dùng thẻ hôm nay
-                </button>
-              )}
-            </div>
+              <p className="text-[13px] text-ink/70">Sắp có: {child.grade !== null && child.grade <= 7 ? "thế giới của con — mỗi tháng một khu rừng, biển hay vũ trụ mới" : "Tập truyện của tuần — mỗi ngày một trang"}.</p>
+            </section>
+            <WeekProgress s={s} view={view} color={color} />
+          </>
+        )}
+
+        {tab === "gop-y" && (
+          <section aria-labelledby="gy" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
+            <h2 id="gy" className="text-lg font-bold">
+              Góp ý cho app
+            </h2>
+            <p className="text-sm text-ink/75">Con thích gì, chưa thích gì, hay có ý tưởng gì cho app? Bố mẹ đọc hết.</p>
+            <FeedbackForm color={color} />
           </section>
-        </div>
+        )}
       </main>
+      <ChildNav active={tab} byEnabled={byEnabled} color={color} onSelect={selectTab} />
     </div>
   );
 }

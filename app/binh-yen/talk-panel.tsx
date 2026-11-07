@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { HOTLINE_TEXT, NOT_DELIVERED_TEXT, OFFLINE_TEXT, type TalkStatus } from "@/lib/binhYen/rules";
 
@@ -86,13 +85,8 @@ export function TalkPanel({ initial, color, variant = "card" }: { initial?: Talk
     setBusy(false);
   }
 
-  const cornerLink =
-    variant === "header" && info?.corner ? (
-      <Link href="/binh-yen" className="btn border border-white/50 bg-transparent text-sm text-white">
-        🌿 Góc bình yên
-      </Link>
-    ) : null;
-  if (!info || (!info.available && !info.status)) return cornerLink;
+  // R2: the corner itself is a tab of the child's screen now (no extra header link).
+  if (!info || (!info.available && !info.status)) return null;
 
   const both = info.parents.length !== 1;
   const sentTo = both ? "cả bố và mẹ" : (info.parents[0]?.name ?? "bố mẹ");
@@ -137,7 +131,6 @@ export function TalkPanel({ initial, color, variant = "card" }: { initial?: Talk
   if (variant === "card") return body;
   return (
     <>
-      {cornerLink}
       <button
         type="button"
         aria-expanded={open}
@@ -147,7 +140,7 @@ export function TalkPanel({ initial, color, variant = "card" }: { initial?: Talk
         {info.status && info.status.phase !== "seen" ? "💬 Đã gửi bố mẹ" : "💬 Muốn nói chuyện"}
       </button>
       {open && (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-md px-4 pb-4 lg:bottom-0 lg:pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="flex flex-col gap-2 rounded-2xl shadow-[0_8px_30px_rgba(28,31,29,0.25)]">
             {body}
           </div>
