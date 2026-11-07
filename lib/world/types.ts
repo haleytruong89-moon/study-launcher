@@ -73,6 +73,8 @@ export interface Thing {
   teach: string;
 }
 
+export type Move = "fly" | "hop" | "swim" | "float";
+
 /** An animal comes (and stays) once the world has at least `n` different things with `tag`, for every need. */
 export interface Animal {
   key: string;
@@ -81,6 +83,8 @@ export interface Animal {
   needs: readonly { tag: string; n: number }[];
   /** Why it came, shown on its card: "Đến vì …". */
   because: string;
+  /** R6b: how it moves in the scene (default by world: swim in the sea, float in space, hop elsewhere). */
+  move?: Move;
   facts: Facts;
   mission: string;
   teach: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TaskView } from "@/lib/dayState";
@@ -9,6 +10,7 @@ import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
 import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, shade, statusPill } from "@/lib/today/view";
+import { Character } from "../avatar-face";
 import { SignOutButton } from "../sign-out-button";
 import { TalkPanel } from "../binh-yen/talk-panel";
 import { FeedbackForm } from "./feedback";
@@ -424,6 +426,12 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       <header className="text-white" style={{ background: color }}>
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 pt-5 pb-4">
           <div className="flex items-center gap-3">
+            {child.look && (
+              // R6b (artifact, item J): the child's own character greets them; a tap opens the creator.
+              <Link href="/nhan-vat" aria-label="Nhân vật của con" className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+                <Character look={child.look} pics={child.pics} expr="smile" className="size-full" />
+              </Link>
+            )}
             <button
               type="button"
               aria-label="Đổi biểu tượng"
