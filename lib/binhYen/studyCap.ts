@@ -5,9 +5,9 @@
  * - Study time = the day's work is not done, the laptop is locked and it is not free time
  *   (LOCK_P1, BREAK_OFFER, LOCK_P2, or a parent lock while work is still open).
  *   Break, free time, sick day, trust mode, a parent's "open" and a finished day: no limit.
- * - In study time each visit (one unlocked session, from the PIN) lasts at most
- *   `by_study_minutes`. At the limit the session ends; the child may come back at once with
- *   the PIN (no limit on the number of visits, Q6).
+ * - In study time each visit (one by_sessions row, from the moment the child opened the corner) lasts at most
+ *   `by_study_minutes`. At the limit the session ends; the child may come back at once
+ *   (a new visit; no limit on the number of visits, Q6).
  * - "Con muốn nói chuyện" and the safety screen are never limited (they do not need the
  *   corner's session at all).
  * This never changes the lock / open rules (DESIGN §5).

@@ -51,7 +51,7 @@ export default async function TalkPage() {
       <AutoRefresh seconds={20} />
       <main className="mx-auto flex max-w-lg flex-col gap-6 px-4 py-6">
         <p className="text-sm text-ink/70">
-          Con bấm “Con muốn nói chuyện” ở màn Hôm nay hoặc trong Góc bình yên. Chỉ có tên con và giờ — không có nội dung. Bấm “Đã thấy” để con biết bố mẹ đã nhận, rồi tìm con khi có thể. Sau 10 phút chưa ai bấm, điện thoại được nhắc lại một lần.
+          Con bấm “Con muốn nói chuyện” ở màn Hôm nay hoặc trong Góc bình yên. Chỉ có tên con và giờ — không có nội dung. Bấm “Đã thấy” để con biết bố mẹ đã nhận, rồi tìm con khi có thể. Sau 10 phút chưa ai bấm, con được nhắc tìm bố mẹ trực tiếp (điện thoại không nhắc lại).
         </p>
         {unseen.length === 0 && <p className="text-sm font-semibold">Không có tín hiệu nào đang chờ.</p>}
         {unseen.map((r) => (

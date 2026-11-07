@@ -7,7 +7,7 @@ import { hoursMinutes, ICONS, REVIEW_QUESTIONS } from "@/lib/today/week";
 import type { WeeklyReview } from "@/lib/today/week-load";
 
 /** Small modal shell (real dialog semantics, Esc / backdrop close, 44px controls). */
-function Modal({ title, error, onClose, children }: { title: string; error?: string | null; onClose: () => void; children: React.ReactNode }) {
+export function Modal({ title, error, onClose, children }: { title: string; error?: string | null; onClose: () => void; children: React.ReactNode }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   // Focus starts inside the dialog, so Esc and keyboard users work right away.
   useEffect(() => closeRef.current?.focus(), []);
@@ -17,7 +17,7 @@ function Modal({ title, error, onClose, children }: { title: string; error?: str
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="flex max-h-[92dvh] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl"
+        className="flex max-h-[92dvh] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-t-3xl bg-white p-5 text-ink sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === "Escape") onClose();

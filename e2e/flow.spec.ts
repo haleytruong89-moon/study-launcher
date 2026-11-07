@@ -5,6 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
 import { makePng } from "./png";
 import { addDays, localDate, weekStart } from "../lib/time";
+import { inEveningWindow } from "../lib/push/window";
 
 const env = e2eEnv();
 
@@ -1265,7 +1266,10 @@ test("Push: a parent turns notifications on/off for a device; children cannot; c
   expect((await request.get("/api/cron/evening", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
   const ok = await request.get("/api/cron/evening", { headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` } });
   expect(ok.status()).toBe(200);
-  expect((await ok.json()).ok).toBe(true);
+  const evening = await ok.json();
+  expect(evening.ok).toBe(true);
+  // 07/11/2026: outside 20:00–23:00 Vietnam time nothing is sent, whoever calls (a late run never pings at night).
+  if (!inEveningWindow(new Date())) expect(evening.skipped).toBe("outside_window");
 });
 
 // ---------------------------------------------------------------------------
@@ -1711,12 +1715,10 @@ test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and 
 });
 
 // ---------------------------------------------------------------------------
-// Góc bình yên S-BY0 (docs/BINH_YEN.md): the child's own PIN, idle lock on the server clock,
-// parent can only wipe; "Con muốn nói chuyện" → parent "Đã thấy"; reminder after 10 minutes.
+// Góc bình yên S-BY0 (docs/BINH_YEN.md). Parent decision 07/11/2026: NO separate PIN and no idle
+// lock — the child's own login opens the corner; the server still holds one visit per browser
+// (study-time limit, R5). "Con muốn nói chuyện" → parent "Đã thấy".
 // ---------------------------------------------------------------------------
-
-const BY_PIN = "593817";
-const LOGIN_PIN = "482916";
 
 function byPsql(sql: string): string {
   const dbUrl = process.env.E2E_DB_URL ?? "";
@@ -1730,12 +1732,13 @@ const byCall = (p: Page, method: string, url: string, body?: unknown) =>
     [method, url, body] as const,
   );
 
-test("Góc bình yên: off by default; child sets an OWN PIN; 5 wrong tries lock; idle needs the PIN again; parent can only wipe it", async ({ page, browser }) => {
+test("Góc bình yên: off by default; the child opens it WITHOUT a PIN; one server-held visit; no idle lock; parents and anon refused", async ({ page, browser, request }) => {
   const db = admin();
   const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
   const childId = kid?.id as string;
+  const openVisits = async () => (await db.from("by_sessions").select("id", { count: "exact", head: true }).eq("child_id", childId).is("ended_at", null)).count;
 
-  // Off by default: friendly page, and the API refuses a PIN.
+  // Off by default: friendly page, no visit is started, and the old PIN routes are gone.
   const kCtx = await browser.newContext();
   const k = await kCtx.newPage();
   await login(k, childEmail, childPassword);
@@ -1744,124 +1747,83 @@ test("Góc bình yên: off by default; child sets an OWN PIN; 5 wrong tries lock
   const head = await k.request.get("/binh-yen");
   expect(head.headers()["content-security-policy"]).toContain("default-src 'self'");
   expect(head.headers()["content-security-policy"]).toContain("connect-src 'self'");
-  expect(await byCall(k, "POST", "/api/by/pin/set", { pin: BY_PIN, again: BY_PIN })).toBe(409);
+  const off = await k.evaluate(async () => (await (await fetch("/api/by/open", { method: "POST" })).json()) as { enabled: boolean; open: boolean });
+  expect(off).toMatchObject({ enabled: false, open: false });
+  expect(await openVisits()).toBe(0);
+  expect(await byCall(k, "POST", "/api/by/pin/set", { pin: "593817", again: "593817" })).toBe(410);
+  expect(await byCall(k, "POST", "/api/by/pin/verify", { pin: "593817" })).toBe(410);
 
-  // The parent knows the login PIN; turns Góc bình yên on in "Luật trong nhà".
+  // Parents and strangers have no corner.
   await login(page, env.parentEmail, env.parentPassword);
-  expect(await byCall(page, "POST", `/api/admin/children/${childId}/pin`, { pin: LOGIN_PIN })).toBe(200);
-  expect(await byCall(page, "POST", "/api/by/pin/set", { pin: BY_PIN, again: BY_PIN })).toBe(403); // parents have no corner
+  expect(await byCall(page, "POST", "/api/by/open")).toBe(403);
+  expect(await byCall(page, "GET", "/api/by/state")).toBe(403);
+  for (const url of ["/api/by/open", "/api/by/ping", "/api/by/checkins/delete"]) expect((await request.post(url, { data: {} })).status()).toBe(401);
+  expect((await request.get("/api/by/checkins")).status()).toBe(401);
+
+  // The parent turns it on in "Luật trong nhà": no "tự khóa" setting any more.
   await page.goto("/parent/settings");
   const box = page.getByRole("group", { name: "Góc bình yên" });
+  await expect(box.getByLabel(/Tự khóa sau bao lâu/)).toHaveCount(0);
+  await expect(box).toContainText("Không cần PIN riêng");
   await box.getByLabel("Bật Góc bình yên cho các con").check();
-  await box.getByLabel(/Tự khóa sau bao lâu/).fill("5");
   await page.getByRole("button", { name: "Lưu cài đặt" }).click();
   await expect(page.getByRole("status")).toContainText("Đã lưu cài đặt");
-  const { data: fs } = await db.from("family_settings").select("by_enabled, by_idle_lock_minutes").eq("family_id", kid?.family_id).single();
-  expect(fs).toEqual({ by_enabled: true, by_idle_lock_minutes: 5 });
+  const { data: fs } = await db.from("family_settings").select("by_enabled").eq("family_id", kid?.family_id).single();
+  expect(fs).toEqual({ by_enabled: true });
 
-  // The child sets their own PIN: the login PIN is refused, another one opens the corner.
+  // The child opens it: straight to the corner's home — no PIN screen, no password box.
   await k.goto("/binh-yen");
-  const setForm = k.getByRole("form", { name: "Đặt PIN Góc bình yên" });
-  await setForm.getByLabel("PIN mới (6 số)").fill(LOGIN_PIN);
-  await setForm.getByLabel("Gõ lại PIN").fill(LOGIN_PIN);
-  await setForm.getByRole("button", { name: "Đặt PIN" }).click();
-  await expect(setForm.getByRole("alert")).toContainText("giống PIN đăng nhập");
-  await setForm.getByLabel("PIN mới (6 số)").fill(BY_PIN);
-  await setForm.getByLabel("Gõ lại PIN").fill(BY_PIN);
-  await setForm.getByRole("button", { name: "Đặt PIN" }).click();
   const home = k.getByRole("region", { name: "Góc của con" });
   await expect(home.getByRole("heading", { name: /^Chào/ })).toBeVisible();
+  await expect(k.locator("input[type=password]")).toHaveCount(0);
+  await expect(k.getByRole("button", { name: "Khóa lại" })).toHaveCount(0);
   await home.getByText("🔒 Ai thấy gì?").click();
-  await expect(home.getByText(/Bố mẹ không xem được cảm xúc/)).toBeVisible();
-  await expect(home.getByText(/tự khóa sau 5 phút/)).toBeVisible();
-  const { data: stored } = await db.from("profiles").select("by_pin_hash, pin_hash").eq("id", childId).single();
-  expect(stored?.by_pin_hash).toMatch(/^scrypt\$/);
-  expect(stored?.by_pin_hash).not.toContain(BY_PIN);
-  expect(stored?.by_pin_hash).not.toBe(stored?.pin_hash);
-  // Server-held session; cookies httpOnly + Secure + SameSite=Strict, only for the corner's paths.
-  const { count: open } = await db.from("by_sessions").select("id", { count: "exact", head: true }).eq("child_id", childId).is("ended_at", null);
-  expect(open).toBe(1);
+  const who = home.getByRole("listitem");
+  await expect(who).toHaveCount(4);
+  await expect(home.getByText("Bố mẹ không có trang nào xem cảm xúc hay hoạt động con chọn ở đây.")).toBeVisible();
+  await expect(home.getByText(/Ai đăng nhập bằng tài khoản của con cũng vào được góc này/)).toBeVisible();
+  await expect(home.getByText(/lượt cũ hơn 12 tháng sẽ tự xóa/)).toBeVisible();
+  await expect(home).not.toContainText("PIN");
+
+  // One server-held visit; cookies httpOnly + Secure + SameSite=Strict, only for the corner's paths.
+  await expect.poll(openVisits).toBe(1);
   const cookies = (await kCtx.cookies()).filter((c) => c.name.startsWith("sl_by"));
   expect(cookies.map((c) => [c.name, c.path, c.httpOnly, c.secure, c.sameSite]).sort()).toEqual([
     ["sl_by_api", "/api/by", true, true, "Strict"],
     ["sl_by_page", "/binh-yen", true, true, "Strict"],
   ]);
-  // A second PIN cannot be set over the first; no one in the browser reads the hash.
-  expect(await byCall(k, "POST", "/api/by/pin/set", { pin: "605938", again: "605938" })).toBe(409);
+  const { data: first } = await db.from("by_sessions").select("id").eq("child_id", childId).is("ended_at", null).single();
+  // A reload continues the same visit (the study-time limit cannot be reset by reloading).
+  await k.reload();
+  await expect(home).toBeVisible();
+  const { data: same } = await db.from("by_sessions").select("id").eq("child_id", childId).is("ended_at", null).single();
+  expect(same?.id).toBe(first?.id);
+  // No one in the browser reads the visits.
   const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
   await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
-  expect((await asChild.from("profiles").select("by_pin_hash")).error).not.toBeNull();
   expect((await asChild.from("by_sessions").select("id")).error).not.toBeNull();
 
-  // Lock, then 4 wrong tries warn and the 5th locks for 15 minutes (even the right PIN waits).
-  await home.getByRole("button", { name: "Khóa lại" }).click();
-  const pinForm = k.getByRole("form", { name: "Mở Góc bình yên" });
-  for (let n = 1; n <= 4; n++) {
-    await pinForm.getByLabel("PIN Góc bình yên").fill(`70000${n}`);
-    await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
-    await expect(pinForm.getByRole("alert")).toContainText(`Còn ${5 - n} lần thử`);
-  }
-  await pinForm.getByLabel("PIN Góc bình yên").fill("700005");
-  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
-  await expect(k.getByRole("heading", { name: "Đang khóa" })).toBeVisible();
-  await expect(k.getByText(/đang khóa vì gõ sai nhiều lần/)).toBeVisible();
-  expect(await byCall(k, "POST", "/api/by/pin/verify", { pin: BY_PIN })).toBe(429);
-
-  // Lock over (test shortcut) → the right PIN opens it again.
-  await db.from("profiles").update({ by_pin_failed_count: 0, by_pin_locked_until: null }).eq("id", childId);
-  await k.reload();
-  await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
-  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
-  await expect(home).toBeVisible();
-
-  // 6 minutes without a touch (server clock) → the PIN again.
+  // No idle lock: away for 6 minutes (server clock) → the corner opens straight away, as a NEW visit.
   expect(byPsql(`with u as (update public.by_sessions set last_seen_at = now() - interval '6 minutes' where child_id = '${childId}' and ended_at is null returning 1) select count(*) from u`)).toBe("1");
   await k.reload();
-  await expect(pinForm).toBeVisible();
-  await expect(home).toHaveCount(0);
-  const { count: stillOpen } = await db.from("by_sessions").select("id", { count: "exact", head: true }).eq("child_id", childId).is("ended_at", null);
-  expect(stillOpen).toBe(0);
-  // No trace of the child's tries or visits in the audit log (D5).
+  await expect(home).toBeVisible();
+  await expect(k.locator("input[type=password]")).toHaveCount(0);
+  await expect.poll(openVisits).toBe(1);
+  const { data: second } = await db.from("by_sessions").select("id").eq("child_id", childId).is("ended_at", null).single();
+  expect(second?.id).not.toBe(first?.id);
+  const { data: old } = await db.from("by_sessions").select("ended_at").eq("id", first?.id as string).single();
+  expect(old?.ended_at).not.toBeNull();
+  // No trace of the child's visits in the audit log (D5).
   const { count: byLogs } = await db.from("audit_log").select("id", { count: "exact", head: true }).like("action", "%by%");
   expect(byLogs).toBe(0);
 
-  // Open again, and pretend this laptop keeps private text for the child.
-  await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
-  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
-  await expect(home).toBeVisible();
-  await k.evaluate((id) => {
-    localStorage.setItem(`by:v1:${id}:vault`, '{"v":1}');
-    localStorage.setItem(`by:v1:${id}:entries`, "[]");
-  }, childId);
-
-  // A child cannot wipe; the parent can — only that, with a clear warning.
-  expect(await byCall(k, "POST", `/api/admin/children/${childId}/by-pin`, {})).toBe(403);
+  // The parent has no "Xóa PIN Góc bình yên" any more (nor its route).
   await page.goto("/parent/children");
   const item = page.getByRole("listitem").filter({ hasText: kid?.display_name ?? "" });
   await item.getByText("Sửa").click();
-  const byBox = item.getByRole("group", { name: /^Góc bình yên của/ });
-  page.once("dialog", (d) => {
-    expect(d.message()).toContain("sẽ bị xóa");
-    void d.accept();
-  });
-  await byBox.getByRole("button", { name: "Xóa PIN Góc bình yên" }).click();
-  await expect(byBox.getByRole("status")).toContainText("Đã xóa");
-  const { data: wiped } = await db.from("profiles").select("by_pin_hash, by_pin_reset_at").eq("id", childId).single();
-  expect(wiped?.by_pin_hash).toBeNull();
-  expect(wiped?.by_pin_reset_at).not.toBeNull();
-  const { count: afterWipe } = await db.from("by_sessions").select("id", { count: "exact", head: true }).eq("child_id", childId).is("ended_at", null);
-  expect(afterWipe).toBe(0);
-  const { count: wipeLogs } = await db.from("audit_log").select("id", { count: "exact", head: true }).eq("action", "child.by_pin_wiped").eq("payload->>child_id", childId);
-  expect(wipeLogs).toBe(1);
-
-  // The child's next visit: told when, the private text on this laptop is gone, new PIN.
-  await k.reload();
-  await expect(setForm.getByRole("status")).toContainText("vừa được bố mẹ xóa lúc");
-  await expect.poll(() => k.evaluate((id) => [localStorage.getItem(`by:v1:${id}:vault`), localStorage.getItem(`by:v1:${id}:entries`)], childId)).toEqual([null, null]);
-  await setForm.getByLabel("PIN mới (6 số)").fill(BY_PIN);
-  await setForm.getByLabel("Gõ lại PIN").fill(BY_PIN);
-  await setForm.getByRole("button", { name: "Đặt PIN" }).click();
-  await expect(home).toBeVisible();
+  await expect(item.getByRole("button", { name: "Đặt lại mật khẩu" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Xóa PIN Góc bình yên/ })).toHaveCount(0);
+  expect(await byCall(page, "POST", `/api/admin/children/${childId}/by-pin`, {})).not.toBe(200);
   await kCtx.close();
 });
 
@@ -1883,11 +1845,11 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   await expect(k.getByRole("button", { name: /Muốn nói chuyện|Đã gửi bố mẹ/ })).toHaveCount(0);
   expect(await byCall(k, "POST", "/api/by/signal", { kind: "want_talk", to: null })).toBe(409);
 
-  // A parent phone turns notifications on → the button shows (also while the corner is locked).
+  // A parent phone turns notifications on → the button shows (on Hôm nay and in the corner).
   const endpoint = `https://push.example.invalid/by-${randomBytes(6).toString("hex")}`;
   expect((await db.from("push_subscriptions").insert({ profile_id: parentId, endpoint, p256dh: "B" + "A".repeat(86), auth: "A".repeat(22) })).error).toBeNull();
   await k.goto("/binh-yen");
-  await expect(k.getByRole("form", { name: "Mở Góc bình yên" })).toBeVisible();
+  await expect(k.getByRole("region", { name: "Góc của con" })).toBeVisible();
   await expect(k.getByRole("region", { name: "Con muốn nói chuyện" })).toBeVisible();
   await k.goto("/today");
   await k.getByRole("button", { name: "💬 Muốn nói chuyện" }).click();
@@ -2001,7 +1963,7 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   const childId = kid?.id as string;
   const familyId = kid?.family_id as string;
   const today = localDate(new Date());
-  await db.from("family_settings").update({ by_enabled: true, by_study_minutes: 10, by_idle_lock_minutes: 5 }).eq("family_id", familyId);
+  await db.from("family_settings").update({ by_enabled: true, by_study_minutes: 10 }).eq("family_id", familyId);
 
   // Study time (LOCK_P1): one homework due today, a normal day, lock mode, no parent override.
   await db.from("overrides").delete().eq("child_id", childId).eq("local_date", today);
@@ -2015,18 +1977,13 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   const { data: hw } = await db.from("homework_items").insert({ family_id: familyId, child_id: childId, subject: "Toán", due_date: today, note: "BY1" }).select("id").single();
   // Sessions left open by the earlier tests' closed browsers: end them, so only this visit counts.
   await db.from("by_sessions").update({ ended_at: new Date().toISOString() }).eq("child_id", childId).is("ended_at", null);
-  // The earlier test wiped the PIN minutes ago; a session aged past that wipe would read as "wiped".
-  await db.from("profiles").update({ by_pin_reset_at: new Date(Date.now() - 86_400_000).toISOString() }).eq("id", childId);
 
   const kCtx = await browser.newContext();
   const k = await kCtx.newPage();
   await login(k, childEmail, childPassword);
   expect((await (await k.request.get("/api/today")).json()).state.status).toBe("LOCK_P1");
 
-  await k.goto("/binh-yen");
-  const pinForm = k.getByRole("form", { name: "Mở Góc bình yên" });
-  await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
-  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
+  await k.goto("/binh-yen"); // no PIN (07/11/2026): straight in
   const home = k.getByRole("region", { name: "Góc của con" });
   const firstName = (kid?.display_name ?? "").trim().split(/\s+/).pop() ?? "";
   await expect(home.getByRole("heading", { name: `Chào ${firstName}.`, exact: true })).toBeVisible(); // lớp 9 → the detective voice
@@ -2086,7 +2043,7 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   const { count: logs } = await db.from("audit_log").select("id", { count: "exact", head: true }).like("action", "%checkin%");
   expect(logs).toBe(0); // D5
 
-  // Nobody else reads it: not the child's own browser login, not the parent, not a sibling, not the API without the PIN.
+  // Nobody else reads it: not the child's own browser login, not the parent, not a sibling, not the API without a visit.
   const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
   await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
   expect((await asChild.from("by_checkins").select("id")).error).not.toBeNull();
@@ -2109,7 +2066,7 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
     const sCtx = await browser.newContext();
     const s = await sCtx.newPage();
     await login(s, sibEmail, sibPassword);
-    expect(await byCall(s, "GET", "/api/by/checkins")).toBe(401); // no Góc bình yên session of their own
+    expect(await byCall(s, "GET", "/api/by/checkins")).toBe(401); // no Góc bình yên visit of their own (they never opened it)
     expect(await byCall(s, "POST", "/api/by/checkins/delete", { all: true })).toBe(401);
     await sCtx.close();
   } finally {
@@ -2135,24 +2092,134 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   expect(open).toBe(0);
   expect(await byCall(k, "POST", "/api/by/checkins", { clientRunId: randomUUID(), quad: "yellow", word: "vui", intensity: null, activity: null })).toBe(401);
 
-  // Q6: back in at once with the PIN. Outside study time (free time) there is no limit.
+  // Q6: back in at once — a NEW visit, no PIN. Outside study time (free time) there is no limit.
   await db.from("day_sessions").update({ free_started_at: new Date().toISOString() }).eq("child_id", childId).eq("local_date", today);
   await k.goto("/binh-yen");
-  await pinForm.getByLabel("PIN Góc bình yên").fill(BY_PIN);
-  await pinForm.getByRole("button", { name: "Mở", exact: true }).click();
   await expect(home).toBeVisible();
   await expect(home.getByText(/Giờ học: mỗi lần tối đa/)).toHaveCount(0);
   expect(byPsql(`with u as (update public.by_sessions set started_at = now() - interval '11 minutes' where child_id = '${childId}' and ended_at is null returning 1) select count(*) from u`)).toBe("1");
   await k.reload();
   await expect(home).toBeVisible();
 
-  // "Xóa hết của con".
-  await recent.getByRole("button", { name: "Xóa hết của con" }).click();
-  await recent.getByRole("group", { name: "Xóa hết" }).getByRole("button", { name: "Xóa hết" }).click();
+  // "Xóa hết của con": not in "Lần ghé gần đây" any more; folded in "Dữ liệu của con", needs XÓA typed.
+  await expect(recent.getByRole("button", { name: "Xóa hết của con" })).toHaveCount(0);
+  const data = k.locator("details", { hasText: "Dữ liệu của con" });
+  const wipeAll = data.getByRole("button", { name: "Xóa hết của con" });
+  await expect(wipeAll).toBeHidden(); // folded
+  await data.getByText("Dữ liệu của con", { exact: true }).click();
+  await expect(wipeAll).toBeDisabled();
+  const confirmBox = data.getByLabel("Gõ XÓA để xác nhận");
+  await confirmBox.fill("xoa");
+  await expect(wipeAll).toBeDisabled();
+  await confirmBox.fill(" xóa ");
+  await expect(wipeAll).toBeEnabled();
+  await wipeAll.click();
   await expect(recent).toContainText("Chưa có lần nào");
   const { count: none } = await db.from("by_checkins").select("id", { count: "exact", head: true }).eq("child_id", childId);
   expect(none).toBe(0);
 
   await kCtx.close();
   await db.from("homework_items").update({ archived_at: new Date().toISOString() }).eq("id", hw?.id as string);
+});
+
+// ---------------------------------------------------------------------------
+// Góp ý (parent decision 07/11/2026): the children's feedback about the app. Not private —
+// parents read it on Thêm › Góp ý của con. Inserts only through POST /api/feedback.
+// ---------------------------------------------------------------------------
+
+test("Góp ý: the child sends from Hôm nay (told parents read it); limits; no direct writes; sibling and other roles refused; parent reads and marks Đã đọc", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  await db.from("app_feedback").delete().eq("family_id", familyId);
+
+  const kCtx = await browser.newContext();
+  const k = await kCtx.newPage();
+  await login(k, childEmail, childPassword);
+  await k.goto("/today");
+  await k.getByRole("button", { name: "💡 Góp ý" }).click();
+  const sheet = k.getByRole("dialog", { name: "Góp ý cho app" });
+  await expect(sheet).toContainText("Bố mẹ sẽ đọc góp ý này.");
+  const send = sheet.getByRole("button", { name: "Gửi", exact: true });
+  await expect(send).toBeDisabled();
+  await sheet.getByText("💡 Ý tưởng").click();
+  await sheet.getByLabel("Con muốn nói gì về app?").fill("  Cho con chọn màu nền tối  ");
+  await send.click();
+  await expect(sheet.getByRole("status")).toContainText("Đã gửi. Cảm ơn con!");
+  const { data: rows } = await db.from("app_feedback").select("family_id, child_id, kind, body, seen_at").eq("child_id", childId);
+  expect(rows).toEqual([{ family_id: familyId, child_id: childId, kind: "idea", body: "Cho con chọn màu nền tối", seen_at: null }]);
+  await sheet.getByRole("button", { name: "Đóng" }).click();
+
+  // The server checks everything; the family and the child always come from the session.
+  expect(await byCall(k, "POST", "/api/feedback", { kind: "angry", body: "x" })).toBe(400);
+  expect(await byCall(k, "POST", "/api/feedback", { kind: "like", body: "   " })).toBe(400);
+  expect(await byCall(k, "POST", "/api/feedback", { kind: "like", body: "x".repeat(501) })).toBe(400);
+  expect(await byCall(k, "POST", "/api/feedback", { kind: "like", body: "x", child_id: randomUUID() })).toBe(400);
+  expect((await request.post("/api/feedback", { data: { kind: "like", body: "x" } })).status()).toBe(401);
+  // At most 10 per child per day: 9 more today → the 11th is refused.
+  expect((await db.from("app_feedback").insert(Array.from({ length: 9 }, (_, n) => ({ family_id: familyId, child_id: childId, kind: "like", body: `seed ${n}` })))).error).toBeNull();
+  const limited = await k.evaluate(async () => {
+    const r = await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "like", body: "một nữa" }) });
+    return [r.status, ((await r.json()) as { error: string }).error];
+  });
+  expect(limited).toEqual([429, "Hôm nay con đã gửi 10 góp ý rồi. Mai gửi tiếp nhé."]);
+  await db.from("app_feedback").delete().eq("child_id", childId).like("body", "seed %");
+
+  // Straight to the database: the child reads only their own and cannot write.
+  const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
+  expect((await asChild.from("app_feedback").select("id")).data).toHaveLength(1);
+  expect((await asChild.from("app_feedback").insert({ family_id: familyId, child_id: childId, kind: "like", body: "x" })).error).not.toBeNull();
+  expect((await asChild.from("app_feedback").update({ body: "đổi" }).eq("child_id", childId)).error).not.toBeNull();
+  const childRead = await asChild.from("app_feedback").update({ seen_at: new Date().toISOString() }).eq("child_id", childId).select("id");
+  expect(childRead.data ?? []).toHaveLength(0);
+
+  // A sibling sees none of it.
+  const sibEmail = `sibling-${randomBytes(4).toString("hex")}@example.com`;
+  const sibPassword = `Sib-${randomBytes(12).toString("hex")}`;
+  const { data: sibUser } = await db.auth.admin.createUser({ email: sibEmail, password: sibPassword, email_confirm: true });
+  const sibId = sibUser.user?.id as string;
+  try {
+    expect((await db.from("profiles").insert({ id: sibId, family_id: familyId, role: "child", display_name: "Em thử", grade: 6 })).error).toBeNull();
+    const asSib = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asSib.auth.signInWithPassword({ email: sibEmail, password: sibPassword });
+    expect((await asSib.from("app_feedback").select("id")).data).toHaveLength(0);
+  } finally {
+    await db.auth.admin.deleteUser(sibId);
+  }
+
+  // Inside Góc bình yên the link says plainly that this is NOT private like the corner.
+  await db.from("family_settings").update({ by_enabled: true }).eq("family_id", familyId);
+  await k.goto("/binh-yen");
+  await expect(k.getByRole("region", { name: "Góc của con" })).toBeVisible();
+  await expect(k.getByText("Góp ý không riêng tư như góc này: bố mẹ sẽ đọc.")).toBeVisible();
+  await k.getByRole("button", { name: "Góp ý cho app" }).click();
+  await expect(k.getByRole("dialog", { name: "Góp ý cho app" })).toContainText("Khác với Góc bình yên, góp ý không phải chuyện riêng");
+  await kCtx.close();
+
+  // The parent: cannot send; unread count on Thêm; reads; "Đã đọc" sets seen_at only.
+  await login(page, env.parentEmail, env.parentPassword);
+  expect(await byCall(page, "POST", "/api/feedback", { kind: "like", body: "x" })).toBe(403);
+  const asParent = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+  await asParent.auth.signInWithPassword({ email: env.parentEmail, password: env.parentPassword });
+  expect((await asParent.from("app_feedback").select("id")).data).toHaveLength(1);
+  expect((await asParent.from("app_feedback").update({ body: "đổi" }).eq("child_id", childId)).error).not.toBeNull();
+  expect((await asParent.from("app_feedback").insert({ family_id: familyId, child_id: childId, kind: "like", body: "x" })).error).not.toBeNull();
+  await page.goto("/parent/more");
+  const row = page.getByRole("link", { name: /Góp ý của con/ });
+  await expect(row).toContainText("1 chưa đọc");
+  await row.click();
+  await expect(page).toHaveURL(/\/parent\/feedback$/);
+  const card = page.getByRole("article", { name: `Góp ý của ${kid?.display_name}` });
+  await expect(card).toContainText("💡 Ý tưởng");
+  await expect(card).toContainText("Cho con chọn màu nền tối");
+  await expect(card).toContainText("Mới");
+  await card.getByRole("button", { name: "Đã đọc" }).click();
+  await expect(card).toContainText("Đã đọc lúc");
+  const { data: seen } = await db.from("app_feedback").select("seen_at, body").eq("child_id", childId).single();
+  expect(seen?.seen_at).not.toBeNull();
+  expect(seen?.body).toBe("Cho con chọn màu nền tối");
+  await page.goto("/parent/more");
+  await expect(page.getByRole("link", { name: /Góp ý của con/ })).not.toContainText("chưa đọc");
 });

@@ -37,7 +37,7 @@ export function confirmRequestMessage(childName: string): PushMessage {
 }
 
 /**
- * Evening reminder (21:45): only when something still waits for the parent. `unreviewed` =
+ * Evening reminder (21:00–21:59, Vercel Cron): only when something still waits for the parent. `unreviewed` =
  * today's finished tasks with no Đạt / Chưa đạt yet; `waiting` = open requests from the children.
  * Returns null when there is nothing to do, so no push is sent.
  */

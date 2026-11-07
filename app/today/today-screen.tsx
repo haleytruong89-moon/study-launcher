@@ -11,6 +11,7 @@ import { childDayTypeNote } from "@/lib/admin/specialDay";
 import { bannerFor, clock, dayProgress, longDate, nextTask, shade, statusPill, stepIndex, upcomingHint, weekSummary } from "@/lib/today/view";
 import { SignOutButton } from "../sign-out-button";
 import { TalkPanel } from "../binh-yen/talk-panel";
+import { FeedbackButton } from "./feedback";
 import { FocusView, NextTask, ProgressRing, TaskRow, WeekStrip, type Act, type TaskCtx } from "./today-parts";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
@@ -340,6 +341,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
             <span className="ml-auto flex flex-wrap items-center gap-2">
               {/* Góc bình yên (S-BY0): hidden unless a parent phone can receive it. */}
               <TalkPanel variant="header" color={color} />
+              <FeedbackButton variant="header" color={color} />
               <SignOutButton onDark />
             </span>
           </div>

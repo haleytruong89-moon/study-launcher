@@ -20,11 +20,12 @@ import {
   type QuadInfo,
   type Voice,
 } from "@/lib/binhYen/catalog";
-import { HEAVY_REPEAT_TEXT, NOT_SAVED_TEXT, type CheckinView } from "@/lib/binhYen/checkin";
+import { DELETE_ALL_WORD, HEAVY_REPEAT_TEXT, NOT_SAVED_TEXT, typedDeleteWord, type CheckinView } from "@/lib/binhYen/checkin";
 import { whoSeesWhat } from "@/lib/binhYen/copy";
 import { studyChip } from "@/lib/binhYen/studyCap";
 import { suggest } from "@/lib/binhYen/suggest";
 import { vnTime } from "@/lib/today/view";
+import { FeedbackButton } from "../today/feedback";
 import { ActivityBody } from "./activities";
 
 /**
@@ -35,12 +36,11 @@ import { ActivityBody } from "./activities";
  */
 
 export interface CornerState {
-  idleMinutes: number;
   studyMinutes: number;
   study: { minutes: number; endsAt: string } | null;
 }
 
-/** Any answer that carries a fresh corner state (locked / study-time limit). */
+/** Any answer that carries a fresh corner state (visit over / study-time limit). */
 export interface StateCarrier {
   state?: unknown;
 }
@@ -108,7 +108,6 @@ export function Corner({
   color,
   state,
   onState,
-  onLock,
   onTalkInline,
   talk,
 }: {
@@ -117,7 +116,6 @@ export function Corner({
   color: string;
   state: CornerState;
   onState: (s: unknown) => void;
-  onLock: () => Promise<void>;
   onTalkInline: (inline: boolean) => void;
   /** The "Con muốn nói chuyện" card, shown inside the "Nhắn bố mẹ" activity. */
   talk: React.ReactNode;
@@ -151,7 +149,8 @@ export function Corner({
       go({ k: "done", text: a ? activityText(a, voice).done : enoughLine(label), heavy: r.data?.heavy === true });
       return;
     }
-    if ((r.status === 401 || r.status === 409) && r.data?.state) return onState(r.data.state);
+    // Visit over (the screen opens a new one) or study-time limit: nothing was stored — say so.
+    if ((r.status === 401 || r.status === 409) && r.data?.state) onState(r.data.state);
     setError(typeof r.data?.error === "string" && r.status === 400 ? r.data.error : NOT_SAVED_TEXT);
   }
 
@@ -195,16 +194,14 @@ export function Corner({
           <details className="rounded-xl bg-bg p-3">
             <summary className="min-h-11 cursor-pointer content-center font-bold">🔒 Ai thấy gì?</summary>
             <ul className="mt-2 flex list-disc flex-col gap-2 pl-5 text-sm">
-              {whoSeesWhat(state.idleMinutes, state.studyMinutes).map((line) => (
+              {whoSeesWhat().map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
           </details>
-          <button type="button" onClick={() => void onLock()} className="btn self-start border border-ink/25 bg-white">
-            Khóa lại
-          </button>
         </section>
         <Recent voice={voice} onState={onState} />
+        <FeedbackButton variant="corner" color={color} />
       </>
     );
   }
@@ -398,11 +395,15 @@ function AckStep({ voice, quad, word, color, onBack, onNext }: { voice: Voice; q
   );
 }
 
-/** "Lần ghé gần đây": the last 7 visits (date, word, activity) with delete. No counts, no charts. */
+/**
+ * "Lần ghé gần đây": the last 7 visits (date, word, activity) with delete. No counts, no charts.
+ * "Xóa hết của con" lives apart, folded away in "Dữ liệu của con", and needs XÓA typed first
+ * (parent decision 07/11/2026: hard to tap by mistake).
+ */
 function Recent({ voice, onState }: { voice: Voice; onState: (s: unknown) => void }) {
   const [items, setItems] = useState<CheckinView[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [confirmAll, setConfirmAll] = useState(false);
+  const [word, setWord] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -428,52 +429,64 @@ function Recent({ voice, onState }: { voice: Voice; onState: (s: unknown) => voi
     setBusy(true);
     const r = await post("/api/by/checkins/delete", body);
     setBusy(false);
-    setConfirmAll(false);
+    setWord("");
     if ((r.status === 401 || r.status === 409) && r.data?.state) return onState(r.data.state);
     if (!r.ok) setFailed(true);
     await load();
   }
 
   return (
-    <section aria-label="Lần ghé gần đây" className="flex flex-col gap-3 rounded-2xl bg-white p-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-bold">Lần ghé gần đây</h2>
-        <p className="text-xs text-ink/65">Chỉ con thấy ở đây. Xóa là mất hẳn.</p>
-      </div>
-      {failed && <p role="alert" className="text-sm text-red-700">Chưa tải được, thử lại sau.</p>}
-      {items && items.length === 0 && <p className="text-sm text-ink/70">Chưa có lần nào. Khi con đi hết một lượt, nó hiện ở đây.</p>}
+    <>
+      <section aria-label="Lần ghé gần đây" className="flex flex-col gap-3 rounded-2xl bg-white p-5">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-bold">Lần ghé gần đây</h2>
+          <p className="text-xs text-ink/65">Chỉ con thấy ở đây. Xóa là mất hẳn.</p>
+        </div>
+        {failed && <p role="alert" className="text-sm text-red-700">Chưa tải được, thử lại sau.</p>}
+        {items && items.length === 0 && <p className="text-sm text-ink/70">Chưa có lần nào. Khi con đi hết một lượt, nó hiện ở đây.</p>}
+        {items && items.length > 0 && (
+          <ul className="flex flex-col divide-y divide-ink/10">
+            {items.map((c) => (
+              <li key={c.id} className="flex items-center gap-3 py-2">
+                <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ background: c.quad ? QUAD_COLORS[c.quad].c : "#999" }} />
+                <span className="flex-1 text-sm">
+                  <span className="text-ink/60">{c.date}</span> · <b>{c.word}</b>
+                  {c.activity ? ` · ${c.activity}` : " · gọi tên là đủ"}
+                </span>
+                <button type="button" disabled={busy} onClick={() => void remove({ id: c.id })} aria-label={`Xóa lượt ${c.date} ${c.word}`} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-ink/70 underline disabled:opacity-50">
+                  Xóa
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       {items && items.length > 0 && (
-        <ul className="flex flex-col divide-y divide-ink/10">
-          {items.map((c) => (
-            <li key={c.id} className="flex items-center gap-3 py-2">
-              <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ background: c.quad ? QUAD_COLORS[c.quad].c : "#999" }} />
-              <span className="flex-1 text-sm">
-                <span className="text-ink/60">{c.date}</span> · <b>{c.word}</b>
-                {c.activity ? ` · ${c.activity}` : " · gọi tên là đủ"}
-              </span>
-              <button type="button" disabled={busy} onClick={() => void remove({ id: c.id })} aria-label={`Xóa lượt ${c.date} ${c.word}`} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-ink/70 underline disabled:opacity-50">
-                Xóa
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {items && items.length > 0 &&
-        (confirmAll ? (
-          <div role="group" aria-label="Xóa hết" className="flex flex-wrap items-center gap-2 rounded-xl bg-[#F6DED8] p-3">
-            <span className="text-sm font-semibold">Xóa hết mọi lượt của con? Không lấy lại được.</span>
-            <button type="button" disabled={busy} onClick={() => void remove({ all: true })} className="btn bg-white text-sm">
-              Xóa hết
-            </button>
-            <button type="button" onClick={() => setConfirmAll(false)} className="btn border border-ink/25 bg-transparent text-sm">
-              Thôi
+        <details aria-label="Dữ liệu của con" className="rounded-2xl bg-white p-4">
+          <summary className="min-h-11 cursor-pointer content-center font-bold">Dữ liệu của con</summary>
+          <div className="mt-2 flex flex-col gap-3 text-sm">
+            <p>
+              <b>Xóa hết của con</b> xóa mọi lượt ghé con đã lưu, không lấy lại được. Muốn xóa thì gõ <b>{DELETE_ALL_WORD}</b> vào ô dưới.
+            </p>
+            <label className="flex flex-col gap-1 font-semibold">
+              Gõ {DELETE_ALL_WORD} để xác nhận
+              <input
+                type="text"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                maxLength={10}
+                value={word}
+                onChange={(e) => setWord(e.target.value)}
+                className="min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal"
+              />
+            </label>
+            <button type="button" disabled={busy || !typedDeleteWord(word)} onClick={() => void remove({ all: true })} className="btn self-start border border-red-700/40 bg-[#F6DED8] text-sm disabled:opacity-50">
+              Xóa hết của con
             </button>
           </div>
-        ) : (
-          <button type="button" onClick={() => setConfirmAll(true)} className="btn self-start border border-ink/25 bg-white text-sm">
-            Xóa hết của con
-          </button>
-        ))}
-    </section>
+        </details>
+      )}
+    </>
   );
 }

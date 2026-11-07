@@ -35,7 +35,7 @@ export default async function SettingsPage() {
                 photoRetentionDays: s.photo_retention_days,
                 ...(typeof s.allow_local_files === "boolean" ? { allowLocalFiles: s.allow_local_files } : {}),
                 ...(typeof s.by_enabled === "boolean"
-                  ? { byEnabled: s.by_enabled, byStudyMinutes: s.by_study_minutes, byIdleLockMinutes: s.by_idle_lock_minutes }
+                  ? { byEnabled: s.by_enabled, byStudyMinutes: s.by_study_minutes }
                   : {}),
               } satisfies SettingsValues
             }

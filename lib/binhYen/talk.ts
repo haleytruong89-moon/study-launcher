@@ -21,7 +21,7 @@ import {
 
 /**
  * "Con muốn nói chuyện" (BINH_YEN.md §4, §6, R3). Works whether or not Góc bình yên is on,
- * and never needs the Góc bình yên PIN (one tap). Content-free: a row says only WHO and WHEN.
+ * and never needs a Góc bình yên visit (one tap). Content-free: a row says only WHO and WHEN.
  */
 
 export interface TalkParent {

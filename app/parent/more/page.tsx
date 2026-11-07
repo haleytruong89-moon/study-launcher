@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { requireParentPage } from "@/lib/admin/page";
+import { unreadFeedbackCount } from "@/lib/feedback/parent";
 import { SignOutButton } from "../../sign-out-button";
 import { ParentHeader } from "../parent-header";
 
 export const dynamic = "force-dynamic";
 
-const GROUPS: { title: string; links: { href: string; label: string; sub: string }[] }[] = [
+const GROUPS: { title: string; links: { href: string; label: string; sub: string; badge?: "feedback" }[] }[] = [
   {
     title: "Máy của con",
     links: [
@@ -24,6 +25,7 @@ const GROUPS: { title: string; links: { href: string; label: string; sub: string
     title: "Gia đình",
     links: [
       { href: "/parent/children", label: "Các con", sub: "Tên, lớp, màu, mật khẩu, chế độ Tin tưởng" },
+      { href: "/parent/feedback", label: "Góp ý của con", sub: "Con thích / chưa thích gì, ý tưởng cho app", badge: "feedback" },
       { href: "/parent/settings", label: "Luật trong nhà", sub: "Giờ tự do, nghỉ, thẻ miễn, giờ ngủ" },
       { href: "/parent/notifications", label: "Thông báo", sub: "Báo lên điện thoại khi con xin mở trang, nhờ xem bài" },
       { href: "/parent/log", label: "Nhật ký", sub: "Ai đã làm gì: mở/khóa, giao bài, xin mở trang, Tin tưởng…" },
@@ -33,7 +35,8 @@ const GROUPS: { title: string; links: { href: string; label: string; sub: string
 
 /** "Thêm": the pages a parent opens once in a while (UI review 19/10/2026). */
 export default async function MorePage() {
-  await requireParentPage();
+  const { db } = await requireParentPage();
+  const unread = await unreadFeedbackCount(db);
   return (
     <>
       <ParentHeader title="Thêm" current="/parent/more" />
@@ -51,6 +54,12 @@ export default async function MorePage() {
                       <span className="font-bold">{l.label}</span>
                       <span className="text-sm text-ink/70">{l.sub}</span>
                     </span>
+                    {l.badge === "feedback" && unread > 0 && (
+                      <span className="flex min-w-7 items-center justify-center rounded-full bg-red-600 px-2 py-0.5 text-sm font-bold text-white">
+                        {unread}
+                        <span className="sr-only"> chưa đọc</span>
+                      </span>
+                    )}
                     <span aria-hidden className="text-lg text-ink/50">
                       ›
                     </span>

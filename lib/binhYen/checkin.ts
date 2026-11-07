@@ -21,6 +21,14 @@ export const checkinBodySchema = z
   .strict();
 export type CheckinBody = z.infer<typeof checkinBodySchema>;
 
+/** What the child types to enable "Xóa hết của con" (parent decision 07/11/2026: hard to tap by mistake). */
+export const DELETE_ALL_WORD = "XÓA";
+
+/** True when the child typed XÓA — case and surrounding spaces do not matter ("xóa", " Xóa "). */
+export function typedDeleteWord(input: string): boolean {
+  return input.normalize("NFC").trim().toLocaleUpperCase("vi") === DELETE_ALL_WORD.normalize("NFC");
+}
+
 /** POST /api/by/checkins/delete: one visit, or everything of this child. */
 export const deleteBodySchema = z.union([z.object({ id: z.uuid() }).strict(), z.object({ all: z.literal(true) }).strict()]);
 
@@ -84,4 +92,4 @@ export function heavyRepeat(rows: Pick<CheckinRow, "intensity" | "created_at">[]
 export const HEAVY_REPEAT_TEXT = "Mấy ngày nay con đã thấy “rất to” nhiều lần. Con không phải mang nó một mình: tìm bố mẹ hoặc thầy cô con tin để nói chuyện nhé.";
 
 export const NOT_SAVED_TEXT = "Chưa lưu được, thử lại nhé.";
-export const LOCKED_TEXT = "Góc bình yên đã tự khóa. Gõ PIN để vào lại.";
+export const LOCKED_TEXT = "Lượt ghé này đã kết thúc. Mở lại Góc bình yên nhé.";

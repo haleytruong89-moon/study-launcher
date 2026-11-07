@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /**
  * "Thông báo" (S5): a parent turns Web Push on for this phone, sends a test, and (first time
  * only) creates the VAPID keys to paste into Vercel. Parent decisions 01/11/2026: push for
- * "Xin mở trang", "Nhờ bố mẹ xem" and a 21:45 reminder when something waits; no quiet hours.
+ * "Xin mở trang", "Nhờ bố mẹ xem" and an evening reminder (21:00–21:59, Vercel Cron) when something waits; no quiet hours.
  */
 export default async function NotificationsPage() {
   const { me } = await requireParentPage();
@@ -26,7 +26,7 @@ export default async function NotificationsPage() {
           <ul className="list-disc pl-5 text-sm text-ink/80">
             <li>Con xin mở một trang bị chặn</li>
             <li>Con nhờ bố mẹ xem bài trực tiếp</li>
-            <li>21:45 còn bài chưa xem hoặc việc con đang nhờ</li>
+            <li>Buổi tối (khoảng 21:00–22:00) còn bài chưa xem hoặc việc con đang nhờ</li>
           </ul>
           <p className="text-sm text-ink/70">Thông báo không chứa chữ con viết. Chạm vào thông báo để mở đúng trang duyệt.</p>
         </section>

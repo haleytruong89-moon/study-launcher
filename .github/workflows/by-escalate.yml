@@ -1,14 +1,11 @@
-name: Góc bình yên reminder (every 5 min)
+name: Góc bình yên reminder (manual run)
 
-# S-BY0 (docs/BINH_YEN.md R3, Q5): a "Con muốn nói chuyện" that no parent marked "Đã thấy"
-# after 10 minutes is pushed again, once. The app decides; this job only calls
-# /api/cron/by-escalate with the CRON_SECRET (same secrets as SETUP A10).
-# BEST EFFORT: GitHub often starts scheduled jobs late (sometimes 10–30 minutes, or skips a
-# run when busy). The app also runs the same check whenever a child's screen asks the server
-# (/api/today every 30 s, /api/by/*), so the reminder does not depend on GitHub alone.
+# S-BY0 (docs/BINH_YEN.md R3, Q5): a needs_care signal (S-BY2) that no parent marked "Đã thấy"
+# after 10 minutes is pushed again, once. "Con muốn nói chuyện" (want_talk) is NOT re-pushed
+# (parent decision 05/11/2026), so there is nothing for a schedule to do now: the every-5-minutes
+# schedule was removed on 07/11/2026. The app still runs the same check whenever a child's
+# screen asks the server (/api/today, /api/by/*). Kept for a manual run only.
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions: {}

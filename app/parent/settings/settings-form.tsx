@@ -22,7 +22,6 @@ export interface SettingsValues {
   /** Góc bình yên (0008). Absent until that migration has run (then the section is hidden). */
   byEnabled?: boolean;
   byStudyMinutes?: number;
-  byIdleLockMinutes?: number;
 }
 
 type Group = "time" | "homework" | "trust" | "photos" | "by";
@@ -57,8 +56,7 @@ const FIELDS: { key: keyof SettingsValues; group: Group; label: string; hint?: s
   { key: "trustUpWeeks", group: "trust", label: "Lên Tin tưởng: số tuần liên tiếp", min: 1, max: 12 },
   { key: "trustDownPct", group: "trust", label: "Gợi ý quay về Khóa khi tuần dưới (%)", min: 0, max: 100 },
   { key: "photoRetentionDays", group: "photos", label: "Giữ ảnh bài (ngày)", min: 7, max: 365 },
-  { key: "byIdleLockMinutes", group: "by", label: "Tự khóa sau bao lâu không chạm (phút)", hint: "Từ 2 đến 15 phút", min: 2, max: 15 },
-  { key: "byStudyMinutes", group: "by", label: "Trong giờ học: mỗi lần tối đa (phút)", hint: "Ít nhất 5 phút · áp dụng khi có phần chọn cảm xúc (bản sau)", min: 5, max: 60 },
+  { key: "byStudyMinutes", group: "by", label: "Trong giờ học: mỗi lần tối đa (phút)", hint: "Ít nhất 5 phút · tính bằng giờ máy chủ; hết giờ con về màn Hôm nay, vào lại ngay được", min: 5, max: 60 },
 ];
 
 interface Kid {
@@ -142,8 +140,8 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
         <fieldset aria-label="Góc bình yên" className="flex flex-col gap-4 rounded-2xl bg-white p-4">
           <legend className="float-left mb-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">Góc bình yên</legend>
           <p className="text-xs text-ink/70">
-            Góc riêng của con để gọi tên cảm xúc và làm dịu. Bố mẹ <strong>không xem được nội dung</strong>, chỉ nhận tín hiệu “Con muốn nói chuyện”. Con tự đặt PIN riêng.
-            Chỉ bật sau khi đã nói chuyện với con. Bản này có: PIN riêng, chọn cảm xúc → gợi ý → hoạt động, nút muốn nói chuyện; chưa có ô để con viết chữ. Bật xong, màn Hôm nay của con có nút “🌿 Góc bình yên”. Nút “Con muốn nói chuyện” trên màn Hôm nay hiện khi có điện thoại bố mẹ bật thông báo, dù Góc bình yên bật hay tắt.
+            Góc riêng của con để gọi tên cảm xúc và làm dịu. Bố mẹ <strong>không xem được nội dung</strong>, chỉ nhận tín hiệu “Con muốn nói chuyện”. Không cần PIN riêng: con đăng nhập tài khoản của mình là vào được (nên ai dùng máy đang đăng nhập của con cũng vào được).
+            Chỉ bật sau khi đã nói chuyện với con. Bản này có: chọn cảm xúc → gợi ý → hoạt động, nút muốn nói chuyện; chưa có ô để con viết chữ. Bật xong, màn Hôm nay của con có nút “🌿 Góc bình yên”. Nút “Con muốn nói chuyện” trên màn Hôm nay hiện khi có điện thoại bố mẹ bật thông báo, dù Góc bình yên bật hay tắt.
           </p>
           {!byPushReady && (
             <p role="note" className="rounded-xl bg-[#FBF0D6] p-3 text-xs font-semibold text-[#5E3D00]">
@@ -154,7 +152,7 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
             <input type="checkbox" checked={byOn} onChange={(e) => setByOn(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-accent" />
             <span className="flex flex-col gap-0.5">
               Bật Góc bình yên cho các con
-              <span className="text-xs font-normal text-ink/65">Tắt: khu này ẩn đi (PIN và dữ liệu của con vẫn giữ nguyên).</span>
+              <span className="text-xs font-normal text-ink/65">Tắt: khu này ẩn đi (dữ liệu của con vẫn giữ nguyên).</span>
             </span>
           </label>
           {FIELDS.filter((f) => f.group === "by" && initial[f.key] !== undefined).map((f) => (
