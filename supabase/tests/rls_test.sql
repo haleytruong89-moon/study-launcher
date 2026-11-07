@@ -970,6 +970,68 @@ begin
 end $$;
 delete from storage.objects where bucket_id = 'avatars';
 
+-- 0013 (R4a): world of the month — server only, like by_checkins. No feeling column.
+reset role;
+select test_helpers.expect_count('world tables have RLS on and no policy',
+  (select count(*) from pg_class c where c.oid in ('public.world_items'::regclass, 'public.world_months'::regclass) and c.relrowsecurity
+     and not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname)), 2);
+select test_helpers.expect_count('browsers have no privilege on world tables',
+  (select count(*) from (values ('public.world_items'), ('public.world_months')) t(tbl), (values ('authenticated'), ('anon')) r(rl), (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) p(priv)
+    where has_table_privilege(r.rl, t.tbl, p.priv)), 0);
+select test_helpers.expect_count('world_items has no feeling column',
+  (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'world_items'
+     and column_name not in ('id', 'family_id', 'child_id', 'local_date', 'pillar', 'world_key', 'item_key', 'variant', 'created_at')), 0);
+insert into public.world_items (family_id, child_id, local_date, pillar, world_key, item_key) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-05', 'study', 'rung', 'cho_ngan_nam');
+do $$
+begin
+  begin
+    insert into public.world_items (family_id, child_id, local_date, pillar, world_key, item_key) values
+      ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-05', 'study', 'rung', 'cay_da');
+    raise exception 'FAIL: two plants for one area on one day';
+  exception when unique_violation then raise notice 'ok: one plant per area per day';
+  end;
+  begin
+    insert into public.world_items (family_id, child_id, local_date, pillar, world_key, item_key) values
+      ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000c1', '2026-11-05', 'feel', 'rung', 'lan_hai');
+    raise exception 'FAIL: world row with a child of another family';
+  exception when foreign_key_violation then raise notice 'ok: world row must match the child family';
+  end;
+  begin
+    insert into public.world_items (family_id, child_id, local_date, pillar, world_key, item_key) values
+      ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-06', 'feel', 'rung', 'Con buồn');
+    raise exception 'FAIL: free text accepted as item_key';
+  exception when check_violation then raise notice 'ok: item_key is a short key, never free text';
+  end;
+  begin
+    insert into public.world_months (family_id, child_id, month, world_key) values
+      ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-05', 'rung');
+    raise exception 'FAIL: world_months month not the 1st';
+  exception when check_violation then raise notice 'ok: world_months.month is the first of a month';
+  end;
+end $$;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+do $$
+begin
+  begin
+    perform 1 from public.world_items;
+    raise exception 'FAIL: parent read world_items';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot read world_items';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  begin
+    perform 1 from public.world_items;
+    raise exception 'FAIL: child read world_items directly';
+  exception when insufficient_privilege then raise notice 'ok: child reads the world only through the server';
+  end;
+end $$;
+reset role;
+delete from public.world_items;
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

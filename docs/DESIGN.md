@@ -96,6 +96,8 @@ Tất cả bảng có `id uuid default gen_random_uuid()` (trừ khi ghi khác),
 
 **Ảnh nhân vật Picrew (0012, R3b, 07/11/2026)** — bucket riêng tư `avatars` (≤ 1 MB/ảnh, PNG/JPEG) tại `avatars/{family_id}/{child_id}/{uuid}.png|jpg`: **cả nhà select** (policy `avatars_family_select`), **không** có policy insert/update/delete (chỉ máy chủ, service_role). `profiles.avatar_pics jsonb` = `{calm, smile, sad, angry → path}` (check object ≤ 2 KB; grant select, revoke update). Ô không có ảnh dùng ảnh đầu tiên theo thứ tự bình yên → vui → buồn → bực; không có ảnh nào → nhân vật tự tạo (0011). Ảnh hiện qua `/api/files/avatar` (cùng địa chỉ app). Trình duyệt vẽ lại ảnh (≤ 800 px, bỏ mọi thông tin kèm file) trước khi gửi.
 
+**Thế giới tháng (0013, R4a, 07/11/2026)** — `world_items` (family_id, child_id, local_date, pillar `feel`/`study`/`skill`/`play`, world_key, item_key, variant, created_at; **unique (child_id, local_date, pillar)**; **không có cột cảm xúc**) và `world_months` (child_id, month = ngày 1, world_key; lựa chọn của con, R4b). Cả hai: RLS bật, **không policy, không grant cho trình duyệt** (như `by_checkins`); chỉ máy chủ đọc/ghi. Luật chọn thứ mọc ("cách 2"), 12 thế giới: `docs/world/README.md`.
+
 **Seed (sau khi tạo gia đình):** allowlist mặc định — domain Launcher, `math-app-gules.vercel.app`, `translate.google.com`, `dictionary.cambridge.org`, `tratu.soha.vn`, `accounts.google.com`; 2 profile con; `family_settings` mặc định.
 
 ## 5. Máy trạng thái — `lib/dayState.ts`
@@ -200,6 +202,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/profile/avatar/pics` · `POST /api/profile/avatar/pics/delete` | con | *(R3b)* Gửi 1 ảnh cho 1 nét mặt (multipart `slot`, `file`): máy chủ kiểm loại ảnh bằng **byte đầu** (PNG/JPEG), ≤ 1 MB (413), ô hợp lệ; lưu bằng service_role vào thư mục của con trong phiên; ảnh cũ của ô đó bị xóa (mỗi lần lưu dọn mọi tệp không còn dùng trong thư mục của con). Lưu kiểu "so rồi mới ghi": 2 lần lưu cùng lúc (2 tab) → lần sau 409, không mất ảnh. Gỡ `{slot}` hoặc `{all: true}` (xóa luôn tệp). Trước khi 0012 chạy → 503 kèm câu giải thích |
 | `GET /api/files/avatar?path=` | cả nhà | *(R3b)* Trả 1 ảnh nhân vật, tải bằng **phiên của người xem** (RLS: cùng gia đình), `nosniff`, kiểu ảnh cố định theo đuôi |
 | `POST /api/admin/children/:id/avatar-pics` | phụ huynh | *(R3b)* Gỡ **hết** ảnh Picrew của con (khi là ảnh chụp, không phải hình vẽ); kiểm con thuộc gia đình bằng phiên bố mẹ; ghi `audit_log` `child.avatar_pics_removed`. Nhân vật tự tạo giữ nguyên |
+| `GET /api/world?month=YYYY-MM` | con (giọng nhà khoa học, An) | *(R4a)* Thế giới của tháng (mặc định tháng này) + album các tháng cũ. Trước khi đọc, **trồng** các mảng đã xong từ `day_sessions` / `by_checkins` (tháng này + tháng trước, idempotent). Chỉ gửi các điều thú vị **đã mở**. Bố mẹ 403; giọng thám tử (Nguyên) 404; trước khi 0013 chạy → 503. `POST /api/by/checkins` cũng trồng ngay sau một lượt ghé (lỗi không làm hỏng lượt ghé) |
 | `POST /api/admin/feedback/:id/seen` | phụ huynh | *(07/11/2026)* "Đã đọc" bằng phiên của bố mẹ (RLS: gia đình mình, chỉ cột `seen_at`) |
 
 ## 7. Extension (thư mục `extension/`)
