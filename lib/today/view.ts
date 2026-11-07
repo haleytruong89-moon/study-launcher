@@ -217,6 +217,17 @@ export function nextTask(state: DayState): TaskView | null {
   return state.part2.items.find(todo) ?? null;
 }
 
+/**
+ * R6d: tasks of today still to do (Phần 1 + Phần 2) for "Còn N việc nữa là có giờ tự do".
+ * Upcoming items and "đang xây" slots are not counted one by one; on a day with no due
+ * homework the "choose N upcoming" quota still left is (the same slots `part1.total` counts),
+ * so the number never says 0 while free time is still closed. Display only.
+ */
+export function leftCount(state: DayState): number {
+  const open = [...state.part1.items, ...state.part2.items].filter((i) => i.group !== "upcoming" && !i.placeholder && i.state !== "done").length;
+  return open + Math.max(0, state.part1.pick.needed - state.part1.pick.done);
+}
+
 /** Required tasks of the day (both parts) for the header ring. */
 export function dayProgress(state: DayState): { done: number; total: number } {
   return { done: state.part1.done + state.part2.done, total: state.part1.total + state.part2.total };

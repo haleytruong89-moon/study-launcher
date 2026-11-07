@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
 import { decideBreak, decideConfirmRequest, decideFinish, decideFreeStart, decidePass, decideProof, decideStart, isProofPath, ON_BREAK_TEXT, passOffered, runningTimedTask } from "@/lib/today/rules";
-import { bannerFor, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, longDate, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
+import { bannerFor, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, leftCount, longDate, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
 
 // Wednesday 2026-10-14, Vietnam time.
 const TODAY = "2026-10-14";
@@ -381,3 +381,31 @@ describe("S2d screen helpers", () => {
   });
 });
 
+
+describe("leftCount (R6d Vui chơi: còn N việc)", () => {
+  it("counts not-done tasks of both parts; upcoming picks are not counted", () => {
+    const UP = "88888888-8888-4888-8888-888888888888";
+    const d = day({
+      homework: [
+        { id: HW, subject: "Toán", dueDate: "2026-10-15", note: null, doneAt: null, archivedAt: null, createdAt: at("06:00") },
+        { id: UP, subject: "Văn", dueDate: "2026-10-20", note: null, doneAt: null, archivedAt: null, createdAt: at("06:00") },
+      ],
+    });
+    const s = computeDayState(d, vn("15:00"));
+    expect(s.part1.items.some((i) => i.group === "upcoming")).toBe(true);
+    expect(leftCount(s)).toBe(3);
+    const running = computeDayState({ ...d, runs: [run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00") })] }, vn("15:05"));
+    expect(leftCount(running)).toBe(3);
+    const done = computeDayState({ ...d, runs: [run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00"), doneAt: at("15:25") })] }, vn("15:30"));
+    expect(leftCount(done)).toBe(2);
+  });
+
+  it("a day with no due homework still counts the upcoming quota left (never 0 while closed)", () => {
+    const UP = "88888888-8888-4888-8888-888888888888";
+    const d = day({ homework: [{ id: UP, subject: "Văn", dueDate: "2026-10-20", note: null, doneAt: null, archivedAt: null, createdAt: at("06:00") }] });
+    const s = computeDayState(d, vn("15:00"));
+    expect(s.part1.pick.needed).toBe(1);
+    expect(leftCount(s)).toBe(3);
+    expect(leftCount(s)).toBe(s.part1.total - s.part1.done + s.part2.total - s.part2.done);
+  });
+});
