@@ -66,6 +66,7 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "child.create": "settings",
   "child.update": "settings",
   "photos.cleanup": "settings",
+  "child.avatar_pics_removed": "settings",
 
   "pin.login": "login",
   "pin.login_failed": "login",
@@ -291,6 +292,8 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
       return say(`Đặt lại mật khẩu của ${kid} (đăng xuất khỏi mọi máy)`);
     case "child.sign_out_all":
       return say(`Đăng xuất ${kid} khỏi mọi máy`);
+    case "child.avatar_pics_removed":
+      return say(`Gỡ ảnh nhân vật của ${kid} (về nhân vật con tự tạo)`);
     case "child.sessions_revoked":
       return say(`${kid} đã bị đăng xuất khỏi mọi máy`);
 

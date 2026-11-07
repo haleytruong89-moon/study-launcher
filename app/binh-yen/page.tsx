@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { storedAvatar } from "@/lib/avatar";
-import { readAvatar } from "@/lib/avatarServer";
+import { hasPics } from "@/lib/avatarPics";
+import { readAvatar, type StoredLook } from "@/lib/avatarServer";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { byState, type ByState } from "@/lib/binhYen/session";
 import { escalateSoon, talkInfo, type TalkInfo } from "@/lib/binhYen/talk";
@@ -33,7 +34,7 @@ export default async function BinhYenPage() {
 
   let state: ByState | null = null;
   let talk: TalkInfo | null = null;
-  let look: { avatar: unknown; icon: string | null } = { avatar: null, icon: null };
+  let look: StoredLook = { avatar: null, pics: {}, icon: null };
   const voice = voiceFor(ctx.grade);
   try {
     // Opening the page: a visit going on in this browser continues (or reports the study-time
@@ -46,7 +47,7 @@ export default async function BinhYenPage() {
   const { avatar, mine } = storedAvatar(look.avatar, voice);
   return (
     <BinhYenScreen
-      child={{ id: ctx.childId, name: ctx.displayName, color: ctx.color, icon: look.icon, avatar, avatarMine: mine }}
+      child={{ id: ctx.childId, name: ctx.displayName, color: ctx.color, icon: look.icon, avatar, pics: look.pics, avatarMine: mine || hasPics(look.pics) }}
       voice={voice}
       initial={state}
       initialTalk={talk}

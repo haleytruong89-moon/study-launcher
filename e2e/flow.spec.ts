@@ -2348,3 +2348,111 @@ test("R3a nhân vật: the child makes a character (codes only); bad codes refus
     await db.from("profiles").update({ grade, avatar: null }).eq("id", childId);
   }
 });
+
+test("R3b Picrew: the child puts pictures on faces (shrunk, checked); family sees them; replace/remove deletes files; parent removes all; no direct writes", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade, display_name").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const folder = `${familyId}/${childId}`;
+  const files = async () => ((await db.storage.from("avatars").list(folder)).data ?? []).map((o) => `${folder}/${o.name}`).sort();
+  const pics = async () => (await db.from("profiles").select("avatar_pics").eq("id", childId).single()).data?.avatar_pics as Record<string, string> | null;
+  await db.from("profiles").update({ grade: 9, avatar: null, avatar_pics: null }).eq("id", childId);
+  await db.from("family_settings").update({ by_enabled: true }).eq("family_id", familyId);
+  try {
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/nhan-vat");
+    const box = k.getByRole("region", { name: "Ảnh từ Picrew" });
+    await expect(box).toContainText("Chỉ hình vẽ, không dùng ảnh chụp con.");
+    await box.getByLabel("Chọn ảnh khi bình yên").setInputFiles({ name: "picrew.png", mimeType: "image/png", buffer: makePng(1200, 1200) });
+    await expect(box.getByRole("status")).toContainText("Đã thêm ảnh khi bình yên.");
+    const first = (await pics())?.calm as string;
+    expect(first).toMatch(new RegExp(`^${folder}/[0-9a-f-]{36}\\.(png|jpg)$`));
+    expect(await files()).toEqual([first]);
+    // The browser redrew it: longest side 800 px at most.
+    const blob = (await db.storage.from("avatars").download(first)).data as Blob;
+    const head = Buffer.from(await blob.arrayBuffer());
+    if (first.endsWith(".png")) expect(head.readUInt32BE(16)).toBeLessThanOrEqual(800);
+    await expect(k.getByText("Đang dùng ảnh Picrew của con.")).toBeVisible();
+
+    // Served from our own address to the family; never to anyone else.
+    const served = await k.evaluate(async (u) => {
+      const r = await fetch(u);
+      return [r.status, r.headers.get("content-type"), r.headers.get("x-content-type-options")];
+    }, `/api/files/avatar?path=${encodeURIComponent(first)}`);
+    expect(served).toEqual([200, first.endsWith(".png") ? "image/png" : "image/jpeg", "nosniff"]);
+    expect((await request.get(`/api/files/avatar?path=${encodeURIComponent(first)}`)).status()).toBe(401);
+    expect(await byCall(k, "GET", `/api/files/avatar?path=${encodeURIComponent(`${randomUUID()}/${childId}/${randomUUID()}.png`)}`)).toBe(404);
+
+    // The server checks again: type by its first bytes, size, the face.
+    const sendRaw = (slot: string, bytes: number[] | string, type: string) =>
+      k.evaluate(
+        async ([s, b, t]) => {
+          const form = new FormData();
+          form.set("slot", s as string);
+          form.set("file", new Blob([typeof b === "string" ? b : new Uint8Array(b as number[])], { type: t as string }), "x.png");
+          return (await fetch("/api/profile/avatar/pics", { method: "POST", body: form })).status;
+        },
+        [slot, bytes, type] as const,
+      );
+    expect(await sendRaw("sad", "<svg onload=alert(1)>", "image/png")).toBe(400);
+    expect(await sendRaw("photo", [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], "image/png")).toBe(400);
+    expect(await sendRaw("sad", "x".repeat(1_100_000), "image/png")).toBe(413);
+    expect((await request.post("/api/profile/avatar/pics", { multipart: { slot: "sad", file: { name: "a.png", mimeType: "image/png", buffer: makePng(10, 10) } } })).status()).toBe(401);
+    expect(await byCall(k, "POST", "/api/profile/avatar/pics/delete", { slot: "photo" })).toBe(400);
+    expect(await byCall(k, "POST", "/api/admin/children/" + childId + "/avatar-pics", {})).toBe(403);
+
+    // Straight to storage / the database: refused.
+    const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
+    expect((await asChild.storage.from("avatars").upload(`${folder}/${randomUUID()}.png`, makePng(10, 10), { contentType: "image/png" })).error).not.toBeNull();
+    expect((await asChild.from("profiles").update({ avatar_pics: {} }).eq("id", childId)).error).not.toBeNull();
+
+    // A second face, then a new picture on the first face: the old file is deleted.
+    await box.getByLabel("Chọn ảnh khi buồn").setInputFiles({ name: "buon.png", mimeType: "image/png", buffer: makePng(600, 600) });
+    await expect(box.getByRole("status")).toContainText("Đã thêm ảnh khi buồn.");
+    await box.getByLabel("Đổi ảnh khi bình yên").setInputFiles({ name: "moi.png", mimeType: "image/png", buffer: makePng(500, 500) });
+    await expect(box.getByRole("status")).toContainText("Đã thêm ảnh khi bình yên.");
+    const now = (await pics()) ?? {};
+    expect(now.calm).not.toBe(first);
+    expect(await files()).toEqual([now.calm, now.sad].sort());
+
+    // Góc bình yên shows the pictures (greeting + the 4 quadrants: buồn its own, others the first).
+    await k.goto("/binh-yen");
+    const corner = k.getByRole("region", { name: "Góc của con" });
+    await expect(corner.getByRole("link", { name: "Đổi nhân vật của con" })).toBeVisible();
+    await expect(corner.locator('img[src*="/api/files/avatar"]')).toHaveCount(5);
+    await expect(corner.locator(`img[src*="${encodeURIComponent(now.sad as string)}"]`)).toHaveCount(1);
+
+    // The child takes one off.
+    await k.goto("/nhan-vat");
+    await box.getByRole("button", { name: "Gỡ ảnh khi buồn" }).click();
+    await expect(box.getByRole("status")).toContainText("Đã gỡ ảnh.");
+    expect(await pics()).toEqual({ calm: now.calm });
+    expect(await files()).toEqual([now.calm]);
+    await kCtx.close();
+
+    // The parent sees it in Các con and removes all (the app cannot tell a drawing from a photo).
+    await login(page, env.parentEmail, env.parentPassword);
+    await page.goto("/parent/children");
+    await page.getByRole("listitem").filter({ hasText: kid?.display_name ?? "" }).locator("summary").click();
+    const card = page.getByRole("region", { name: `Nhân vật của ${kid?.display_name}` });
+    await expect(card).toContainText("Con đang dùng ảnh tải lên (Picrew).");
+    await expect(card.locator('img[src*="/api/files/avatar"]')).toHaveCount(4);
+    page.on("dialog", (d) => void d.accept());
+    await card.getByRole("button", { name: "Gỡ ảnh nhân vật của con" }).click();
+    await expect(card).toContainText("Con chưa tạo — đang là hình tạm.");
+    expect(await pics()).toBeNull();
+    expect(await files()).toEqual([]);
+    const { data: log } = await db.from("audit_log").select("action, payload").eq("family_id", familyId).eq("action", "child.avatar_pics_removed");
+    expect(log?.some((l) => (l.payload as { child_id?: string }).child_id === childId)).toBe(true);
+    expect(await byCall(page, "POST", "/api/profile/avatar/pics/delete", { all: true })).toBe(403);
+  } finally {
+    const left = ((await db.storage.from("avatars").list(folder)).data ?? []).map((o) => `${folder}/${o.name}`);
+    if (left.length) await db.storage.from("avatars").remove(left);
+    await db.from("profiles").update({ grade, avatar: null, avatar_pics: null }).eq("id", childId);
+  }
+});

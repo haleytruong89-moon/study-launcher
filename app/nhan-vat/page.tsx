@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { storedAvatar } from "@/lib/avatar";
 import { readAvatar } from "@/lib/avatarServer";
+import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { bySettings } from "@/lib/binhYen/session";
 import { requireChild } from "@/lib/today/service";
@@ -27,10 +28,11 @@ export default async function AvatarPage({ searchParams }: { searchParams: Promi
 
   const voice = voiceFor(ctx.grade);
   let avatar: unknown = null;
+  let pics: AvatarPics = {};
   let icon: string | null = null;
   let byEnabled = false;
   try {
-    [{ avatar, icon }, { enabled: byEnabled }] = await Promise.all([readAvatar(ctx), bySettings(ctx.familyId)]);
+    [{ avatar, pics, icon }, { enabled: byEnabled }] = await Promise.all([readAvatar(ctx), bySettings(ctx.familyId)]);
   } catch {
     console.error("avatar page failed");
   }
@@ -42,6 +44,7 @@ export default async function AvatarPage({ searchParams }: { searchParams: Promi
       color={ctx.color ?? "#2B5D4F"}
       icon={icon}
       initial={look}
+      initialPics={pics}
       mine={mine}
       back={tu === "binh-yen" && byEnabled ? "binh-yen" : "hom-nay"}
       byEnabled={byEnabled}
