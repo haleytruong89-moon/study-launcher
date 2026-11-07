@@ -2414,7 +2414,7 @@ test("R3b Picrew: the child puts pictures on faces (shrunk, checked); family see
     // A second face, then a new picture on the first face: the old file is deleted.
     await box.getByLabel("Chọn ảnh khi buồn").setInputFiles({ name: "buon.png", mimeType: "image/png", buffer: makePng(600, 600) });
     await expect(box.getByRole("status")).toContainText("Đã thêm ảnh khi buồn.");
-    await box.getByLabel("Chọn ảnh khi bình yên").setInputFiles({ name: "moi.png", mimeType: "image/png", buffer: makePng(500, 500) });
+    await box.getByLabel("Đổi ảnh khi bình yên").setInputFiles({ name: "moi.png", mimeType: "image/png", buffer: makePng(500, 500) });
     await expect(box.getByRole("status")).toContainText("Đã thêm ảnh khi bình yên.");
     const now = (await pics()) ?? {};
     expect(now.calm).not.toBe(first);

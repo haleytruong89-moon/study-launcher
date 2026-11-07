@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { PIC_SLOTS } from "@/lib/avatarPics";
+import { PIC_SLOTS, hasPics } from "@/lib/avatarPics";
 import { isFamilyChild, jsonError, requireParent, writeAudit } from "@/lib/admin/guard";
 import { loadPics, removePics } from "@/lib/avatarServer";
 
@@ -19,7 +19,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   try {
     const current = await loadPics(ctx.familyId, id.data);
     if (!current.ok) return jsonError(current.notReady ? "Phần ảnh nhân vật chưa được cập nhật." : "Không tìm thấy tài khoản con.", current.notReady ? 503 : 404);
-    await removePics(ctx.familyId, id.data, current.pics, PIC_SLOTS);
+    if (!hasPics(current.pics)) return NextResponse.json({ ok: true }); // nothing to remove, nothing to log
+    if (!(await removePics(ctx.familyId, id.data, current, PIC_SLOTS))) return jsonError("Con vừa đổi ảnh. Tải lại trang rồi thử lại.", 409);
   } catch (e) {
     console.error("child.avatar_pics_removed failed", e instanceof Error ? e.message : e);
     return jsonError("Không gỡ được, thử lại sau.", 500);

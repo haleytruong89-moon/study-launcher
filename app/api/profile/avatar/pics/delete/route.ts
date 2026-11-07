@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { PIC_SLOTS } from "@/lib/avatarPics";
-import { NOT_READY_TEXT, loadPics, removePics } from "@/lib/avatarServer";
+import { BUSY_TEXT, NOT_READY_TEXT, loadPics, removePics } from "@/lib/avatarServer";
 import { jsonError, requireChild, serverError } from "@/lib/today/service";
 
 const bodySchema = z.union([z.object({ slot: z.enum(["calm", "smile", "sad", "angry"]) }).strict(), z.object({ all: z.literal(true) }).strict()]);
@@ -18,7 +18,8 @@ export async function POST(request: Request) {
     const current = await loadPics(ctx.familyId, ctx.childId);
     if (!current.ok) return current.notReady ? jsonError(NOT_READY_TEXT, 503) : jsonError("Không tìm thấy hồ sơ của con.", 404);
     const slots = "all" in parsed.data ? PIC_SLOTS : [parsed.data.slot];
-    const pics = await removePics(ctx.familyId, ctx.childId, current.pics, slots);
+    const pics = await removePics(ctx.familyId, ctx.childId, current, slots);
+    if (!pics) return jsonError(BUSY_TEXT, 409);
     return NextResponse.json({ pics });
   } catch (e) {
     return serverError("profile.avatar.pics.delete", e);

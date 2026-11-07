@@ -30,34 +30,55 @@ export async function readAvatar(ctx: ChildContext): Promise<StoredLook> {
 /** Postgres "column does not exist" / storage "bucket not found": the migration has not run yet. */
 export const NOT_READY_TEXT = "Tải ảnh sẽ chạy sau khi bố mẹ cập nhật app. Con cứ dùng nhân vật tự tạo trước nhé.";
 
+export interface LoadedPics {
+  pics: AvatarPics;
+  /** The value exactly as stored: a save only goes through if nobody changed it in between. */
+  raw: unknown;
+}
+
 /** The child's pictures as stored (service_role; the caller has already checked who may ask). */
-export async function loadPics(familyId: string, childId: string): Promise<{ ok: true; pics: AvatarPics } | { ok: false; notReady: boolean }> {
+export async function loadPics(familyId: string, childId: string): Promise<({ ok: true } & LoadedPics) | { ok: false; notReady: boolean }> {
   const { data, error } = await createAdminClient().from("profiles").select("avatar_pics").eq("id", childId).eq("family_id", familyId).eq("role", "child").maybeSingle();
   if (error) return { ok: false, notReady: error.code === "42703" };
   if (!data) return { ok: false, notReady: false };
-  return { ok: true, pics: parsePics(data.avatar_pics, familyId, childId) };
+  return { ok: true, pics: parsePics(data.avatar_pics, familyId, childId), raw: data.avatar_pics ?? null };
 }
 
-export async function savePics(familyId: string, childId: string, pics: AvatarPics): Promise<void> {
-  const value = PIC_SLOTS.some((s) => pics[s]) ? pics : null;
-  const { error } = await createAdminClient().from("profiles").update({ avatar_pics: value }).eq("id", childId).eq("family_id", familyId).eq("role", "child");
+/** Another save (a second tab or device) got there first: nothing was changed. */
+export const BUSY_TEXT = "Ảnh vừa được đổi ở chỗ khác. Tải lại trang rồi thử lại nhé.";
+
+/**
+ * Saves the map ONLY if it is still what was read (compare-and-set), then deletes every file in
+ * the child's folder that the saved map does not use (replaced, removed, or left by a failed
+ * request). false = someone else saved in between; nothing changed.
+ */
+export async function savePics(familyId: string, childId: string, before: LoadedPics, after: AvatarPics): Promise<boolean> {
+  const value = PIC_SLOTS.some((s) => after[s]) ? after : null;
+  let q = createAdminClient().from("profiles").update({ avatar_pics: value }).eq("id", childId).eq("family_id", familyId).eq("role", "child");
+  q = before.raw === null ? q.is("avatar_pics", null) : q.eq("avatar_pics", JSON.stringify(before.raw));
+  const { data, error } = await q.select("id");
   if (error) throw new Error(error.message);
+  if ((data ?? []).length === 0) return false;
+  await sweep(familyId, childId, after);
+  return true;
 }
 
-/** Deletes files no face uses any more. Best effort: a leftover file is harmless (private, family-only). */
-export async function deleteUnused(before: AvatarPics, after: AvatarPics): Promise<void> {
-  const keep = new Set(Object.values(after));
-  const gone = [...new Set(Object.values(before))].filter((p): p is string => !!p && !keep.has(p));
+/** Best effort: a leftover file is harmless (private, family-only) and goes at the next save. */
+async function sweep(familyId: string, childId: string, keep: AvatarPics): Promise<void> {
+  const folder = `${familyId}/${childId}`;
+  const storage = createAdminClient().storage.from("avatars");
+  const { data, error } = await storage.list(folder, { limit: 100 });
+  if (error) return console.error("avatar.pics.list", error.message);
+  const used = new Set(Object.values(keep));
+  const gone = (data ?? []).map((o) => `${folder}/${o.name}`).filter((p) => !used.has(p));
   if (gone.length === 0) return;
-  const { error } = await createAdminClient().storage.from("avatars").remove(gone);
-  if (error) console.error("avatar.pics.remove", error.message);
+  const removed = await storage.remove(gone);
+  if (removed.error) console.error("avatar.pics.remove", removed.error.message);
 }
 
-/** Removes some faces (or all): row first, then the files. */
-export async function removePics(familyId: string, childId: string, before: AvatarPics, slots: readonly Expression[]): Promise<AvatarPics> {
-  const after: AvatarPics = { ...before };
+/** Removes some faces (or all). false = changed elsewhere in between (nothing done). */
+export async function removePics(familyId: string, childId: string, before: LoadedPics, slots: readonly Expression[]): Promise<AvatarPics | null> {
+  const after: AvatarPics = { ...before.pics };
   for (const s of slots) delete after[s];
-  await savePics(familyId, childId, after);
-  await deleteUnused(before, after);
-  return after;
+  return (await savePics(familyId, childId, before, after)) ? after : null;
 }

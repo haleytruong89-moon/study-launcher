@@ -27,6 +27,9 @@ export async function GET(request: Request) {
       // Paths are random and never reused (a new picture gets a new path).
       "Cache-Control": "private, max-age=86400",
       "X-Content-Type-Options": "nosniff",
+      // Never run as a page, whatever bytes follow the image header.
+      "Content-Security-Policy": "default-src 'none'; sandbox",
+      Vary: "Cookie",
     },
   });
 }

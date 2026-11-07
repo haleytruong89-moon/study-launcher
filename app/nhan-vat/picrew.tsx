@@ -101,7 +101,7 @@ export function PicrewPictures({ pics, onChange, color }: { pics: AvatarPics; on
                 <input
                   type="file"
                   accept="image/png,image/jpeg"
-                  aria-label={`Chọn ảnh ${label.toLowerCase()}`}
+                  aria-label={`${pic ? "Đổi" : "Chọn"} ảnh ${label.toLowerCase()}`}
                   className="sr-only"
                   disabled={busy !== null}
                   onChange={(e) => {

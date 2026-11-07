@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { MAX_PIC_BYTES, isPicSlot, sniffPic } from "@/lib/avatarPics";
-import { NOT_READY_TEXT, deleteUnused, loadPics, savePics } from "@/lib/avatarServer";
+import { BUSY_TEXT, NOT_READY_TEXT, loadPics, savePics } from "@/lib/avatarServer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { jsonError, requireChild, serverError } from "@/lib/today/service";
 
@@ -9,7 +9,7 @@ import { jsonError, requireChild, serverError } from "@/lib/today/service";
  * R3b: the child puts ONE Picrew picture on one face (multipart: slot, file). The browser has
  * already shrunk and redrawn it; the server checks again: PNG/JPEG by its first bytes, <= 1 MB.
  * Saved as avatars/{family}/{child}/{uuid}.png|jpg with service_role, only in the session
- * child's folder. The picture it replaces is deleted.
+ * child's folder. The picture it replaces is deleted. Two saves at once: the second gets 409.
  */
 export async function POST(request: Request) {
   const guard = await requireChild();
@@ -38,13 +38,13 @@ export async function POST(request: Request) {
       throw new Error(up.error.message);
     }
     const after = { ...current.pics, [slot]: path };
+    let saved = false;
     try {
-      await savePics(ctx.familyId, ctx.childId, after);
-    } catch (e) {
-      await storage.remove([path]);
-      throw e;
+      saved = await savePics(ctx.familyId, ctx.childId, current, after);
+    } finally {
+      if (!saved) await storage.remove([path]);
     }
-    await deleteUnused(current.pics, after);
+    if (!saved) return jsonError(BUSY_TEXT, 409);
     return NextResponse.json({ pics: after });
   } catch (e) {
     return serverError("profile.avatar.pics", e);
