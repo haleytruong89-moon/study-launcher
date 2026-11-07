@@ -21,3 +21,8 @@ export function tabHref(tab: ChildTab): string {
 export function isChildTab(v: unknown): v is TodayTab {
   return v === "hom-nay" || v === "hoc-tap" || v === "tuan" || v === "gop-y";
 }
+
+/** R4: An's 4th tab is her world of the month (same tab key, so links keep working). */
+export function tabLabel(tab: ChildTab, world = false): string {
+  return world && tab === "tuan" ? "Thế giới" : TAB_LABELS[tab];
+}

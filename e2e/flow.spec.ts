@@ -2456,3 +2456,96 @@ test("R3b Picrew: the child puts pictures on faces (shrunk, checked); family see
     await db.from("profiles").update({ grade, avatar: null, avatar_pics: null }).eq("id", childId);
   }
 });
+
+test("R4a thế giới: An's tab shows what grew from finished areas (stored once, never twice); cards open facts; parents and Nguyên's voice have no route", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const today = localDate(new Date());
+  test.skip(today.endsWith("-01"), "needs a day before today in this month");
+  const month = today.slice(0, 7);
+  const first = `${month}-01`;
+  const runId = randomUUID();
+  await db.from("profiles").update({ grade: 6 }).eq("id", childId);
+  await db.from("world_items").delete().eq("child_id", childId);
+  const { data: before } = await db.from("day_sessions").select("*").eq("child_id", childId).eq("local_date", first).maybeSingle();
+  try {
+    const at = `${first}T10:00:00+07:00`;
+    expect((await db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, local_date: first, part1_done_at: at, part2_done_at: at, free_started_at: at }, { onConflict: "child_id,local_date" })).error).toBeNull();
+    expect((await db.from("by_checkins").insert({ family_id: familyId, child_id: childId, local_date: first, quad: "green", word_key: "binh_yen", client_run_id: runId })).error).toBeNull();
+
+    // What should grow: one plant per finished area per day this month (from the durable records).
+    const { data: days } = await db.from("day_sessions").select("local_date, part1_done_at, part2_done_at, free_started_at").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
+    const { data: visits } = await db.from("by_checkins").select("local_date").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
+    const expected = new Set<string>();
+    for (const d of days ?? []) {
+      if (d.part1_done_at) expected.add(`${d.local_date}|study`);
+      if (d.part2_done_at) expected.add(`${d.local_date}|skill`);
+      if (d.free_started_at) expected.add(`${d.local_date}|play`);
+    }
+    for (const v of visits ?? []) expected.add(`${v.local_date}|feel`);
+
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/today");
+    const nav = k.getByRole("navigation", { name: "Các mục của con" });
+    await expect(nav.getByRole("link", { name: "Thế giới" })).toBeVisible();
+    await expect(k.getByRole("button", { name: /Rừng nhiệt đới của con · \d+ thứ đã mọc/ })).toBeVisible();
+    await nav.getByRole("link", { name: "Thế giới" }).click();
+    await expect(k).toHaveURL(/\/today\?tab=tuan$/);
+    await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+
+    const rows = async () => (await db.from("world_items").select("local_date, pillar, world_key, item_key, variant").eq("child_id", childId).gte("local_date", first)).data ?? [];
+    const planted = await rows();
+    expect(new Set(planted.map((r) => `${r.local_date}|${r.pillar}`))).toEqual(expected);
+    expect(planted.every((r) => r.world_key === "rung")).toBe(true);
+    // The first Học tập plant of the month is always the first big tree.
+    const firstStudy = planted.filter((r) => r.pillar === "study").sort((a, b) => (a.local_date < b.local_date ? -1 : 1))[0];
+    expect(firstStudy?.item_key).toBe("cho_ngan_nam");
+
+    const grown = k.getByRole("list", { name: "Những thứ đã mọc" });
+    await grown.getByRole("button", { name: /^Chò ngàn năm, đã mọc \d+ lần/ }).click();
+    const card = k.getByRole("dialog", { name: "Chò ngàn năm" });
+    await expect(card).toContainText("Cúc Phương");
+    await expect(card.getByRole("region", { name: "Nhiệm vụ ngoài đời" })).toBeVisible();
+    await expect(card.getByRole("region", { name: "Tối nay dạy cả nhà" })).toBeVisible();
+    await card.getByRole("button", { name: "Đóng" }).click();
+
+    // Opening again never plants twice.
+    await k.reload();
+    await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+    expect((await rows()).length).toBe(expected.size);
+    // Deleting the visit does not take the flower away (BINH_YEN D2).
+    await db.from("by_checkins").delete().eq("client_run_id", runId);
+    await k.reload();
+    await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+    expect((await rows()).some((r) => r.local_date === first && r.pillar === "feel")).toBe(true);
+
+    // The server checks the month; Nguyên's voice has no world (R5 is her comic).
+    expect(await byCall(k, "GET", "/api/world?month=2026-13")).toBe(400);
+    expect(await byCall(k, "GET", "/api/world?month=2099-01")).toBe(404);
+    expect(await byCall(k, "GET", "/api/world?month=2026-10")).toBe(404);
+    await db.from("profiles").update({ grade: 9 }).eq("id", childId);
+    expect(await byCall(k, "GET", "/api/world")).toBe(404);
+    await k.goto("/today");
+    await expect(nav.getByRole("link", { name: "Tuần của con" })).toBeVisible();
+    await kCtx.close();
+
+    expect((await request.get("/api/world")).status()).toBe(401);
+    await login(page, env.parentEmail, env.parentPassword);
+    expect(await byCall(page, "GET", "/api/world")).toBe(403);
+    // Straight to the database: neither parent nor child can read the world.
+    const asParent = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asParent.auth.signInWithPassword({ email: env.parentEmail, password: env.parentPassword });
+    expect((await asParent.from("world_items").select("id")).error).not.toBeNull();
+  } finally {
+    await db.from("by_checkins").delete().eq("client_run_id", runId);
+    await db.from("world_items").delete().eq("child_id", childId);
+    if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
+    else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", first);
+    await db.from("profiles").update({ grade }).eq("id", childId);
+  }
+});

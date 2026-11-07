@@ -14,8 +14,10 @@ import { TalkPanel } from "../binh-yen/talk-panel";
 import { FeedbackForm } from "./feedback";
 import { FocusView, NextTask, ProgressRing, type Act, type TaskCtx } from "./today-parts";
 import { Breadcrumb, ChildNav } from "../child-nav";
-import { TAB_LABELS, isChildTab, tabHref, type ChildTab } from "@/lib/childTabs";
+import { isChildTab, tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
+import { voiceFor } from "@/lib/binhYen/catalog";
 import { FeelWeek, PillarCards, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
+import { WorldMini, WorldTab } from "./world";
 import type { WeekDaysView } from "@/lib/today/weekDays";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
@@ -283,6 +285,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   }, [fastMs, refresh]);
 
   const color = child.color ?? "#2b5d4f";
+  // R4: An (scientist voice) has her world of the month in the 4th tab.
+  const hasWorld = voiceFor(child.grade) === "scientist";
   if (!view) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4">
@@ -464,7 +468,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={tab === "hom-nay" ? [TAB_LABELS["hom-nay"]] : [TAB_LABELS["hom-nay"], TAB_LABELS[tab]]} />
+        <Breadcrumb trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, hasWorld)]} />
         {error && !dialog && !proofOpen && (
           <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
             {error}
@@ -483,6 +487,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
                 onSave={(answers) => act({ url: "/api/week/review", body: answers })}
               />
             )}
+
+            {hasWorld && <WorldMini onOpen={() => selectTab("tuan")} />}
 
             {byEnabled && (
               <section aria-labelledby="by-invite" className="flex flex-col gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}>
@@ -597,6 +603,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
         {tab === "tuan" && (
           <>
+            {hasWorld && <WorldTab color={color} />}
             <section aria-labelledby="wk-own" className="flex flex-col gap-4 rounded-2xl border border-ink/10 bg-white p-4">
               <h2 id="wk-own" className="text-lg font-bold">
                 Tuần này của con
@@ -609,7 +616,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               ) : (
                 <p className="text-sm text-ink/70">Đang tải…</p>
               )}
-              <p className="text-[13px] text-ink/70">Sắp có: {child.grade !== null && child.grade <= 7 ? "thế giới của con — mỗi tháng một khu rừng, biển hay vũ trụ mới" : "Tập truyện của tuần — mỗi ngày một trang"}.</p>
+              {!hasWorld && <p className="text-[13px] text-ink/70">Sắp có: Tập truyện của tuần — mỗi ngày một trang.</p>}
             </section>
             <WeekProgress s={s} view={view} color={color} />
           </>
@@ -625,7 +632,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
           </section>
         )}
       </main>
-      <ChildNav active={tab} byEnabled={byEnabled} color={color} onSelect={selectTab} />
+      <ChildNav active={tab} byEnabled={byEnabled} color={color} world={hasWorld} onSelect={selectTab} />
     </div>
   );
 }
