@@ -246,6 +246,19 @@ describe("decideBreak (R1, parent decision 07/11/2026)", () => {
     expect(decideBreak(computeDayState(locked, vn("16:05")), "start")).toMatchObject({ ok: false, error: "Bố mẹ đang khóa máy." });
   });
 
+  it("a break still running under a parent lock keeps tasks paused (no timer resumes inside the break)", () => {
+    const s = computeDayState(
+      day({
+        sessions: [session({ part1DoneAt: at("16:00"), breakStartedAt: at("16:01") })],
+        overrides: [{ id: "o", localDate: TODAY, kind: "lock_until", until: at("16:20"), createdAt: at("16:02") }],
+      }),
+      vn("16:05"),
+    );
+    expect(s.status).toBe("LOCK_OVERRIDE");
+    expect(decideStart(s, "template", SKILL)).toMatchObject({ ok: false, error: ON_BREAK_TEXT });
+    expect(decideBreak(s, "end")).toMatchObject({ ok: true });
+  });
+
   it("end only while running", () => {
     const running = day({ sessions: [session({ part1DoneAt: at("16:00"), breakStartedAt: at("16:01") })] });
     expect(decideBreak(computeDayState(running, vn("16:05")), "end")).toMatchObject({ ok: true });
@@ -274,6 +287,12 @@ describe("decideFreeStart (empty day, parent decision 07/11/2026)", () => {
 });
 
 describe("decidePass", () => {
+  it("not offered on an empty day (the free-time button is there)", () => {
+    const empty = computeDayState(day({ homework: [], templates: [] }), vn("09:00"));
+    expect(passOffered(empty)).toBe(false);
+    expect(decidePass(empty)).toMatchObject({ ok: false, status: 409 });
+  });
+
   it("available once per week, not when free time already started", () => {
     expect(decidePass(computeDayState(day(), vn("15:00")))).toMatchObject({ ok: true });
     const usedMonday = day({ sessions: [session({ localDate: "2026-10-12", passUsedAt: "2026-10-12T10:00:00Z", freeStartedAt: "2026-10-12T10:00:00Z" })] });

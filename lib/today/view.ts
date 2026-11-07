@@ -73,7 +73,7 @@ export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMi
       }
       return {
         title: `Còn ${remaining(state.part1)} bài tập · ${remaining(state.part2)} kỹ năng`,
-        sub: "Bài tập và kỹ năng làm song song, con chọn thứ tự. Xong một phần là được nghỉ.",
+        sub: `Bài tập và kỹ năng làm song song, con chọn thứ tự.${rules.breakMinutes > 0 && (state.break.state === "not_yet" || state.break.state === "offer") ? " Xong một phần là được nghỉ." : ""}`,
         tone: "lock",
       };
     case "BREAK":
@@ -92,7 +92,7 @@ export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMi
       };
     case "FREE":
       return {
-        title: state.free.startedAt && state.part2.complete ? `Xong cả hai phần — giờ tự do` : "Giờ tự do",
+        title: state.part1.doneAt !== null && state.part2.doneAt !== null ? `Xong cả hai phần — giờ tự do` : "Giờ tự do",
         sub: "Gợi ý: ra sân, vẽ, Lego… Hết giờ máy khóa lại đến hết ngày.",
         tone: "open",
       };

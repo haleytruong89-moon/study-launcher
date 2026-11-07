@@ -25,14 +25,16 @@ export function runningTimedTask(state: DayState): TaskView | null {
 
 /** Whether the pass button should be offered (refused while a parent lock is in effect). */
 export function passOffered(state: DayState): boolean {
-  return state.passAvailable && state.status !== "LOCK_OVERRIDE";
+  // An empty day has its own "Bắt đầu giờ tự do" button: the weekly pass is not spent on it.
+  return state.passAvailable && state.status !== "LOCK_OVERRIDE" && !state.free.canStart;
 }
 
 /** R1 E8 (07/11/2026): during the 10' break the task buttons pause; "Học tiếp" ends the break. */
 export const ON_BREAK_TEXT = "Đang nghỉ — bấm Học tiếp để làm tiếp.";
 
+/** A break that is still running pauses tasks even under a parent lock (no timer then resumes inside the break). */
 function onBreak(state: DayState): boolean {
-  return state.status === "BREAK";
+  return state.break.state === "running";
 }
 
 /** Start a task: it must be today's, countable and not done; never during the break. Both parts are open (R1). */
@@ -134,6 +136,7 @@ export function decideFreeStart(state: DayState): Decision<null> {
 export function decidePass(state: DayState): Decision<null> {
   if (state.status === "LOCK_OVERRIDE") return deny(409, "Bố mẹ đang khóa máy, chưa dùng thẻ được.");
   if (!state.passAvailable) return deny(409, "Không còn thẻ miễn tuần này, hoặc hôm nay đã có giờ tự do.");
+  if (state.free.canStart) return deny(409, "Hôm nay không có việc — bấm “Bắt đầu giờ tự do”, không cần dùng thẻ.");
   return { ok: true, value: null };
 }
 

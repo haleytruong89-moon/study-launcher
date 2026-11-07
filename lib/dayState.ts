@@ -26,7 +26,9 @@
  *     needs BOTH parts. Status LOCK_P1 = Part 1 not done (whatever Part 2 is), LOCK_P2 =
  *     Part 1 done, Part 2 not done.
  *  2. Break (parent decision 07/11/2026): optional, once per day, `break.canStart` when
- *     Part 1 OR Part 2 is done (an empty part counts), free time has not started,
+ *     Part 1 is done (an empty Part 1 counts, E5d) or Part 2 is really done (an empty Part 2
+ *     alone does not count: on a day without skills the break still follows the homework),
+ *     free time has not started,
  *     break_minutes > 0, the laptop is in a locked study status (LOCK_P1 / LOCK_P2 /
  *     FREE_READY; not a parent lock, trust, sick or a parent open) and no timed task is
  *     running (so the 10' are never counted as task minutes). BREAK (row 7) is open until
@@ -701,13 +703,19 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   );
   const breakTaken = session.breakSkipped || breakStartMs !== null;
   const lockedStatus = status === "LOCK_P1" || status === "LOCK_P2" || status === "FREE_READY";
+  // "A part is done" for the break (parent 07/11/2026): Part 1 done (an empty Part 1 counts, as
+  // before R1, E5d) or Part 2 really finished. An empty Part 2 alone does not open the break:
+  // on a day without skills the break still comes after the homework, as before.
+  const partDoneForBreak = part1Done || session.part2DoneAt !== null;
   const breakCanStart =
-    !breakTaken && settings.breakMinutes > 0 && session.freeStartedAt === null && (part1Done || part2Done) && lockedStatus && !timedRunning;
+    !breakTaken && settings.breakMinutes > 0 && session.freeStartedAt === null && partDoneForBreak && lockedStatus && !timedRunning;
   let breakState: BreakView["state"];
   if (breakStartMs !== null) breakState = breakRunning ? "running" : "done";
   else if (session.breakSkipped) breakState = "skipped";
   else breakState = breakCanStart ? "offer" : "not_yet";
-  const freeCanStart = emptyDay && session.freeStartedAt === null && override?.kind !== "lock_until";
+  // Only where it means something: the locked empty day, or trust mode (to mark the day). Not
+  // during a parent lock / open window or a sick day (it would spend the day's 45' for nothing).
+  const freeCanStart = emptyDay && session.freeStartedAt === null && (status === "FREE_READY" || status === "OPEN_TRUST");
 
   // --- Passes (Monday-week) ---
   const monday = weekStart(today);

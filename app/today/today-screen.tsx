@@ -236,7 +236,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const steps = daySteps(s);
   const currentStep = steps.findIndex((st) => !st.done);
   // R1 E8: during the 10' break the task buttons pause ("Học tiếp" resumes).
-  const paused = s.status === "BREAK";
+  const paused = s.break.state === "running";
   const pill = statusPill(s, nowMs);
   // Special day (S3d): the sick status pill already says "Ngày ốm" when the sick day decides the state.
   const dayNote = s.status === "OPEN_SICK" ? null : childDayTypeNote(s.dayType);
@@ -248,11 +248,12 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const mustToday = s.part1.items.filter((i) => i.group !== "upcoming");
   const upcoming = s.part1.items.filter((i) => i.group === "upcoming");
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
-  const focusItem = next?.state === "running" && minimized !== next.key ? next : null;
+  const focusItem = !paused && next?.state === "running" && minimized !== next.key ? next : null;
   const proofItem = proofKey ? (s.part1.items.find((i) => i.key === proofKey) ?? null) : null;
   // Finished (e.g. from the phone) or gone: the sheet closes by itself.
   const proofOpen = proofItem !== null && proofItem.state === "running";
   const ctx: TaskCtx = {
+    paused,
     today: s.localDate,
     nowMs,
     busy,

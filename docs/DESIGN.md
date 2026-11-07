@@ -139,9 +139,9 @@ Quy tắc phụ:
 - **Mọi `openUntil` bị cắt ở 00:00** giờ VN của ngày hiện tại (nghỉ, giờ tự do, override).
 - **Phần không có việc nào** (vd ngày thi tắt hết mẫu việc, ngày không có kỹ năng) = coi như đã xong (nghỉ được, phần kia xong là xong ngày).
   - *Chốt 14/10 + 07/11/2026:* phần rỗng **chưa ghi** mốc cho đến khi **phần kia có mốc**; lúc đó ghi luôn (kể cả đang bị khóa tay, để "ngày đạt" không bị trễ). Bài / kỹ năng giao trước lúc đó vẫn khóa lại.
-  - **Cả hai phần rỗng** → FREE_READY: không tự ghi gì (extension hỏi cả lúc 00:00). Con bấm "Bắt đầu giờ tự do" (`POST /api/day/free`) thì mới ghi 2 mốc + `free_started_at`. Dùng thẻ không bao giờ ghi mốc phần.
+  - **Cả hai phần rỗng** → FREE_READY: không tự ghi gì (extension hỏi cả lúc 00:00). Con bấm "Bắt đầu giờ tự do" (`POST /api/day/free`, nút chỉ có ở FREE_READY và chế độ Tin tưởng) thì mới ghi 2 mốc + `free_started_at`. Ngày đó không mời dùng thẻ. Dùng thẻ không bao giờ ghi mốc phần.
 - **Hai phần mở song song** (R1): bắt đầu / xong việc của phần nào cũng được, bất kể status. Mỗi lúc vẫn chỉ 1 việc có giờ tối thiểu (chốt 15/10).
-- **Nghỉ** (R1): `break.canStart` khi Phần 1 **hoặc** Phần 2 đã xong (phần rỗng tính là xong), chưa nghỉ hôm nay (kể cả dòng cũ có `break_skipped = true`), chưa có giờ tự do, `break_minutes > 0`, máy đang khóa giờ học (LOCK_P1 / LOCK_P2 / FREE_READY — không phải khóa tay, Tin tưởng, ngày ốm, bố mẹ mở), và **không** có việc có giờ tối thiểu đang chạy. Trong lúc nghỉ, route bắt đầu / xong / nộp ảnh / nhờ bố mẹ xem từ chối ("Đang nghỉ — bấm Học tiếp"). Giờ tự do bắt đầu trong lúc nghỉ (vd bố mẹ xác nhận bài cuối) → FREE ngay, phần nghỉ còn lại bỏ.
+- **Nghỉ** (R1): `break.canStart` khi Phần 1 đã xong (Phần 1 rỗng tính là xong, như trước R1) **hoặc** Phần 2 đã xong thật (Phần 2 rỗng một mình không mở nghỉ: ngày không có kỹ năng thì vẫn nghỉ sau bài tập), chưa nghỉ hôm nay (kể cả dòng cũ có `break_skipped = true`), chưa có giờ tự do, `break_minutes > 0`, máy đang khóa giờ học (LOCK_P1 / LOCK_P2 / FREE_READY — không phải khóa tay, Tin tưởng, ngày ốm, bố mẹ mở), và **không** có việc có giờ tối thiểu đang chạy. Trong lúc nghỉ (kể cả khi bố mẹ khóa tay giữa lúc nghỉ), route bắt đầu / xong / nộp ảnh / nhờ bố mẹ xem từ chối ("Đang nghỉ — bấm Học tiếp"). Giờ tự do bắt đầu trong lúc nghỉ (vd bố mẹ xác nhận bài cuối) → FREE ngay, phần nghỉ còn lại bỏ.
 - Phút tối thiểu của một việc = `task_templates.min_minutes` nếu có, nếu không lấy `extra_min_minutes` / `skill_min_minutes` trong `family_settings`.
 - *Chốt 17/10/2026 (S2c, `computeDayState` diễn giải 17–18):* **mọi** `homework_items` chưa xong, chưa `archived_at` đều trả về, với `group`: `due` (`due_date ≤ localDate + homework_lookahead_days`, bắt buộc từng bài) hoặc `upcoming` (không bắt buộc từng bài). Ngày không có bài `due` nào (kể cả đã xong hôm nay) → Phần 1 thêm `pick.needed = min(homework_min_upcoming, số bài upcoming)` "chỗ", lấp bằng bài upcoming xong hôm nay. `early` = xong vào ngày ≤ `due_date − 2`; `earlyThisWeek` đếm từ thứ Hai — chỉ hiển thị, không đổi trạng thái.
 - **Phần 1** = `homework_items` chưa `done_at`, chưa `archived_at`, `due_date ≤ localDate + homework_lookahead_days` + `task_templates` part `extra` có `weekday` hôm nay, không nằm trong `disabled_template_ids`. Slot `placeholder` **vẫn hiện** thành dòng "đang xây" (trả trong `items` với cờ `placeholder: true`) nhưng **không tính** vào total/done.
@@ -163,12 +163,12 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | Route | Ai gọi | Việc làm |
 |---|---|---|
 | `GET /api/today` | con | Trả `DayState` + danh sách việc |
-| `POST /api/tasks/start` | con | Tạo `task_run` (chặn nếu Phần 2 đang khóa; chặn nếu đã có run mở cho việc đó) |
-| `POST /api/tasks/finish` | con | Kiểm `now − started_at ≥ min_minutes` (template) → nếu thiếu trả **409**. Homework: cần ≥ 1 `proof_path` → set `homework_items.done_at`. Cập nhật mốc phần |
-| `POST /api/tasks/proof` | con | Ghi đường dẫn ảnh đã tải lên Storage vào `task_run` |
+| `POST /api/tasks/start` | con | Tạo `task_run` (R1: cả hai phần mở; chặn khi **đang nghỉ**; chặn nếu đã có run mở cho việc đó; 1 việc có giờ tối thiểu một lúc) |
+| `POST /api/tasks/finish` | con | Kiểm `now − started_at ≥ min_minutes` (template) → nếu thiếu trả **409**. Homework: cần ≥ 1 `proof_path` → set `homework_items.done_at`. Cập nhật mốc phần. Chặn khi **đang nghỉ** (R1) |
+| `POST /api/tasks/proof` | con | Ghi đường dẫn ảnh đã tải lên Storage vào `task_run`. Chặn khi **đang nghỉ** (R1; cả "Nhờ bố mẹ xem" `confirm-request`) |
 | `POST /api/day/break` | con | `start` (khi `break.canStart`, R1); `end` (chỉ ở BREAK — nút "Học tiếp", ghi `break_ended_at`). `skip` bỏ ở R1 (trả 400) |
 | `POST /api/day/free` | con | Ngày không có việc nào (FREE_READY): ghi `part1_done_at` + `part2_done_at` + `free_started_at` trong 1 câu lệnh (R1, chốt 07/11/2026) |
-| `POST /api/day/pass` | con | Dùng thẻ miễn nếu còn; trả 409 nếu hôm nay đã có `free_started_at` |
+| `POST /api/day/pass` | con | Dùng thẻ miễn nếu còn; trả 409 nếu hôm nay đã có `free_started_at`, hoặc ngày không có việc nào (đã có nút "Bắt đầu giờ tự do", R1) |
 | `POST /api/unlock-requests` | con (hoặc trang khóa) | Tạo yêu cầu (bỏ qua nếu cùng domain đang `pending`) → gửi push cho phụ huynh |
 | `GET /api/unlock-requests/:id` | trang khóa | Trạng thái yêu cầu (hiện "đã duyệt" / "bị từ chối" / "bố mẹ chưa trả lời" sau 10 phút) |
 | `POST /api/unlock-requests/:id/decide` | phụ huynh | Duyệt / từ chối → tạo allowlist có hạn |

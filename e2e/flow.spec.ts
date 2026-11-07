@@ -1612,11 +1612,11 @@ test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and 
   const { data: rules } = await db.from("family_settings").select("trust_up_weeks").single();
   const weeks = rules?.trust_up_weeks ?? 3;
 
-  // Every day of the last complete weeks was "đạt" (Part 2 done in the morning, before bedtime).
+  // Every day of the last complete weeks was "đạt" (both parts done in the morning, before bedtime; R1).
   const monday = weekStart(today);
   const rows = Array.from({ length: 7 * weeks }, (_, i) => {
     const date = addDays(monday, -(i + 1));
-    return { child_id: childId, family_id: kid?.family_id, local_date: date, part2_done_at: new Date(`${date}T10:00:00+07:00`).toISOString() };
+    return { child_id: childId, family_id: kid?.family_id, local_date: date, part1_done_at: new Date(`${date}T09:00:00+07:00`).toISOString(), part2_done_at: new Date(`${date}T10:00:00+07:00`).toISOString() };
   });
   const { error: seedError } = await db.from("day_sessions").upsert(rows, { onConflict: "child_id,local_date" });
   expect(seedError).toBeNull();

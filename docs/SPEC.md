@@ -155,7 +155,7 @@ Cả nhà cùng chốt luật; con được quyền quyết: thứ tự 2 phần
 | ☕ Nghỉ / 🎮 Giờ tự do | Tất cả |
 
 Quy tắc:
-- Reset 00:00 mỗi ngày → về KHÓA_BÀI_TẬP. **Mọi khoảng mở (nghỉ, giờ tự do, override) kết thúc muộn nhất 00:00.** Không có bài trên lớp → Phần 1 chỉ còn bài bổ sung; một phần **không có việc nào** thì coi như đã xong.
+- Reset 00:00 mỗi ngày → về KHÓA_BÀI_TẬP. **Mọi khoảng mở (nghỉ, giờ tự do, override) kết thúc muộn nhất 00:00.** Không có bài trên lớp → Phần 1 chỉ còn bài bổ sung; một phần **không có việc nào** thì coi như đã xong. *(R1)* Cả hai phần không có việc nào → con bấm "Bắt đầu giờ tự do" thì 45' mới tính (không tự chạy lúc 00:00).
 - Mỗi ngày **1 lần** nghỉ 10' và **1 lần** giờ tự do 45'.
 - Mọi thời gian (đồng hồ việc, nghỉ, giờ tự do) tính theo **đồng hồ server** (chống chỉnh giờ máy).
 - Mất mạng / không đọc được trạng thái → **mặc định khóa**.

@@ -1013,6 +1013,20 @@ describe("parallel parts and the break (R1)", () => {
     for (const s of [lock, trust, sick, open]) expect(s.break.canStart).toBe(false);
   });
 
+  it("a day without skills: the break still comes after the homework (empty Part 2 alone does not open it)", () => {
+    const noSkills = input({ homework: [hw("h1")], templates: [tpl("e1", "extra")] });
+    expect(computeDayState(noSkills, vn(`${TODAY} 06:00`)).break.canStart).toBe(false);
+  });
+
+  it("empty day: the free-time button only where it means something (locked, or trust)", () => {
+    const open = computeDayState(input({ overrides: [ov("open_until", `${TODAY} 18:00`, `${TODAY} 15:00`)] }), vn(`${TODAY} 15:10`));
+    expect(open.free.canStart).toBe(false);
+    const sick = computeDayState(input({ sessions: [session(TODAY, { dayType: "sick" })] }), vn(`${TODAY} 15:10`));
+    expect(sick.free.canStart).toBe(false);
+    const trust = computeDayState(input({ trustMode: "trust" }), vn(`${TODAY} 15:10`));
+    expect(trust.free.canStart).toBe(true);
+  });
+
   it("break_minutes = 0 → no break button", () => {
     const s = computeDayState(normalDay({ settings: { ...SETTINGS, breakMinutes: 0 }, sessions: [session(TODAY, P1_DONE)] }), now);
     expect(s.break.canStart).toBe(false);
