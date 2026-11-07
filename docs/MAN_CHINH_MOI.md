@@ -227,6 +227,7 @@ Không thể tính lại khu rừng từ `by_checkins`. Khi con xóa check-in, h
 | Cột | Ý nghĩa |
 |---|---|
 | `family_id`, `child_id`, `local_date`, `pillar` (`feel` / `study` / `skill` / `play`) | Cây của mảng nào, ngày nào |
+| `world_key` | Thế giới của tháng đó (rừng / biển / vũ trụ…) |
 | `item_key` | Mã loài (hoặc mã trang truyện) |
 | `variant` | Số thứ tự câu thoại / kiểu (§5) |
 | `created_at` | |
@@ -237,7 +238,10 @@ Không thể tính lại khu rừng từ `by_checkins`. Khi con xóa check-in, h
 - **Không grant cho trình duyệt** (giống `by_checkins`); con đọc qua route của phiên con. Mảng `feel` cũng thuộc dữ liệu Góc bình yên nên bố mẹ không đọc.
 - Danh sách loài, con vật, điều thú vị nằm trong `lib/world/` (bảng dữ liệu để sau, như `by_catalog`). Danh sách **chỉ thêm**, không xóa mã.
 
-*Cần hỏi An trước R4:* khu rừng gom **cả năm**, hay mỗi **tháng** một khu rừng mới (khu rừng cũ vào "album")?
+**Bố mẹ chốt 07/11: mỗi tháng một thế giới mới** — khu rừng, biển, vũ trụ… (tháng theo lịch, giờ Việt Nam). Thế giới tháng cũ vào **album**, mở lại xem được.
+- Mỗi thế giới có danh sách "loài" riêng theo 4 mảng (rừng: cây / con vật; biển: san hô / cá…; vũ trụ: hành tinh / sao…), cùng luật §4.1: đếm lượt trồng **trong tháng**, không vòng lại, mã đã chọn được lưu.
+- `world_items` thêm cột `world_key` (mã thế giới của tháng, ghi lúc trồng), nên đổi thứ tự thế giới sau này không làm đổi album cũ.
+- Thế giới của tháng chọn thế nào (con chọn đầu tháng hay theo vòng cố định): hỏi An trước R4.
 
 ## 5. Tập của tuần — Nguyên (R5)
 
