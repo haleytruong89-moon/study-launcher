@@ -15,8 +15,10 @@ import { FeedbackForm } from "./feedback";
 import { FocusView, NextTask, ProgressRing, type Act, type TaskCtx } from "./today-parts";
 import { Breadcrumb, ChildNav } from "../child-nav";
 import { isChildTab, tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
+import type { Avatar } from "@/lib/avatar";
+import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
-import { FeelWeek, PillarCards, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
+import { FeelInvite, FeelWeek, PillarCards, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
 import { WorldMini, WorldTab } from "./world";
 import type { WeekDaysView } from "@/lib/today/weekDays";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
@@ -29,6 +31,9 @@ interface Child {
   name: string;
   grade: number | null;
   color: string | null;
+  /** R6a: the child's character (drawn feelings for Nguyên, header later). */
+  look: Avatar | null;
+  pics: AvatarPics;
 }
 
 const POLL_MS = 30_000;
@@ -286,7 +291,9 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
   const color = child.color ?? "#2b5d4f";
   // R4: An (scientist voice) has her world of the month in the 4th tab.
-  const hasWorld = voiceFor(child.grade) === "scientist";
+  const voice = voiceFor(child.grade);
+  const hasWorld = voice === "scientist";
+  const feelLook = { voice, look: child.look, pics: child.pics };
   if (!view) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4">
@@ -492,21 +499,11 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
             {byEnabled && (
               <section aria-labelledby="by-invite" className="flex flex-col gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}>
-                <a href="/binh-yen" className="flex min-h-16 items-center gap-3 rounded-2xl px-4 text-white no-underline" style={{ background: "#4E8C63" }}>
-                  <span aria-hidden className="text-3xl">
-                    🌿
-                  </span>
-                  <span className="flex flex-col">
-                    <strong id="by-invite" className="text-lg">
-                      Hôm nay con thấy thế nào?
-                    </strong>
-                    <span className="text-sm opacity-90">Vào Góc bình yên trước khi học, nếu con muốn</span>
-                  </span>
-                </a>
+                <FeelInvite voice={voice} feelLook={feelLook} today={week?.days.find((d) => d.date === s.localDate)?.feel ?? null} />
                 {week && (
                   <div className="flex flex-col gap-1.5">
                     <span className="text-[13px] font-semibold text-ink/70">Cảm xúc tuần này của con</span>
-                    <FeelWeek week={week} color={color} />
+                    <FeelWeek week={week} color={color} feelLook={feelLook} />
                   </div>
                 )}
               </section>
@@ -610,8 +607,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               </h2>
               {week ? (
                 <>
-                  {week.byEnabled && <FeelWeek week={week} color={color} big />}
-                  <WeekAreas week={week} color={color} />
+                  {week.byEnabled && <FeelWeek week={week} color={color} big feelLook={feelLook} />}
+                  <WeekAreas week={week} color={color} feelLook={feelLook} />
                 </>
               ) : (
                 <p className="text-sm text-ink/70">Đang tải…</p>

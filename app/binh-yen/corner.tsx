@@ -20,7 +20,6 @@ import {
   mentorLine,
   wordsFor,
   type Quad,
-  type QuadInfo,
   type Voice,
 } from "@/lib/binhYen/catalog";
 import { DELETE_ALL_WORD, HEAVY_REPEAT_TEXT, NOT_SAVED_TEXT, typedDeleteWord, type CheckinView } from "@/lib/binhYen/checkin";
@@ -29,7 +28,10 @@ import { activityEmoji, wordEmoji } from "@/lib/binhYen/emoji";
 import { studyChip } from "@/lib/binhYen/studyCap";
 import { suggest } from "@/lib/binhYen/suggest";
 import { vnTime } from "@/lib/today/view";
+import type { FeelGrowth } from "@/lib/world/rules";
+import { WorldIcon } from "../world-icon";
 import { Character } from "../avatar-face";
+import { QUAD_ICONS } from "../quad-icon";
 import { FeedbackButton } from "../today/feedback";
 import { ActivityBody } from "./activities";
 
@@ -56,7 +58,60 @@ type Step =
   | { k: "ack"; quad: Quad; word: string }
   | { k: "suggest"; quad: Quad; word: string; intensity: number | null }
   | { k: "activity"; quad: Quad; word: string; intensity: number | null; activity: string }
-  | { k: "done"; text: string; heavy: boolean };
+  | { k: "done"; text: string; heavy: boolean; growth: FeelGrowth | null };
+
+/** The reward from the check-in answer (R6a); anything unexpected shows no reward, never breaks "Xong rồi". */
+function asGrowth(v: unknown): FeelGrowth | null {
+  if (!v || typeof v !== "object") return null;
+  const g = v as FeelGrowth;
+  if (g.kind === "choose") return g;
+  return g.kind === "grew" && typeof g.name === "string" && typeof g.world === "string" && g.icon ? g : null;
+}
+
+/** What today's visit grew in An's world: the thing, the fact it opened, a visitor that came. */
+function Growth({ growth }: { growth: FeelGrowth }) {
+  if (growth.kind === "choose") {
+    return (
+      <div className="flex flex-col gap-2 rounded-2xl bg-[#EAF2E3] p-4">
+        <p className="font-semibold">Hạt giống của hôm nay đang chờ con chọn thế giới tháng này 🌱</p>
+        <Link href="/today?tab=tuan" className="btn self-start bg-[#2B5D4F] text-white">
+          Chọn thế giới →
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl bg-[#EAF2E3] p-4" role="group" aria-label="Thế giới của con">
+      <div className="flex items-center gap-3">
+        <span className="pop shrink-0">
+          <WorldIcon icon={growth.icon} size={64} />
+        </span>
+        <p className="text-lg font-bold">
+          {growth.again
+            ? `Hôm nay ${growth.name} đã mọc trong ${growth.world} của con rồi. Mai ghé lại là có thứ mới.`
+            : growth.isNew
+              ? `Mới! ${growth.name} vừa mọc trong ${growth.world} của con.`
+              : `${growth.name} lớn thêm trong ${growth.world} của con.`}
+        </p>
+      </div>
+      {growth.fact && (
+        <p className="rounded-xl bg-white p-3 text-sm">
+          <span className="font-semibold">Con có biết? </span>
+          {growth.fact}
+        </p>
+      )}
+      {growth.animal && (
+        <p className="flex items-center gap-2 text-sm font-semibold">
+          <WorldIcon icon={growth.animal.icon} size={32} />
+          {growth.animal.name} vừa dọn đến ở!
+        </p>
+      )}
+      <Link href="/today?tab=tuan" className="btn self-start bg-[#2B5D4F] text-white">
+        Xem trong Thế giới →
+      </Link>
+    </div>
+  );
+}
 
 async function post(url: string, body: unknown): Promise<{ ok: boolean; status: number; data: (Record<string, unknown> & StateCarrier) | null }> {
   try {
@@ -67,29 +122,7 @@ async function post(url: string, body: unknown): Promise<{ ok: boolean; status: 
   }
 }
 
-const ICONS: Record<QuadInfo["icon"], React.ReactNode> = {
-  volcano: <path d="M4 28 L13 12 H19 L28 28 Z M14 12 Q16 4 13 2 M18 12 Q17 6 20 3" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />,
-  sun: (
-    <>
-      <circle cx="16" cy="16" r="7" fill="currentColor" />
-      <path d="M16 2v4M16 26v4M2 16h4M26 16h4M6 6l3 3M23 23l3 3M26 6l-3 3M9 23l-3 3" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-    </>
-  ),
-  sea: (
-    <>
-      <path d="M2 12 Q8 6 14 12 T26 12 T32 12 V30 H2 Z" fill="currentColor" opacity=".35" />
-      <path d="M2 18 Q8 12 14 18 T26 18 T32 18 V30 H2 Z" fill="currentColor" />
-    </>
-  ),
-  forest: <path d="M10 4 L18 18 H2 Z M22 8 L30 22 H14 Z M9 18 h2.5 v8 H9 Z M21 22 h2.5 v6 H21 Z" fill="currentColor" />,
-  folder: (
-    <>
-      <path d="M3 8 h9 l3 3 h14 v16 H3 Z" fill="currentColor" opacity=".35" />
-      <circle cx="17" cy="18" r="5" fill="none" stroke="currentColor" strokeWidth="2.6" />
-      <path d="M21 22 l5 5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </>
-  ),
-};
+const ICONS = QUAD_ICONS;
 
 function Back({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
@@ -119,6 +152,7 @@ export function Corner({
   onState,
   onTalkInline,
   talk,
+  startQuad = null,
 }: {
   voice: Voice;
   firstName: string;
@@ -133,8 +167,14 @@ export function Corner({
   onTalkInline: (inline: boolean) => void;
   /** The "Con muốn nói chuyện" card, shown inside the "Nhắn bố mẹ" activity. */
   talk: React.ReactNode;
+  /** R6a: a region tile on Hôm nay opens the corner straight at that region's words. */
+  startQuad?: Quad | null;
 }) {
-  const [step, setStepRaw] = useState<Step>({ k: "home" });
+  const [step, setStepRaw] = useState<Step>(startQuad ? { k: "words", quad: startQuad } : { k: "home" });
+  useEffect(() => {
+    // Used once: a reload or "Về góc của con" starts from the corner's home, not the region again.
+    if (startQuad && window.location.search) window.history.replaceState(window.history.state, "", "/binh-yen");
+  }, [startQuad]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const runId = useRef<string | null>(null);
@@ -160,7 +200,7 @@ export function Corner({
       runId.current = null;
       const a = activity ? findActivity(activity) : undefined;
       const label = findWord(s.word)?.label ?? "";
-      go({ k: "done", text: a ? activityText(a, voice).done : enoughLine(label), heavy: r.data?.heavy === true });
+      go({ k: "done", text: a ? activityText(a, voice).done : enoughLine(label), heavy: r.data?.heavy === true, growth: asGrowth(r.data?.world) });
       return;
     }
     // Visit over (the screen opens a new one) or study-time limit: nothing was stored — say so.
@@ -359,6 +399,7 @@ export function Corner({
         {step.text}
       </p>
       {step.heavy && <p className="rounded-xl bg-[#FBF0D6] p-3 text-sm font-semibold text-[#5E3D00]">{HEAVY_REPEAT_TEXT}</p>}
+      {step.growth && <Growth growth={step.growth} />}
       <button type="button" onClick={() => go({ k: "home" })} className="btn self-start text-white" style={{ background: color }}>
         Về góc của con
       </button>

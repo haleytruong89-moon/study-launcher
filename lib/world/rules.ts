@@ -209,6 +209,30 @@ export function monthView(month: string, worldKey: string, rows: readonly WorldR
   };
 }
 
+/** What today's Góc bình yên visit grew, for the reward on the "Xong rồi" screen (R6a). */
+export type FeelGrowth =
+  | { kind: "grew"; name: string; icon: Icon; world: string; isNew: boolean; fact: string | null; animal: { name: string; icon: Icon } | null; again: boolean }
+  | { kind: "choose" };
+
+/** Today's Góc bình yên plant in a month view (null if it has not grown, e.g. not synced yet). */
+/** `again`: not the first visit today — the day's plant already grew (one per area per day), nothing new opens. */
+export function feelGrowthOf(view: MonthView, again = false): FeelGrowth | null {
+  const thing = view.things.find((t) => t.pillar === "feel" && t.today);
+  if (!thing) return null;
+  const animal = view.animals.find((a) => a.today) ?? null;
+  return {
+    kind: "grew",
+    name: thing.name,
+    icon: thing.icon,
+    world: view.world.name,
+    isNew: thing.count === 1,
+    // The fact this visit opened (the 1st on a new thing, the 2nd/3rd when it grows again).
+    fact: !again && thing.count <= MAX_FACTS ? (thing.facts[thing.count - 1] ?? null) : null,
+    animal: !again && animal ? { name: animal.name, icon: animal.icon } : null,
+    again,
+  };
+}
+
 export interface WorldChoice {
   key: string;
   name: string;

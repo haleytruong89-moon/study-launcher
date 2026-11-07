@@ -3,7 +3,7 @@ import { checkinBodySchema, checkinProblem } from "@/lib/binhYen/checkin";
 import { recentCheckins, saveCheckin } from "@/lib/binhYen/checkins";
 import { byFailed, byJson, requireByOpen } from "@/lib/binhYen/http";
 import { requireChild } from "@/lib/today/service";
-import { syncWorldQuietly } from "@/lib/world/service";
+import { feelGrowthToday, syncWorldQuietly } from "@/lib/world/service";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +40,8 @@ export async function POST(request: Request) {
     // R4: a finished visit grows a flower in An's world right away (best effort; the world also
     // catches up when it is opened). The plant is the same whatever the child felt.
     await syncWorldQuietly(guard.ctx);
-    return byJson(result);
+    // R6a: tell the "Xong rồi" screen what grew (null for Nguyên, before migration 0013, on error).
+    return byJson({ ...result, world: await feelGrowthToday(guard.ctx) });
   } catch {
     return byFailed("checkins.save");
   }

@@ -52,13 +52,27 @@ function isWaiting(item: TaskView, ctx: TaskCtx): boolean {
   return item.state === "todo" && ctx.runningTimed !== null && ctx.runningTimed.key !== item.key && item.source === "template" && item.minMinutes > 0;
 }
 
+/**
+ * R6a (parent 08/11: "Practice ghi chung chung"): which subject and which app a set task is,
+ * e.g. "Toán · trên Khan Academy". Empty for homework (its title is already the subject).
+ */
+export function whereLine(item: TaskView): string {
+  if (item.source !== "template") return "";
+  const subject = item.subject && item.subject.trim().toLowerCase() !== item.title.trim().toLowerCase() ? item.subject.trim() : null;
+  return [subject, item.appLabel ? `trên ${item.appLabel}` : null].filter(Boolean).join(" · ");
+}
+
 function subLine(item: TaskView, ctx: TaskCtx): string {
   if (isWaiting(item, ctx)) return `Làm xong “${ctx.runningTimed?.title}” rồi bắt đầu việc này`;
   if (item.state === "todo" && item.source === "homework" && item.dueDate) {
     const due = item.group === "upcoming" ? `Hạn ${dayMonth(item.dueDate)}` : dueLabel(item.dueDate, ctx.today);
     return item.note ? `${due} · ${item.note}` : due;
   }
-  if (item.state === "todo" && item.source === "template") return item.minMinutes > 0 ? `Ít nhất ${item.minMinutes} phút` : "Không giới hạn thời gian";
+  if (item.state === "todo" && item.source === "template") {
+    const time = item.minMinutes > 0 ? `ít nhất ${item.minMinutes} phút` : "không giới hạn thời gian";
+    const where = whereLine(item);
+    return where ? `${where} · ${time}` : time.charAt(0).toUpperCase() + time.slice(1);
+  }
   // The "★ sớm" badge on the right already says it.
   return taskMeta(item, ctx.nowMs, ctx.today).replace(" · ★ sớm", "");
 }
@@ -206,6 +220,7 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
         <div className="text-[23px] leading-tight font-bold">{item.title}</div>
         <div className="text-[15px] text-ink/80">
           {kind}
+          {whereLine(item) ? ` · ${whereLine(item)}` : ""}
           {item.note ? ` · ${item.note}` : ""}
         </div>
       </div>
@@ -222,7 +237,7 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
       <FileLinks files={files} />
       {item.deepLink && (
         <a href={item.deepLink} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-bg px-3 text-sm font-semibold text-ink no-underline">
-          Mở app ↗
+          Mở {item.appLabel ?? "app"} ↗
         </a>
       )}
       {item.state === "todo" ? (
@@ -275,7 +290,10 @@ export function FocusView({ item, ctx, dark, onClose }: { item: TaskView; ctx: T
   const ready = !item.requiresProof && remaining <= 0;
   const R = 120;
   const C = 2 * Math.PI * R;
-  const kind = item.source === "homework" ? "Bài trên lớp · chụp ảnh khi xong" : `${item.part === 1 ? "Bài bổ sung" : "Kỹ năng"}${item.minMinutes > 0 ? ` · ít nhất ${item.minMinutes} phút` : ""}`;
+  const kind =
+    item.source === "homework"
+      ? "Bài trên lớp · chụp ảnh khi xong"
+      : [item.part === 1 ? "Bài bổ sung" : "Kỹ năng", whereLine(item), item.minMinutes > 0 ? `ít nhất ${item.minMinutes} phút` : ""].filter(Boolean).join(" · ");
 
   return (
     <section role="dialog" aria-modal="true" aria-label="Đang tập trung" className="fixed inset-0 z-50 overflow-y-auto text-white" style={{ background: dark }}>
@@ -328,7 +346,7 @@ export function FocusView({ item, ctx, dark, onClose }: { item: TaskView; ctx: T
         <FileLinks files={ctx.files(item)} dark />
         {item.deepLink && (
           <a href={item.deepLink} target="_blank" rel="noreferrer" className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white/10 text-[15px] font-semibold text-white no-underline">
-            Mở app ↗
+            Mở {item.appLabel ?? "app"} ↗
           </a>
         )}
         {item.requiresProof && isAsked(item, ctx) && (

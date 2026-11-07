@@ -2485,7 +2485,7 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     await k.goto("/today");
     const nav = k.getByRole("navigation", { name: "Các mục của con" });
     await expect(nav.getByRole("link", { name: "Thế giới" })).toBeVisible();
-    await expect(k.getByRole("button", { name: /Rừng nhiệt đới của con · \d+ thứ đã mọc/ })).toBeVisible();
+    await expect(k.getByRole("region", { name: /Rừng nhiệt đới của con/ })).toContainText(/\d+ thứ đã mọc/);
     await nav.getByRole("link", { name: "Thế giới" }).click();
     await expect(k).toHaveURL(/\/today\?tab=tuan$/);
     await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
@@ -2616,6 +2616,61 @@ test("R4b An chọn thế giới: a new month waits for An's pick (nothing plant
     await db.from("world_months").delete().eq("child_id", childId);
     if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
     else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", first);
+    await db.from("profiles").update({ grade }).eq("id", childId);
+  }
+});
+
+test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that region; \"Xong rồi\" shows what grew in An's world; the week shows region icons", async ({ browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const today = localDate(new Date());
+  const first = `${today.slice(0, 7)}-01`;
+  await db.from("profiles").update({ grade: 6 }).eq("id", childId);
+  await db.from("family_settings").update({ by_enabled: true }).eq("family_id", familyId);
+  await db.from("world_items").delete().eq("child_id", childId);
+  await db.from("world_months").delete().eq("child_id", childId);
+  await db.from("by_sessions").update({ ended_at: new Date().toISOString() }).eq("child_id", childId).is("ended_at", null);
+  try {
+    expect((await db.from("world_months").insert({ family_id: familyId, child_id: childId, month: first, world_key: "rung" })).error).toBeNull();
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/today");
+
+    // The 4 regions of An's corner are on Hôm nay; a tile goes straight to that region's words.
+    const invite = k.getByRole("region", { name: "Hôm nay con thấy thế nào?" });
+    for (const name of ["Núi lửa", "Mặt trời", "Biển sâu", "Khu rừng"]) await expect(invite.getByRole("link", { name: new RegExp(`^${name}:`) })).toBeVisible();
+    await invite.getByRole("link", { name: /^Khu rừng:/ }).click();
+    const words = k.getByRole("region", { name: "Chọn từ" });
+    await expect(words).toBeVisible();
+    await expect(k).toHaveURL(/\/binh-yen$/); // used once: a reload starts from the corner's home
+    await words.getByRole("group", { name: "Từ cảm xúc" }).getByRole("button").first().click();
+    await words.getByRole("button", { name: "Tiếp →" }).click();
+    await k.getByRole("region", { name: "Công nhận" }).getByRole("button", { name: "Tận hưởng →" }).click();
+    await k.getByRole("region", { name: "Gợi ý cho con" }).getByRole("button", { name: "Vậy là đủ cho hôm nay" }).click();
+
+    // The reward: what grew in Cảm xúc today, a fact, and the way to the world.
+    const done = k.getByRole("region", { name: "Xong rồi" });
+    const grew = done.getByRole("group", { name: "Thế giới của con" });
+    await expect(grew).toContainText(/trong Rừng nhiệt đới của con/);
+    await expect(grew).toContainText("Con có biết?");
+    const { data: plant } = await db.from("world_items").select("pillar, world_key").eq("child_id", childId).eq("local_date", today).eq("pillar", "feel");
+    expect(plant).toEqual([{ pillar: "feel", world_key: "rung" }]);
+    await grew.getByRole("link", { name: "Xem trong Thế giới →" }).click();
+    await expect(k).toHaveURL(/\/today\?tab=tuan$/);
+    await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+
+    // Hôm nay: the visit is remembered (only for the child) and the compact world card shows today's plant.
+    await k.goto("/today");
+    await expect(k.getByRole("region", { name: "Hôm nay con thấy thế nào?" })).toContainText("Hôm nay con đã ghé Góc bình yên");
+    await expect(k.getByRole("region", { name: /Rừng nhiệt đới của con/ }).getByRole("list", { name: "Hôm nay đã mọc" }).getByRole("listitem")).not.toHaveCount(0);
+    await kCtx.close();
+  } finally {
+    await db.from("world_items").delete().eq("child_id", childId);
+    await db.from("world_months").delete().eq("child_id", childId);
     await db.from("profiles").update({ grade }).eq("id", childId);
   }
 });

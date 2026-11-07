@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { localDate } from "@/lib/time";
 import type { ChildContext } from "@/lib/today/service";
 import { findWorld } from "./catalog";
-import { monthOf, monthView, plantsToAdd, prevMonth, worldOfMonth, worldStarted, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
+import { feelGrowthOf, monthOf, monthView, plantsToAdd, prevMonth, worldOfMonth, worldStarted, type FeelGrowth, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
 import { PILLARS, type Pillar } from "./types";
 
 /** The world of the month is An's (scientist voice). Nguyên gets her comic in R5. */
@@ -174,4 +174,29 @@ export async function worldReady(): Promise<boolean> {
   if (!error) return true;
   if (missingTable(error)) return false;
   throw new Error(`world.ready: ${error.message}`);
+}
+
+/** Best effort: null when there is no world for this child, the tables are not there yet, or anything fails. */
+export async function feelGrowthToday(ctx: ChildContext, now = new Date()): Promise<FeelGrowth | null> {
+  if (!hasWorld(ctx)) return null;
+  try {
+    const today = localDate(now);
+    const month = monthOf(today);
+    if (!worldStarted(month)) return null;
+    const known = await knownWorlds(ctx.childId);
+    const { key, choose } = worldOfMonth(month, true, known);
+    if (!key) return choose.length > 0 ? { kind: "choose" } : null;
+    const admin = createAdminClient();
+    const [{ data, error }, visits] = await Promise.all([
+      admin.from("world_items").select("local_date, pillar, world_key, item_key, variant").eq("child_id", ctx.childId).gte("local_date", firstDay(month)).lte("local_date", lastDay(month)),
+      admin.from("by_checkins").select("id", { count: "exact", head: true }).eq("child_id", ctx.childId).eq("local_date", today),
+    ]);
+    if (error) throw new Error(`world.growth: ${error.message}`);
+    if (visits.error) throw new Error(`world.growth.visits: ${visits.error.message}`);
+    const view = monthView(month, key, (data ?? []) as WorldRow[], today);
+    return view ? feelGrowthOf(view, (visits.count ?? 0) > 1) : null;
+  } catch (e) {
+    console.error("world.growth", e instanceof Error ? e.message : e);
+    return null;
+  }
 }
