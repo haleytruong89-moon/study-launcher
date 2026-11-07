@@ -1,6 +1,6 @@
 # Màn chính mới của con — spec R0
 
-> Trạng thái: **bản nháp chờ bố mẹ duyệt** (07/11/2026). Chỉ tài liệu, không đổi code, không đổi database.
+> Trạng thái: **bản nháp chờ bố mẹ duyệt** (07/11/2026; sửa luật nghỉ theo ý bố mẹ cùng ngày). Chỉ tài liệu, không đổi code, không đổi database.
 > Nguồn: bản bấm thử hai con đã duyệt (https://claude.ai/artifact/Cr5rqxEEGdiWuMgV5TRYav), canvas (https://claude.ai/artifact/VN6NCVjHRVKuti7qGZ63og), spec biểu tượng PR #41 (`docs/BINH_YEN_BIEU_TUONG.md`), góp ý của hai con 06–07/11.
 > Đã qua 1 lượt review độc lập (07/11, 21 điểm, đã sửa vào bản này).
 > Sau khi bố mẹ duyệt, từng lát R1–R5 cập nhật `SPEC.md` / `DESIGN.md` / `PROGRESS.md`. R0 không sửa các file đó để khỏi đụng PR #42 đang mở.
@@ -20,7 +20,9 @@ Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái th
 |---|---|
 | 07/11 | Có **Góc học tập** riêng (màn rộng để xếp bài, làm bài). |
 | 07/11 | **Kỹ năng mở ngay, làm song song** với bài tập. **Giờ tự do 45' chỉ có sau khi xong cả bài tập và kỹ năng.** |
-| 07/11 | **Nghỉ 10' dùng lúc nào cũng được**, vẫn 1 lần/ngày, không bắt buộc. |
+| 07/11 | **Nghỉ 10' sau khi xong một trong hai phần** (xong bài tập *hoặc* xong kỹ năng, phần nào xong trước cũng được), vẫn 1 lần/ngày, không bắt buộc. Bố mẹ sửa lại 07/11: không phải "lúc nào cũng được". |
+| 07/11 | Ngày không có bài đến hạn: **giữ bắt buộc làm trước 1 bài** (`homework_min_upcoming = 1`). |
+| 07/11 | Làm bài trên lớp trong lúc chạy đồng hồ kỹ năng: **chấp nhận, ghi là giới hạn đã biết**. |
 | 07/11 | Trang truyện / khu rừng **có cảm xúc của con, hiện trên màn của con** (Hôm nay, Tuần). **Bố mẹ không có trang nào để xem.** |
 | 07/11 | Thứ tự code: R1 luật mới → R2 Góc học tập → R3–R5. |
 
@@ -31,7 +33,8 @@ Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái th
 - **Phần 1** (bài trên lớp đến hạn + bài bổ sung) và **Phần 2** (kỹ năng) **mở cùng lúc** từ đầu ngày. Con tự chọn thứ tự. SPEC §3 vốn đã cho con "quyền quyết thứ tự 2 phần".
 - **Giờ tự do** bắt đầu khi **cả hai phần xong**, hoặc khi con dùng thẻ miễn. Vẫn 45', 1 lần/ngày, dừng ở 00:00.
 - **Nghỉ 10'**:
-  - Con bấm lúc nào cũng được, miễn là **chưa có giờ tự do**. Vẫn 1 lần/ngày. Trong 10' đó máy mở mọi trang.
+  - Mở khi con **xong Phần 1 hoặc xong Phần 2** (phần nào trước cũng được) và **chưa có giờ tự do**. Vẫn 1 lần/ngày. Trong 10' đó máy mở mọi trang.
+  - Phần không có việc nào tính là đã xong (như cũ): ngày không có bài tập và bài bổ sung thì nghỉ được ngay.
   - Không nghỉ cũng không sao: không còn bước "mời nghỉ" chặn đường.
   - Nút Nghỉ ẩn khi `break_minutes = 0`.
 - **Giữ nguyên:**
@@ -56,7 +59,7 @@ Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái th
 | 9 | Phần 1 xong, kỹ năng chưa xong | LOCK_P2 | khóa |
 
 Khác bản cũ:
-- **BREAK lên trên LOCK_P1**: con nghỉ được cả khi chưa xong Phần 1.
+- **BREAK lên trên LOCK_P1**: con xong kỹ năng trước thì nghỉ được dù bài tập chưa xong.
 - **Bỏ BREAK_OFFER** khỏi danh sách status. TypeScript sẽ báo mọi chỗ còn dùng nó.
 - `part2.locked` luôn `false`.
 - Các tên status khác giữ nguyên. Extension không phụ thuộc tên status (chỉ đọc `open` / `openUntil`).
@@ -87,10 +90,13 @@ Dòng cũ có `part2_done_at` nhưng `part1_done_at` trống thì tính theo lu�
 | E2 | Xong cả 2 kỹ năng, bài trên lớp mới xong 1/2 | Khóa (LOCK_P1), chưa có giờ tự do |
 | E3 | Xong hết Phần 1, kỹ năng mới 1/2 | Khóa (LOCK_P2). Không có bước mời nghỉ |
 | E4 | 19:00 xong việc cuối cùng (của phần nào cũng vậy) | Giờ tự do 19:00–19:45. Đúng 19:45:00 khóa đến hết ngày |
-| E5 | 17:05 chưa làm gì, bấm Nghỉ | Mở mọi trang 17:05–17:15. Đúng 17:15:00 khóa lại (LOCK_P1) |
+| E5 | 17:05 chưa xong phần nào, bấm Nghỉ | **Từ chối** (nút ẩn): "Xong bài tập hoặc xong kỹ năng là được nghỉ" |
+| E5b | 17:40 xong cả 2 kỹ năng, bài tập chưa xong, bấm Nghỉ | Mở mọi trang 17:40–17:50. Đúng 17:50:00 khóa lại (LOCK_P1) |
+| E5c | 18:30 xong Phần 1, kỹ năng chưa xong, bấm Nghỉ | Mở 18:30–18:40, rồi khóa (LOCK_P2) — giống hiện nay |
+| E5d | Ngày không có bài trên lớp, không có bài bổ sung | Nghỉ được ngay từ đầu ngày (Phần 1 rỗng = xong), như hiện nay |
 | E6 | Đã nghỉ rồi, bấm Nghỉ lần 2 | Từ chối: "Hôm nay con đã nghỉ rồi" |
-| E7 | Đang chạy đồng hồ kỹ năng, bấm Nghỉ | **Từ chối**: "Bấm Xong việc đang làm trước". Để 10' nghỉ không tính vào 20' của kỹ năng — *cần bố mẹ chốt* |
-| E8 | Đang nghỉ, con bấm Bắt đầu, Xong, nộp ảnh (cả nộp qua QR bằng điện thoại) hoặc nhờ bố mẹ xem | **Từ chối**: "Đang nghỉ — bấm Học tiếp để làm tiếp". Bấm Học tiếp thì hết nghỉ ngay và làm tiếp được. Xếp thứ tự bài vẫn được — *cần bố mẹ chốt* |
+| E7 | Đang chạy đồng hồ kỹ năng, bấm Nghỉ | **Từ chối**: "Bấm Xong việc đang làm trước". Để 10' nghỉ không tính vào 20' của kỹ năng (áp dụng mặc định, bố mẹ đổi được) |
+| E8 | Đang nghỉ, con bấm Bắt đầu, Xong, nộp ảnh (cả nộp qua QR bằng điện thoại) hoặc nhờ bố mẹ xem | **Từ chối**: "Đang nghỉ — bấm Học tiếp để làm tiếp". Bấm Học tiếp thì hết nghỉ ngay và làm tiếp được. Xếp thứ tự bài vẫn được (áp dụng mặc định, bố mẹ đổi được) |
 | E9 | Cả ngày không nghỉ | Không sao; xong hết thì có giờ tự do luôn |
 | E10 | Đã có giờ tự do, bấm Nghỉ | Từ chối (nút ẩn) |
 | E11 | 23:55 bấm Nghỉ | Mở đến 00:00, không cộng sang hôm sau |
@@ -101,26 +107,23 @@ Dòng cũ có `part2_done_at` nhưng `part1_done_at` trống thì tính theo lu�
 | E16 | Như E15, nhưng bố mẹ giao bài lúc 06:30 (trước khi con xong kỹ năng) | Khóa lại (LOCK_P1) đến khi xong bài đó |
 | E17 | Bố mẹ giao thêm bài sau khi con xong Phần 1, kỹ năng chưa xong | Bài hiện ra, **không chặn** giờ tự do (như cũ) |
 | E18 | Xong kỹ năng 18:00, xong bài trên lớp 22:00 | Giờ tự do 22:00–22:45. **Không** tính "ngày đạt" vì Phần 1 xong sau 21:30 |
-| E19 | Ngày không có bài đến hạn, có bài "Sắp tới" | Theo cài đặt `homework_min_upcoming` (hiện = 1: phải làm trước 1 bài mới đủ Phần 1) — *cần bố mẹ chốt, xem §1.5* |
+| E19 | Ngày không có bài đến hạn, có bài "Sắp tới" | Theo cài đặt `homework_min_upcoming` = 1: phải làm trước 1 bài mới đủ Phần 1 (**bố mẹ chốt giữ 07/11**) |
 | E20 | Có bài đến hạn, con bấm "+ Làm trước" bài tuần sau | Không bắt buộc, không chặn giờ tự do. Xong sớm ≥ 2 ngày thì được ★ (chỉ ghi nhận) |
 | E21 | Thẻ miễn | Như cũ: dùng được khi còn thẻ và chưa có giờ tự do, không dùng được khi bố mẹ khóa tay. Dùng thẻ **không** ghi mốc Phần 1 / Phần 2 |
 | E22 | Con đang nghỉ, bố mẹ bấm xác nhận bài cuối cùng (cả 2 phần thành xong) | Giờ tự do bắt đầu ngay; phần nghỉ còn lại bỏ, không cộng thêm (FREE ở dòng 6, trên BREAK) |
 | E23 | Ngày không có kỹ năng, 20:00 xong Phần 1, bố mẹ khóa tay đến 22:00 | Mốc Phần 1 / Phần 2 ghi lúc 20:00, nên **vẫn đạt**. Giờ tự do hoãn, 22:00–22:45 |
 | E24 | Ngày cũ có `break_skipped = true` | Hết lượt nghỉ hôm đó. Ngày đạt tính như trước |
 
-### 1.5 Điểm cần bố mẹ chốt trước khi code R1
+### 1.5 Đã chốt / mặc định (07/11)
 
-1. **E7 + E8 — nghỉ và đồng hồ việc:**
-   - Đề xuất: không cho nghỉ khi đang chạy đồng hồ, và khóa nút việc trong lúc nghỉ. Lý do: phút tối thiểu = giờ Xong − giờ Bắt đầu, nên nếu cho nghỉ giữa chừng thì 10' nghỉ cũng được tính vào 20' kỹ năng.
-   - Cách khác: cho nghỉ, đồng hồ việc tạm dừng. Cách này phải thêm cột vào database và phức tạp hơn.
-2. **E19 — "Làm trước" vào ngày không có bài đến hạn:**
-   - Bản bấm thử để "Làm trước" hoàn toàn tùy ý. Luật hiện tại (chốt 17/10) bắt làm trước 1 bài vào ngày không có bài đến hạn.
-   - Không cần sửa code: bố mẹ chọn **giữ 1** hay **đặt 0** trong Thêm › Luật trong nhà.
-3. **Làm bài trên lớp trong lúc chạy đồng hồ kỹ năng:**
-   - Bài trên lớp không có đồng hồ, nên con có thể bấm Bắt đầu kỹ năng 20' rồi làm bài Toán trong lúc đó. Lỗ này đã có từ trước với bài bổ sung; nay kỹ năng mở sớm nên dễ gặp hơn.
-   - Đề xuất: chấp nhận và ghi thành giới hạn đã biết, vì bài trên lớp có ảnh / bố mẹ xem.
-   - Cách khác: chặn nộp bài trên lớp khi đang chạy đồng hồ.
-4. **Ghi nhận (không cần chọn):** Phần 2 nay có thể xong từ sáng sớm. Kỹ năng bố mẹ bật thêm sau đó không tính cho hôm đó (như E15, E17). Nếu sau này muốn "giờ tự do không trước HH:MM", đó sẽ là một tham số trong `family_settings`, không ghi cứng trong code.
+1. **Nghỉ 10'** mở khi xong Phần 1 **hoặc** Phần 2 (bố mẹ sửa lại 07/11, xem E5–E5d).
+2. **E7 + E8 — nghỉ và đồng hồ việc** (áp dụng mặc định, bố mẹ chưa chọn khác):
+   - Không cho nghỉ khi đang chạy đồng hồ một việc (ví dụ đã xong kỹ năng, đang làm bài bổ sung 20').
+   - Trong lúc nghỉ, các nút việc tạm khóa.
+   - Lý do: phút tối thiểu = giờ Xong − giờ Bắt đầu. Nếu cho nghỉ giữa chừng thì 10' nghỉ cũng được tính vào 20' của việc đang làm.
+3. **E19 — "Làm trước":** giữ bắt buộc 1 bài vào ngày không có bài đến hạn (`homework_min_upcoming = 1`, không đổi code). Bố mẹ chốt 07/11.
+4. **Làm bài trên lớp trong lúc chạy đồng hồ kỹ năng:** chấp nhận, ghi là giới hạn đã biết, vì bài trên lớp vẫn cần ảnh hoặc bố mẹ xem. Bố mẹ chốt 07/11.
+5. **Ghi nhận:** Phần 2 nay có thể xong từ sáng sớm. Kỹ năng bố mẹ bật thêm sau đó không tính cho hôm đó (như E15, E17). Nếu sau này muốn "giờ tự do không trước HH:MM", đó sẽ là một tham số trong `family_settings`, không ghi cứng trong code.
 
 ### 1.6 Những chỗ phải sửa khi code R1 (không SQL)
 
@@ -176,8 +179,8 @@ Không có điểm, streak, bảng xếp hạng; không so sánh hai con (SPEC �
 | Danh sách bên trái | Nhóm: Bài trên lớp · Bài bổ sung · Kỹ năng · Làm trước ★. Kéo ⋮⋮ hoặc bấm ↑↓ để xếp. Thứ tự lưu vào `day_plans` qua `/api/day/plan` (đã có); chỉ để hiển thị, **không đổi khóa/mở**. Kỹ năng nay xếp được cùng bài tập |
 | Khung làm bài bên phải | Đề bài / file bố mẹ đính kèm (`homework_items.photo_paths`, đọc qua route file đã có); đồng hồ theo giờ server; nộp ảnh / nhờ bố mẹ xem (như #21, #23); nút Xong |
 | Chế độ tập trung | Ẩn danh sách, chỉ còn khung làm bài. Chỉ chạy trên trình duyệt, không ghi gì |
-| Nghỉ 10' | Nút ở cuối danh sách, theo §1.4 |
-| "Làm trước" | Bài "Sắp tới" có nút "+ Làm trước"; có bắt buộc hay không theo §1.5 điểm 2 |
+| Nghỉ 10' | Nút ở cuối danh sách; hiện khi đã xong một phần (§1.1, §1.4) |
+| "Làm trước" | Bài "Sắp tới" có nút "+ Làm trước"; ngày không có bài đến hạn vẫn bắt buộc 1 bài (§1.5 điểm 3) |
 
 Màn rộng ≥ 1024px chia 2 cột. Màn hẹp hơn: hiện danh sách, bấm vào bài thì khung làm bài mở toàn màn.
 
@@ -299,8 +302,8 @@ Theo `docs/BINH_YEN_BIEU_TUONG.md` (PR #41). Nhân vật dùng chung cho Góc b�
 
 | Lát | Nội dung | Database | Xong khi |
 |---|---|---|---|
-| R0 | Spec này + review độc lập | Không | Bố mẹ duyệt E1–E24 và các điểm ở §1.5 |
-| R1 | Luật mới §1 (app + test; extension không đổi) | Không | Test E1–E24 xanh; trên preview bắt đầu được kỹ năng trước bài tập, nghỉ được lúc 17:05 |
+| R0 | Spec này + review độc lập | Không | Bố mẹ duyệt bảng E1–E24 |
+| R1 | Luật mới §1 (app + test; extension không đổi) | Không | Test E1–E24 xanh; trên preview bắt đầu được kỹ năng trước bài tập; xong kỹ năng thì nghỉ được dù bài tập chưa xong |
 | R2 | Khung 5 tab + Hôm nay mới + Góc học tập | Không | Hai con bấm thử preview trên laptop + iPhone |
 | R3 | Nhân vật + biểu tượng (#41) | 1 cột `profiles.avatar` | Con tạo nhân vật và thấy nó ở Góc bình yên |
 | R4 | Khu rừng sống (An) | 1 bảng `world_items` | An mở khu rừng, bấm cây / con vật ra thẻ loài |
