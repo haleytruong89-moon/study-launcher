@@ -1,6 +1,6 @@
 # Góc bình yên — Biểu tượng & nhân vật (spec bổ sung)
 
-> **Trạng thái:** bản nháp 07/11/2026, chờ bố mẹ duyệt. **Chưa code.**
+> **Trạng thái:** bố mẹ đã duyệt 07/11/2026 (3 câu chốt ở cuối file). **Chưa code** — lát R3a, R3b.
 > **Vì sao có file này:** bản mẫu hai con đã thử (https://claude.ai/artifact/MqDzfE32PkVW3yyrPSrDVT)
 > có khuôn mặt nhân vật, tạo nhân vật và hình nhỏ cho từng nút. `BINH_YEN.md` §1 lại xếp
 > "Picrew / nhân vật riêng" vào cột *Chưa làm*. Vì vậy lát S-BY1 làm ô của Nguyên bằng
