@@ -87,6 +87,8 @@ export interface World {
   animals: readonly Animal[];
   /** What the visitors are called: "con vật" (rừng, biển), "vị khách" (vũ trụ). */
   visitorWord: string;
+  /** Night scene (Vũ trụ): light text on it. */
+  dark?: boolean;
   /** Scene colours: sky, land. */
   sky: string;
   land: string;

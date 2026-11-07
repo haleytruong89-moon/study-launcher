@@ -103,7 +103,7 @@ export const BIEN: World = {
         key: "co_bien",
         name: "Cỏ biển",
         icon: { svg: { shape: "blades", color: "#4E9C57", accent: "#3E7F45", n: 6 } },
-        tags: ["seagrass", "seaweed"],
+        tags: ["seagrass"],
         facts: [
           "Cỏ biển là cây có hoa sống hoàn toàn dưới nước biển, không phải rong.",
           "Bò biển và rùa xanh ăn cỏ biển.",
@@ -135,7 +135,7 @@ export const BIEN: World = {
           "Biển Sargasso giữa Đại Tây Dương được đặt theo tên loài rong này.",
           "Ven biển Việt Nam có nhiều rong mơ; người ta dùng làm phân bón và thức ăn chăn nuôi.",
         ],
-        mission: "Thả một nắp chai rỗng và một nắp chai đầy nước vào chậu: cái nào nổi? Vì sao?",
+        mission: "Thả vào chậu một chai nhựa nhỏ rỗng đậy kín nắp và một hòn sỏi: cái nào nổi? Vì sao chai nổi được?",
         teach: "Rong mơ nổi được nhờ những bóng phao nhỏ chứa khí.",
       },
       {
@@ -221,22 +221,22 @@ export const BIEN: World = {
       },
       {
         key: "tai_tuong",
-        name: "Sò tai tượng",
+        name: "Trai tai tượng",
         icon: { svg: { shape: "shell", color: "#5E8FB0", accent: "#2E5A78", n: 2 } },
-        tags: ["shell", "coral_friend"],
+        tags: ["shell", "coral"],
         facts: [
-          "Sò tai tượng là loài trai lớn nhất thế giới, có con dài hơn một mét.",
-          "Trong thịt sò có tảo sống nhờ, cho màu xanh tím rất đẹp và giúp sò có thêm thức ăn.",
-          "Lớn lên sò tai tượng bám một chỗ và ở yên đó cả đời. Ở Việt Nam, loài này cần được bảo vệ.",
+          "Trai tai tượng khổng lồ là loài trai lớn nhất thế giới, có con dài hơn một mét.",
+          "Trong thịt trai có tảo sống nhờ, cho màu xanh tím rất đẹp và giúp trai có thêm thức ăn.",
+          "Lớn lên trai tai tượng ở yên một chỗ cả đời. Ở Việt Nam có vài loài trai tai tượng nhỏ hơn; chúng đều cần được bảo vệ.",
         ],
         mission: "Đo sải tay của con bằng thước: dài hơn hay ngắn hơn một mét?",
-        teach: "Sò tai tượng có tảo sống trong thịt, giống san hô.",
+        teach: "Trai tai tượng có tảo sống trong thịt, giống san hô.",
       },
       {
         key: "cat_trang",
         name: "Cát trắng",
         icon: { svg: { shape: "patch", color: "#F2E6C9", accent: "#E3D2AA" } },
-        tags: ["sand"],
+        tags: ["sand", "coral"],
         facts: [
           "Hạt cát là những mảnh đá, vỏ sò, san hô vỡ rất nhỏ.",
           "Nhiều bãi cát trắng ở vùng san hô có một phần là do cá vẹt gặm san hô rồi thải ra thành cát.",
@@ -361,7 +361,7 @@ export const BIEN: World = {
       name: "Rùa biển",
       icon: { emoji: "🐢" },
       needs: [{ tag: "seagrass", n: 1 }],
-      because: "rạn có cỏ biển để ăn",
+      because: "rạn có cỏ biển, món ăn của rùa xanh",
       facts: [
         "Rùa biển cái thường bơi về đúng vùng bờ biển nơi nó nở ra để đẻ trứng.",
         "Độ nóng của cát quyết định trứng nở ra rùa đực hay rùa cái.",
@@ -443,7 +443,7 @@ export const BIEN: World = {
         "Tua sứa có tế bào châm. Bị sứa châm khi tắm biển, lên bờ báo người lớn ngay.",
         "Có một loài sứa nhỏ có thể quay ngược về dạng non rồi lớn lại, nên được gọi là “sứa bất tử”.",
       ],
-      mission: "Hỏi bố mẹ: bị sứa châm khi đi biển thì nên làm gì?",
+      mission: "Hỏi bố mẹ: bị sứa châm khi đi biển thì nên làm gì? (Gợi ý: lên bờ, báo người lớn hoặc cứu hộ, rửa bằng nước biển, không chà xát, không dùng nước ngọt.)",
       teach: "Sứa không có não, không có tim, mà vẫn sống được.",
     },
     {

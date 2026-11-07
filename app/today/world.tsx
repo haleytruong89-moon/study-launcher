@@ -44,7 +44,7 @@ type Card = { kind: "thing"; v: ThingView; area: string } | { kind: "animal"; v:
 
 function Scene({ view, onOpen }: { view: MonthView; onOpen: (c: Card) => void }) {
   // Vũ trụ has a night sky: light text and labels there.
-  const dark = view.world.key === "vu_tru";
+  const dark = view.world.dark;
   const tag = dark ? "bg-white/90" : "bg-white";
   return (
     <div className="overflow-hidden rounded-2xl" style={{ background: view.world.land }}>
@@ -139,7 +139,7 @@ function CardView({ card, onClose }: { card: Card; onClose: () => void }) {
 }
 
 /** R4b: the first day(s) of a month — An picks the world (stays the whole month). */
-function Chooser({ options, color, onChosen }: { options: WorldChoice[]; color: string; onChosen: (d: WorldResponse) => void }) {
+function Chooser({ month, options, color, onChosen, onStale }: { month: string; options: WorldChoice[]; color: string; onChosen: (d: WorldResponse) => void; onStale: () => void }) {
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,9 +150,11 @@ function Chooser({ options, color, onChosen }: { options: WorldChoice[]; color: 
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/world/choose", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ world: chosen.key }), cache: "no-store" });
+      const res = await fetch("/api/world/choose", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ world: chosen.key, month }), cache: "no-store" });
       const data = (await res.json().catch(() => null)) as (WorldResponse & { error?: string }) | null;
       if (res.ok && data && "album" in data) onChosen(data);
+      // Picked elsewhere, or a new month began while the page was open: show what is true now.
+      else if (res.status === 409) onStale();
       else setError(data?.error ?? "Chưa chọn được, thử lại sau.");
     } catch {
       setError("Mất kết nối mạng, thử lại sau.");
@@ -167,30 +169,34 @@ function Chooser({ options, color, onChosen }: { options: WorldChoice[]; color: 
         🌍 Tháng mới! Con chọn thế giới cho tháng này
       </h2>
       <p className="text-sm text-ink/75">Chọn rồi thì cả tháng ở đó. Những mảng con đã xong từ đầu tháng sẽ mọc ngay khi chọn, không mất gì.</p>
-      <div role="radiogroup" aria-label="Các thế giới" className="grid gap-3 sm:grid-cols-2">
+      <ul aria-label="Các thế giới" className="grid gap-3 sm:grid-cols-2">
         {options.map((o) => (
-          <button
-            key={o.key}
-            type="button"
-            role="radio"
-            aria-checked={picked === o.key}
-            onClick={() => setPicked(o.key)}
-            className="flex min-h-11 flex-col gap-2 rounded-2xl border-2 bg-white p-3 text-left"
-            style={{ borderColor: picked === o.key ? color : "rgb(28 31 29 / 0.12)", background: picked === o.key ? `${color}10` : undefined }}
-          >
-            <strong className="text-base">
-              <span aria-hidden>{o.emoji} </span>
-              {o.name}
-            </strong>
-            <span className="flex items-center gap-1" aria-label={`Ví dụ: ${o.peek.map((p) => p.name).join(", ")}`}>
-              {o.peek.map((p) => (
-                <WorldIcon key={p.name} icon={p.icon} size={28} />
-              ))}
-            </span>
-            <span className="text-sm text-ink/75">{o.intro}</span>
-          </button>
+          <li key={o.key}>
+            <button
+              type="button"
+              aria-pressed={picked === o.key}
+              aria-describedby={`world-intro-${o.key}`}
+              onClick={() => setPicked(o.key)}
+              className="flex min-h-11 w-full flex-col gap-2 rounded-2xl border-2 bg-white p-3 text-left"
+              style={{ borderColor: picked === o.key ? color : "rgb(28 31 29 / 0.12)", background: picked === o.key ? `${color}10` : undefined }}
+            >
+              <strong className="text-base">
+                <span aria-hidden>{o.emoji} </span>
+                {o.name}
+              </strong>
+              <span className="flex items-center gap-1">
+                {o.peek.map((p) => (
+                  <WorldIcon key={p.name} icon={p.icon} size={28} />
+                ))}
+                <span className="sr-only">Ví dụ: {o.peek.map((p) => p.name).join(", ")}</span>
+              </span>
+              <span id={`world-intro-${o.key}`} className="text-sm text-ink/75">
+                {o.intro}
+              </span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
       {error && (
         <p role="alert" className="text-sm text-red-700">
           {error}
@@ -206,10 +212,19 @@ function Chooser({ options, color, onChosen }: { options: WorldChoice[]; color: 
 /** Tab "Thế giới" (An): this month's world, the album of past months. */
 export function WorldTab({ color }: { color: string }) {
   const [month, setMonth] = useState<string | null>(null);
-  const [fetched, retry] = useWorld(month);
-  // After a pick the route answers with the new world: show it without another round trip.
+  const [fetched, refetch] = useWorld(month);
+  // After a pick the route answers with the new world: show it without another round trip
+  // (until the next fetch: another month, "Thử lại", a 409).
   const [picked, setPicked] = useState<WorldResponse | null>(null);
   const load: Load = picked && month === null ? { state: "ok", data: picked } : fetched;
+  const retry = () => {
+    setPicked(null);
+    refetch();
+  };
+  const openMonth = (m: string | null) => {
+    setPicked(null);
+    setMonth(m);
+  };
   const [card, setCard] = useState<Card | null>(null);
 
   if (load.state === "loading") return <p className="rounded-2xl bg-white p-4 text-sm text-ink/70">Đang mở thế giới của con…</p>;
@@ -224,7 +239,7 @@ export function WorldTab({ color }: { color: string }) {
             Thử lại
           </button>
           {month && (
-            <button type="button" onClick={() => setMonth(null)} className="btn border border-ink/20 bg-white text-sm">
+            <button type="button" onClick={() => openMonth(null)} className="btn border border-ink/20 bg-white text-sm">
               ← Về tháng này
             </button>
           )}
@@ -232,7 +247,7 @@ export function WorldTab({ color }: { color: string }) {
       </section>
     );
   const { view, current, album, choose } = load.data;
-  if (current && choose.length > 0) return <Chooser options={choose} color={color} onChosen={setPicked} />;
+  if (current && choose.length > 0) return <Chooser month={load.data.month} options={choose} color={color} onChosen={setPicked} onStale={retry} />;
   if (!view)
     return (
       <p className="rounded-2xl bg-white p-4 text-sm">
@@ -249,7 +264,7 @@ export function WorldTab({ color }: { color: string }) {
             {view.world.name} · {monthLabel(view.month)}
           </h2>
           {!current && (
-            <button type="button" onClick={() => setMonth(null)} className="min-h-11 text-sm font-semibold underline" style={{ color }}>
+            <button type="button" onClick={() => openMonth(null)} className="min-h-11 text-sm font-semibold underline" style={{ color }}>
               ← Về tháng này
             </button>
           )}
@@ -284,7 +299,7 @@ export function WorldTab({ color }: { color: string }) {
                 key={a.month}
                 type="button"
                 aria-pressed={month === a.month}
-                onClick={() => setMonth(a.month)}
+                onClick={() => openMonth(a.month)}
                 className="min-h-11 rounded-full border-[1.5px] bg-white px-4 text-sm font-medium"
                 style={month === a.month ? { borderColor: color, background: `${color}14` } : { borderColor: "rgb(28 31 29 / 0.15)" }}
               >

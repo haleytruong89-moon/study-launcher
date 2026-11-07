@@ -56,8 +56,9 @@ export function defaultWorld(month: string, used: readonly { month: string; worl
 
 /** Worlds the child may pick for a month (R4b): every world with a pack not used in the 11 months before. */
 export function worldOptions(month: string, used: readonly { month: string; worldKey: string }[]): string[] {
-  const before = used.filter((u) => u.month < month && monthsBetween(u.month, month) <= 11);
-  return WORLD_ORDER.filter((k) => WORLDS[k] && !before.some((u) => u.worldKey === k));
+  // Months on both sides count: an ended month never takes the world already picked for the next one.
+  const near = used.filter((u) => u.month !== month && Math.abs(monthsBetween(u.month, month)) <= 11);
+  return WORLD_ORDER.filter((k) => WORLDS[k] && !near.some((u) => u.worldKey === k));
 }
 
 /**
@@ -142,7 +143,7 @@ export interface AnimalView {
 
 export interface MonthView {
   month: string;
-  world: { key: string; name: string; emoji: string; sky: string; land: string; intro: string; visitorWord: string; pillarNames: Record<Pillar, string> };
+  world: { key: string; name: string; emoji: string; sky: string; land: string; intro: string; visitorWord: string; dark: boolean; pillarNames: Record<Pillar, string> };
   things: ThingView[];
   animals: AnimalView[];
   /** Things of this world not grown yet (never named: a gentle "còn … đang chờ"). */
@@ -197,7 +198,7 @@ export function monthView(month: string, worldKey: string, rows: readonly WorldR
   const total = PILLARS.reduce((n, p) => n + world.things[p].length, 0);
   return {
     month,
-    world: { key: world.key, name: world.name, emoji: world.emoji, sky: world.sky, land: world.land, intro: world.intro, visitorWord: world.visitorWord, pillarNames: world.pillarNames },
+    world: { key: world.key, name: world.name, emoji: world.emoji, sky: world.sky, land: world.land, intro: world.intro, visitorWord: world.visitorWord, dark: world.dark === true, pillarNames: world.pillarNames },
     things: [...things.values()],
     animals,
     waiting: total - things.size,
@@ -215,6 +216,8 @@ export interface WorldChoice {
 }
 
 export interface WorldResponse {
+  /** The month shown ("2026-12"). */
+  month: string;
   view: MonthView | null;
   /** This month has no world yet: An picks one (R4b). */
   choose: WorldChoice[];

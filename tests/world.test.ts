@@ -138,6 +138,9 @@ describe("An picks the world of the month (R4b)", () => {
     expect(worldOfMonth("2026-12", false, known([["2026-11", "rung"]]))).toEqual({ key: "bien", choose: [] });
     expect(worldOfMonth("2027-01", true, known([["2026-11", "rung"], ["2026-12", "bien"]]))).toEqual({ key: "vu_tru", choose: [] });
   });
+  it("an ended month never takes the world already picked for the next month (pick made after midnight)", () => {
+    expect(worldOfMonth("2026-12", false, known([["2026-11", "rung"]], [["2027-01", "bien"]]))).toEqual({ key: "vu_tru", choose: [] });
+  });
   it("offers only worlds with a pack not used in the 11 months before", () => {
     expect(worldOptions("2026-11", [])).toEqual(["rung", "bien", "vu_tru"]);
     expect(worldOptions("2027-11", [{ month: "2026-11", worldKey: "rung" }])).toEqual(["rung", "bien", "vu_tru"]);

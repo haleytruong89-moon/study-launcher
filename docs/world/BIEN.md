@@ -87,7 +87,7 @@
 2. Biển Sargasso giữa Đại Tây Dương được đặt theo tên loài rong này.
 3. Ven biển Việt Nam có nhiều rong mơ; người ta dùng làm phân bón và thức ăn chăn nuôi.
 
-- **Nhiệm vụ ngoài đời:** Thả một nắp chai rỗng và một nắp chai đầy nước vào chậu: cái nào nổi? Vì sao?
+- **Nhiệm vụ ngoài đời:** Thả vào chậu một chai nhựa nhỏ rỗng đậy kín nắp và một hòn sỏi: cái nào nổi? Vì sao chai nổi được?
 - **Tối nay dạy cả nhà:** Rong mơ nổi được nhờ những bóng phao nhỏ chứa khí.
 
 ### (hình vẽ) Tảo bẹ (`tao_be`)
@@ -146,14 +146,14 @@
 - **Nhiệm vụ ngoài đời:** Nhìn một món đồ có lớp xà cừ (nút áo, hộp khảm): nghiêng qua lại xem màu thay đổi thế nào.
 - **Tối nay dạy cả nhà:** Ngọc trai là vật lạ được con trai bọc bằng rất nhiều lớp xà cừ.
 
-### (hình vẽ) Sò tai tượng (`tai_tuong`)
+### (hình vẽ) Trai tai tượng (`tai_tuong`)
 
-1. Sò tai tượng là loài trai lớn nhất thế giới, có con dài hơn một mét.
-2. Trong thịt sò có tảo sống nhờ, cho màu xanh tím rất đẹp và giúp sò có thêm thức ăn.
-3. Lớn lên sò tai tượng bám một chỗ và ở yên đó cả đời. Ở Việt Nam, loài này cần được bảo vệ.
+1. Trai tai tượng khổng lồ là loài trai lớn nhất thế giới, có con dài hơn một mét.
+2. Trong thịt trai có tảo sống nhờ, cho màu xanh tím rất đẹp và giúp trai có thêm thức ăn.
+3. Lớn lên trai tai tượng ở yên một chỗ cả đời. Ở Việt Nam có vài loài trai tai tượng nhỏ hơn; chúng đều cần được bảo vệ.
 
 - **Nhiệm vụ ngoài đời:** Đo sải tay của con bằng thước: dài hơn hay ngắn hơn một mét?
-- **Tối nay dạy cả nhà:** Sò tai tượng có tảo sống trong thịt, giống san hô.
+- **Tối nay dạy cả nhà:** Trai tai tượng có tảo sống trong thịt, giống san hô.
 
 ### (hình vẽ) Cát trắng (`cat_trang`)
 
@@ -242,7 +242,7 @@
 - **Nhiệm vụ ngoài đời:** Kể một cặp “bạn cùng có lợi” khác trong tự nhiên (gợi ý: ong và hoa).
 - **Tối nay dạy cả nhà:** Cá hề và hải quỳ là đôi bạn giúp nhau cùng sống.
 
-### 🐢 Rùa biển (`rua_bien`) — đến vì rạn có cỏ biển để ăn
+### 🐢 Rùa biển (`rua_bien`) — đến vì rạn có cỏ biển, món ăn của rùa xanh
 
 Điều kiện: 1 thứ có nhãn `seagrass`
 
@@ -305,7 +305,7 @@
 2. Tua sứa có tế bào châm. Bị sứa châm khi tắm biển, lên bờ báo người lớn ngay.
 3. Có một loài sứa nhỏ có thể quay ngược về dạng non rồi lớn lại, nên được gọi là “sứa bất tử”.
 
-- **Nhiệm vụ ngoài đời:** Hỏi bố mẹ: bị sứa châm khi đi biển thì nên làm gì?
+- **Nhiệm vụ ngoài đời:** Hỏi bố mẹ: bị sứa châm khi đi biển thì nên làm gì? (Gợi ý: lên bờ, báo người lớn hoặc cứu hộ, rửa bằng nước biển, không chà xát, không dùng nước ngọt.)
 - **Tối nay dạy cả nhà:** Sứa không có não, không có tim, mà vẫn sống được.
 
 ### 🐬 Cá heo (`ca_heo`) — đến vì biển có nhiều sinh vật nhỏ và rạn san hô

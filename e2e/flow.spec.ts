@@ -2579,8 +2579,8 @@ test("R4b An chọn thế giới: a new month waits for An's pick (nothing plant
     await k.getByRole("button", { name: /Tháng mới! Chọn thế giới của con/ }).click();
     await expect(k).toHaveURL(/\/today\?tab=tuan$/);
     await expect(k.getByRole("heading", { name: /Tháng mới! Con chọn thế giới cho tháng này/ })).toBeVisible();
-    const worlds = k.getByRole("radiogroup", { name: "Các thế giới" });
-    await expect(worlds.getByRole("radio")).toHaveCount(3);
+    const worlds = k.getByRole("list", { name: "Các thế giới" });
+    await expect(worlds.getByRole("button")).toHaveCount(3);
     // Nothing grows before the pick (it is not lost: it grows once An picks).
     expect(await monthRows()).toEqual([]);
 
@@ -2589,7 +2589,8 @@ test("R4b An chọn thế giới: a new month waits for An's pick (nothing plant
     expect(await byCall(k, "POST", "/api/world/choose", { world: "Biển!" })).toBe(400);
     expect(await byCall(k, "POST", "/api/world/choose", {})).toBe(400);
 
-    await worlds.getByRole("radio", { name: /Biển và rạn san hô/ }).click();
+    await worlds.getByRole("button", { name: /Biển và rạn san hô/ }).click();
+    await expect(worlds.getByRole("button", { name: /Biển và rạn san hô/ })).toHaveAttribute("aria-pressed", "true");
     await k.getByRole("button", { name: "Vào Biển và rạn san hô" }).click();
     await expect(k.getByRole("heading", { name: /Biển và rạn san hô · tháng/ })).toBeVisible();
     const rows = await monthRows();
@@ -2603,6 +2604,7 @@ test("R4b An chọn thế giới: a new month waits for An's pick (nothing plant
 
     // Picked once: the month stays in Biển.
     expect(await byCall(k, "POST", "/api/world/choose", { world: "vu_tru" })).toBe(409);
+    expect(await byCall(k, "POST", "/api/world/choose", { world: "vu_tru", month: "2020-01" })).toBe(409);
     await k.reload();
     await expect(k.getByRole("heading", { name: /Biển và rạn san hô · tháng/ })).toBeVisible();
     await kCtx.close();

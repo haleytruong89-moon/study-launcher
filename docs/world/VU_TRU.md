@@ -47,16 +47,16 @@
 
 1. Sao Chức Nữ là một trong những ngôi sao sáng nhất trên bầu trời mùa hè.
 2. Vì trục Trái Đất lắc rất chậm, khoảng 14.000 năm trước Sao Chức Nữ từng là “sao Bắc Cực”.
-3. Chức Nữ, Ngưu Lang và một sao thứ ba tạo thành “Tam giác mùa hè” trên bầu trời.
+3. Chức Nữ, Ngưu Lang và sao Thiên Tân (Deneb) tạo thành “Tam giác mùa hè” trên bầu trời.
 
 - **Nhiệm vụ ngoài đời:** Vẽ 3 chấm thành một tam giác và đặt tên 3 ngôi sao của “Tam giác mùa hè”.
-- **Tối nay dạy cả nhà:** Sao Bắc Cực không phải lúc nào cũng là một ngôi sao: hàng nghìn năm trước, đó từng là Chức Nữ.
+- **Tối nay dạy cả nhà:** Sao Bắc Cực không phải lúc nào cũng là cùng một ngôi sao: khoảng 14.000 năm trước, đó là Chức Nữ.
 
 ### (hình vẽ) Betelgeuse (`betelgeuse`)
 
 1. Betelgeuse là ngôi sao màu đỏ cam ở vai chòm sao Lạp Hộ (Thợ Săn).
 2. Nó là sao siêu khổng lồ đỏ: nếu đặt vào chỗ Mặt Trời, nó còn rộng hơn cả quỹ đạo Sao Hỏa.
-3. Một ngày nào đó Betelgeuse sẽ nổ thành siêu tân tinh, sáng rực đến mức thấy được cả ban ngày.
+3. Một ngày nào đó, có thể trong vòng 100.000 năm tới, Betelgeuse sẽ nổ thành siêu tân tinh, sáng rực đến mức thấy được cả ban ngày.
 
 - **Nhiệm vụ ngoài đời:** Tìm chòm Lạp Hộ trên trời tối mùa đông (ba ngôi sao thẳng hàng ở “thắt lưng”).
 - **Tối nay dạy cả nhà:** Sao màu đỏ thì nguội hơn Mặt Trời, sao màu xanh trắng thì nóng hơn.
@@ -76,9 +76,9 @@
 
 1. Sao Hôm và Sao Mai mà người xưa nhìn thấy thật ra đều là Sao Kim.
 2. Sao Kim là hành tinh nóng nhất, dù không gần Mặt Trời nhất, vì lớp khí dày giữ nhiệt như một cái chăn.
-3. Sao Kim quay quanh mình rất chậm: một ngày trên Sao Kim còn dài hơn một năm của nó.
+3. Sao Kim quay quanh mình rất chậm: quay một vòng quanh mình còn lâu hơn đi một vòng quanh Mặt Trời.
 
-- **Nhiệm vụ ngoài đời:** Lúc chạng vạng, nhìn về phía tây: chấm sáng nhất (không nhấp nháy) có thể là Sao Kim.
+- **Nhiệm vụ ngoài đời:** Sao Kim lúc thì hiện ở phía tây sau hoàng hôn, lúc thì ở phía đông trước bình minh. Cùng bố mẹ tra xem tháng này nên nhìn lúc nào, rồi tìm chấm sáng nhất, không nhấp nháy.
 - **Tối nay dạy cả nhà:** Sao Hôm và Sao Mai là cùng một hành tinh: Sao Kim.
 
 ### (hình vẽ) Sao Hỏa (`sao_hoa`)
@@ -102,8 +102,8 @@
 ### (hình vẽ) Sao Thổ (`sao_tho`)
 
 1. Vành đai Sao Thổ làm từ vô số mảnh băng và đá, có mảnh nhỏ như hạt bụi, có mảnh to như ngôi nhà.
-2. Sao Thổ nhẹ hơn nước so với kích thước của nó: nếu có bồn nước đủ lớn, Sao Thổ sẽ nổi.
-3. Sao Thổ có hơn 100 mặt trăng đã được tìm thấy.
+2. Sao Thổ rất to nhưng “xốp”: trung bình nó nhẹ hơn nước cùng thể tích, nên nếu có bồn nước đủ lớn, Sao Thổ sẽ nổi.
+3. Sao Thổ có hơn 200 mặt trăng đã được tìm thấy, nhiều nhất trong các hành tinh.
 
 - **Nhiệm vụ ngoài đời:** Thả vào chậu nước một quả bóng nhựa và một viên bi: cái nào nổi? Vì sao?
 - **Tối nay dạy cả nhà:** Sao Thổ to khổng lồ nhưng lại nhẹ đến mức có thể nổi trên nước.
@@ -158,11 +158,11 @@
 ### (hình vẽ) Titan (`titan`)
 
 1. Titan là mặt trăng lớn nhất của Sao Thổ và có một lớp khí quyển dày.
-2. Trên Titan có hồ và sông, nhưng chứa khí mê-tan lỏng chứ không phải nước.
+2. Trên Titan có hồ và sông, nhưng chứa mê-tan lỏng chứ không phải nước.
 3. Năm 2005, tàu Huygens đã đáp xuống Titan và gửi ảnh về Trái Đất.
 
 - **Nhiệm vụ ngoài đời:** Kể tên 3 chất lỏng trong nhà con không phải là nước.
-- **Tối nay dạy cả nhà:** Titan có sông hồ, nhưng là khí mê-tan lỏng chứ không phải nước.
+- **Tối nay dạy cả nhà:** Titan có sông hồ, nhưng là mê-tan lỏng chứ không phải nước.
 
 ### ☄️ Sao chổi Halley (`halley`)
 
@@ -181,7 +181,7 @@
 2. Ngân Hà có hàng trăm tỉ ngôi sao; Mặt Trời chỉ là một trong số đó.
 3. Ở nơi rất tối, không có đèn, ta thấy Ngân Hà như một dải sáng mờ vắt ngang trời.
 
-- **Nhiệm vụ ngoài đời:** Lần tới về quê hoặc ở nơi ít đèn, tắt đèn và nhìn trời 10 phút cho mắt quen tối.
+- **Nhiệm vụ ngoài đời:** Lần tới về quê hoặc ở nơi ít đèn, cùng bố mẹ tắt đèn và nhìn trời 10 phút cho mắt quen tối.
 - **Tối nay dạy cả nhà:** Mặt Trời chỉ là một trong hàng trăm tỉ ngôi sao của Ngân Hà.
 
 ### (hình vẽ) Tinh vân Lạp Hộ (`tinh_van_lap_ho`)
@@ -206,7 +206,7 @@
 
 1. Tiên Nữ là thiên hà lớn gần Ngân Hà nhất.
 2. Ánh sáng từ Tiên Nữ phải đi khoảng 2,5 triệu năm mới đến mắt ta — ta đang nhìn thấy nó của 2,5 triệu năm trước.
-3. Sau khoảng vài tỉ năm nữa, Tiên Nữ và Ngân Hà sẽ đến gần và nhập lại với nhau.
+3. Tiên Nữ và Ngân Hà đang tiến lại gần nhau. Các nhà khoa học tính rằng sau vài tỉ năm nữa, hai thiên hà có thể (khoảng một nửa khả năng) nhập lại với nhau.
 
 - **Nhiệm vụ ngoài đời:** Hỏi cả nhà: nhìn một ngôi sao là nhìn về quá khứ — vì sao vậy?
 - **Tối nay dạy cả nhà:** Nhìn lên trời là nhìn về quá khứ, vì ánh sáng cần thời gian để đi tới.
@@ -231,7 +231,7 @@
 
 ## Vị khách ghé thăm
 
-### 🛰️ Trạm Vũ trụ Quốc tế (`iss`) — đến vì bầu trời đã có Mặt Trời và hành tinh
+### 🛰️ Trạm Vũ trụ Quốc tế (`iss`) — đến vì bầu trời đã có ngôi sao và hành tinh
 
 Điều kiện: 1 thứ có nhãn `planet` + 1 thứ có nhãn `star`
 
@@ -248,7 +248,7 @@
 
 1. Năm 1980, Phạm Tuân trở thành người Việt Nam đầu tiên bay vào vũ trụ.
 2. Ông cũng là người châu Á đầu tiên bay vào vũ trụ.
-3. Ông bay trên tàu vũ trụ của Liên Xô và ở trên trạm vũ trụ khoảng 8 ngày.
+3. Ông bay trên tàu vũ trụ của Liên Xô; chuyến bay kéo dài gần 8 ngày, phần lớn ở trên trạm vũ trụ Salyut 6.
 
 - **Nhiệm vụ ngoài đời:** Hỏi ông bà: năm 1980 ông bà có nghe tin Phạm Tuân bay vào vũ trụ không?
 - **Tối nay dạy cả nhà:** Người châu Á đầu tiên bay vào vũ trụ là một người Việt Nam: Phạm Tuân.
@@ -280,8 +280,8 @@
 Điều kiện: 1 thứ có nhãn `mars`
 
 1. Perseverance là xe tự hành đáp xuống Sao Hỏa năm 2021 để tìm dấu vết sự sống xưa.
-2. Nó mang theo trực thăng nhỏ Ingenuity — chiếc máy bay đầu tiên bay được trên một hành tinh khác.
-3. Xe khoan đá và cất các mẫu đá vào ống, chờ một chuyến tàu sau mang về Trái Đất.
+2. Nó mang theo trực thăng nhỏ Ingenuity — chiếc máy bay có động cơ đầu tiên bay được trên một hành tinh khác.
+3. Xe khoan đá và cất các mẫu đá vào ống, để một ngày nào đó mang về Trái Đất.
 
 - **Nhiệm vụ ngoài đời:** Thiết kế một chiếc xe để chạy trên Sao Hỏa: cần bánh xe thế nào, nguồn điện từ đâu?
 - **Tối nay dạy cả nhà:** Đã có một chiếc trực thăng nhỏ bay được trên Sao Hỏa.
@@ -303,19 +303,19 @@
 
 1. Sao băng không phải ngôi sao: đó là hạt bụi, đá nhỏ lao vào khí quyển và bốc cháy.
 2. Nhiều trận mưa sao băng xảy ra khi Trái Đất đi qua dải bụi do sao chổi để lại.
-3. Mưa sao băng Song Tử, rõ nhất vào giữa tháng 12, là một trong những trận đẹp nhất trong năm.
+3. Mưa sao băng Song Tử, rõ nhất vào giữa tháng 12, là một trong những trận đẹp nhất trong năm — lạ là bụi của nó đến từ một tiểu hành tinh, không phải sao chổi.
 
-- **Nhiệm vụ ngoài đời:** Giữa tháng 12, nếu trời quang, cả nhà ra chỗ tối nhìn trời 15 phút và đếm sao băng.
+- **Nhiệm vụ ngoài đời:** Giữa tháng 12, nếu trời quang, cả nhà cùng ra chỗ tối nhìn trời 15 phút và đếm sao băng.
 - **Tối nay dạy cả nhà:** Sao băng là hạt bụi vũ trụ cháy sáng, không phải ngôi sao rơi.
 
-### (hình vẽ) Cực quang (`cuc_quang`) — đến vì bầu trời đã có Mặt Trời thổi gió Mặt Trời
+### (hình vẽ) Cực quang (`cuc_quang`) — đến vì bầu trời đã có ngôi sao và các hành tinh
 
-Điều kiện: 1 thứ có nhãn `sun` + 1 thứ có nhãn `planet`
+Điều kiện: 1 thứ có nhãn `star` + 2 thứ có nhãn `planet`
 
 1. Cực quang là những dải sáng xanh, tím uốn lượn trên bầu trời gần hai cực Trái Đất.
 2. Nó sinh ra khi các hạt từ Mặt Trời bay tới, gặp từ trường và khí quyển Trái Đất.
 3. Sao Mộc và Sao Thổ cũng có cực quang.
 
-- **Nhiệm vụ ngoài đời:** Đặt một nam châm dưới tờ giấy, rắc mạt sắt (nếu có) lên trên: xem các đường từ trường.
+- **Nhiệm vụ ngoài đời:** Nhờ người lớn giúp: đặt nam châm dưới tờ giấy, rắc mạt sắt (nếu có) lên trên để xem đường từ trường. Không dụi mắt khi tay dính mạt sắt.
 - **Tối nay dạy cả nhà:** Cực quang là “gió” từ Mặt Trời làm bầu trời phát sáng.
 

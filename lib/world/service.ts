@@ -134,6 +134,7 @@ export async function readWorld(ctx: ChildContext, month: string | null, now = n
     .sort((a, b) => (a.month < b.month ? 1 : -1));
   const { key, choose } = worldOfMonth(want, want === current, known);
   return {
+    month: want,
     view: key ? monthView(want, key, byMonth.get(want) ?? [], today) : null,
     choose: choose.map(choiceOf).filter((c): c is WorldChoice => c !== null),
     current: want === current,
@@ -144,10 +145,13 @@ export async function readWorld(ctx: ChildContext, month: string | null, now = n
 /**
  * R4b: An picks this month's world. Only a world on offer (a pack not used in the last 11
  * months), only while the month has no pick and no plants. Then what grew since the 1st is
- * planted at once. false = not allowed now (already picked / planted, or not on offer).
+ * planted at once. "already" also when the page was opened in another month (midnight).
  */
-export async function chooseWorld(ctx: ChildContext, key: string, now = new Date()): Promise<"ok" | "not_offered" | "already"> {
+export async function chooseWorld(ctx: ChildContext, key: string, forMonth: string | undefined, now = new Date()): Promise<"ok" | "not_offered" | "already"> {
   const month = monthOf(localDate(now));
+  if (forMonth !== undefined && forMonth !== month) return "already";
+  // The month before gets its world first, so this month's choice never repeats it.
+  await syncWorld(ctx, now);
   const known = await knownWorlds(ctx.childId);
   const { key: fixed, choose } = worldOfMonth(month, true, known);
   if (fixed) return "already";

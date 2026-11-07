@@ -12,6 +12,7 @@ export const VU_TRU: World = {
   emoji: "🌌",
   pillarNames: { feel: "Ngôi sao", study: "Hành tinh", skill: "Mặt trăng, sao chổi", play: "Tinh vân, thiên hà" },
   visitorWord: "vị khách",
+  dark: true,
   sky: "#2B3157",
   land: "#3E4577",
   intro: "Mỗi mảng con làm xong trong ngày, bầu trời của con sáng thêm một thứ. Những vị khách sẽ ghé khi bầu trời có thứ họ cần.",
@@ -78,10 +79,10 @@ export const VU_TRU: World = {
         facts: [
           "Sao Chức Nữ là một trong những ngôi sao sáng nhất trên bầu trời mùa hè.",
           "Vì trục Trái Đất lắc rất chậm, khoảng 14.000 năm trước Sao Chức Nữ từng là “sao Bắc Cực”.",
-          "Chức Nữ, Ngưu Lang và một sao thứ ba tạo thành “Tam giác mùa hè” trên bầu trời.",
+          "Chức Nữ, Ngưu Lang và sao Thiên Tân (Deneb) tạo thành “Tam giác mùa hè” trên bầu trời.",
         ],
         mission: "Vẽ 3 chấm thành một tam giác và đặt tên 3 ngôi sao của “Tam giác mùa hè”.",
-        teach: "Sao Bắc Cực không phải lúc nào cũng là một ngôi sao: hàng nghìn năm trước, đó từng là Chức Nữ.",
+        teach: "Sao Bắc Cực không phải lúc nào cũng là cùng một ngôi sao: khoảng 14.000 năm trước, đó là Chức Nữ.",
       },
       {
         key: "betelgeuse",
@@ -91,7 +92,7 @@ export const VU_TRU: World = {
         facts: [
           "Betelgeuse là ngôi sao màu đỏ cam ở vai chòm sao Lạp Hộ (Thợ Săn).",
           "Nó là sao siêu khổng lồ đỏ: nếu đặt vào chỗ Mặt Trời, nó còn rộng hơn cả quỹ đạo Sao Hỏa.",
-          "Một ngày nào đó Betelgeuse sẽ nổ thành siêu tân tinh, sáng rực đến mức thấy được cả ban ngày.",
+          "Một ngày nào đó, có thể trong vòng 100.000 năm tới, Betelgeuse sẽ nổ thành siêu tân tinh, sáng rực đến mức thấy được cả ban ngày.",
         ],
         mission: "Tìm chòm Lạp Hộ trên trời tối mùa đông (ba ngôi sao thẳng hàng ở “thắt lưng”).",
         teach: "Sao màu đỏ thì nguội hơn Mặt Trời, sao màu xanh trắng thì nóng hơn.",
@@ -120,9 +121,9 @@ export const VU_TRU: World = {
         facts: [
           "Sao Hôm và Sao Mai mà người xưa nhìn thấy thật ra đều là Sao Kim.",
           "Sao Kim là hành tinh nóng nhất, dù không gần Mặt Trời nhất, vì lớp khí dày giữ nhiệt như một cái chăn.",
-          "Sao Kim quay quanh mình rất chậm: một ngày trên Sao Kim còn dài hơn một năm của nó.",
+          "Sao Kim quay quanh mình rất chậm: quay một vòng quanh mình còn lâu hơn đi một vòng quanh Mặt Trời.",
         ],
-        mission: "Lúc chạng vạng, nhìn về phía tây: chấm sáng nhất (không nhấp nháy) có thể là Sao Kim.",
+        mission: "Sao Kim lúc thì hiện ở phía tây sau hoàng hôn, lúc thì ở phía đông trước bình minh. Cùng bố mẹ tra xem tháng này nên nhìn lúc nào, rồi tìm chấm sáng nhất, không nhấp nháy.",
         teach: "Sao Hôm và Sao Mai là cùng một hành tinh: Sao Kim.",
       },
       {
@@ -158,8 +159,8 @@ export const VU_TRU: World = {
         tags: ["planet", "gas"],
         facts: [
           "Vành đai Sao Thổ làm từ vô số mảnh băng và đá, có mảnh nhỏ như hạt bụi, có mảnh to như ngôi nhà.",
-          "Sao Thổ nhẹ hơn nước so với kích thước của nó: nếu có bồn nước đủ lớn, Sao Thổ sẽ nổi.",
-          "Sao Thổ có hơn 100 mặt trăng đã được tìm thấy.",
+          "Sao Thổ rất to nhưng “xốp”: trung bình nó nhẹ hơn nước cùng thể tích, nên nếu có bồn nước đủ lớn, Sao Thổ sẽ nổi.",
+          "Sao Thổ có hơn 200 mặt trăng đã được tìm thấy, nhiều nhất trong các hành tinh.",
         ],
         mission: "Thả vào chậu nước một quả bóng nhựa và một viên bi: cái nào nổi? Vì sao?",
         teach: "Sao Thổ to khổng lồ nhưng lại nhẹ đến mức có thể nổi trên nước.",
@@ -239,11 +240,11 @@ export const VU_TRU: World = {
         tags: ["moon"],
         facts: [
           "Titan là mặt trăng lớn nhất của Sao Thổ và có một lớp khí quyển dày.",
-          "Trên Titan có hồ và sông, nhưng chứa khí mê-tan lỏng chứ không phải nước.",
+          "Trên Titan có hồ và sông, nhưng chứa mê-tan lỏng chứ không phải nước.",
           "Năm 2005, tàu Huygens đã đáp xuống Titan và gửi ảnh về Trái Đất.",
         ],
         mission: "Kể tên 3 chất lỏng trong nhà con không phải là nước.",
-        teach: "Titan có sông hồ, nhưng là khí mê-tan lỏng chứ không phải nước.",
+        teach: "Titan có sông hồ, nhưng là mê-tan lỏng chứ không phải nước.",
       },
       {
         key: "halley",
@@ -271,7 +272,7 @@ export const VU_TRU: World = {
           "Ngân Hà có hàng trăm tỉ ngôi sao; Mặt Trời chỉ là một trong số đó.",
           "Ở nơi rất tối, không có đèn, ta thấy Ngân Hà như một dải sáng mờ vắt ngang trời.",
         ],
-        mission: "Lần tới về quê hoặc ở nơi ít đèn, tắt đèn và nhìn trời 10 phút cho mắt quen tối.",
+        mission: "Lần tới về quê hoặc ở nơi ít đèn, cùng bố mẹ tắt đèn và nhìn trời 10 phút cho mắt quen tối.",
         teach: "Mặt Trời chỉ là một trong hàng trăm tỉ ngôi sao của Ngân Hà.",
       },
       {
@@ -308,7 +309,7 @@ export const VU_TRU: World = {
         facts: [
           "Tiên Nữ là thiên hà lớn gần Ngân Hà nhất.",
           "Ánh sáng từ Tiên Nữ phải đi khoảng 2,5 triệu năm mới đến mắt ta — ta đang nhìn thấy nó của 2,5 triệu năm trước.",
-          "Sau khoảng vài tỉ năm nữa, Tiên Nữ và Ngân Hà sẽ đến gần và nhập lại với nhau.",
+          "Tiên Nữ và Ngân Hà đang tiến lại gần nhau. Các nhà khoa học tính rằng sau vài tỉ năm nữa, hai thiên hà có thể (khoảng một nửa khả năng) nhập lại với nhau.",
         ],
         mission: "Hỏi cả nhà: nhìn một ngôi sao là nhìn về quá khứ — vì sao vậy?",
         teach: "Nhìn lên trời là nhìn về quá khứ, vì ánh sáng cần thời gian để đi tới.",
@@ -350,7 +351,7 @@ export const VU_TRU: World = {
         { tag: "planet", n: 1 },
         { tag: "star", n: 1 },
       ],
-      because: "bầu trời đã có Mặt Trời và hành tinh",
+      because: "bầu trời đã có ngôi sao và hành tinh",
       facts: [
         "Trạm Vũ trụ Quốc tế bay một vòng quanh Trái Đất mất khoảng 90 phút.",
         "Vì bay nhanh như vậy, các nhà du hành trên trạm thấy khoảng 16 lần Mặt Trời mọc mỗi ngày.",
@@ -368,7 +369,7 @@ export const VU_TRU: World = {
       facts: [
         "Năm 1980, Phạm Tuân trở thành người Việt Nam đầu tiên bay vào vũ trụ.",
         "Ông cũng là người châu Á đầu tiên bay vào vũ trụ.",
-        "Ông bay trên tàu vũ trụ của Liên Xô và ở trên trạm vũ trụ khoảng 8 ngày.",
+        "Ông bay trên tàu vũ trụ của Liên Xô; chuyến bay kéo dài gần 8 ngày, phần lớn ở trên trạm vũ trụ Salyut 6.",
       ],
       mission: "Hỏi ông bà: năm 1980 ông bà có nghe tin Phạm Tuân bay vào vũ trụ không?",
       teach: "Người châu Á đầu tiên bay vào vũ trụ là một người Việt Nam: Phạm Tuân.",
@@ -409,8 +410,8 @@ export const VU_TRU: World = {
       because: "bầu trời đã có Sao Hỏa",
       facts: [
         "Perseverance là xe tự hành đáp xuống Sao Hỏa năm 2021 để tìm dấu vết sự sống xưa.",
-        "Nó mang theo trực thăng nhỏ Ingenuity — chiếc máy bay đầu tiên bay được trên một hành tinh khác.",
-        "Xe khoan đá và cất các mẫu đá vào ống, chờ một chuyến tàu sau mang về Trái Đất.",
+        "Nó mang theo trực thăng nhỏ Ingenuity — chiếc máy bay có động cơ đầu tiên bay được trên một hành tinh khác.",
+        "Xe khoan đá và cất các mẫu đá vào ống, để một ngày nào đó mang về Trái Đất.",
       ],
       mission: "Thiết kế một chiếc xe để chạy trên Sao Hỏa: cần bánh xe thế nào, nguồn điện từ đâu?",
       teach: "Đã có một chiếc trực thăng nhỏ bay được trên Sao Hỏa.",
@@ -438,9 +439,9 @@ export const VU_TRU: World = {
       facts: [
         "Sao băng không phải ngôi sao: đó là hạt bụi, đá nhỏ lao vào khí quyển và bốc cháy.",
         "Nhiều trận mưa sao băng xảy ra khi Trái Đất đi qua dải bụi do sao chổi để lại.",
-        "Mưa sao băng Song Tử, rõ nhất vào giữa tháng 12, là một trong những trận đẹp nhất trong năm.",
+        "Mưa sao băng Song Tử, rõ nhất vào giữa tháng 12, là một trong những trận đẹp nhất trong năm — lạ là bụi của nó đến từ một tiểu hành tinh, không phải sao chổi.",
       ],
-      mission: "Giữa tháng 12, nếu trời quang, cả nhà ra chỗ tối nhìn trời 15 phút và đếm sao băng.",
+      mission: "Giữa tháng 12, nếu trời quang, cả nhà cùng ra chỗ tối nhìn trời 15 phút và đếm sao băng.",
       teach: "Sao băng là hạt bụi vũ trụ cháy sáng, không phải ngôi sao rơi.",
     },
     {
@@ -448,16 +449,16 @@ export const VU_TRU: World = {
       name: "Cực quang",
       icon: { svg: { shape: "aurora", color: "#5BE3A0", accent: "#9C7BE8" } },
       needs: [
-        { tag: "sun", n: 1 },
-        { tag: "planet", n: 1 },
+        { tag: "star", n: 1 },
+        { tag: "planet", n: 2 },
       ],
-      because: "bầu trời đã có Mặt Trời thổi gió Mặt Trời",
+      because: "bầu trời đã có ngôi sao và các hành tinh",
       facts: [
         "Cực quang là những dải sáng xanh, tím uốn lượn trên bầu trời gần hai cực Trái Đất.",
         "Nó sinh ra khi các hạt từ Mặt Trời bay tới, gặp từ trường và khí quyển Trái Đất.",
         "Sao Mộc và Sao Thổ cũng có cực quang.",
       ],
-      mission: "Đặt một nam châm dưới tờ giấy, rắc mạt sắt (nếu có) lên trên: xem các đường từ trường.",
+      mission: "Nhờ người lớn giúp: đặt nam châm dưới tờ giấy, rắc mạt sắt (nếu có) lên trên để xem đường từ trường. Không dụi mắt khi tay dính mạt sắt.",
       teach: "Cực quang là “gió” từ Mặt Trời làm bầu trời phát sáng.",
     },
   ],
