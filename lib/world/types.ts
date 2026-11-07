@@ -96,6 +96,8 @@ export interface World {
   animals: readonly Animal[];
   /** What the visitors are called: "con vật" (rừng, biển), "vị khách" (vũ trụ). */
   visitorWord: string;
+  /** First month the pack may be offered ("2027-01"); none = any month. */
+  from?: string;
   /** Night scene (Vũ trụ): light text on it. */
   dark?: boolean;
   /** Scene colours: sky, land. */

@@ -13,6 +13,7 @@ export const NUI_LUA: World = {
   emoji: "🌋",
   pillarNames: { feel: "Tinh thể, đá quý", study: "Núi lửa", skill: "Đá", play: "Hiện tượng lạ" },
   visitorWord: "vị khách",
+  from: "2027-01",
   sky: "#F3D9C8",
   land: "#9C7A66",
   intro: "Mỗi mảng con làm xong trong ngày, vùng núi lửa của con có thêm một thứ. Những vị khách sẽ ghé khi nơi này có thứ họ cần.",
@@ -38,7 +39,7 @@ export const NUI_LUA: World = {
         icon: { emoji: "💎" },
         tags: ["crystal"],
         facts: [
-          "Kim cương và ruột bút chì (than chì) đều làm từ cacbon, chỉ khác cách các nguyên tử xếp với nhau.",
+          "Kim cương và than chì (trộn với đất sét làm ruột bút chì) đều làm từ cacbon, chỉ khác cách các nguyên tử xếp với nhau.",
           "Kim cương là vật liệu tự nhiên cứng nhất; người ta dùng nó gắn vào mũi khoan, lưỡi cắt.",
           "Kim cương hình thành rất sâu trong lòng đất, được đưa lên gần mặt đất nhờ những vụ phun trào núi lửa cổ.",
         ],
@@ -51,7 +52,7 @@ export const NUI_LUA: World = {
         icon: { svg: { shape: "crystal", color: "#A57BD1", accent: "#7A55A8", n: 5 } },
         tags: ["crystal"],
         facts: [
-          "Thạch anh tím là thạch anh có lẫn một chút sắt, nên có màu tím.",
+          "Thạch anh tím là thạch anh có lẫn một chút sắt; cùng với tia phóng xạ tự nhiên trong đá, nó thành màu tím.",
           "Thạch anh tím hay mọc bên trong những hốc đá tròn; bổ đôi hòn đá ra mới thấy cả một “hang” tinh thể.",
           "Để dưới nắng gắt rất lâu, thạch anh tím có thể nhạt màu dần.",
         ],
@@ -81,7 +82,7 @@ export const NUI_LUA: World = {
           "Mùi “trứng thối” gần núi lửa là của một loại khí có lưu huỳnh, còn lưu huỳnh nguyên chất gần như không có mùi.",
           "Ở núi lửa Ijen (Indonesia), ban đêm có ngọn lửa màu xanh lam do khí lưu huỳnh cháy.",
         ],
-        mission: "Hỏi bố mẹ: que diêm có lưu huỳnh không? Đừng tự quẹt diêm khi không có người lớn.",
+        mission: "Hỏi bố mẹ: đầu que diêm có lưu huỳnh không? Con chỉ hỏi và nhìn thôi, không quẹt diêm.",
         teach: "Núi lửa Ijen có ngọn lửa màu xanh lam vì lưu huỳnh cháy.",
       },
       {
@@ -94,7 +95,7 @@ export const NUI_LUA: World = {
           "Khi nước muối bay hơi chậm, các hạt muối lớn dần thành tinh thể to hơn.",
           "Ruộng muối ven biển Việt Nam làm ra muối bằng cách phơi nắng cho nước biển bay hơi.",
         ],
-        mission: "Cùng người lớn: pha nước ấm thật mặn, để yên vài ngày, xem tinh thể muối mọc ra.",
+        mission: "Cùng người lớn: pha nước ấm (không dùng nước sôi) thật mặn, để yên vài ngày, xem tinh thể muối mọc ra.",
         teach: "Hạt muối nào cũng là một khối vuông tí hon.",
       },
     ],
@@ -107,7 +108,7 @@ export const NUI_LUA: World = {
         tags: ["volcano"],
         facts: [
           "Phú Sĩ là ngọn núi cao nhất Nhật Bản, và là một núi lửa vẫn còn hoạt động.",
-          "Hình nón cân đối của Phú Sĩ do rất nhiều lớp tro và dung nham chồng lên nhau qua hàng nghìn năm.",
+          "Hình nón cân đối của Phú Sĩ do rất nhiều lớp tro và dung nham chồng lên nhau qua hàng chục nghìn năm.",
           "Lần cuối Phú Sĩ phun trào là năm 1707.",
         ],
         mission: "Vẽ một ngọn núi lửa hình nón và tô các lớp tro, dung nham chồng lên nhau.",
@@ -119,11 +120,11 @@ export const NUI_LUA: World = {
         icon: { svg: { shape: "volcano", color: "#5A4A42", accent: "#E8582E", n: 1 } },
         tags: ["volcano", "heat"],
         facts: [
-          "Mauna Loa ở quần đảo Hawaii là núi lửa lớn nhất trên Trái Đất (tính theo thể tích).",
+          "Mauna Loa ở quần đảo Hawaii là núi lửa đang hoạt động lớn nhất trên Trái Đất (tính theo thể tích).",
           "Đây là núi lửa hình khiên: dung nham loãng chảy xa, nên núi thoai thoải như chiếc khiên úp.",
           "Mauna Loa phun trào gần đây nhất vào năm 2022.",
         ],
-        mission: "Đổ một thìa mật ong và một thìa nước lên đĩa nghiêng: cái nào chảy xa hơn? Dung nham loãng giống cái nào?",
+        mission: "Đổ một thìa mật ong và một thìa tương cà (hoặc kem đánh răng) lên đĩa nghiêng: cái nào chảy xa hơn? Dung nham loãng chảy như mật ong, dung nham đặc như kem đánh răng.",
         teach: "Dung nham loãng làm núi lửa thấp và rộng như chiếc khiên.",
       },
       {
@@ -136,7 +137,7 @@ export const NUI_LUA: World = {
           "Đất trên núi là đất đỏ bazan màu mỡ; người dân trồng rau, củ ngay trên sườn núi lửa.",
           "Cuối năm, hoa dã quỳ nở vàng kín núi — chính loài hoa con đã gặp trong Rừng nhiệt đới.",
         ],
-        mission: "Tìm trên bản đồ Việt Nam: Gia Lai ở đâu? Gần biển hay gần núi?",
+        mission: "Tìm trên bản đồ Việt Nam mới: tỉnh Gia Lai bây giờ trải từ núi Tây Nguyên ra tận biển. Núi lửa Chư Đăng Ya nằm ở phía núi hay phía biển?",
         teach: "Việt Nam có núi lửa — đã tắt từ lâu, nay là núi trồng rau và hoa.",
       },
       {
@@ -146,10 +147,10 @@ export const NUI_LUA: World = {
         tags: ["volcano"],
         facts: [
           "Năm 79, núi lửa Vesuvius (nước Ý) phun trào, vùi thành phố Pompeii dưới lớp tro dày.",
-          "Lớp tro giữ thành phố gần như nguyên vẹn suốt hơn một nghìn năm, đến khi được đào lên.",
+          "Lớp tro giữ thành phố gần như nguyên vẹn suốt khoảng 1.700 năm, đến khi được đào lên.",
           "Vesuvius vẫn là núi lửa đang hoạt động; các nhà khoa học theo dõi nó từng ngày.",
         ],
-        mission: "Tìm ảnh Pompeii ngày nay: con thấy những gì của một thành phố gần 2.000 năm trước?",
+        mission: "Cùng bố mẹ xem ảnh đường phố, nhà cửa và tranh vẽ trên tường ở Pompeii ngày nay: con thấy những gì của một thành phố gần 2.000 năm trước?",
         teach: "Tro núi lửa đã giữ cả một thành phố cổ gần như nguyên vẹn.",
       },
       {
@@ -176,7 +177,7 @@ export const NUI_LUA: World = {
           "Các nhà khoa học đặt máy đo quanh Yellowstone để theo dõi mặt đất phồng lên, xẹp xuống từng chút.",
         ],
         mission: "Tìm ảnh hồ Grand Prismatic ở Yellowstone: hồ có những màu gì?",
-        teach: "Có những ngọn núi lửa rộng đến mức cả một công viên nằm trong miệng nó.",
+        teach: "Có những ngọn núi lửa rộng đến mức miệng của nó chiếm một phần lớn cả một công viên.",
       },
     ],
     // Kỹ năng → đá.
@@ -187,9 +188,9 @@ export const NUI_LUA: World = {
         icon: { svg: { shape: "rock", color: "#4A4A4E", accent: "#6A6A70" } },
         tags: ["rock", "undersea"],
         facts: [
-          "Dung nham nguội nhanh trên mặt đất thành đá bazan màu đen xám.",
+          "Dung nham loãng nguội trên mặt đất thành đá bazan màu đen xám.",
           "Đá bazan vỡ vụn qua rất nhiều năm thành đất đỏ bazan ở Tây Nguyên, nơi trồng cà phê.",
-          "Phần lớn đáy các đại dương là đá bazan.",
+          "Phần lớn đáy đại dương, bên dưới lớp bùn cát, là đá bazan.",
         ],
         mission: "Hỏi bố mẹ: cà phê nhà mình uống trồng ở đâu?",
         teach: "Đất đỏ Tây Nguyên trồng cà phê là đá núi lửa vỡ vụn qua rất nhiều năm.",
@@ -285,7 +286,7 @@ export const NUI_LUA: World = {
           "Mạch nước Old Faithful ở Yellowstone phun khá đều đặn, cách nhau khoảng một đến hai giờ.",
           "Từ “geyser” (mạch nước phun) lấy theo tên mạch nước Geysir ở Iceland.",
         ],
-        mission: "Nhìn nồi nước sôi (đứng xa, có người lớn): hơi nước đẩy nắp nồi lên thế nào?",
+        mission: "Xem video mạch nước Old Faithful phun: cột nước phun cao bao lâu thì hạ xuống? Con đếm giây nhé.",
         teach: "Mạch nước phun là “nồi nước sôi” khổng lồ dưới lòng đất.",
       },
       {
@@ -322,7 +323,7 @@ export const NUI_LUA: World = {
         facts: [
           "Vỏ Trái Đất chia thành nhiều mảng lớn, trôi rất chậm — chỉ vài xăng-ti-mét mỗi năm, như móng tay mọc.",
           "Khi hai mảng bị kẹt rồi bất ngờ trượt mạnh, mặt đất rung lên: đó là động đất.",
-          "Có động đất thì: cúi xuống, núp dưới gầm bàn chắc, che đầu và bám chặt cho đến khi hết rung.",
+          "Có động đất thì: cúi xuống, núp dưới gầm bàn chắc, che đầu và bám chặt cho đến khi hết rung. Không có bàn thì ngồi sát tường bên trong, lấy tay che đầu và gáy, tránh xa cửa kính. Đừng chạy ra ngoài khi đất còn rung.",
         ],
         mission: "Cả nhà tập một lần: “Cúi xuống — Núp dưới bàn — Bám chặt”.",
         teach: "Vỏ Trái Đất trôi chậm như móng tay mọc; động đất là lúc nó trượt mạnh.",
@@ -335,7 +336,7 @@ export const NUI_LUA: World = {
         facts: [
           "Động đất dưới đáy biển có thể đẩy cả một khối nước khổng lồ, tạo ra sóng thần.",
           "Ngoài khơi sóng thần thấp và đi rất nhanh; vào gần bờ nó dâng cao lên.",
-          "Nếu ở bãi biển thấy nước rút ra xa bất thường, hãy chạy ngay lên chỗ cao và báo người lớn.",
+          "Ở gần biển mà thấy động đất mạnh, nước rút ra xa bất thường hoặc nghe biển gầm to: gọi người lớn và cùng đi ngay lên chỗ cao hoặc vào sâu trong đất liền. Không ra xem nước rút, không chờ thông báo.",
         ],
         mission: "Nhắc cả nhà dấu hiệu sóng thần: nước biển rút xa bất thường → chạy lên cao ngay.",
         teach: "Nước biển rút ra xa bất thường là dấu hiệu phải chạy lên cao ngay.",
@@ -351,7 +352,7 @@ export const NUI_LUA: World = {
       because: "nơi này có suối nước nóng",
       facts: [
         "Khỉ tuyết Nhật Bản ngâm mình trong suối nước nóng vào mùa đông lạnh giá.",
-        "Chúng sống ở nơi lạnh hơn bất kỳ loài khỉ nào khác (ngoài con người).",
+        "Chúng là loài linh trưởng sống ở nơi lạnh nhất, xa nhất về phía bắc (trừ con người).",
         "Thói quen tắm suối bắt đầu từ vài con, rồi cả đàn học theo nhau.",
       ],
       mission: "Kể một thói quen tốt con học được từ người khác trong nhà.",
@@ -383,7 +384,7 @@ export const NUI_LUA: World = {
         "Người ta tìm thấy chúng năm 1977 và rất bất ngờ vì không ngờ có sự sống ở nơi tối và nóng như vậy.",
       ],
       mission: "Nghĩ xem: nếu không có ánh sáng Mặt Trời, sinh vật lấy năng lượng từ đâu?",
-      teach: "Có sinh vật sống được ở đáy biển tối om, nhờ sức nóng của núi lửa.",
+      teach: "Có sinh vật sống được ở đáy biển tối om, nhờ chất hóa học từ miệng phun nước nóng của núi lửa dưới biển.",
     },
     {
       key: "vi_khuan_ua_nhiet",
@@ -393,7 +394,7 @@ export const NUI_LUA: World = {
       because: "nơi này có mạch nước nóng",
       facts: [
         "Có những vi khuẩn sống khỏe trong nước nóng gần sôi, nơi hầu hết sinh vật khác không sống nổi.",
-        "Những vòng màu cam, vàng, xanh quanh hồ Grand Prismatic ở Yellowstone là do vi khuẩn tạo nên.",
+        "Những vòng màu vàng, cam, nâu quanh hồ Grand Prismatic ở Yellowstone là do vi khuẩn; màu xanh lam ở giữa là màu của nước rất nóng và trong.",
         "Một chất lấy từ vi khuẩn ưa nhiệt được dùng trong các xét nghiệm ADN ngày nay.",
       ],
       mission: "Tìm ảnh hồ Grand Prismatic và đếm xem có bao nhiêu vòng màu.",
@@ -424,7 +425,7 @@ export const NUI_LUA: World = {
         "Gần 1.900 năm trước, nhà khoa học Trương Hành (Trung Quốc) đã làm một dụng cụ báo có động đất.",
         "Ở Việt Nam, các nhà khoa học theo dõi động đất bằng mạng lưới trạm đo trên khắp cả nước.",
       ],
-      mission: "Đặt một cốc nước đầy trên bàn rồi gõ nhẹ mặt bàn: mặt nước rung thế nào?",
+      mission: "Đặt một cốc nhựa đầy nước trên bàn rồi gõ nhẹ mặt bàn: mặt nước rung thế nào?",
       teach: "Máy đo địa chấn “nghe” được cả những rung động mà ta không cảm thấy.",
     },
     {
@@ -441,7 +442,7 @@ export const NUI_LUA: World = {
         "Mũi chó nhạy hơn mũi người rất nhiều lần, ngửi được mùi người qua khe gạch đá.",
         "Chó và người huấn luyện tập cùng nhau rất lâu mới thành một đội cứu hộ.",
       ],
-      mission: "Chơi trò tìm đồ bằng mũi: bịt mắt và đoán 3 thứ trong bếp chỉ bằng mùi.",
+      mission: "Nhờ người lớn chọn 3 thứ an toàn trong bếp (chanh, cà phê, hành…), con bịt mắt đoán bằng mùi. Không ngửi chai nước tẩy rửa, không hít mạnh bột ớt, tiêu.",
       teach: "Chó cứu hộ tìm người bằng chiếc mũi siêu nhạy.",
     },
     {

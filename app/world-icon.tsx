@@ -275,7 +275,7 @@ function Shape({ s }: { s: SvgIcon }) {
         </>
       );
     case "crystal": {
-      // n = 4: a cube (muối, lưu huỳnh); 5–6: a cluster of points.
+      // n = 4: a block (muối; lưu huỳnh drawn the same, simplified); 5–6: a cluster of points.
       if (s.n === 4)
         return (
           <>

@@ -134,7 +134,7 @@ describe("months and the world of a month", () => {
 describe("An picks the world of the month (R4b)", () => {
   const known = (planted: [string, string][], picked: [string, string][] = []) => ({ planted: new Map(planted), picked: new Map(picked) });
   it("this month, no plants, no pick, several worlds: wait for An (nothing is planted yet)", () => {
-    expect(worldOfMonth("2026-12", true, known([["2026-11", "rung"]]))).toEqual({ key: null, choose: ["bien", "vu_tru", "nui_lua"] });
+    expect(worldOfMonth("2026-12", true, known([["2026-11", "rung"]]))).toEqual({ key: null, choose: ["bien", "vu_tru"] });
   });
   it("a pick or the month's plants fix the world", () => {
     expect(worldOfMonth("2026-12", true, known([["2026-11", "rung"]], [["2026-12", "vu_tru"]]))).toEqual({ key: "vu_tru", choose: [] });
@@ -149,7 +149,9 @@ describe("An picks the world of the month (R4b)", () => {
     expect(worldOfMonth("2026-12", false, known([["2026-11", "rung"]], [["2027-01", "vu_tru"]]))).toEqual({ key: "bien", choose: [] });
   });
   it("offers only worlds with a pack not used in the 11 months before", () => {
-    expect(worldOptions("2026-11", [])).toEqual(["rung", "bien", "vu_tru", "nui_lua"]);
+    // Núi lửa is the January 2027 pack: not on offer before.
+    expect(worldOptions("2026-11", [])).toEqual(["rung", "bien", "vu_tru"]);
+    expect(worldOptions("2027-01", [{ month: "2026-11", worldKey: "rung" }, { month: "2026-12", worldKey: "bien" }])).toEqual(["vu_tru", "nui_lua"]);
     expect(worldOptions("2027-11", [{ month: "2026-11", worldKey: "rung" }])).toEqual(["rung", "bien", "vu_tru", "nui_lua"]);
     expect(worldOptions("2027-10", [{ month: "2026-11", worldKey: "rung" }])).toEqual(["bien", "vu_tru", "nui_lua"]);
   });
