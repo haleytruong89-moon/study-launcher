@@ -58,16 +58,16 @@ Biểu cảm theo ô (lấy từ bản mẫu):
 - Màn tạo nhân vật có xem trước 4 biểu cảm cùng lúc. Nút **Lưu**, nút **Về mặc định**.
 - Con muốn thêm kiểu tóc, áo, đạo cụ → góp ý qua nút **Góp ý**. Bố mẹ duyệt rồi Claude thêm vào danh sách.
 
-**Bản 2 — nhập nhân vật Picrew (để sau bản 1):**
-- Con tạo nhân vật trên Picrew, tải ảnh về máy, rồi nhập vào 4 ô biểu cảm.
-- Chỉ nhận PNG/JPG ≤ 1 MB, là hình vẽ, **không phải ảnh chụp con**.
-- Mỗi người tạo trên Picrew có điều khoản dùng ảnh riêng. Bố mẹ xem điều khoản của mẫu con chọn trước khi nhập.
-- Cần thêm chỗ lưu ảnh nên sẽ có file SQL riêng ở lát đó.
+**Bản 2 — nhập nhân vật Picrew** (bố mẹ chốt **làm**, 07/11/2026; lát R3b, ngay sau bản 1):
+- Con tạo nhân vật trên Picrew, tải ảnh về máy, rồi tải lên app. Tối đa 4 ảnh, mỗi ô biểu cảm một ảnh; ô nào không có ảnh thì dùng ảnh đầu tiên.
+- Chỉ nhận PNG/JPG; app thu nhỏ trước khi gửi, ≤ 1 MB. Phải là hình vẽ, **không phải ảnh chụp con**. App không tự kiểm được điều này, nhưng nhân vật nằm trong hồ sơ nên bố mẹ thấy và gỡ được.
+- Điều khoản Picrew (tra 07/11/2026, support.picrew.me): ảnh chỉ được dùng trong phạm vi người tạo bộ vẽ và Picrew cho phép. Mức "cá nhân" gồm cả dùng làm ảnh đại diện. Dùng làm nhân vật trong app riêng của gia đình là dùng cá nhân. App không đăng ảnh đi đâu khác.
+- Ảnh lưu trong **kho ảnh riêng** (bucket mới `avatars`, riêng tư): con chỉ ghi ảnh của mình qua route máy chủ; cả nhà xem được. Lát R3b có file SQL tạo bucket + quy tắc RLS.
+- Con **gỡ ảnh** được lúc nào cũng được → quay về nhân vật tự tạo (bản 1).
 
 **Dữ liệu (bản 1)**
 - Nhân vật chỉ là **một bộ mã lựa chọn** (vd `hair: "long"`, `hairColor: "den"`), không có ảnh. Máy chủ kiểm từng mã theo danh sách cố định.
-- *Đề xuất, chờ bố mẹ chốt:* lưu cạnh **biểu tượng riêng của con** (`profiles`). Bố mẹ cũng thấy được nhân vật, giống biểu tượng hiện tại. Nhân vật là tranh, không phải cảm xúc, nên không cần giấu như lượt ghé.
-- Lựa chọn khác: lưu trong khu Góc bình yên (bố mẹ không thấy).
+- **Bố mẹ chốt 07/11/2026:** lưu cạnh **biểu tượng riêng của con** (`profiles.avatar`). Bố mẹ cũng thấy được nhân vật, giống biểu tượng hiện tại. Nhân vật là tranh, không phải cảm xúc, nên không cần giấu như lượt ghé.
 - Lát code sẽ có 1 file SQL nhỏ: thêm 1 cột, con chỉ ghi qua route máy chủ.
 
 **Tiêu chí nghiệm thu**
@@ -129,17 +129,16 @@ Biểu cảm theo ô (lấy từ bản mẫu):
 
 | Lát | Gồm | Database | Ước tính |
 |---|---|---|---|
-| S-BY1b | C + D (emoji cho từ, hoạt động, nguyên nhân; biểu tượng riêng) | Không | ~0,5 ngày |
-| S-BY1c | A + B bản 1 (khuôn mặt 4 ô, tạo nhân vật trong app) | Có, 1 cột | ~2 ngày |
-| Sau | B bản 2 (nhập Picrew) | Có, chỗ lưu ảnh | ~1 ngày |
+| **R3a** | A + B bản 1 + C + D (khuôn mặt 4 ô, tạo nhân vật trong app, emoji cho từ / hoạt động / nguyên nhân, biểu tượng riêng) | Có, 1 cột `profiles.avatar` | ~2,5 ngày |
+| **R3b** | B bản 2 (nhập ảnh Picrew) | Có, bucket `avatars` + quy tắc | ~1 ngày |
 
-Thứ tự cuối cùng chốt cùng thiết kế lại màn chính (mockup: https://claude.ai/artifact/VN6NCVjHRVKuti7qGZ63og).
+Theo `docs/MAN_CHINH_MOI.md` §9, R3 nằm sau R2 (5 tab). Mockup: https://claude.ai/artifact/VN6NCVjHRVKuti7qGZ63og.
 
-## Câu hỏi chờ bố mẹ
+## Bố mẹ đã chốt (07/11/2026)
 
-1. Nhân vật của con lưu cạnh biểu tượng (bố mẹ thấy được) hay trong Góc bình yên (bố mẹ không thấy)? *Đề xuất: cạnh biểu tượng.*
-2. Picrew (bản 2): có làm không, và khi nào?
-3. Danh sách emoji ở mục C: để hai con sửa trước khi code?
+1. Nhân vật lưu **trong hồ sơ con** (`profiles.avatar`), cả nhà thấy.
+2. **Có làm Picrew**: con tải ảnh Picrew lên (R3b, ngay sau R3a).
+3. Danh sách emoji ở mục C: **hai con duyệt trên preview R3a**, chỗ nào chưa hợp thì gửi ở tab Góp ý.
 
 ## Còn lại từ bản mẫu, chưa có trong app (ghi để không bị sót lần nữa)
 
