@@ -1,7 +1,7 @@
 # Thế giới "Rừng nhiệt đới" — nội dung để bố mẹ và An đọc lại
 
-> Sinh từ `lib/world/rung.ts` (R4a); test `tests/world.test.ts` kiểm hai file khớp nhau. Sửa chữ ở file `.ts` rồi sinh lại. Mã (`key`) không bao giờ đổi.
-> Mỗi thứ có 3 điều thú vị: điều 1 mở khi mọc lần đầu, điều 2 và 3 mở khi mọc lại.
+> Sinh từ `lib/world/rung.ts` bằng `scripts/world-doc.ts`; test `tests/world.test.ts` kiểm hai file khớp nhau. Sửa chữ ở file `.ts` rồi sinh lại. Mã (`key`) không bao giờ đổi.
+> Mỗi thứ có 3 điều thú vị: điều 1 mở khi có lần đầu, điều 2 và 3 mở khi có lại.
 
 **Lời mở đầu:** Mỗi mảng con làm xong trong ngày, khu rừng mọc thêm một thứ. Con vật tự tìm đến khi rừng có thứ chúng cần.
 

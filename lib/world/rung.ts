@@ -11,6 +11,7 @@ export const RUNG: World = {
   name: "Rừng nhiệt đới",
   emoji: "🌳",
   pillarNames: { feel: "Hoa", study: "Cây lớn", skill: "Cây có quả, có hạt", play: "Mặt đất rừng" },
+  visitorWord: "con vật",
   sky: "#CFE6F5",
   land: "#A9D18E",
   intro: "Mỗi mảng con làm xong trong ngày, khu rừng mọc thêm một thứ. Con vật tự tìm đến khi rừng có thứ chúng cần.",

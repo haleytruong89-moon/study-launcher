@@ -51,9 +51,33 @@ export function isMonth(v: unknown): v is string {
  * stored milestones once the pack arrives.
  */
 export function defaultWorld(month: string, used: readonly { month: string; worldKey: string }[]): string | null {
-  const available = WORLD_ORDER.filter((k) => WORLDS[k]);
-  const before = used.filter((u) => u.month < month && monthsBetween(u.month, month) <= 11);
-  return available.find((k) => !before.some((u) => u.worldKey === k)) ?? null;
+  return worldOptions(month, used)[0] ?? null;
+}
+
+/** Worlds the child may pick for a month (R4b): every world with a pack not used in the 11 months before. */
+export function worldOptions(month: string, used: readonly { month: string; worldKey: string }[]): string[] {
+  // Months on both sides count: an ended month never takes the world already picked for the next one.
+  const near = used.filter((u) => u.month !== month && Math.abs(monthsBetween(u.month, month)) <= 11);
+  return WORLD_ORDER.filter((k) => WORLDS[k] && !near.some((u) => u.worldKey === k));
+}
+
+/**
+ * The world of a month (R4b). Its plants' world if it has plants, else the child's pick. This
+ * month with no pick and a real choice (2+ worlds): null — plants wait until An picks (nothing is
+ * lost, they are made from the stored milestones). A month that has ended, or only one world
+ * left: the default.
+ */
+export function worldOfMonth(
+  month: string,
+  current: boolean,
+  known: { planted: ReadonlyMap<string, string>; picked: ReadonlyMap<string, string> },
+): { key: string | null; choose: string[] } {
+  const fixed = known.planted.get(month) ?? known.picked.get(month);
+  if (fixed) return { key: fixed, choose: [] };
+  const used = [...new Map([...known.picked, ...known.planted])].map(([m, worldKey]) => ({ month: m, worldKey }));
+  const options = worldOptions(month, used);
+  if (current && options.length >= 2) return { key: null, choose: options };
+  return { key: options[0] ?? null, choose: [] };
 }
 
 /** What the k-th plant (0-based) of an area in this world's month is. */
@@ -119,7 +143,7 @@ export interface AnimalView {
 
 export interface MonthView {
   month: string;
-  world: { key: string; name: string; emoji: string; sky: string; land: string; intro: string; pillarNames: Record<Pillar, string> };
+  world: { key: string; name: string; emoji: string; sky: string; land: string; intro: string; visitorWord: string; dark: boolean; pillarNames: Record<Pillar, string> };
   things: ThingView[];
   animals: AnimalView[];
   /** Things of this world not grown yet (never named: a gentle "còn … đang chờ"). */
@@ -174,7 +198,7 @@ export function monthView(month: string, worldKey: string, rows: readonly WorldR
   const total = PILLARS.reduce((n, p) => n + world.things[p].length, 0);
   return {
     month,
-    world: { key: world.key, name: world.name, emoji: world.emoji, sky: world.sky, land: world.land, intro: world.intro, pillarNames: world.pillarNames },
+    world: { key: world.key, name: world.name, emoji: world.emoji, sky: world.sky, land: world.land, intro: world.intro, visitorWord: world.visitorWord, dark: world.dark === true, pillarNames: world.pillarNames },
     things: [...things.values()],
     animals,
     waiting: total - things.size,
@@ -182,8 +206,21 @@ export function monthView(month: string, worldKey: string, rows: readonly WorldR
   };
 }
 
+export interface WorldChoice {
+  key: string;
+  name: string;
+  emoji: string;
+  intro: string;
+  /** Three things the child will meet there, to help choose. */
+  peek: { name: string; icon: Icon }[];
+}
+
 export interface WorldResponse {
+  /** The month shown ("2026-12"). */
+  month: string;
   view: MonthView | null;
+  /** This month has no world yet: An picks one (R4b). */
+  choose: WorldChoice[];
   current: boolean;
   album: { month: string; key: string; name: string; emoji: string; plants: number }[];
 }

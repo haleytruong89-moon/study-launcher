@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { WORLDS, WORLD_ORDER, findThing } from "@/lib/world/catalog";
-import { defaultWorld, isMonth, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
+import { defaultWorld, isMonth, worldOfMonth, worldOptions, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
 import { RUNG } from "@/lib/world/rung";
 import { PILLARS, type Pillar } from "@/lib/world/types";
 
@@ -34,11 +34,13 @@ describe("world packs (content rules)", () => {
 });
 
 describe("the reading copy for parents and An", () => {
-  it("docs/world/RUNG.md has every name, fact, mission and teach line of lib/world/rung.ts", () => {
-    const md = readFileSync("docs/world/RUNG.md", "utf8");
-    const items = [...PILLARS.flatMap((p) => RUNG.things[p]), ...RUNG.animals];
-    for (const s of [RUNG.intro, ...items.flatMap((t) => [t.name, ...t.facts, t.mission, t.teach])]) expect(md, s).toContain(s);
-  });
+  for (const world of Object.values(WORLDS)) {
+    it(`docs/world/${world.key.toUpperCase()}.md has every name, fact, mission and teach line of the ${world.key} pack`, () => {
+      const md = readFileSync(`docs/world/${world.key.toUpperCase()}.md`, "utf8");
+      const items = [...PILLARS.flatMap((p) => world.things[p]), ...world.animals];
+      for (const s of [world.intro, ...items.flatMap((t) => [t.name, ...t.facts, t.mission, t.teach])]) expect(md, s).toContain(s);
+    });
+  }
 });
 
 describe("what grows (cách 2)", () => {
@@ -111,9 +113,37 @@ describe("months and the world of a month", () => {
   });
   it("defaults to the first world with a pack not used in the last 11 months; none left → the month waits", () => {
     expect(defaultWorld("2026-11", [])).toBe("rung");
-    // Only Rừng has a pack so far: December waits for a new world instead of repeating Rừng.
-    expect(defaultWorld("2026-12", [{ month: "2026-11", worldKey: "rung" }])).toBeNull();
+    expect(defaultWorld("2026-12", [{ month: "2026-11", worldKey: "rung" }])).toBe("bien");
+    // Every pack used in the last 11 months: the month waits for a new world instead of repeating one.
+    expect(defaultWorld("2027-02", [
+      { month: "2026-11", worldKey: "rung" },
+      { month: "2026-12", worldKey: "bien" },
+      { month: "2027-01", worldKey: "vu_tru" },
+    ])).toBeNull();
     // 12 months later Rừng is new again.
     expect(defaultWorld("2027-11", [{ month: "2026-11", worldKey: "rung" }])).toBe("rung");
+  });
+});
+
+describe("An picks the world of the month (R4b)", () => {
+  const known = (planted: [string, string][], picked: [string, string][] = []) => ({ planted: new Map(planted), picked: new Map(picked) });
+  it("this month, no plants, no pick, several worlds: wait for An (nothing is planted yet)", () => {
+    expect(worldOfMonth("2026-12", true, known([["2026-11", "rung"]]))).toEqual({ key: null, choose: ["bien", "vu_tru"] });
+  });
+  it("a pick or the month's plants fix the world", () => {
+    expect(worldOfMonth("2026-12", true, known([["2026-11", "rung"]], [["2026-12", "vu_tru"]]))).toEqual({ key: "vu_tru", choose: [] });
+    expect(worldOfMonth("2026-12", true, known([["2026-12", "bien"]], [["2026-12", "vu_tru"]]))).toEqual({ key: "bien", choose: [] });
+  });
+  it("a month that ended without a pick takes the default; one world left is no choice", () => {
+    expect(worldOfMonth("2026-12", false, known([["2026-11", "rung"]]))).toEqual({ key: "bien", choose: [] });
+    expect(worldOfMonth("2027-01", true, known([["2026-11", "rung"], ["2026-12", "bien"]]))).toEqual({ key: "vu_tru", choose: [] });
+  });
+  it("an ended month never takes the world already picked for the next month (pick made after midnight)", () => {
+    expect(worldOfMonth("2026-12", false, known([["2026-11", "rung"]], [["2027-01", "bien"]]))).toEqual({ key: "vu_tru", choose: [] });
+  });
+  it("offers only worlds with a pack not used in the 11 months before", () => {
+    expect(worldOptions("2026-11", [])).toEqual(["rung", "bien", "vu_tru"]);
+    expect(worldOptions("2027-11", [{ month: "2026-11", worldKey: "rung" }])).toEqual(["rung", "bien", "vu_tru"]);
+    expect(worldOptions("2027-10", [{ month: "2026-11", worldKey: "rung" }])).toEqual(["bien", "vu_tru"]);
   });
 });
