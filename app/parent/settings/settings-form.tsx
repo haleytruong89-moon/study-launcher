@@ -143,7 +143,7 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
           <legend className="float-left mb-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">Góc bình yên</legend>
           <p className="text-xs text-ink/70">
             Góc riêng của con để gọi tên cảm xúc và làm dịu. Bố mẹ <strong>không xem được nội dung</strong>, chỉ nhận tín hiệu “Con muốn nói chuyện”. Con tự đặt PIN riêng.
-            Chỉ bật sau khi đã nói chuyện với con. Bản này mới có PIN + nút muốn nói chuyện; phần chọn cảm xúc có ở bản sau. Nút “Con muốn nói chuyện” trên màn Hôm nay hiện khi có điện thoại bố mẹ bật thông báo, dù Góc bình yên bật hay tắt.
+            Chỉ bật sau khi đã nói chuyện với con. Bản này có: PIN riêng, chọn cảm xúc → gợi ý → hoạt động, nút muốn nói chuyện; chưa có ô để con viết chữ. Bật xong, màn Hôm nay của con có nút “🌿 Góc bình yên”. Nút “Con muốn nói chuyện” trên màn Hôm nay hiện khi có điện thoại bố mẹ bật thông báo, dù Góc bình yên bật hay tắt.
           </p>
           {!byPushReady && (
             <p role="note" className="rounded-xl bg-[#FBF0D6] p-3 text-xs font-semibold text-[#5E3D00]">
