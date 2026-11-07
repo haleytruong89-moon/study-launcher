@@ -15,8 +15,8 @@ import { Modal } from "./today-extras";
  * "💡 Góp ý" (parent decision 07/11/2026): the child tells the parents what they like, do not
  * like, or an idea for the APP. NOT private — the sheet says so before sending; inside Góc bình
  * yên it also says that, unlike the corner, parents read this. One server route; no push.
- * `variant="header"`: the button in the coloured header of Hôm nay; `"corner"`: a small link at
- * the bottom of the Góc bình yên home.
+ * `variant="header"`: a button on a coloured header; `"corner"`: a small link at the bottom of
+ * the Góc bình yên home. R2: in /today the form is its own tab (FeedbackForm).
  */
 export function FeedbackButton({ color, variant }: { color: string; variant: "header" | "corner" }) {
   const [open, setOpen] = useState(false);
@@ -40,6 +40,15 @@ export function FeedbackButton({ color, variant }: { color: string; variant: "he
 }
 
 function FeedbackSheet({ color, inCorner, onClose }: { color: string; inCorner: boolean; onClose: () => void }) {
+  return (
+    <Modal title="Góp ý cho app" onClose={onClose}>
+      <FeedbackForm color={color} inCorner={inCorner} />
+    </Modal>
+  );
+}
+
+/** The form itself: in the Góp ý tab of /today (R2) and in the sheet opened from Góc bình yên. */
+export function FeedbackForm({ color, inCorner = false }: { color: string; inCorner?: boolean }) {
   const [kind, setKind] = useState<FeedbackKind | null>(null);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,11 +75,16 @@ function FeedbackSheet({ color, inCorner, onClose }: { color: string; inCorner: 
   }
 
   return (
-    <Modal title="Góp ý cho app" error={error} onClose={onClose}>
+    <div className="flex flex-col gap-4">
       <p className="rounded-xl bg-[#FBF0D6] p-3 text-sm font-semibold text-[#5E3D00]">
         {FEEDBACK_NOT_PRIVATE}
         {inCorner && " Khác với Góc bình yên, góp ý không phải chuyện riêng: bố mẹ thấy tên con và điều con viết."}
       </p>
+      {error && (
+        <p role="alert" className="text-sm font-medium text-red-700">
+          {error}
+        </p>
+      )}
       {sent && (
         <p role="status" className="text-sm font-semibold" style={{ color }}>
           {FEEDBACK_SENT}
@@ -112,6 +126,6 @@ function FeedbackSheet({ color, inCorner, onClose }: { color: string; inCorner: 
           {busy ? "Đang gửi…" : "Gửi"}
         </button>
       </form>
-    </Modal>
+    </div>
   );
 }
