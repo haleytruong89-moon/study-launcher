@@ -48,7 +48,8 @@ const TONE = {
   later: { dot: "#9AA19C", text: "#4A4F4C", chipBg: "#EEF0EC" },
 } as const;
 
-function isWaiting(item: TaskView, ctx: TaskCtx): boolean {
+/** A timed task that waits for another running timed task (one at a time). */
+export function isWaiting(item: TaskView, ctx: TaskCtx): boolean {
   return item.state === "todo" && ctx.runningTimed !== null && ctx.runningTimed.key !== item.key && item.source === "template" && item.minMinutes > 0;
 }
 

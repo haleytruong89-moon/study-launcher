@@ -20,7 +20,8 @@ import { isChildTab, tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
 import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
-import { FeelInvite, FeelWeek, PillarCards, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
+import { PillarCards } from "./pillars";
+import { FeelInvite, FeelWeek, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
 import { WorldMini, WorldTab } from "./world";
 import type { WeekDaysView } from "@/lib/today/weekDays";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
@@ -537,11 +538,14 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
             <PillarCards
               s={s}
+              view={view}
               today={week?.days.find((d) => d.date === s.localDate) ?? null}
               byEnabled={byEnabled}
               color={color}
               nowMs={nowMs}
               freeMinutes={view.rules.freeMinutes}
+              voice={voice}
+              ctx={ctx}
               onStudy={() => selectTab("hoc-tap")}
             />
 

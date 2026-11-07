@@ -7,10 +7,11 @@ import type { AvatarPics } from "@/lib/avatarPics";
 import { QUADS, QUAD_COLORS, QUAD_KEYS, type Voice } from "@/lib/binhYen/catalog";
 import type { DayState, TaskView } from "@/lib/dayState";
 import type { TodayView } from "@/lib/today/service";
-import { clock, dayLabel, dayMonth, upcomingHint, vnTime, weekSummary } from "@/lib/today/view";
+import { dayLabel, dayMonth, upcomingHint, weekSummary } from "@/lib/today/view";
 import { plannable } from "@/lib/today/week";
-import type { WeekDay, WeekDaysView, WeekFeel } from "@/lib/today/weekDays";
+import type { WeekDaysView, WeekFeel } from "@/lib/today/weekDays";
 import { QuadMark } from "../quad-icon";
+import { groupLabel } from "./pillars";
 import { NextTask, TaskRow, WeekStrip, type TaskCtx } from "./today-parts";
 
 /**
@@ -94,96 +95,9 @@ export function FeelWeek({ week, color, big = false, feelLook }: { week: WeekDay
 }
 
 // ---------------------------------------------------------------------------
-// The four areas of today (Hôm nay)
-// ---------------------------------------------------------------------------
-
-function Pillar({ icon, title, line, done, action }: { icon: string; title: string; line: string; done: boolean; action?: React.ReactNode }) {
-  return (
-    <li className="flex flex-col gap-2 rounded-2xl border border-ink/10 bg-white p-3.5">
-      <div className="flex items-center gap-2">
-        <span aria-hidden className="text-xl">
-          {icon}
-        </span>
-        <strong className="grow">{title}</strong>
-        {done && (
-          <span className="rounded-full bg-[#DCEDE0] px-2 py-0.5 text-xs font-bold text-[#24563A]" aria-label="Đã xong">
-            ✓
-          </span>
-        )}
-      </div>
-      <span className="text-sm text-ink/75">{line}</span>
-      {action}
-    </li>
-  );
-}
-
-export function PillarCards({
-  s,
-  today,
-  byEnabled,
-  color,
-  nowMs,
-  freeMinutes,
-  onStudy,
-}: {
-  s: DayState;
-  today: WeekDay | null;
-  byEnabled: boolean;
-  color: string;
-  nowMs: number;
-  freeMinutes: number;
-  onStudy: () => void;
-}) {
-  const go = (label: string) => (
-    <button type="button" onClick={onStudy} className="btn self-start border-[1.5px] bg-white text-sm" style={{ borderColor: color, color }}>
-      {label}
-    </button>
-  );
-  const freeLine =
-    s.free.startedAt === null
-      ? `Xong bài tập và kỹ năng là có ${freeMinutes} phút giờ tự do.`
-      : s.free.endsAt && nowMs < new Date(s.free.endsAt).getTime()
-        ? `Đang giờ tự do · còn ${clock(new Date(s.free.endsAt).getTime() - nowMs)}`
-        : `Đã dùng giờ tự do hôm nay (từ ${vnTime(s.free.startedAt)}).`;
-  return (
-    <ul aria-label="Bốn mảng hôm nay" className="grid gap-2.5 sm:grid-cols-2">
-      {byEnabled && (
-        <Pillar
-          icon="🌿"
-          title="Cảm xúc"
-          done={!!today?.feel}
-          line={today?.feel ? `Hôm nay con thấy: ${today.feel.label}` : "Con chưa ghé Góc bình yên hôm nay."}
-          action={
-            <Link href="/binh-yen" className="btn self-start border-[1.5px] bg-white text-sm no-underline" style={{ borderColor: color, color }}>
-              Vào Góc bình yên
-            </Link>
-          }
-        />
-      )}
-      <Pillar
-        icon="📚"
-        title="Học tập"
-        done={s.part1.complete}
-        line={s.part1.total === 0 ? "Hôm nay không có bài tập." : `${s.part1.done}/${s.part1.total} việc xong`}
-        action={!s.part1.complete ? go("Vào Góc học tập") : undefined}
-      />
-      <Pillar
-        icon="🎯"
-        title="Kỹ năng"
-        done={s.part2.complete}
-        line={s.part2.total === 0 ? "Hôm nay không có kỹ năng." : `${s.part2.done}/${s.part2.total} kỹ năng xong · làm song song với bài tập`}
-        action={!s.part2.complete ? go("Làm kỹ năng") : undefined}
-      />
-      <Pillar icon="🎮" title="Vui chơi" done={s.free.startedAt !== null} line={freeLine} />
-    </ul>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Góc học tập (§3)
 // ---------------------------------------------------------------------------
 
-const GROUP_LABEL = (i: TaskView) => (i.source === "homework" ? (i.group === "upcoming" ? "Làm trước" : "Bài trên lớp") : i.part === 1 ? "Bài bổ sung" : "Kỹ năng");
 
 /** Today's tasks in the child's order (the saved plan first, then the rest in the usual order). */
 export function orderedToday(s: DayState, plan: string[] | null): TaskView[] {
@@ -273,7 +187,7 @@ export function StudyCorner({
                       className="inline-flex min-h-11 items-center self-start rounded-full px-3 text-xs font-bold"
                       style={current?.key === item.key ? { background: color, color: "#fff" } : { background: "#EEF0EC", color: "#4A4F4C" }}
                     >
-                      {GROUP_LABEL(item)} · {current?.key === item.key ? "đang xem" : "xem chi tiết"}
+                      {groupLabel(item)} · {current?.key === item.key ? "đang xem" : "xem chi tiết"}
                     </button>
                     <ul className="contents">
                       <TaskRow item={item} ctx={ctx} locked={paused} />
