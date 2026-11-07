@@ -2,32 +2,47 @@
 
 > Trạng thái: **bản nháp chờ bố mẹ duyệt** (07/11/2026). Chỉ tài liệu, không đổi code, không đổi database.
 > Nguồn: bản bấm thử hai con đã duyệt (https://claude.ai/artifact/Cr5rqxEEGdiWuMgV5TRYav), canvas (https://claude.ai/artifact/VN6NCVjHRVKuti7qGZ63og), spec biểu tượng PR #41 (`docs/BINH_YEN_BIEU_TUONG.md`), góp ý của hai con 06–07/11.
-> Sau khi bố mẹ duyệt, từng lát R1–R5 sẽ cập nhật `SPEC.md` / `DESIGN.md` / `PROGRESS.md` (R0 không sửa các file đó để khỏi đụng PR #42 đang mở).
+> Đã qua 1 lượt review độc lập (07/11, 21 điểm, đã sửa vào bản này).
+> Sau khi bố mẹ duyệt, từng lát R1–R5 cập nhật `SPEC.md` / `DESIGN.md` / `PROGRESS.md`. R0 không sửa các file đó để khỏi đụng PR #42 đang mở.
 
 ## 0. Vì sao làm
 
-Hai con góp ý (06/11): muốn vào Góc bình yên trước rồi mới học, muốn thấy biểu đồ cảm xúc cả tuần ngay trang đầu, muốn app có đủ **cảm xúc – học tập – kỹ năng – vui chơi**, muốn có chỗ xếp nhiều bài, kỹ năng không bị khóa, và "thế giới" của mình (Nguyên: tập truyện tranh; An: khu rừng sống). Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái thì con sẽ không dùng.
+Góp ý của hai con (06/11):
+- Muốn vào Góc bình yên trước rồi mới học.
+- Muốn thấy biểu đồ cảm xúc cả tuần ngay trang đầu.
+- Muốn app có đủ **cảm xúc – học tập – kỹ năng – vui chơi**.
+- Muốn có chỗ xếp nhiều bài, và kỹ năng không bị khóa.
+- Muốn có "thế giới" của mình: Nguyên là tập truyện tranh, An là khu rừng sống.
 
-Quyết định của bố mẹ đã có:
+Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái thì con sẽ không dùng.
 
-| Ngày | Quyết định |
+| Ngày | Quyết định của bố mẹ |
 |---|---|
 | 07/11 | Có **Góc học tập** riêng (màn rộng để xếp bài, làm bài). |
 | 07/11 | **Kỹ năng mở ngay, làm song song** với bài tập. **Giờ tự do 45' chỉ có sau khi xong cả bài tập và kỹ năng.** |
 | 07/11 | **Nghỉ 10' dùng lúc nào cũng được**, vẫn 1 lần/ngày, không bắt buộc. |
-| 07/11 | Trang truyện / khu rừng **có cảm xúc của con, hiện trên màn của con** (Hôm nay, Tuần). **Bố mẹ không có trang nào xem.** |
+| 07/11 | Trang truyện / khu rừng **có cảm xúc của con, hiện trên màn của con** (Hôm nay, Tuần). **Bố mẹ không có trang nào để xem.** |
 | 07/11 | Thứ tự code: R1 luật mới → R2 Góc học tập → R3–R5. |
 
-## 1. Luật mới (R1) — thay cho DESIGN §5 hiện tại
+## 1. Luật mới (R1) — thay DESIGN §5 hiện tại
 
 ### 1.1 Bằng lời
 
-- **Phần 1** (bài trên lớp đến hạn + bài bổ sung) và **Phần 2** (kỹ năng) **mở cùng lúc** từ đầu ngày. Con làm theo thứ tự con muốn (SPEC §3 vốn đã cho con "quyền quyết thứ tự 2 phần").
-- **Giờ tự do** bắt đầu khi **cả hai phần xong** (hoặc dùng thẻ miễn). Vẫn 45', 1 lần/ngày, dừng ở 00:00.
-- **Nghỉ 10'**: con bấm lúc nào cũng được **trước khi có giờ tự do**, 1 lần/ngày, mở mọi trang trong 10'. Không bấm cũng không sao: không còn bước "mời nghỉ" chặn đường.
-- Vẫn giữ: 1 việc có giờ tối thiểu chạy một lúc; Xong sớm hơn 20' bị từ chối; bài trên lớp cần ảnh hoặc bố mẹ xác nhận; override mới nhất thắng; mọi khoảng mở dừng ở 00:00; fail-closed.
+- **Phần 1** (bài trên lớp đến hạn + bài bổ sung) và **Phần 2** (kỹ năng) **mở cùng lúc** từ đầu ngày. Con tự chọn thứ tự. SPEC §3 vốn đã cho con "quyền quyết thứ tự 2 phần".
+- **Giờ tự do** bắt đầu khi **cả hai phần xong**, hoặc khi con dùng thẻ miễn. Vẫn 45', 1 lần/ngày, dừng ở 00:00.
+- **Nghỉ 10'**:
+  - Con bấm lúc nào cũng được, miễn là **chưa có giờ tự do**. Vẫn 1 lần/ngày. Trong 10' đó máy mở mọi trang.
+  - Không nghỉ cũng không sao: không còn bước "mời nghỉ" chặn đường.
+  - Nút Nghỉ ẩn khi `break_minutes = 0`.
+- **Giữ nguyên:**
+  - Mỗi lúc chỉ chạy 1 việc có giờ tối thiểu.
+  - Bấm Xong sớm hơn 20' thì bị từ chối.
+  - Bài trên lớp cần ảnh hoặc bố mẹ xác nhận.
+  - Override mới nhất thắng.
+  - Mọi khoảng mở dừng ở 00:00.
+  - Fail-closed.
 
-### 1.2 Bảng ưu tiên mới (từ trên xuống, gặp đúng thì dừng)
+### 1.2 Bảng ưu tiên mới (xét từ trên xuống, gặp điều kiện đúng thì dừng)
 
 | # | Điều kiện | Status | Máy |
 |---|---|---|---|
@@ -40,70 +55,93 @@ Quyết định của bố mẹ đã có:
 | 8 | Phần 1 chưa xong | LOCK_P1 | khóa |
 | 9 | Phần 1 xong, kỹ năng chưa xong | LOCK_P2 | khóa |
 
-Khác bản cũ: **BREAK lên trên LOCK_P1** (nghỉ được cả khi chưa xong Phần 1); **bỏ BREAK_OFFER** (không còn bước mời nghỉ); `part2.locked` luôn `false`. Tên status giữ nguyên để extension và trang bố mẹ ít phải đổi.
+Khác bản cũ:
+- **BREAK lên trên LOCK_P1**: con nghỉ được cả khi chưa xong Phần 1.
+- **Bỏ BREAK_OFFER** khỏi danh sách status. TypeScript sẽ báo mọi chỗ còn dùng nó.
+- `part2.locked` luôn `false`.
+- Các tên status khác giữ nguyên. Extension không phụ thuộc tên status (chỉ đọc `open` / `openUntil`).
 
 ### 1.3 Mốc ghi lười (milestones)
 
 | Mốc | Ghi khi | Ghi chú |
 |---|---|---|
-| `part1_done_at` | Phần 1 có việc và đã xong hết; **hoặc** Phần 1 rỗng và giờ tự do vừa bắt đầu | Phần 1 rỗng chưa chốt sớm: bài bố mẹ giao trước lúc có giờ tự do vẫn khóa lại (giữ quyết định 14/10, đổi mốc chốt từ "bấm/bỏ nghỉ" sang "bắt đầu giờ tự do") |
-| `part2_done_at` | Phần 2 có việc và đã xong hết (**không cần Phần 1 xong trước**); **hoặc** Phần 2 rỗng và giờ tự do vừa bắt đầu | Kỹ năng bố mẹ bật thêm sau mốc này: hiện ra, không khóa lại (giống bài giao thêm sau Phần 1) |
-| `free_started_at` | Cả hai phần xong và **không** đang bị bố mẹ khóa tay | Như cũ: đang khóa tay thì hoãn |
-| `break_skipped` | Không ghi nữa | Cột giữ nguyên, ngày cũ vẫn đọc được |
+| `part1_done_at` | Phần 1 có việc và đã xong hết; **hoặc** Phần 1 rỗng **và Phần 2 vừa xong** | Có khóa tay hay không thì cũng ghi. **Không bao giờ ghi do dùng thẻ.** Phần 1 rỗng chưa được chốt sớm, nên bài bố mẹ giao trước lúc đó vẫn khóa lại (giữ quyết định 14/10; mốc chốt đổi từ "bấm/bỏ nghỉ" sang "phần kia xong") |
+| `part2_done_at` | Phần 2 có việc và đã xong hết (**không cần Phần 1 xong trước**); **hoặc** Phần 2 rỗng **và Phần 1 vừa xong** | Như trên. Kỹ năng bố mẹ bật thêm sau mốc này vẫn hiện ra nhưng không khóa lại, giống bài giao thêm sau Phần 1 (diễn giải 13 thêm vế cho Phần 2) |
+| `free_started_at` | Có cả 2 mốc trên và bố mẹ **không** đang khóa tay; hoặc con dùng thẻ | Như cũ: đang khóa tay thì hoãn, hết khóa mới bắt đầu |
+| `break_skipped` | Không ghi nữa | Cột giữ nguyên. Dòng có `break_skipped = true` (ngày cũ, hoặc chính ngày R1 lên) = **hôm đó đã hết lượt nghỉ** |
 
-**"Ngày đạt"** (tuần, Tin tưởng): `part1_done_at` **và** `part2_done_at` đều có, đều trước giờ ngủ; hoặc dùng thẻ; hoặc ngày ốm/nghỉ lễ. Ngày cũ luôn có Phần 1 trước Phần 2 nên kết quả các tuần đã qua **không đổi**.
+**"Ngày đạt"** (dùng cho thống kê tuần và chế độ Tin tưởng) khi có một trong ba:
+- Có **cả** `part1_done_at` lẫn `part2_done_at`, cả hai trước giờ ngủ.
+- Dùng thẻ.
+- Ngày ốm hoặc nghỉ lễ.
+
+Dòng cũ có `part2_done_at` nhưng `part1_done_at` trống thì tính theo luật cũ (chỉ xét `part2_done_at`). Nhờ vậy tiến độ Tin tưởng và tổng kết các tuần đã qua **không đổi**.
 
 ### 1.4 Ví dụ đáp án (bố mẹ xác nhận → thành bài kiểm tra Vitest ở R1)
 
-Ngày mẫu: 2 bài trên lớp đến hạn (Toán, Anh), 1 bài bổ sung 20', 2 kỹ năng 20'. Nghỉ 10', giờ tự do 45', giờ ngủ 21:30.
+**Ngày mẫu:** 2 bài trên lớp đến hạn (Toán, Anh), 1 bài bổ sung 20', 2 kỹ năng 20'. Nghỉ 10', giờ tự do 45', giờ ngủ 21:30.
 
 | # | Tình huống | Đáp án đề xuất |
 |---|---|---|
 | E1 | 17:00 chưa làm gì, con bấm Bắt đầu kỹ năng "Đọc sách" | **Được** (bản cũ: từ chối). Máy vẫn khóa (LOCK_P1) |
 | E2 | Xong cả 2 kỹ năng, bài trên lớp mới xong 1/2 | Khóa (LOCK_P1), chưa có giờ tự do |
-| E3 | Xong hết Phần 1, kỹ năng 1/2 | Khóa (LOCK_P2). Không có bước mời nghỉ |
-| E4 | 19:00 xong việc cuối cùng (bất kể phần nào) | Giờ tự do 19:00–19:45; 19:45:00 khóa đến hết ngày |
-| E5 | 17:05 chưa làm gì, bấm Nghỉ | Mở mọi trang 17:05–17:15; 17:15:00 khóa lại (LOCK_P1) |
+| E3 | Xong hết Phần 1, kỹ năng mới 1/2 | Khóa (LOCK_P2). Không có bước mời nghỉ |
+| E4 | 19:00 xong việc cuối cùng (của phần nào cũng vậy) | Giờ tự do 19:00–19:45. Đúng 19:45:00 khóa đến hết ngày |
+| E5 | 17:05 chưa làm gì, bấm Nghỉ | Mở mọi trang 17:05–17:15. Đúng 17:15:00 khóa lại (LOCK_P1) |
 | E6 | Đã nghỉ rồi, bấm Nghỉ lần 2 | Từ chối: "Hôm nay con đã nghỉ rồi" |
-| E7 | Đang chạy đồng hồ kỹ năng, bấm Nghỉ | **Từ chối**: "Bấm Xong việc đang làm trước" (để 10' nghỉ không tính vào 20' của kỹ năng) — *cần bố mẹ chốt* |
-| E8 | Đang nghỉ, bấm Bắt đầu / Xong một việc | **Từ chối**: "Đang nghỉ — bấm Học tiếp để làm tiếp". Bấm Học tiếp → hết nghỉ ngay, làm tiếp được — *cần bố mẹ chốt* |
-| E9 | Cả ngày không nghỉ | Không sao; xong hết → giờ tự do luôn |
+| E7 | Đang chạy đồng hồ kỹ năng, bấm Nghỉ | **Từ chối**: "Bấm Xong việc đang làm trước". Để 10' nghỉ không tính vào 20' của kỹ năng — *cần bố mẹ chốt* |
+| E8 | Đang nghỉ, con bấm Bắt đầu, Xong, nộp ảnh (cả nộp qua QR bằng điện thoại) hoặc nhờ bố mẹ xem | **Từ chối**: "Đang nghỉ — bấm Học tiếp để làm tiếp". Bấm Học tiếp thì hết nghỉ ngay và làm tiếp được. Xếp thứ tự bài vẫn được — *cần bố mẹ chốt* |
+| E9 | Cả ngày không nghỉ | Không sao; xong hết thì có giờ tự do luôn |
 | E10 | Đã có giờ tự do, bấm Nghỉ | Từ chối (nút ẩn) |
 | E11 | 23:55 bấm Nghỉ | Mở đến 00:00, không cộng sang hôm sau |
 | E12 | Bố mẹ đang khóa tay, con bấm Nghỉ | Từ chối (nút ẩn): "Bố mẹ đang khóa máy" |
-| E13 | Máy đang mở sẵn (Tin tưởng / ngày ốm / bố mẹ mở) | Nút Nghỉ ẩn (không tốn lượt nghỉ) |
+| E13 | Máy đang mở sẵn (Tin tưởng / ngày ốm / bố mẹ mở) | Nút Nghỉ ẩn, không tốn lượt nghỉ |
 | E14 | Ngày không có kỹ năng; 18:00 xong Phần 1 | Giờ tự do 18:00–18:45 |
-| E15 | 06:00 chưa có bài trên lớp, không có bài bổ sung; 07:00 con xong kỹ năng | Giờ tự do 07:00. Bài bố mẹ giao lúc 17:00 hiện ra, **không khóa lại** — *giống hiện nay* (bản cũ con chỉ cần bỏ qua nghỉ là có kết quả tương tự) |
-| E16 | Như E15 nhưng bố mẹ giao bài lúc 06:30 (trước khi con xong kỹ năng) | Khóa lại (LOCK_P1) đến khi xong bài đó |
+| E15 | 06:00 chưa có bài trên lớp, không có bài bổ sung; 07:00 con xong kỹ năng | Giờ tự do từ 07:00. Bài bố mẹ giao lúc 17:00 hiện ra nhưng **không khóa lại**. *Giống hiện nay*: bản cũ con chỉ cần bỏ qua nghỉ là có kết quả tương tự |
+| E16 | Như E15, nhưng bố mẹ giao bài lúc 06:30 (trước khi con xong kỹ năng) | Khóa lại (LOCK_P1) đến khi xong bài đó |
 | E17 | Bố mẹ giao thêm bài sau khi con xong Phần 1, kỹ năng chưa xong | Bài hiện ra, **không chặn** giờ tự do (như cũ) |
-| E18 | Xong kỹ năng 18:00, xong bài trên lớp 22:00 | Giờ tự do 22:00–22:45. **Không** tính "ngày đạt" (Phần 1 sau 21:30) |
+| E18 | Xong kỹ năng 18:00, xong bài trên lớp 22:00 | Giờ tự do 22:00–22:45. **Không** tính "ngày đạt" vì Phần 1 xong sau 21:30 |
 | E19 | Ngày không có bài đến hạn, có bài "Sắp tới" | Theo cài đặt `homework_min_upcoming` (hiện = 1: phải làm trước 1 bài mới đủ Phần 1) — *cần bố mẹ chốt, xem §1.5* |
-| E20 | Có bài đến hạn, con bấm "+ Làm trước" bài tuần sau | Không bắt buộc, không chặn giờ tự do; xong sớm ≥ 2 ngày được ★ (chỉ ghi nhận) |
-| E21 | Thẻ miễn | Như cũ: dùng được khi còn thẻ và chưa có giờ tự do, không dùng khi bố mẹ khóa tay |
+| E20 | Có bài đến hạn, con bấm "+ Làm trước" bài tuần sau | Không bắt buộc, không chặn giờ tự do. Xong sớm ≥ 2 ngày thì được ★ (chỉ ghi nhận) |
+| E21 | Thẻ miễn | Như cũ: dùng được khi còn thẻ và chưa có giờ tự do, không dùng được khi bố mẹ khóa tay. Dùng thẻ **không** ghi mốc Phần 1 / Phần 2 |
+| E22 | Con đang nghỉ, bố mẹ bấm xác nhận bài cuối cùng (cả 2 phần thành xong) | Giờ tự do bắt đầu ngay; phần nghỉ còn lại bỏ, không cộng thêm (FREE ở dòng 6, trên BREAK) |
+| E23 | Ngày không có kỹ năng, 20:00 xong Phần 1, bố mẹ khóa tay đến 22:00 | Mốc Phần 1 / Phần 2 ghi lúc 20:00, nên **vẫn đạt**. Giờ tự do hoãn, 22:00–22:45 |
+| E24 | Ngày cũ có `break_skipped = true` | Hết lượt nghỉ hôm đó. Ngày đạt tính như trước |
 
-### 1.5 Ba điểm cần bố mẹ chốt trước khi code R1
+### 1.5 Điểm cần bố mẹ chốt trước khi code R1
 
-1. **E7 – nghỉ khi đang chạy đồng hồ:** đề xuất **từ chối** (phút tối thiểu = giờ Xong − giờ Bắt đầu, nếu cho nghỉ giữa chừng thì 10' nghỉ được tính là 10' kỹ năng). Cách khác: cho nghỉ, đồng hồ việc dừng lại (phải thêm cột, phức tạp hơn).
-2. **E8 – trong lúc nghỉ:** đề xuất khóa các nút việc, chỉ còn "Học tiếp".
-3. **E19 – "Làm trước" ngày không có bài đến hạn:** bản bấm thử để "Làm trước" hoàn toàn tùy ý. Luật hiện tại (chốt 17/10) bắt làm trước 1 bài vào ngày không có bài đến hạn. Không cần sửa code: bố mẹ chọn **giữ 1** hoặc **đặt 0** trong Thêm › Luật trong nhà.
+1. **E7 + E8 — nghỉ và đồng hồ việc:**
+   - Đề xuất: không cho nghỉ khi đang chạy đồng hồ, và khóa nút việc trong lúc nghỉ. Lý do: phút tối thiểu = giờ Xong − giờ Bắt đầu, nên nếu cho nghỉ giữa chừng thì 10' nghỉ cũng được tính vào 20' kỹ năng.
+   - Cách khác: cho nghỉ, đồng hồ việc tạm dừng. Cách này phải thêm cột vào database và phức tạp hơn.
+2. **E19 — "Làm trước" vào ngày không có bài đến hạn:**
+   - Bản bấm thử để "Làm trước" hoàn toàn tùy ý. Luật hiện tại (chốt 17/10) bắt làm trước 1 bài vào ngày không có bài đến hạn.
+   - Không cần sửa code: bố mẹ chọn **giữ 1** hay **đặt 0** trong Thêm › Luật trong nhà.
+3. **Làm bài trên lớp trong lúc chạy đồng hồ kỹ năng:**
+   - Bài trên lớp không có đồng hồ, nên con có thể bấm Bắt đầu kỹ năng 20' rồi làm bài Toán trong lúc đó. Lỗ này đã có từ trước với bài bổ sung; nay kỹ năng mở sớm nên dễ gặp hơn.
+   - Đề xuất: chấp nhận và ghi thành giới hạn đã biết, vì bài trên lớp có ảnh / bố mẹ xem.
+   - Cách khác: chặn nộp bài trên lớp khi đang chạy đồng hồ.
+4. **Ghi nhận (không cần chọn):** Phần 2 nay có thể xong từ sáng sớm. Kỹ năng bố mẹ bật thêm sau đó không tính cho hôm đó (như E15, E17). Nếu sau này muốn "giờ tự do không trước HH:MM", đó sẽ là một tham số trong `family_settings`, không ghi cứng trong code.
 
-### 1.6 Ảnh hưởng khi code R1 (không SQL)
+### 1.6 Những chỗ phải sửa khi code R1 (không SQL)
 
 | Chỗ | Đổi gì |
 |---|---|
-| `lib/dayState.ts` | Bảng ưu tiên §1.2, mốc §1.3, "ngày đạt", diễn giải 1/2/8/15 viết lại; bỏ `BREAK_OFFER`; `break.state` = `offer` khi còn lượt và chưa có giờ tự do |
-| `lib/today/rules.ts` | `decideStart`: bỏ chặn Phần 2; chặn khi đang nghỉ (E8). `decideBreak`: cho nghỉ khi E5, từ chối E6/E7/E10/E12/E13 |
-| `/api/day/break` | Bỏ `skip`; `start` / `end` giữ nguyên |
-| `lib/today/view.ts`, `today-screen.tsx`, `lib/today/week.ts` | Chữ banner; bỏ "🔒 mở khi xong Phần 1"; kế hoạch được xếp cả kỹ năng |
-| `lib/parent/overview.ts` | Nhãn: LOCK_P1 "Đang học", LOCK_P2 "Còn kỹ năng"; bỏ nhãn BREAK_OFFER |
-| `lib/binhYen/studyCap.ts` | Chỉ sửa chú thích (giờ nghỉ là máy mở → không giới hạn 10' Góc bình yên, như cũ) |
-| Extension | **Không đổi logic**: extension chỉ đọc `open` + `openUntil`. Nghỉ giữa giờ học = một khoảng mở bình thường. Không cần cài lại |
-| Tài liệu | DESIGN §5, SPEC §2.6 (dòng "Phần 2 không bấm Bắt đầu được…"), SPEC §3 sơ đồ luồng, SPEC §18 log |
-| Test | Mỗi dòng bảng §1.2 + E1–E21 + biên: đúng giây hết 10', hết 45', qua 00:00; ngày cũ (có `break_skipped`) vẫn tính đạt như trước |
+| `lib/dayState.ts` | Bảng §1.2, mốc §1.3, "ngày đạt" (có nhánh cho dòng cũ). Bỏ `BREAK_OFFER` khỏi `Status`. Thêm `break.canStart` (cùng điều kiện với `decideBreak`). Viết lại diễn giải 1, 2, 7, 8, 13, 15, 20 trong phần đầu file |
+| `lib/today/service.ts` `persistMilestones` | Bỏ giả định "giờ tự do bắt đầu cùng lúc Phần 2 xong". Ghi các mốc trong 1 transaction cho mọi thứ tự (Phần 1 xong sau cùng, Phần 2 xong sau cùng, phần rỗng) |
+| `lib/today/rules.ts` | `decideStart`: bỏ chặn Phần 2; chặn khi đang nghỉ (E8). `decideFinish`, nộp ảnh, nhờ bố mẹ xem: chặn khi đang nghỉ. `decideBreak`: E5–E7, E10–E13; từ chối khi `break_minutes ≤ 0` |
+| `/api/day/break` | Bỏ `skip` (client cũ gọi sẽ nhận lỗi 400); `start` / `end` giữ nguyên |
+| `/api/tasks/finish`, `/api/tasks/proof`, route nộp qua QR, `/api/tasks/confirm-request` | Gọi luật "đang nghỉ" ở trên |
+| `lib/binhYen/studyCap.ts` + `lib/binhYen/session.ts` | `isStudyTime` đổi thành "chưa xong **cả hai** phần". Nếu giữ như cũ, xong kỹ năng trước là Góc bình yên hết giới hạn 10' dù vẫn đang giờ học |
+| `lib/today/view.ts`, `app/today/today-screen.tsx`, blocked view | Chữ banner; bỏ bước "Nghỉ" kiểu bậc thang; bỏ "🔒 mở khi xong Phần 1"; thẻ "việc tiếp theo" không ẩn theo trạng thái nghỉ |
+| `lib/today/week.ts` | Kế hoạch được xếp cả kỹ năng; sửa chú thích "Phần 2 trước giờ ngủ" |
+| `lib/parent/overview.ts` | LOCK_P1 "Đang học", LOCK_P2 "Còn kỹ năng"; bỏ nhãn BREAK_OFFER |
+| Extension | **Không đổi**, không cần cài lại. Extension chỉ đọc `open` + `openUntil`. Nghỉ giữa giờ học là một khoảng mở bình thường. Lỗi máy chủ vẫn → khóa |
+| Test | Vitest: mỗi dòng §1.2, E1–E24, biên (đúng giây hết 10' / 45', qua 00:00, `break_minutes = 0`). Sửa `tests/todayRules`, `specialDay`, `week`, `parentOverview`, `binhYenCheckin`, `e2e/flow.spec.ts` (đoạn bỏ qua nghỉ) |
+| Tài liệu | DESIGN §5; SPEC §2.6 (dòng "Phần 2 không bấm Bắt đầu được…"); sơ đồ luồng SPEC §3; log SPEC §18 |
 
 ## 2. Khung màn của con (R2)
 
-### 2.1 Năm tab dưới cùng (điện thoại) / cột trái (laptop)
+### 2.1 Năm tab (thanh dưới trên điện thoại / cột trái trên laptop)
 
 | Tab | Nguyên | An | Nội dung |
 |---|---|---|---|
@@ -113,15 +151,21 @@ Ngày mẫu: 2 bài trên lớp đến hạn (Toán, Anh), 1 bài bổ sung 20',
 | 4 | Tập của tuần | Khu rừng | §5 / §4 |
 | 5 | Góp ý | Góp ý | Thích / Chưa thích / Ý tưởng (#42) |
 
-Dòng "Con đang ở: Hôm nay › Góc học tập › Toán" ở đầu mỗi màn; nút quay lại luôn cùng chỗ. Nút cao ≥ 44px. Màu Nguyên `#2F5D9E`, An `#B85A1C`.
+- Đầu mỗi màn có dòng "Con đang ở: Hôm nay › Góc học tập › Toán".
+- Nút quay lại luôn ở cùng một chỗ.
+- Nút cao ≥ 44px. Màu Nguyên `#2F5D9E`, An `#B85A1C`.
 
-### 2.2 Trang Hôm nay (thứ tự từ trên xuống)
+### 2.2 Trang Hôm nay (từ trên xuống)
 
-1. **Chào + nút Góc bình yên to nhất** ("Hôm nay con thấy thế nào?"). Chỉ là lời mời, **không bao giờ chặn** việc học.
-2. **Biểu đồ cảm xúc tuần** (T2 → hôm nay): mỗi ngày một ô màu vùng (đỏ/vàng/xanh dương/xanh lá) + biểu tượng từ. Ngày không ghé = ô trống, không có chữ trách.
-3. **Bốn mảng hôm nay**: Cảm xúc · Học tập · Kỹ năng · Vui chơi — mỗi mảng một thẻ: đã làm gì, còn gì, nút đi tiếp ("Vào Góc học tập", "Bắt đầu kỹ năng").
-4. **Trạng thái máy + đồng hồ** (khóa / đang nghỉ đến … / giờ tự do đến …), nút Nghỉ 10' (khi được phép, §1.4), nút thẻ miễn (như cũ).
-5. **Thế giới của con**: Nguyên — trang truyện hôm nay (khung vẽ thêm theo mảng đã xong); An — khu rừng thu nhỏ, bấm vào mở tab Khu rừng.
+1. **Lời chào + nút Góc bình yên to nhất** ("Hôm nay con thấy thế nào?"). Đây chỉ là lời mời, **không bao giờ chặn** việc học.
+2. **Biểu đồ cảm xúc tuần** (từ thứ Hai đến hôm nay):
+   - Mỗi ngày một ô mang màu vùng (đỏ / vàng / xanh dương / xanh lá) và biểu tượng của từ con chọn.
+   - Ngày không ghé thì ô trống, không có chữ trách.
+3. **Bốn mảng hôm nay**: Cảm xúc · Học tập · Kỹ năng · Vui chơi. Mỗi mảng là một thẻ ghi đã làm gì, còn gì, kèm nút đi tiếp ("Vào Góc học tập", "Bắt đầu kỹ năng").
+4. **Trạng thái máy + đồng hồ** (khóa / đang nghỉ đến … / giờ tự do đến …). Nút Nghỉ 10' hiện khi `break.canStart`; nút thẻ miễn như cũ.
+5. **Thế giới của con**:
+   - Nguyên: trang truyện hôm nay, khung được vẽ thêm theo mảng đã xong.
+   - An: khu rừng thu nhỏ; bấm vào mở tab Khu rừng.
 
 Không có điểm, streak, bảng xếp hạng; không so sánh hai con (SPEC §15).
 
@@ -129,95 +173,146 @@ Không có điểm, streak, bảng xếp hạng; không so sánh hai con (SPEC �
 
 | Phần | Luật |
 |---|---|
-| Danh sách bên trái | Nhóm: Bài trên lớp · Bài bổ sung · Kỹ năng · Làm trước ★. Kéo ⋮⋮ hoặc ↑↓ để xếp; thứ tự lưu vào `day_plans` qua `/api/day/plan` (đã có, chỉ để hiển thị, **không đổi khóa/mở**). Kỹ năng nay xếp được cùng bài tập |
-| Khung làm bài bên phải | Đề bài / file bố mẹ đính kèm (`homework_items.photo_paths`, đọc qua route file đã có), đồng hồ (giờ server), nộp ảnh / nhờ bố mẹ xem (như #21, #23), nút Xong |
-| Chế độ tập trung | Ẩn danh sách, chỉ còn khung làm bài. Chỉ ở trình duyệt, không ghi gì |
+| Danh sách bên trái | Nhóm: Bài trên lớp · Bài bổ sung · Kỹ năng · Làm trước ★. Kéo ⋮⋮ hoặc bấm ↑↓ để xếp. Thứ tự lưu vào `day_plans` qua `/api/day/plan` (đã có); chỉ để hiển thị, **không đổi khóa/mở**. Kỹ năng nay xếp được cùng bài tập |
+| Khung làm bài bên phải | Đề bài / file bố mẹ đính kèm (`homework_items.photo_paths`, đọc qua route file đã có); đồng hồ theo giờ server; nộp ảnh / nhờ bố mẹ xem (như #21, #23); nút Xong |
+| Chế độ tập trung | Ẩn danh sách, chỉ còn khung làm bài. Chỉ chạy trên trình duyệt, không ghi gì |
 | Nghỉ 10' | Nút ở cuối danh sách, theo §1.4 |
-| "Làm trước" | Bài "Sắp tới" có nút "+ Làm trước"; luật bắt buộc theo §1.5 điểm 3 |
+| "Làm trước" | Bài "Sắp tới" có nút "+ Làm trước"; có bắt buộc hay không theo §1.5 điểm 2 |
 
-Màn rộng ≥ 1024px: 2 cột; hẹp hơn: danh sách → bấm vào bài mở khung làm bài toàn màn.
+Màn rộng ≥ 1024px chia 2 cột. Màn hẹp hơn: hiện danh sách, bấm vào bài thì khung làm bài mở toàn màn.
 
 ## 4. Khu rừng sống của An (R4)
 
-### 4.1 Luật dữ liệu
+### 4.1 Luật
 
-- **Cây mọc theo mảng xong trong ngày**: Cảm xúc (ghé Góc bình yên và chọn cảm xúc), Học tập (Phần 1 xong), Kỹ năng (Phần 2 xong), Vui chơi (có giờ tự do). Mỗi mảng xong = 1 lượt trồng của mảng đó.
-- **Loài cây**: mỗi mảng có danh sách loài cố định, theo thứ tự; lượt trồng thứ *n* của mảng ra loài thứ *n* (vòng lại khi hết). Loài đã có thì cây đó lớn thêm ("đã trồng 3 lần").
-- **Cây Cảm xúc không phụ thuộc con thấy gì**: ghé là có cây, không có cây "buồn" hay "giận" → người đứng sau màn hình không đoán được cảm xúc từ khu rừng.
-- **Con vật đến theo sinh thái**: mỗi con vật có điều kiện theo đặc điểm cây đang có (ong khi có hoa, sóc khi có cây có hạt, ếch khi có ao…). Đã đến thì ở lại.
-- **Không có mất mát**: ngày bỏ lỡ chỉ là không có cây mới. Không héo, không chết, không chuỗi ngày.
-- **Thẻ loài**: tên, ảnh/biểu tượng, một điều thú vị có thật, "Nhiệm vụ ngoài đời" (tùy chọn), "Tối nay dạy cả nhà". v1 chỉ hiển thị, **không lưu** đã làm nhiệm vụ hay chưa.
-- **Danh sách loài chỉ được thêm, không đổi thứ tự / không xóa** (nếu không khu rừng cũ sẽ tự đổi).
+- **Mảng xong trong ngày → 1 cây của mảng đó.** Tối đa 1 cây mỗi mảng mỗi ngày:
 
-### 4.2 Nguồn dữ liệu và lưu trữ
+  | Mảng | Có cây khi |
+  |---|---|
+  | Cảm xúc | Đi hết một lượt ở Góc bình yên. Theo `by_daily_rewards`, hiện là 1/ngày |
+  | Học tập | Có `part1_done_at` |
+  | Kỹ năng | Có `part2_done_at` |
+  | Vui chơi | Có giờ tự do |
 
-Khu rừng **tính lại từ dữ liệu đã có** (`day_sessions` cho Học tập / Kỹ năng / Vui chơi, `by_checkins` cho Cảm xúc) + danh mục loài trong code (`lib/world/forest.ts`). **Không cần bảng mới.**
+- **Ngày đặc biệt:**
+  - Học tập / Kỹ năng **chỉ** có cây khi có mốc thật. Ngày dùng thẻ không có cây Học tập / Kỹ năng, nhưng vẫn có cây Vui chơi.
+  - Ngày ốm / Tin tưởng / nghỉ lễ: tính theo mốc thật như ngày thường.
+  - Phần rỗng được chốt (§1.3) tính là xong.
+- **Chọn loài:**
+  - Mỗi mảng có danh sách loài theo thứ tự. Lượt trồng thứ *n* của mảng ra loài thứ *n*.
+  - Hết danh sách thì **không vòng lại**: các loài đã có lớn thêm ("đã trồng 3 lần").
+  - Loài được chọn **lưu lại ngay lúc trồng** (§4.2), nên thêm loài mới vào danh sách không làm đổi cây cũ.
+- **Cây Cảm xúc không phụ thuộc con thấy gì.** Ghé là có cây; không có cây "buồn" hay "giận". Người đứng sau màn hình không đoán được cảm xúc từ khu rừng (giống BINH_YEN R4).
+- **Con vật đến theo sinh thái.** Mỗi con vật có điều kiện theo đặc điểm của các cây đang có (ong khi có hoa, sóc khi có cây có hạt, ếch khi có ao…). Đã đến thì ở lại.
+- **Không có mất mát.** Ngày bỏ lỡ chỉ là không có cây mới. Không héo, không chết, không chuỗi ngày.
+- **Thẻ loài:**
+  - Gồm tên, hình, một điều thú vị có thật, "Nhiệm vụ ngoài đời" (tùy chọn), "Tối nay dạy cả nhà".
+  - v1 chỉ hiển thị, **không lưu** việc đã làm nhiệm vụ hay chưa.
+  - Hình đóng gói sẵn trong app, **không** lấy từ trang ngoài (để máy con không gửi yêu cầu tới bên thứ ba).
 
-*Điểm chờ hỏi An (trước R4):* khu rừng gom **cả năm** hay mỗi **mùa / tháng** một khu rừng mới (khu rừng cũ vào "album")? Đề xuất: mỗi tháng một khu rừng, album giữ 12 tháng (khớp hạn giữ dữ liệu Góc bình yên 12 tháng).
+### 4.2 Lưu ở đâu (sửa theo review)
+
+Không thể tính lại khu rừng từ `by_checkins`. Khi con xóa check-in, hoặc check-in hết hạn 12 tháng, cây sẽ mất và mọi cây sau đổi loài. Như vậy là phạt con vì giữ riêng tư (BINH_YEN D2).
+
+→ **R4 thêm 1 bảng `world_items`.** Bảng này thay cho `by_rewards` dự kiến trong BINH_YEN §2.2.
+
+| Cột | Ý nghĩa |
+|---|---|
+| `family_id`, `child_id`, `local_date`, `pillar` (`feel` / `study` / `skill` / `play`) | Cây của mảng nào, ngày nào |
+| `item_key` | Mã loài (hoặc mã trang truyện) |
+| `variant` | Số thứ tự câu thoại / kiểu (§5) |
+| `created_at` | |
+
+- Khóa duy nhất `(child_id, local_date, pillar)`, nên hai lượt cùng lúc không trồng 2 cây.
+- **Không có cột cảm xúc nào.**
+- Ghi bằng route server lúc mảng xong. Bảng này chỉ thêm dòng; xóa check-in không xóa `world_items`.
+- **Không grant cho trình duyệt** (giống `by_checkins`); con đọc qua route của phiên con. Mảng `feel` cũng thuộc dữ liệu Góc bình yên nên bố mẹ không đọc.
+- Danh sách loài, con vật, điều thú vị nằm trong `lib/world/` (bảng dữ liệu để sau, như `by_catalog`). Danh sách **chỉ thêm**, không xóa mã.
+
+*Cần hỏi An trước R4:* khu rừng gom **cả năm**, hay mỗi **tháng** một khu rừng mới (khu rừng cũ vào "album")?
 
 ## 5. Tập của tuần — Nguyên (R5)
 
-### 5.1 Luật dữ liệu
+### 5.1 Luật
 
-- **Một tập = một tuần (T2–CN)**. Bìa: "Tập *n*", tên nhân vật, mục lục 7 ngày (biểu tượng từ cảm xúc).
-- **Một trang = một ngày**, ghép từ mã cố định, không chữ tự do:
+- **Một tập = một tuần (T2–CN).**
+  - Tập đánh số từ 1, bắt đầu từ tuần đầu tiên Nguyên dùng màn mới.
+  - Bìa gồm "Tập *n*", tên nhân vật, mục lục 7 ngày.
+  - Tập **đóng lúc 00:00 thứ Hai** và lên **kệ truyện**. Tối CN tập vẫn mở (cùng lúc với tổng kết tuần).
+- **Một trang = một ngày**, ghép từ mã cố định, không có chữ tự do:
 
 | Khung | Có khi | Nội dung |
 |---|---|---|
-| A · Mở đầu | Ghé Góc bình yên | Mặt nhân vật theo vùng, bóng thoại theo vùng (danh sách câu cố định), chữ hiệu ứng, "Hồ sơ … · *từ cảm xúc*" |
-| B · Cách xử lý | Có hoạt động đã chọn | Biểu tượng + tên hoạt động (hoặc "Gọi tên là đủ cho hôm nay") |
-| C · Nhiệm vụ học | Phần 1 xong | "XONG!" + bài hôm nay |
-| D · Kỹ năng | Phần 2 xong | Tên kỹ năng + số phút |
+| A · Mở đầu | Đi hết một lượt Góc bình yên (dòng `feel` trong `world_items`) | Nhân vật + bóng thoại (câu số `variant`) + chữ hiệu ứng. **Vùng và từ cảm xúc lấy từ check-in nếu còn**: khi đó mặt, câu thoại theo vùng, "Hồ sơ … · *từ*". Check-in đã xóa / hết hạn thì khung vẫn còn, chỉ hiện "Hôm nay con đã ghé" với mặt bình thường |
+| B · Cách xử lý | Check-in còn và có hoạt động đã chọn | Biểu tượng + tên hoạt động, hoặc "Gọi tên là đủ cho hôm nay" |
+| C · Nhiệm vụ học | Có `part1_done_at` | "XONG!" + số bài đã xong hôm đó. Phần 1 rỗng: "Hôm nay không có bài" |
+| D · Kỹ năng | Có `part2_done_at` | Tên kỹ năng + số phút. Tên lấy theo mẫu việc hiện tại: đổi tên mẫu thì trang cũ cũng đổi (chấp nhận) |
 | E · Giờ tự do | Có giờ tự do | Nhân vật cười + **hoạt động chọn từ danh sách** (Vẽ / Đọc truyện / Nghe nhạc / Ra ngoài / …) |
 
-- Khung chưa có = ô trống nhẹ ("đang vẽ…" hôm nay; "hôm nay chưa xong — không sao" ngày cũ). Không trách.
-- **Tối Chủ nhật tập đóng lại**, lên **kệ truyện**; mở lại xem được. Kệ giữ 12 tháng (cùng hạn Góc bình yên).
+- Khung chưa có thì để ô trống nhẹ: "đang vẽ…" cho hôm nay, "hôm nay chưa xong — không sao" cho ngày cũ. Không trách.
+- **Câu thoại:** danh sách theo vùng, chỉ thêm. `variant` được chọn lúc ghi và lưu lại, nên thêm câu mới không làm đổi trang cũ.
 
-### 5.2 Nguồn dữ liệu và lưu trữ
+### 5.2 Lưu ở đâu
 
-Tính lại từ `by_checkins` + `day_sessions` + `task_runs`. **Có thể cần 1 cột** cho khung E: hoạt động giờ tự do con chọn (mã cố định), ví dụ `day_sessions.free_activity_key` ghi qua route server. Chốt ở R5.
+- Dùng `world_items` (R4) + `day_sessions` + `task_runs` + `by_checkins` (chỉ để hiện vùng / từ khi check-in còn).
+- Khung E cần lưu hoạt động giờ tự do con chọn (mã cố định).
+  - Đề xuất: `day_sessions.free_activity_key`, ghi qua route server. Cột này bố mẹ **đọc được** (theo RLS `day_sessions` hiện tại) — chỉ là hoạt động vui chơi, không phải cảm xúc.
+  - Chốt ở R5.
 
 ## 6. Nhân vật & biểu tượng (R3)
 
-Theo `docs/BINH_YEN_BIEU_TUONG.md` (PR #41). Nhân vật dùng chung cho Góc bình yên, trang truyện (Nguyên) và khu rừng (An). Cần 1 cột lưu nhân vật (đề xuất `profiles.avatar jsonb`, chỉ mã: kiểu tóc, màu, mắt, da, áo, phụ kiện, tên ≤ 24 ký tự) — trả lời 3 câu hỏi mở của #41 trước R3.
+Theo `docs/BINH_YEN_BIEU_TUONG.md` (PR #41). Nhân vật dùng chung cho Góc bình yên, trang truyện (Nguyên) và khu rừng (An).
+
+- Cần 1 cột: đề xuất `profiles.avatar jsonb`, chỉ chứa mã (kiểu tóc, màu, mắt, da, áo, phụ kiện).
+- **Tên nhân vật (≤ 24 ký tự) là ngoại lệ chữ tự do duy nhất.** Cả nhà đọc được (giống tên hiển thị). Màn tạo nhân vật ghi rõ: "Tên này cả nhà đều thấy".
+- Trả lời 3 câu hỏi mở của #41 trước khi làm R3.
 
 ## 7. Riêng tư — ai thấy gì
 
 | Dữ liệu | Con | Bố mẹ |
 |---|---|---|
-| Cảm xúc (vùng, từ, mức), hoạt động chọn | Thấy ở Góc bình yên, Hôm nay (biểu đồ tuần), Tập của tuần, khu rừng (chỉ "đã ghé") | **Không có trang nào**, không route nào cho bố mẹ đọc. Chỉ tín hiệu không nội dung như hiện nay |
-| Việc học, kỹ năng, giờ tự do | Thấy | Thấy (như hiện nay) |
-| Thứ tự xếp bài, chế độ tập trung | Thấy | Không cần (thứ tự lưu `day_plans`, bố mẹ đọc được theo RLS hiện tại — không đổi) |
-| Nhân vật | Thấy | Thấy biểu tượng con chọn (như `profiles.icon`) |
+| Cảm xúc (vùng, từ, mức), hoạt động Góc bình yên | Thấy ở Góc bình yên, Hôm nay (biểu đồ tuần), Tập của tuần (khung A/B) | **Không có trang hay route nào** cho bố mẹ đọc. Chỉ tín hiệu không nội dung như hiện nay |
+| Cây / trang đã mở (`world_items`) | Thấy | Không đọc |
+| Việc học, kỹ năng, giờ tự do, hoạt động giờ tự do | Thấy | Thấy (như hiện nay) |
+| Thứ tự xếp bài (`day_plans`) | Thấy | Đọc được theo RLS hiện tại (không đổi) |
+| Nhân vật + tên nhân vật | Thấy | Thấy |
 
-- Dữ liệu cảm xúc tới màn Hôm nay / Tuần **chỉ qua route server của phiên con** (`requireChild`), service_role phía server; `by_checkins` vẫn không grant cho trình duyệt.
-- **Sửa "Ai thấy gì?"** trong Góc bình yên (vẫn 3–5 dòng), thêm ý: *"Cảm xúc con chọn cũng hiện ở trang Hôm nay và Tập của tuần / Khu rừng trên máy của con — ai đứng cạnh màn hình con cũng thấy được."*
-- Không chữ tự do mới ở R1–R5. Chữ con viết vẫn để S-BY2 (mã hóa, chỉ trên laptop riêng).
+- Dữ liệu cảm xúc tới Hôm nay / Tuần **chỉ qua route server của phiên con** (`requireChild`).
+  - **Không** đưa vào `DayState`, `todayView` hay tổng kết tuần, vì trang bố mẹ dùng lại các hàm này.
+  - `by_checkins` và `world_items` vẫn không grant cho trình duyệt.
+- **Nói thật với con trong "Ai thấy gì?"** (vẫn 3–5 dòng), thêm ý: *"Cảm xúc con chọn hiện ở Hôm nay và Tập của tuần / Khu rừng trên máy con. Ai đứng cạnh màn hình, hoặc đăng nhập bằng tài khoản của con, cũng thấy được."*
+  - Lý do: Góc bình yên đã bỏ PIN riêng (#42) và bố mẹ biết mã đăng nhập của con. "Bố mẹ không có trang xem" là đúng, nhưng không phải là khóa kỹ thuật. Đây là lời hứa của gia đình.
+- R1–R5 không thêm chữ tự do nào ngoài tên nhân vật. Chữ con viết vẫn để S-BY2 (mã hóa, chỉ trên laptop riêng).
 
-## 8. Quyết định khó đổi về sau (one-way door)
+## 8. Quyết định khó đổi về sau
 
-| # | Quyết định | Vì sao khó đổi | Chốt |
+| # | Quyết định | Vì sao khó đổi | Trạng thái |
 |---|---|---|---|
-| 1 | Bảng ưu tiên §1.2 (nghỉ lên trên LOCK_P1, bỏ BREAK_OFFER) | Đụng luật khóa/mở, thống kê tuần, Tin tưởng | Bố mẹ quyết 07/11; ví dụ E1–E21 chờ xác nhận |
-| 2 | "Ngày đạt" cần cả 2 mốc trước giờ ngủ | Đổi định nghĩa làm đổi tiến độ Tin tưởng | Đề xuất; ngày cũ không đổi kết quả |
-| 3 | Thế giới của con **tính lại từ dữ liệu**, không chụp lại | Nếu sau này cần giữ lâu hơn 12 tháng phải thêm bảng chụp | Đề xuất; thêm bảng sau vẫn được (chỉ thêm) |
-| 4 | Danh sách loài cây / câu thoại chỉ thêm, không sửa thứ tự | Sửa thứ tự làm đổi khu rừng / truyện cũ | Đề xuất (quy tắc cho người viết code) |
-| 5 | Cảm xúc hiện trên màn của con, bố mẹ không có trang xem | Thêm trang cho bố mẹ sau = phá lời hứa với con | Bố mẹ quyết 07/11 |
-| 6 | Tên status giữ nguyên | Đổi tên phải sửa extension + trang bố mẹ | Đề xuất |
+| 1 | Bảng ưu tiên §1.2 (nghỉ lên trên LOCK_P1, bỏ BREAK_OFFER) | Đụng luật khóa/mở, thống kê tuần, Tin tưởng | Bố mẹ quyết 07/11; ví dụ E1–E24 chờ xác nhận |
+| 2 | "Ngày đạt" cần cả 2 mốc trước giờ ngủ (dòng cũ theo luật cũ) | Đổi định nghĩa là đổi tiến độ Tin tưởng | Đề xuất; các tuần đã qua không đổi |
+| 3 | Cây / trang đã mở **được lưu** (`world_items`), không tính lại; cảm xúc trong trang chỉ hiện khi check-in còn | Tính lại thì xóa check-in làm mất phần thưởng | Đề xuất (theo BINH_YEN D2) |
+| 4 | Danh sách loài / câu thoại chỉ thêm, không xóa mã; mã đã chọn được lưu | Xóa mã làm vỡ khu rừng / truyện cũ | Đề xuất |
+| 5 | Cảm xúc hiện trên màn của con; bố mẹ không có trang xem (lời hứa, không phải khóa kỹ thuật) | Thêm trang cho bố mẹ sau này = phá lời hứa với con | Bố mẹ quyết 07/11 |
+| 6 | Bỏ BREAK_OFFER, giữ các tên status khác | Extension không phụ thuộc; trang bố mẹ đổi nhãn | Đề xuất |
 
 ## 9. Chia lát
 
 | Lát | Nội dung | Database | Xong khi |
 |---|---|---|---|
-| R0 | Spec này + review độc lập | Không | Bố mẹ duyệt E1–E21 và 3 điểm §1.5 |
-| R1 | Luật mới §1 (app + test; extension không đổi) | Không | Test E1–E21 xanh; preview: bắt đầu kỹ năng trước bài tập, nghỉ lúc 17:05 |
+| R0 | Spec này + review độc lập | Không | Bố mẹ duyệt E1–E24 và các điểm ở §1.5 |
+| R1 | Luật mới §1 (app + test; extension không đổi) | Không | Test E1–E24 xanh; trên preview bắt đầu được kỹ năng trước bài tập, nghỉ được lúc 17:05 |
 | R2 | Khung 5 tab + Hôm nay mới + Góc học tập | Không | Hai con bấm thử preview trên laptop + iPhone |
-| R3 | Nhân vật + biểu tượng (#41) | 1 cột `profiles` | Con tạo nhân vật, thấy ở Góc bình yên |
-| R4 | Khu rừng sống (An) | Không (đề xuất) | An mở khu rừng, bấm cây / con vật ra thẻ loài |
-| R5 | Tập của tuần (Nguyên) | Có thể 1 cột | Nguyên lật trang tuần này + tập cũ trên kệ |
+| R3 | Nhân vật + biểu tượng (#41) | 1 cột `profiles.avatar` | Con tạo nhân vật và thấy nó ở Góc bình yên |
+| R4 | Khu rừng sống (An) | 1 bảng `world_items` | An mở khu rừng, bấm cây / con vật ra thẻ loài |
+| R5 | Tập của tuần (Nguyên) | Có thể 1 cột `day_sessions.free_activity_key` | Nguyên lật trang tuần này và xem tập cũ trên kệ |
 
-Mỗi lát 1 PR, bố mẹ thử preview rồi mới merge. R1 nên vào trước R2 vì R2 hiển thị theo luật mới.
+Mỗi lát là 1 PR; bố mẹ thử preview rồi mới merge. R1 vào trước R2 vì R2 hiển thị theo luật mới.
 
 ## 10. Ngoài phạm vi (không làm ở R0–R5)
 
-Điểm, streak, bảng xếp hạng, đổi điểm lấy giờ chơi · so sánh hai con · trang cho bố mẹ xem cảm xúc · chữ tự do (để S-BY2) · Picrew / dịch vụ bên ngoài nhận dữ liệu của con · lưu trạng thái nhiệm vụ ngoài đời của khu rừng.
+- Điểm, streak, bảng xếp hạng, đổi điểm lấy giờ chơi.
+- So sánh hai con.
+- Trang cho bố mẹ xem cảm xúc.
+- Chữ tự do (để S-BY2), trừ tên nhân vật.
+- Picrew hay dịch vụ bên ngoài nhận dữ liệu của con; hình lấy từ trang ngoài.
+- Lưu trạng thái nhiệm vụ ngoài đời của khu rừng.
