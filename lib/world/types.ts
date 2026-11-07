@@ -36,7 +36,16 @@ export type SvgShape =
   | "dugong"
   | "probe"
   | "rover"
-  | "aurora";
+  | "aurora"
+  // R4c
+  | "crystal"
+  | "volcano"
+  | "rock"
+  | "geyser"
+  | "columns"
+  | "lake"
+  | "quake"
+  | "tubes";
 export interface SvgIcon {
   shape: SvgShape;
   /** Main colour. */

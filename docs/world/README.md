@@ -42,5 +42,5 @@
 ## Nội dung
 
 - `lib/world/<thế giới>.ts`: chỉ **thêm** ở cuối danh sách, không xóa hay đổi mã.
-- Bản đọc lại cho bố mẹ và An: `docs/world/<THẾ GIỚI>.md`, sinh bằng `scripts/world-doc.ts`. Có: [`RUNG.md`](RUNG.md), [`BIEN.md`](BIEN.md), [`VU_TRU.md`](VU_TRU.md).
+- Bản đọc lại cho bố mẹ và An: `docs/world/<THẾ GIỚI>.md`, sinh bằng `scripts/world-doc.ts`. Có: [`RUNG.md`](RUNG.md), [`BIEN.md`](BIEN.md), [`VU_TRU.md`](VU_TRU.md), [`NUI_LUA.md`](NUI_LUA.md) (gói tháng 1/2027).
 - Vũ trụ gọi "vị khách" (trạm vũ trụ, tàu thăm dò, mưa sao băng, cực quang, phi hành gia Phạm Tuân…) thay cho "con vật" (`visitorWord`).

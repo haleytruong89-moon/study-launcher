@@ -2580,7 +2580,9 @@ test("R4b An chọn thế giới: a new month waits for An's pick (nothing plant
     await expect(k).toHaveURL(/\/today\?tab=tuan$/);
     await expect(k.getByRole("heading", { name: /Tháng mới! Con chọn thế giới cho tháng này/ })).toBeVisible();
     const worlds = k.getByRole("list", { name: "Các thế giới" });
-    await expect(worlds.getByRole("button")).toHaveCount(3);
+    // Every world with a pack is on offer in a first month (Rừng, Biển, Vũ trụ, Núi lửa…).
+    await expect(worlds.getByRole("button")).toHaveCount(4);
+    await expect(worlds.getByRole("button", { name: /Núi lửa và động đất/ })).toBeVisible();
     // Nothing grows before the pick (it is not lost: it grows once An picks).
     expect(await monthRows()).toEqual([]);
 
