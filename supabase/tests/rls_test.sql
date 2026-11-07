@@ -919,6 +919,57 @@ begin
   end;
 end $$;
 
+-- 0012 (R3b): Picrew pictures. The whole family looks; no browser writes; other families see nothing.
+reset role;
+insert into storage.buckets (id, name, public) values ('avatars', 'avatars', false) on conflict do nothing;
+insert into storage.objects (bucket_id, name) values
+  ('avatars', '10000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-0000000000c1/11111111-1111-4111-8111-111111111111.png');
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees own avatar picture', (select count(*) from storage.objects where bucket_id = 'avatars'), 1);
+select test_helpers.expect_count('child1 can read avatar_pics column', (select count(*) from public.profiles where avatar_pics is null), 1);
+do $$
+begin
+  begin
+    insert into storage.objects (bucket_id, name)
+    values ('avatars', '10000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-0000000000c1/22222222-2222-4222-8222-222222222222.png');
+    raise exception 'FAIL: child wrote an avatar picture directly';
+  exception when insufficient_privilege or check_violation then raise notice 'ok: child cannot upload avatar pictures directly';
+  end;
+  delete from storage.objects where bucket_id = 'avatars';
+  if found then raise exception 'FAIL: child deleted an avatar picture directly'; end if;
+  raise notice 'ok: child cannot delete avatar pictures directly';
+  begin
+    update public.profiles set avatar_pics = '{}'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: child updated avatar_pics directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write profiles.avatar_pics';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c2', false);
+select test_helpers.expect_count('sibling sees the family avatar picture', (select count(*) from storage.objects where bucket_id = 'avatars'), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees the family avatar picture', (select count(*) from storage.objects where bucket_id = 'avatars'), 1);
+do $$
+begin
+  begin
+    update public.profiles set avatar_pics = '{}'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: parent updated avatar_pics directly';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot write profiles.avatar_pics (server removes)';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees no family A avatar picture', (select count(*) from storage.objects where bucket_id = 'avatars'), 0);
+reset role;
+do $$
+begin
+  begin
+    update public.profiles set avatar_pics = '"x"'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: a non-object avatar_pics was stored';
+  exception when check_violation then raise notice 'ok: avatar_pics must be a JSON object';
+  end;
+end $$;
+delete from storage.objects where bucket_id = 'avatars';
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

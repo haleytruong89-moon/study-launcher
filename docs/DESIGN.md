@@ -94,6 +94,8 @@ Tất cả bảng có `id uuid default gen_random_uuid()` (trừ khi ghi khác),
 
 **Nhân vật của con (0011, R3a, 07/11/2026)** — `profiles.avatar jsonb` (null = "Hình tạm", nhân vật mặc định theo giọng). Chỉ lưu **mã** `{style, hair, eye, skin, outfit, acc, name}` (danh sách trong `lib/avatar.ts`, mã không bao giờ bị xóa) + tên ≤ 24 ký tự; check `jsonb_typeof = object` và ≤ 1 KB. Cả nhà **select** được (cột grant cho `authenticated`); trình duyệt **không** update cột này (revoke) — chỉ `POST /api/profile/avatar`. Không có ảnh nào của con (ảnh Picrew là R3b, bucket riêng).
 
+**Ảnh nhân vật Picrew (0012, R3b, 07/11/2026)** — bucket riêng tư `avatars` (≤ 1 MB/ảnh, PNG/JPEG) tại `avatars/{family_id}/{child_id}/{uuid}.png|jpg`: **cả nhà select** (policy `avatars_family_select`), **không** có policy insert/update/delete (chỉ máy chủ, service_role). `profiles.avatar_pics jsonb` = `{calm, smile, sad, angry → path}` (check object ≤ 2 KB; grant select, revoke update). Ô không có ảnh dùng ảnh đầu tiên theo thứ tự bình yên → vui → buồn → bực; không có ảnh nào → nhân vật tự tạo (0011). Ảnh hiện qua `/api/files/avatar` (cùng địa chỉ app). Trình duyệt vẽ lại ảnh (≤ 800 px, bỏ mọi thông tin kèm file) trước khi gửi.
+
 **Seed (sau khi tạo gia đình):** allowlist mặc định — domain Launcher, `math-app-gules.vercel.app`, `translate.google.com`, `dictionary.cambridge.org`, `tratu.soha.vn`, `accounts.google.com`; 2 profile con; `family_settings` mặc định.
 
 ## 5. Máy trạng thái — `lib/dayState.ts`
@@ -195,6 +197,9 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `GET/POST /api/by/checkins` · `POST /api/by/checkins/delete` | con, **cần lượt ghé Góc bình yên** (`/api/by/open`) | *(S-BY1)* GET = 7 lượt gần nhất của chính con. POST `{clientRunId, quad, word, intensity, activity}` (activity null = "Vậy là đủ") → kiểm theo danh sách **trước** khi ghi; cùng `clientRunId` chỉ 1 dòng. Delete `{id}` hoặc `{all: true}` → xóa hẳn, chỉ của con. Không `audit_log`. **R5:** mọi route `/api/by/*` + trang tính giới hạn giờ học (`computeDayState`, giờ máy chủ): quá `by_study_minutes` kể từ lúc bắt đầu lượt ghé → lượt kết thúc, trả 409 `capped` |
 | `POST /api/feedback` | con | *(07/11/2026)* **Góp ý** cho app `{kind: like\|dislike\|idea, body ≤ 500}` (zod, trim) → `app_feedback` (service_role; gia đình + con lấy từ phiên). ≤ **10 / con / ngày** (đếm ở máy chủ, ngày VN) → 429. Không push, không `audit_log` |
 | `POST /api/profile/avatar` | con | *(R3a, 07/11/2026)* Lưu nhân vật `{avatar: {...}}` hoặc về hình tạm `{avatar: null}`. Máy chủ chỉ nhận mã có trong danh sách, không nhận khóa lạ, tên ≤ 24 ký tự (bỏ ký tự điều khiển) → 400. Ghi bằng service_role **chỉ dòng của con trong phiên** (`.eq(id).eq(role, child)`); bố mẹ 403, chưa đăng nhập 401 |
+| `POST /api/profile/avatar/pics` · `POST /api/profile/avatar/pics/delete` | con | *(R3b)* Gửi 1 ảnh cho 1 nét mặt (multipart `slot`, `file`): máy chủ kiểm loại ảnh bằng **byte đầu** (PNG/JPEG), ≤ 1 MB (413), ô hợp lệ; lưu bằng service_role vào thư mục của con trong phiên; ảnh cũ của ô đó bị xóa. Gỡ `{slot}` hoặc `{all: true}` (xóa luôn tệp). Trước khi 0012 chạy → 503 kèm câu giải thích |
+| `GET /api/files/avatar?path=` | cả nhà | *(R3b)* Trả 1 ảnh nhân vật, tải bằng **phiên của người xem** (RLS: cùng gia đình), `nosniff`, kiểu ảnh cố định theo đuôi |
+| `POST /api/admin/children/:id/avatar-pics` | phụ huynh | *(R3b)* Gỡ **hết** ảnh Picrew của con (khi là ảnh chụp, không phải hình vẽ); kiểm con thuộc gia đình bằng phiên bố mẹ; ghi `audit_log` `child.avatar_pics_removed`. Nhân vật tự tạo giữ nguyên |
 | `POST /api/admin/feedback/:id/seen` | phụ huynh | *(07/11/2026)* "Đã đọc" bằng phiên của bố mẹ (RLS: gia đình mình, chỉ cột `seen_at`) |
 
 ## 7. Extension (thư mục `extension/`)

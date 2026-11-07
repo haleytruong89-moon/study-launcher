@@ -1,4 +1,5 @@
 import { ACCESSORIES, EYE_COLORS, HAIR_COLORS, OUTFIT_COLORS, SKINS, type Avatar, type Expression } from "@/lib/avatar";
+import { picFor, picUrl, type AvatarPics } from "@/lib/avatarPics";
 
 /**
  * The child's character with one of its 4 faces (R3a). Drawn exactly like the prototype both
@@ -104,5 +105,19 @@ export function AvatarFace({ look, expr, className }: { look: Avatar; expr: Expr
       <path d={bangs} fill={hc} />
       {acc[look.acc]}
     </svg>
+  );
+}
+
+/**
+ * R3b: the child's Picrew picture for that face when there is one (its own, else the first),
+ * otherwise the character made in the app. Decorative like AvatarFace (empty alt).
+ */
+export function Character({ look, pics, expr, className }: { look: Avatar; pics: AvatarPics; expr: Expression; className?: string }) {
+  const pic = picFor(pics, expr);
+  if (!pic) return <AvatarFace look={look} expr={expr} className={className} />;
+  return (
+    // Served from our own address (/api/files/avatar); next/image would add nothing here.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={picUrl(pic)} alt="" aria-hidden="true" draggable={false} className={`aspect-square rounded-xl bg-white object-contain ${className ?? ""}`} />
   );
 }

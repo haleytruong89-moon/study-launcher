@@ -1,7 +1,11 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
+import { storedAvatar } from "@/lib/avatar";
+import { parsePics, type AvatarPics } from "@/lib/avatarPics";
+import { voiceFor } from "@/lib/binhYen/catalog";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { localDate } from "@/lib/time";
 import { AddChildForm } from "../add-child-form";
+import { ChildAvatar } from "../child-avatar";
 import { ChildEdit } from "../child-edit";
 import { ParentHeader } from "../parent-header";
 import { TrustSwitch } from "../trust-switch";
@@ -10,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 /** "Các con": name, grade, colour, password (moved here from the old Tổng quan). */
 export default async function ChildrenPage() {
-  const { db } = await requireParentPage();
+  const { db, me } = await requireParentPage();
   const children = await loadChildren(db);
   // Whether a PIN is set (the hash column is server-only; only a yes/no leaves the server).
   // The ids come from the parent's own session (RLS), so only this family's children.
@@ -36,6 +40,18 @@ export default async function ChildrenPage() {
       .not("pin_hash", "is", null);
     for (const r of data ?? []) pinSet.add(r.id as string);
   }
+  // R3b: each child's character (parent's own session, RLS: this family). Before 0011 / 0012
+  // a column does not exist yet: show the default character.
+  const looks = new Map<string, { avatar: unknown; pics: unknown }>();
+  const withPics = await db.from("profiles").select("id, avatar, avatar_pics").eq("role", "child");
+  const rows = withPics.error ? (await db.from("profiles").select("id, avatar").eq("role", "child")).data : withPics.data;
+  for (const r of (rows ?? []) as { id: string; avatar?: unknown; avatar_pics?: unknown }[]) looks.set(r.id, { avatar: r.avatar ?? null, pics: r.avatar_pics ?? null });
+  const lookOf = (c: { id: string; grade: number | null }, familyId: string) => {
+    const { avatar, mine } = storedAvatar(looks.get(c.id)?.avatar, voiceFor(c.grade));
+    const pics: AvatarPics = parsePics(looks.get(c.id)?.pics, familyId, c.id);
+    return { look: avatar, mine, pics };
+  };
+
   // Khóa / Tin tưởng per child (parent's own session, RLS: this family only).
   const { data: trustRows } = await db.from("trust_state").select("child_id, mode, since");
   const trust = new Map((trustRows ?? []).map((r) => [r.child_id as string, { mode: r.mode === "trust" ? ("trust" as const) : ("lock" as const), since: r.since as string }]));
@@ -65,6 +81,7 @@ export default async function ChildrenPage() {
                       <span className="ml-auto text-sm font-semibold text-accent">Sửa</span>
                     </summary>
                     <ChildEdit child={{ id: c.id, displayName: c.display_name, grade: c.grade, color: c.color }} pinSet={pinSet.has(c.id)} remembered={remembered.get(c.id) ?? 0} />
+                    <ChildAvatar childId={c.id} name={c.display_name} {...lookOf(c, me.profile.family_id)} />
                     <div className="pb-3">
                       <TrustSwitch
                         childId={c.id}

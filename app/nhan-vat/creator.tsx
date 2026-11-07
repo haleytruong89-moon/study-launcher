@@ -5,8 +5,10 @@ import { useState } from "react";
 import { ACCESSORIES, AVATAR_NAME_MAX, EYE_COLORS, HAIR_COLORS, HAIR_STYLES, OUTFIT_COLORS, SKINS, defaultAvatar, type Avatar, type Expression } from "@/lib/avatar";
 import type { Voice } from "@/lib/binhYen/catalog";
 import { tabHref } from "@/lib/childTabs";
-import { AvatarFace } from "../avatar-face";
+import { hasPics, type AvatarPics } from "@/lib/avatarPics";
+import { Character } from "../avatar-face";
 import { Breadcrumb, ChildNav } from "../child-nav";
+import { PicrewPictures } from "./picrew";
 
 const FACES: { expr: Expression; label: string }[] = [
   { expr: "angry", label: "Khi bực" },
@@ -72,6 +74,7 @@ export function Creator({
   color,
   icon,
   initial,
+  initialPics,
   mine,
   back,
   byEnabled,
@@ -80,11 +83,14 @@ export function Creator({
   color: string;
   icon: string | null;
   initial: Avatar;
+  initialPics: AvatarPics;
   mine: boolean;
   back: "hom-nay" | "binh-yen";
   byEnabled: boolean;
 }) {
   const [look, setLook] = useState<Avatar>(initial);
+  const [pics, setPics] = useState<AvatarPics>(initialPics);
+  const usingPics = hasPics(pics);
   const [saved, setSaved] = useState<Avatar | null>(mine ? initial : null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -142,13 +148,17 @@ export function Creator({
           <div className="grid grid-cols-4 gap-2">
             {FACES.map((f) => (
               <figure key={f.expr} className="flex flex-col items-center gap-1">
-                <AvatarFace look={look} expr={f.expr} className="w-full max-w-24" />
+                <Character look={look} pics={pics} expr={f.expr} className="w-full max-w-24" />
                 <figcaption className="text-center text-xs text-ink/70">{f.label}</figcaption>
               </figure>
             ))}
           </div>
           {look.name && <p className="text-center font-bold">{look.name}</p>}
-          <p className="text-sm text-ink/70">{saved ? "Đây là nhân vật con đã lưu. Đổi gì cũng được, lúc nào cũng được." : "Đang là hình tạm. Con chọn tóc, mắt, áo… rồi bấm Lưu."}</p>
+          <p className="text-sm text-ink/70">{usingPics
+              ? "Đang dùng ảnh Picrew của con. Nhân vật tự tạo bên dưới quay lại khi con gỡ hết ảnh."
+              : saved
+                ? "Đây là nhân vật con đã lưu. Đổi gì cũng được, lúc nào cũng được."
+                : "Đang là hình tạm. Con chọn tóc, mắt, áo… rồi bấm Lưu."}</p>
         </section>
 
         <section aria-label="Chọn phần" className="flex flex-col gap-5 rounded-2xl bg-white p-5">
@@ -191,7 +201,8 @@ export function Creator({
             </button>
           )}
         </div>
-        <p className="text-xs text-ink/65">Chỉ lưu các lựa chọn (kiểu tóc, màu…), không có ảnh nào của con. Cả nhà thấy nhân vật này.</p>
+        <p className="text-xs text-ink/65">Nhân vật tự tạo chỉ lưu các lựa chọn (kiểu tóc, màu…), không có ảnh. Cả nhà thấy nhân vật này.</p>
+        <PicrewPictures pics={pics} onChange={setPics} color={color} />
       </main>
       <ChildNav active={null} byEnabled={byEnabled} color={color} />
     </div>

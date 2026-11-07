@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QUAD_EXPRESSION, type Avatar } from "@/lib/avatar";
+import type { AvatarPics } from "@/lib/avatarPics";
 import {
   BRAIN,
   INTENSITY_LABELS,
@@ -28,7 +29,7 @@ import { activityEmoji, wordEmoji } from "@/lib/binhYen/emoji";
 import { studyChip } from "@/lib/binhYen/studyCap";
 import { suggest } from "@/lib/binhYen/suggest";
 import { vnTime } from "@/lib/today/view";
-import { AvatarFace } from "../avatar-face";
+import { Character } from "../avatar-face";
 import { FeedbackButton } from "../today/feedback";
 import { ActivityBody } from "./activities";
 
@@ -112,6 +113,7 @@ export function Corner({
   color,
   icon,
   avatar,
+  pics,
   avatarMine,
   state,
   onState,
@@ -124,6 +126,7 @@ export function Corner({
   /** R3a: the child's icon (S2e) and character; the default character until they make one. */
   icon: string | null;
   avatar: Avatar;
+  pics: AvatarPics;
   avatarMine: boolean;
   state: CornerState;
   onState: (s: unknown) => void;
@@ -178,7 +181,7 @@ export function Corner({
               tabIndex={avatarMine ? undefined : -1}
               className="relative shrink-0 rounded-2xl bg-bg p-1"
             >
-              <AvatarFace look={avatar} expr="calm" className="size-16" />
+              <Character look={avatar} pics={pics} expr="calm" className="size-16" />
               {icon && (
                 <span aria-hidden className="absolute -right-1 -bottom-1 text-xl leading-none">
                   {icon}
@@ -216,7 +219,7 @@ export function Corner({
                   >
                     {voice === "detective" ? (
                       // R3a: Nguyên's quadrants show her own character with that quadrant's face.
-                      <AvatarFace look={avatar} expr={QUAD_EXPRESSION[q]} className="size-12" />
+                      <Character look={avatar} pics={pics} expr={QUAD_EXPRESSION[q]} className="size-12" />
                     ) : (
                       <svg viewBox="0 0 32 32" aria-hidden className="size-8" style={{ color: QUAD_COLORS[q].c }}>
                         {ICONS[info.icon]}
