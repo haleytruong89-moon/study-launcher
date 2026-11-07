@@ -1,6 +1,6 @@
 # Màn chính mới của con — spec R0
 
-> Trạng thái: **bản nháp chờ bố mẹ duyệt** (07/11/2026; sửa luật nghỉ theo ý bố mẹ cùng ngày). Chỉ tài liệu, không đổi code, không đổi database.
+> Trạng thái: **bố mẹ đã duyệt** (07/11/2026; sửa luật nghỉ + ngày không có việc theo ý bố mẹ cùng ngày). Chỉ tài liệu, không đổi code, không đổi database.
 > Nguồn: bản bấm thử hai con đã duyệt (https://claude.ai/artifact/Cr5rqxEEGdiWuMgV5TRYav), canvas (https://claude.ai/artifact/VN6NCVjHRVKuti7qGZ63og), spec biểu tượng PR #41 (`docs/BINH_YEN_BIEU_TUONG.md`), góp ý của hai con 06–07/11.
 > Đã qua 1 lượt review độc lập (07/11, 21 điểm, đã sửa vào bản này).
 > Sau khi bố mẹ duyệt, từng lát R1–R5 cập nhật `SPEC.md` / `DESIGN.md` / `PROGRESS.md`. R0 không sửa các file đó để khỏi đụng PR #42 đang mở.
@@ -25,6 +25,7 @@ Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái th
 | 07/11 | Làm bài trên lớp trong lúc chạy đồng hồ kỹ năng: **chấp nhận, ghi là giới hạn đã biết**. |
 | 07/11 | Trang truyện / khu rừng **có cảm xúc của con, hiện trên màn của con** (Hôm nay, Tuần). **Bố mẹ không có trang nào để xem.** |
 | 07/11 | Thứ tự code: R1 luật mới → R2 Góc học tập → R3–R5. |
+| 07/11 | Ngày **không có việc nào** (không bài, không bổ sung, không kỹ năng): **con bấm "Bắt đầu giờ tự do"** thì 45' mới tính. Lý do: extension hỏi máy chủ cả lúc 00:00, tự bắt đầu thì 45' trôi mất lúc con ngủ. |
 
 ## 1. Luật mới (R1) — thay DESIGN §5 hiện tại
 
@@ -57,6 +58,7 @@ Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái th
 | 7 | **Đang nghỉ** (đã bấm, chưa hết 10', chưa bấm Học tiếp) | BREAK | mở đến hết nghỉ |
 | 8 | Phần 1 chưa xong | LOCK_P1 | khóa |
 | 9 | Phần 1 xong, kỹ năng chưa xong | LOCK_P2 | khóa |
+| 10 | Cả hai phần không có việc nào, con chưa bấm "Bắt đầu giờ tự do" | FREE_READY | khóa |
 
 Khác bản cũ:
 - **BREAK lên trên LOCK_P1**: con xong kỹ năng trước thì nghỉ được dù bài tập chưa xong.
@@ -68,7 +70,7 @@ Khác bản cũ:
 
 | Mốc | Ghi khi | Ghi chú |
 |---|---|---|
-| `part1_done_at` | Phần 1 có việc và đã xong hết; **hoặc** Phần 1 rỗng **và Phần 2 vừa xong** | Có khóa tay hay không thì cũng ghi. **Không bao giờ ghi do dùng thẻ.** Phần 1 rỗng chưa được chốt sớm, nên bài bố mẹ giao trước lúc đó vẫn khóa lại (giữ quyết định 14/10; mốc chốt đổi từ "bấm/bỏ nghỉ" sang "phần kia xong") |
+| `part1_done_at` | Phần 1 có việc và đã xong hết; **hoặc** Phần 1 rỗng **và Phần 2 vừa xong**; **hoặc** ngày không có việc nào và con bấm "Bắt đầu giờ tự do" | Có khóa tay hay không thì cũng ghi. **Không bao giờ ghi do dùng thẻ.** Phần 1 rỗng chưa được chốt sớm, nên bài bố mẹ giao trước lúc đó vẫn khóa lại (giữ quyết định 14/10; mốc chốt đổi từ "bấm/bỏ nghỉ" sang "phần kia xong") |
 | `part2_done_at` | Phần 2 có việc và đã xong hết (**không cần Phần 1 xong trước**); **hoặc** Phần 2 rỗng **và Phần 1 vừa xong** | Như trên. Kỹ năng bố mẹ bật thêm sau mốc này vẫn hiện ra nhưng không khóa lại, giống bài giao thêm sau Phần 1 (diễn giải 13 thêm vế cho Phần 2) |
 | `free_started_at` | Có cả 2 mốc trên và bố mẹ **không** đang khóa tay; hoặc con dùng thẻ | Như cũ: đang khóa tay thì hoãn, hết khóa mới bắt đầu |
 | `break_skipped` | Không ghi nữa | Cột giữ nguyên. Dòng có `break_skipped = true` (ngày cũ, hoặc chính ngày R1 lên) = **hôm đó đã hết lượt nghỉ** |
@@ -78,7 +80,7 @@ Khác bản cũ:
 - Dùng thẻ.
 - Ngày ốm hoặc nghỉ lễ.
 
-Dòng cũ có `part2_done_at` nhưng `part1_done_at` trống thì tính theo luật cũ (chỉ xét `part2_done_at`). Nhờ vậy tiến độ Tin tưởng và tổng kết các tuần đã qua **không đổi**.
+Không cần luật riêng cho ngày cũ: đã kiểm lịch sử code, từ lần chạy thật đầu tiên (PR #4) mọi dòng có `part2_done_at` đều có `part1_done_at`. Tiến độ Tin tưởng và tổng kết các tuần đã qua **không đổi**. (Bản trước của spec đề xuất "dòng cũ tính theo luật cũ" — bỏ, vì với luật mới nó sẽ tính "đạt" cho ngày con xong kỹ năng mà bỏ bài tập.)
 
 ### 1.4 Ví dụ đáp án (bố mẹ xác nhận → thành bài kiểm tra Vitest ở R1)
 
@@ -113,6 +115,7 @@ Dòng cũ có `part2_done_at` nhưng `part1_done_at` trống thì tính theo lu�
 | E22 | Con đang nghỉ, bố mẹ bấm xác nhận bài cuối cùng (cả 2 phần thành xong) | Giờ tự do bắt đầu ngay; phần nghỉ còn lại bỏ, không cộng thêm (FREE ở dòng 6, trên BREAK) |
 | E23 | Ngày không có kỹ năng, 20:00 xong Phần 1, bố mẹ khóa tay đến 22:00 | Mốc Phần 1 / Phần 2 ghi lúc 20:00, nên **vẫn đạt**. Giờ tự do hoãn, 22:00–22:45 |
 | E24 | Ngày cũ có `break_skipped = true` | Hết lượt nghỉ hôm đó. Ngày đạt tính như trước |
+| E25 | Ngày không có việc nào; 00:00 extension hỏi máy chủ | Vẫn khóa (FREE_READY), không tự bắt đầu giờ tự do. Con bấm "Bắt đầu giờ tự do" lúc 15:00 → 15:00–15:45. Bố mẹ giao bài trước lúc con bấm → khóa lại đến khi xong bài |
 
 ### 1.5 Đã chốt / mặc định (07/11)
 
@@ -302,7 +305,7 @@ Theo `docs/BINH_YEN_BIEU_TUONG.md` (PR #41). Nhân vật dùng chung cho Góc b�
 
 | Lát | Nội dung | Database | Xong khi |
 |---|---|---|---|
-| R0 | Spec này + review độc lập | Không | Bố mẹ duyệt bảng E1–E24 |
+| R0 | Spec này + review độc lập | Không | Bố mẹ duyệt bảng E1–E25 (đã "ok" 07/11) |
 | R1 | Luật mới §1 (app + test; extension không đổi) | Không | Test E1–E24 xanh; trên preview bắt đầu được kỹ năng trước bài tập; xong kỹ năng thì nghỉ được dù bài tập chưa xong |
 | R2 | Khung 5 tab + Hôm nay mới + Góc học tập | Không | Hai con bấm thử preview trên laptop + iPhone |
 | R3 | Nhân vật + biểu tượng (#41) | 1 cột `profiles.avatar` | Con tạo nhân vật và thấy nó ở Góc bình yên |
