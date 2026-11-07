@@ -132,7 +132,7 @@ Không cần luật riêng cho ngày cũ: đã kiểm lịch sử code, từ l�
 
 | Chỗ | Đổi gì |
 |---|---|
-| `lib/dayState.ts` | Bảng §1.2, mốc §1.3, "ngày đạt" (có nhánh cho dòng cũ). Bỏ `BREAK_OFFER` khỏi `Status`. Thêm `break.canStart` (cùng điều kiện với `decideBreak`). Viết lại diễn giải 1, 2, 7, 8, 13, 15, 20 trong phần đầu file |
+| `lib/dayState.ts` | Bảng §1.2, mốc §1.3, "ngày đạt" (một luật, không nhánh dòng cũ). Bỏ `BREAK_OFFER` khỏi `Status`, thêm `FREE_READY` + `free.canStart` + route `/api/day/free`. Thêm `break.canStart` (cùng điều kiện với `decideBreak`). Viết lại diễn giải 1, 2, 7, 8, 13, 15, 20 trong phần đầu file |
 | `lib/today/service.ts` `persistMilestones` | Bỏ giả định "giờ tự do bắt đầu cùng lúc Phần 2 xong". Ghi các mốc trong 1 transaction cho mọi thứ tự (Phần 1 xong sau cùng, Phần 2 xong sau cùng, phần rỗng) |
 | `lib/today/rules.ts` | `decideStart`: bỏ chặn Phần 2; chặn khi đang nghỉ (E8). `decideFinish`, nộp ảnh, nhờ bố mẹ xem: chặn khi đang nghỉ. `decideBreak`: E5–E7, E10–E13; từ chối khi `break_minutes ≤ 0` |
 | `/api/day/break` | Bỏ `skip` (client cũ gọi sẽ nhận lỗi 400); `start` / `end` giữ nguyên |
@@ -294,8 +294,8 @@ Theo `docs/BINH_YEN_BIEU_TUONG.md` (PR #41). Nhân vật dùng chung cho Góc b�
 
 | # | Quyết định | Vì sao khó đổi | Trạng thái |
 |---|---|---|---|
-| 1 | Bảng ưu tiên §1.2 (nghỉ lên trên LOCK_P1, bỏ BREAK_OFFER) | Đụng luật khóa/mở, thống kê tuần, Tin tưởng | Bố mẹ quyết 07/11; ví dụ E1–E24 chờ xác nhận |
-| 2 | "Ngày đạt" cần cả 2 mốc trước giờ ngủ (dòng cũ theo luật cũ) | Đổi định nghĩa là đổi tiến độ Tin tưởng | Đề xuất; các tuần đã qua không đổi |
+| 1 | Bảng ưu tiên §1.2 (nghỉ lên trên LOCK_P1, bỏ BREAK_OFFER) | Đụng luật khóa/mở, thống kê tuần, Tin tưởng | Bố mẹ quyết và duyệt ví dụ 07/11 |
+| 2 | "Ngày đạt" cần cả 2 mốc trước giờ ngủ | Đổi định nghĩa là đổi tiến độ Tin tưởng | Bố mẹ duyệt 07/11; các tuần đã qua không đổi (đã kiểm dữ liệu) |
 | 3 | Cây / trang đã mở **được lưu** (`world_items`), không tính lại; cảm xúc trong trang chỉ hiện khi check-in còn | Tính lại thì xóa check-in làm mất phần thưởng | Đề xuất (theo BINH_YEN D2) |
 | 4 | Danh sách loài / câu thoại chỉ thêm, không xóa mã; mã đã chọn được lưu | Xóa mã làm vỡ khu rừng / truyện cũ | Đề xuất |
 | 5 | Cảm xúc hiện trên màn của con; bố mẹ không có trang xem (lời hứa, không phải khóa kỹ thuật) | Thêm trang cho bố mẹ sau này = phá lời hứa với con | Bố mẹ quyết 07/11 |
@@ -306,7 +306,7 @@ Theo `docs/BINH_YEN_BIEU_TUONG.md` (PR #41). Nhân vật dùng chung cho Góc b�
 | Lát | Nội dung | Database | Xong khi |
 |---|---|---|---|
 | R0 | Spec này + review độc lập | Không | Bố mẹ duyệt bảng E1–E25 (đã "ok" 07/11) |
-| R1 | Luật mới §1 (app + test; extension không đổi) | Không | Test E1–E24 xanh; trên preview bắt đầu được kỹ năng trước bài tập; xong kỹ năng thì nghỉ được dù bài tập chưa xong |
+| R1 | Luật mới §1 (app + test; extension không đổi) | Không | Test E1–E25 xanh; trên preview bắt đầu được kỹ năng trước bài tập; xong kỹ năng thì nghỉ được dù bài tập chưa xong |
 | R2 | Khung 5 tab + Hôm nay mới + Góc học tập | Không | Hai con bấm thử preview trên laptop + iPhone |
 | R3 | Nhân vật + biểu tượng (#41) | 1 cột `profiles.avatar` | Con tạo nhân vật và thấy nó ở Góc bình yên |
 | R4 | Khu rừng sống (An) | 1 bảng `world_items` | An mở khu rừng, bấm cây / con vật ra thẻ loài |
