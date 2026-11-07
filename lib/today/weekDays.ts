@@ -16,6 +16,8 @@ export interface WeekFeel {
   /** Catalog key of the word, and its label ("vui", "mệt"…). */
   word: string;
   label: string;
+  /** Catalog key of the activity done on that visit, or null (named the feeling only). R6d. */
+  activity: string | null;
 }
 
 export interface WeekDay {
@@ -49,6 +51,7 @@ export interface WeekCheckinRow {
   quad: string;
   word_key: string;
   created_at: string;
+  activity_key: string | null;
 }
 
 export function buildWeekDays(
@@ -72,7 +75,7 @@ export function buildWeekDays(
     let feel: WeekFeel | null = null;
     if (c && isQuad(c.quad)) {
       const w = findWord(c.word_key);
-      feel = { quad: c.quad, word: c.word_key, label: w?.label ?? "" };
+      feel = { quad: c.quad, word: c.word_key, label: w?.label ?? "", activity: c.activity_key ?? null };
     }
     days.push({
       date,
