@@ -12,6 +12,8 @@ export interface TaskCtx {
   today: string;
   nowMs: number;
   busy: string | null;
+  /** R1 E8: the 10' break is running, so every task button pauses ("Học tiếp" resumes). */
+  paused: boolean;
   color: string;
   files: (item: TaskView) => AttachmentView[];
   /** A timed task already running: other timed tasks wait (one at a time). */
@@ -34,7 +36,7 @@ const canFinishWithPhotos = (item: TaskView) => item.state === "running" && item
 
 function FinishButton({ item, ctx, className, style }: { item: TaskView; ctx: TaskCtx; className: string; style?: React.CSSProperties }) {
   return (
-    <button type="button" disabled={!!ctx.busy} onClick={() => void ctx.onAct({ url: "/api/tasks/finish", body: { runId: item.runId } })} className={className} style={style}>
+    <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => void ctx.onAct({ url: "/api/tasks/finish", body: { runId: item.runId } })} className={className} style={style}>
       Xong · đã gửi {item.proofCount} ảnh
     </button>
   );
@@ -66,7 +68,7 @@ export function ProofButton({ item, ctx, big = false }: { item: TaskView; ctx: T
   return (
     <button
       type="button"
-      disabled={!!ctx.busy}
+      disabled={(!!ctx.busy || ctx.paused)}
       onClick={() => ctx.onProofOpen(item)}
       className={`inline-flex items-center justify-center gap-2 rounded-2xl font-bold text-white disabled:opacity-60 ${big ? "min-h-14 w-full text-[17px]" : "min-h-11 px-4 text-sm"}`}
       style={{ background: big ? "rgba(255,255,255,0.18)" : "#1c1f1d" }}
@@ -149,7 +151,7 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
         {item.state === "todo" && (
           <button
             type="button"
-            disabled={!!ctx.busy || locked || waiting}
+            disabled={(!!ctx.busy || ctx.paused) || locked || waiting}
             onClick={() => void ctx.onAct({ url: "/api/tasks/start", body: { source: item.source, id: item.id } })}
             className="min-h-11 rounded-full border-[1.5px] bg-white px-4 text-sm font-bold disabled:opacity-50"
             style={upcoming ? { borderColor: "rgba(28,31,29,0.3)" } : { borderColor: ctx.color, color: ctx.color }}
@@ -160,7 +162,7 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
         {item.state === "todo" && item.requiresProof && (
           <button
             type="button"
-            disabled={!!ctx.busy || locked}
+            disabled={(!!ctx.busy || ctx.paused) || locked}
             onClick={() => ctx.onDoneNow(item)}
             className="min-h-11 rounded-full bg-ink px-4 text-sm font-bold text-white disabled:opacity-50"
           >
@@ -227,7 +229,7 @@ export function NextTask({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            disabled={!!ctx.busy || waiting || item.placeholder}
+            disabled={(!!ctx.busy || ctx.paused) || waiting || item.placeholder}
             onClick={() => void ctx.onAct({ url: "/api/tasks/start", body: { source: item.source, id: item.id } })}
             className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50"
             style={{ background: ctx.color }}
@@ -235,7 +237,7 @@ export function NextTask({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
             Bắt đầu
           </button>
           {item.requiresProof && (
-            <button type="button" disabled={!!ctx.busy} onClick={() => ctx.onDoneNow(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">
+            <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onDoneNow(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">
               Làm xong trong vở rồi · nộp ảnh
             </button>
           )}
@@ -246,7 +248,7 @@ export function NextTask({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
           {canFinishWithPhotos(item) ? (
             <FinishButton item={item} ctx={ctx} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }} />
           ) : (
-            <button type="button" disabled={!!ctx.busy} onClick={() => ctx.onProofOpen(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }}>
+            <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onProofOpen(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }}>
               Nộp ảnh bài
             </button>
           )}
@@ -339,7 +341,7 @@ export function FocusView({ item, ctx, dark, onClose }: { item: TaskView; ctx: T
         ) : (
           <button
             type="button"
-            disabled={!ready || !!ctx.busy}
+            disabled={!ready || (!!ctx.busy || ctx.paused)}
             onClick={() => void ctx.onAct({ url: "/api/tasks/finish", body: { runId: item.runId } })}
             className="min-h-14 rounded-2xl text-[17px] font-bold disabled:bg-white/15 disabled:text-white/70"
             style={ready ? { background: "#FFFFFF", color: dark } : undefined}

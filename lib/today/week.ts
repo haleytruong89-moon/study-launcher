@@ -43,7 +43,7 @@ export function cleanPlan(state: DayState, keys: string[]): string[] | null {
 
 /**
  * Next task when the child made a plan: a running task first, then the first planned task
- * still to do that can start now (Part 2 only once unlocked). null = plan has nothing left
+ * still to do (both parts are open, R1). null = plan has nothing left
  * that can start (the screen falls back to the default suggestion).
  */
 export function nextFromPlan(state: DayState, plan: string[] | null): TaskView | null {
@@ -55,7 +55,6 @@ export function nextFromPlan(state: DayState, plan: string[] | null): TaskView |
   for (const k of plan) {
     const i = byKey.get(k);
     if (!i || i.state !== "todo") continue;
-    if (i.part === 2 && state.part2.locked) continue;
     return i;
   }
   return null;
@@ -89,7 +88,7 @@ export function reviewWeek(now: Date): string | null {
 /** What the weekly review shows (no points, no ranking: information only). */
 export interface WeekStats {
   weekStart: string;
-  /** Days of the week counted as "đạt" (sick / holiday / pass / Part 2 before bedtime). */
+  /** Days of the week counted as "đạt" (sick / holiday / pass / both parts before bedtime). */
   okDays: number;
   /** Homework finished >= 2 days early during the week. */
   early: number;

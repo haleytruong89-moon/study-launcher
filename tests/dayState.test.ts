@@ -227,7 +227,7 @@ describe("priority table", () => {
     expect(s.status).toBe("FREE");
     expect(s.open).toBe(true);
     expect(s.openUntil).toBe(iso(`${TODAY} 19:45`));
-    expect(s.free).toEqual({ startedAt: iso(`${TODAY} 19:00`), endsAt: iso(`${TODAY} 19:45`) });
+    expect(s.free).toEqual({ canStart: false, startedAt: iso(`${TODAY} 19:00`), endsAt: iso(`${TODAY} 19:45`) });
   });
 
   it("row 6: free time from a pass even though Part 1 is not done → FREE", () => {
@@ -241,23 +241,24 @@ describe("priority table", () => {
     expect(s.part1.complete).toBe(false);
   });
 
-  it("row 7: Part 1 not done → LOCK_P1", () => {
+  it("row 8: Part 1 not done → LOCK_P1 (no part done: no break yet)", () => {
     const s = computeDayState(normalDay(), vn(`${TODAY} 15:00`));
     expect(s.status).toBe("LOCK_P1");
     expect(s.open).toBe(false);
     expect(s.openUntil).toBeNull();
     expect(s.break.state).toBe("not_yet");
+    expect(s.break.canStart).toBe(false);
   });
 
-  it("row 8: Part 1 done, no break yet → BREAK_OFFER", () => {
+  it("row 9: Part 1 done, Part 2 not done → LOCK_P2; the break may start (no break step in between)", () => {
     const s = computeDayState(normalDay({ sessions: [session(TODAY, P1_DONE)] }), vn(`${TODAY} 16:05`));
-    expect(s.status).toBe("BREAK_OFFER");
+    expect(s.status).toBe("LOCK_P2");
     expect(s.open).toBe(false);
     expect(s.break.state).toBe("offer");
-    expect(s.part2.locked).toBe(true);
+    expect(s.break.canStart).toBe(true);
   });
 
-  it("row 9: break running → BREAK until start + 10'", () => {
+  it("row 7: break running → BREAK until start + 10'", () => {
     const s = computeDayState(
       normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`) })] }),
       vn(`${TODAY} 16:10`),
@@ -265,22 +266,33 @@ describe("priority table", () => {
     expect(s.status).toBe("BREAK");
     expect(s.open).toBe(true);
     expect(s.openUntil).toBe(iso(`${TODAY} 16:15`));
-    expect(s.break).toEqual({ state: "running", startedAt: iso(`${TODAY} 16:05`), endsAt: iso(`${TODAY} 16:15`) });
-    expect(s.part2.locked).toBe(true);
+    expect(s.break).toEqual({ state: "running", canStart: false, startedAt: iso(`${TODAY} 16:05`), endsAt: iso(`${TODAY} 16:15`) });
   });
 
-  it("row 10: break skipped, Part 2 not done → LOCK_P2", () => {
+  it("row 7 beats row 8: a break while Part 1 is not done (Part 2 done first) → BREAK", () => {
+    const s = computeDayState(
+      normalDay({
+        sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`), breakStartedAt: iso(`${TODAY} 17:40`) })],
+        runs: [run({ templateId: "s1", startedAt: iso(`${TODAY} 17:20`), doneAt: iso(`${TODAY} 17:40`) })],
+      }),
+      vn(`${TODAY} 17:45`),
+    );
+    expect(s.status).toBe("BREAK");
+    expect(s.openUntil).toBe(iso(`${TODAY} 17:50`));
+    expect(s.part1.complete).toBe(false);
+  });
+
+  it("a legacy break_skipped = true uses the break of the day → LOCK_P2, no break offer", () => {
     const s = computeDayState(
       normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true })] }),
       vn(`${TODAY} 16:05`),
     );
     expect(s.status).toBe("LOCK_P2");
-    expect(s.open).toBe(false);
     expect(s.break.state).toBe("skipped");
-    expect(s.part2.locked).toBe(false);
+    expect(s.break.canStart).toBe(false);
   });
 
-  it("row 10: break ended early with 'Học tiếp' → LOCK_P2", () => {
+  it("break ended early with 'Học tiếp' → back to the locked status, break used", () => {
     const s = computeDayState(
       normalDay({
         sessions: [
@@ -291,7 +303,16 @@ describe("priority table", () => {
     );
     expect(s.status).toBe("LOCK_P2");
     expect(s.break.state).toBe("done");
-    expect(s.part2.locked).toBe(false);
+    expect(s.break.canStart).toBe(false);
+  });
+
+  it("row 10: both parts empty → FREE_READY (locked) until the child presses 'Bắt đầu giờ tự do'", () => {
+    const s = computeDayState(input(), vn(`${TODAY} 00:00:30`));
+    expect(s.status).toBe("FREE_READY");
+    expect(s.open).toBe(false);
+    expect(s.free.canStart).toBe(true);
+    expect(s.milestones).toEqual({});
+    expect(s.break.canStart).toBe(true);
   });
 });
 
@@ -307,7 +328,6 @@ describe("boundaries at the exact second", () => {
     const end = computeDayState(onBreak, vn(`${TODAY} 16:10:00`));
     expect(end.status).toBe("LOCK_P2");
     expect(end.break.state).toBe("done");
-    expect(end.part2.locked).toBe(false);
   });
 
   const onFree = normalDay({ sessions: [session(TODAY, { ...P1_DONE, freeStartedAt: iso(`${TODAY} 19:00`) })] });
@@ -449,7 +469,7 @@ describe("crossing 00:00", () => {
     expect(s.localDate).toBe(TOMORROW);
     expect(s.status).toBe("LOCK_P1");
     expect(s.open).toBe(false);
-    expect(s.free).toEqual({ startedAt: null, endsAt: null });
+    expect(s.free).toEqual({ canStart: false, startedAt: null, endsAt: null });
     expect(s.week.at(-2)).toEqual({ date: TODAY, result: "miss" }); // done 23:40 > bedtime 21:30
   });
 });
@@ -610,8 +630,8 @@ describe("Part 1 composition", () => {
     expect(s.part1.total).toBe(0);
     expect(s.part1.items).toHaveLength(1);
     expect(s.part1.complete).toBe(true);
-    expect(s.milestones).toEqual({}); // empty Part 1 is not frozen until the child moves on
-    expect(s.status).toBe("BREAK_OFFER");
+    expect(s.milestones).toEqual({}); // both parts empty: nothing frozen until the child presses
+    expect(s.status).toBe("FREE_READY");
   });
 
   it("homework added after part1_done_at is shown but does not re-lock", () => {
@@ -627,7 +647,7 @@ describe("Part 1 composition", () => {
       }),
       vn(`${TODAY} 18:30`),
     );
-    expect(s.status).toBe("BREAK_OFFER");
+    expect(s.status).toBe("LOCK_P2");
     expect(s.part1.complete).toBe(true);
     expect(s.part1.total).toBe(3);
     expect(s.part1.done).toBe(2);
@@ -642,61 +662,76 @@ describe("Part 1 composition", () => {
 // ---------------------------------------------------------------------------
 
 describe("empty parts and milestones", () => {
-  it("empty Part 1 lets the day move on but is NOT frozen (decision 14/10)", () => {
-    const now = vn(`${TODAY} 07:00`);
-    const s = computeDayState(input({ templates: [tpl("s1", "skill")] }), now);
+  it("empty Part 1 counts as done (break may start) but is NOT frozen while Part 2 is open", () => {
+    const s = computeDayState(input({ templates: [tpl("s1", "skill")] }), vn(`${TODAY} 07:00`));
     expect(s.milestones).toEqual({});
     expect(s.part1.complete).toBe(true);
     expect(s.part1.doneAt).toBeNull();
-    expect(s.status).toBe("BREAK_OFFER");
-    expect(s.part2.locked).toBe(true);
+    expect(s.status).toBe("LOCK_P2");
+    expect(s.break.canStart).toBe(true); // E5d
   });
 
-  it("empty Part 1 at 06:00, homework assigned at 17:00 before the child moved on → locks again (LOCK_P1)", () => {
-    const early = computeDayState(input({ templates: [tpl("s1", "skill")] }), vn(`${TODAY} 06:00`));
-    expect(early.status).toBe("BREAK_OFFER");
+  it("E16: empty Part 1 at 06:00, homework assigned at 06:30 before Part 2 is done → LOCK_P1", () => {
     const later = computeDayState(
-      input({ templates: [tpl("s1", "skill")], homework: [hw("late", { createdAt: iso(`${TODAY} 17:00`) })] }),
-      vn(`${TODAY} 17:05`),
+      input({ templates: [tpl("s1", "skill")], homework: [hw("late", { createdAt: iso(`${TODAY} 06:30`) })] }),
+      vn(`${TODAY} 06:35`),
     );
     expect(later.status).toBe("LOCK_P1");
-    expect(later.part1.complete).toBe(false);
     expect(later.milestones).toEqual({});
   });
 
-  it("empty Part 1 is frozen once the child skips the break; later homework is listed but does not re-lock", () => {
+  it("E15: empty Part 1 is frozen when Part 2 is done; free time starts; later homework does not re-lock", () => {
     const now = vn(`${TODAY} 07:00`);
-    const s = computeDayState(input({ templates: [tpl("s1", "skill")], sessions: [session(TODAY, { breakSkipped: true })] }), now);
-    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString() });
-    expect(s.status).toBe("LOCK_P2");
+    const doneSkill = run({ templateId: "s1", startedAt: iso(`${TODAY} 06:35`), doneAt: iso(`${TODAY} 06:58`) });
+    const s = computeDayState(input({ templates: [tpl("s1", "skill")], runs: [doneSkill] }), now);
+    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString(), part2DoneAt: now.toISOString(), freeStartedAt: now.toISOString() });
+    expect(s.status).toBe("FREE");
 
     const later = computeDayState(
       input({
         templates: [tpl("s1", "skill")],
+        runs: [doneSkill],
         homework: [hw("late", { createdAt: iso(`${TODAY} 17:00`) })],
-        sessions: [session(TODAY, { breakSkipped: true, part1DoneAt: now.toISOString() })],
+        sessions: [session(TODAY, { part1DoneAt: now.toISOString(), part2DoneAt: now.toISOString(), freeStartedAt: now.toISOString() })],
       }),
       vn(`${TODAY} 17:05`),
     );
-    expect(later.status).toBe("LOCK_P2");
+    expect(later.status).toBe("LOCK_END");
     expect(later.part1.items.find((x) => x.id === "late")?.addedAfterPart1Done).toBe(true);
   });
 
-  it("empty Part 1 is frozen once the child starts the break", () => {
-    const now = vn(`${TODAY} 07:02`);
-    const s = computeDayState(input({ sessions: [session(TODAY, { breakStartedAt: iso(`${TODAY} 07:00`) })] }), now);
-    expect(s.milestones.part1DoneAt).toBe(now.toISOString());
-    expect(s.status).toBe("BREAK");
+  it("an entirely empty day stays FREE_READY (nothing frozen, even at 00:00 or after a break)", () => {
+    expect(computeDayState(input(), vn(`${TODAY} 00:00:30`)).status).toBe("FREE_READY");
+    const s = computeDayState(
+      input({ sessions: [session(TODAY, { breakStartedAt: iso(`${TODAY} 07:00`) })] }),
+      vn(`${TODAY} 07:20`),
+    );
+    expect(s.status).toBe("FREE_READY");
+    expect(s.milestones).toEqual({});
+    expect(s.free.canStart).toBe(true);
   });
 
-  it("an entirely empty day: skipping the break freezes Part 1 and starts free time in one read", () => {
-    const now = vn(`${TODAY} 07:00`);
-    const s = computeDayState(input({ sessions: [session(TODAY, { breakSkipped: true })] }), now);
-    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString(), part2DoneAt: now.toISOString(), freeStartedAt: now.toISOString() });
+  it("empty day: homework assigned before the child presses → LOCK_P1, no free-time button", () => {
+    const s = computeDayState(input({ homework: [hw("h", { createdAt: iso(`${TODAY} 08:00`) })] }), vn(`${TODAY} 08:05`));
+    expect(s.status).toBe("LOCK_P1");
+    expect(s.free.canStart).toBe(false);
+  });
+
+  it("empty day after the press (route wrote the 3 milestones) → FREE", () => {
+    const at = iso(`${TODAY} 15:00`);
+    const s = computeDayState(input({ sessions: [session(TODAY, { part1DoneAt: at, part2DoneAt: at, freeStartedAt: at })] }), vn(`${TODAY} 15:10`));
     expect(s.status).toBe("FREE");
+    expect(s.free.canStart).toBe(false);
+    expect(s.milestones).toEqual({});
   });
 
-  it("Part 1 finished by tasks → part1DoneAt milestone", () => {
+  it("empty day: no free-time button during a parent lock", () => {
+    const s = computeDayState(input({ overrides: [ov("lock_until", `${TODAY} 18:00`, `${TODAY} 15:00`)] }), vn(`${TODAY} 15:10`));
+    expect(s.status).toBe("LOCK_OVERRIDE");
+    expect(s.free.canStart).toBe(false);
+  });
+
+  it("Part 1 finished by tasks → part1DoneAt milestone, LOCK_P2 (no break step)", () => {
     const now = vn(`${TODAY} 16:00`);
     const s = computeDayState(
       normalDay({
@@ -706,49 +741,55 @@ describe("empty parts and milestones", () => {
       now,
     );
     expect(s.milestones).toEqual({ part1DoneAt: now.toISOString() });
-    expect(s.status).toBe("BREAK_OFFER");
+    expect(s.status).toBe("LOCK_P2");
   });
 
-  it("empty Part 2 is NOT done while the break is still on offer", () => {
-    const s = computeDayState(input({ sessions: [session(TODAY, P1_DONE)] }), vn(`${TODAY} 16:05`));
-    expect(s.status).toBe("BREAK_OFFER");
-    expect(s.milestones).toEqual({});
-    expect(s.part2.complete).toBe(false);
-  });
-
-  it("empty Part 2 is NOT done while the break is running", () => {
+  it("E14: empty Part 2 is frozen when Part 1 is done → FREE at once", () => {
+    const now = vn(`${TODAY} 18:00`);
     const s = computeDayState(
-      input({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`) })] }),
-      vn(`${TODAY} 16:10`),
-    );
-    expect(s.status).toBe("BREAK");
-    expect(s.milestones).toEqual({});
-  });
-
-  it("empty Part 2 after the break → part2DoneAt + freeStartedAt = now, FREE", () => {
-    const now = vn(`${TODAY} 16:20`);
-    const s = computeDayState(
-      input({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`) })] }),
+      input({
+        homework: [hw("h1", { doneAt: iso(`${TODAY} 17:50`) })],
+      }),
       now,
     );
-    expect(s.milestones).toEqual({ part2DoneAt: now.toISOString(), freeStartedAt: now.toISOString() });
+    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString(), part2DoneAt: now.toISOString(), freeStartedAt: now.toISOString() });
     expect(s.status).toBe("FREE");
-    expect(s.openUntil).toBe(iso(`${TODAY} 17:05`));
+    expect(s.openUntil).toBe(iso(`${TODAY} 18:45`));
   });
 
-  it("an empty day goes straight to BREAK_OFFER, then FREE after skipping", () => {
-    const now = vn(`${TODAY} 07:00`);
-    expect(computeDayState(input(), now).status).toBe("BREAK_OFFER");
-    const s = computeDayState(input({ sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true })] }), now);
-    expect(s.status).toBe("FREE");
-    expect(s.milestones.freeStartedAt).toBe(now.toISOString());
+  it("E2: Part 2 done first, Part 1 not done → part2DoneAt, LOCK_P1, no free time", () => {
+    const now = vn(`${TODAY} 17:40`);
+    const s = computeDayState(normalDay({ runs: [run({ templateId: "s1", startedAt: iso(`${TODAY} 17:15`), doneAt: iso(`${TODAY} 17:38`) })] }), now);
+    expect(s.milestones).toEqual({ part2DoneAt: now.toISOString() });
+    expect(s.status).toBe("LOCK_P1");
+    expect(s.part2.complete).toBe(true);
+    expect(s.free.startedAt).toBeNull();
+    expect(s.break.canStart).toBe(true); // E5b
   });
 
-  it("Part 2 finished by tasks → part2DoneAt + freeStartedAt", () => {
+  it("E4: Part 1 finished last → part1DoneAt + freeStartedAt in one read", () => {
+    const now = vn(`${TODAY} 19:00`);
+    const s = computeDayState(
+      normalDay({
+        homework: [hw("h1", { doneAt: iso(`${TODAY} 18:58`) })],
+        sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`) })],
+        runs: [
+          run({ templateId: "s1", startedAt: iso(`${TODAY} 17:15`), doneAt: iso(`${TODAY} 17:38`) }),
+          run({ templateId: "e1", startedAt: iso(`${TODAY} 18:00`), doneAt: iso(`${TODAY} 18:25`) }),
+        ],
+      }),
+      now,
+    );
+    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString(), freeStartedAt: now.toISOString() });
+    expect(s.status).toBe("FREE");
+    expect(s.openUntil).toBe(iso(`${TODAY} 19:45`));
+  });
+
+  it("Part 2 finished last → part2DoneAt + freeStartedAt", () => {
     const now = vn(`${TODAY} 17:00`);
     const s = computeDayState(
       normalDay({
-        sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true })],
+        sessions: [session(TODAY, P1_DONE)],
         runs: [run({ templateId: "s1", startedAt: iso(`${TODAY} 16:30`), doneAt: iso(`${TODAY} 16:55`) })],
       }),
       now,
@@ -758,18 +799,14 @@ describe("empty parts and milestones", () => {
     expect(s.status).toBe("FREE");
   });
 
-  it("Part 2 finished after a pass already started free time → only part2DoneAt", () => {
+  it("E21: a pass never freezes a part; finishing after a pass writes only the milestones", () => {
+    const passed = { passUsedAt: iso(`${TODAY} 18:00`), freeStartedAt: iso(`${TODAY} 18:00`) };
+    const s0 = computeDayState(input({ templates: [tpl("s1", "skill")], sessions: [session(TODAY, passed)] }), vn(`${TODAY} 18:05`));
+    expect(s0.milestones).toEqual({}); // empty Part 1 not frozen by the pass
     const now = vn(`${TODAY} 19:00`);
     const s = computeDayState(
       normalDay({
-        sessions: [
-          session(TODAY, {
-            ...P1_DONE,
-            breakSkipped: true,
-            passUsedAt: iso(`${TODAY} 18:00`),
-            freeStartedAt: iso(`${TODAY} 18:00`),
-          }),
-        ],
+        sessions: [session(TODAY, { ...P1_DONE, ...passed })],
         runs: [run({ templateId: "s1", startedAt: iso(`${TODAY} 18:30`), doneAt: iso(`${TODAY} 18:55`) })],
       }),
       now,
@@ -782,14 +819,7 @@ describe("empty parts and milestones", () => {
   it("stored milestones are not returned again", () => {
     const s = computeDayState(
       input({
-        sessions: [
-          session(TODAY, {
-            ...P1_DONE,
-            breakSkipped: true,
-            part2DoneAt: iso(`${TODAY} 17:00`),
-            freeStartedAt: iso(`${TODAY} 17:00`),
-          }),
-        ],
+        sessions: [session(TODAY, { ...P1_DONE, part2DoneAt: iso(`${TODAY} 17:00`), freeStartedAt: iso(`${TODAY} 17:00`) })],
       }),
       vn(`${TODAY} 17:10`),
     );
@@ -797,15 +827,43 @@ describe("empty parts and milestones", () => {
     expect(s.status).toBe("FREE");
   });
 
-  it("part2_done_at without free_started_at (no lock in effect) → free time starts now", () => {
+  it("both milestones without free_started_at (no lock in effect) → free time starts now", () => {
     const now = vn(`${TODAY} 17:10`);
-    const s = computeDayState(
-      input({ sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true, part2DoneAt: iso(`${TODAY} 17:00`) })] }),
-      now,
-    );
+    const s = computeDayState(input({ sessions: [session(TODAY, { ...P1_DONE, part2DoneAt: iso(`${TODAY} 17:00`) })] }), now);
     expect(s.milestones).toEqual({ freeStartedAt: now.toISOString() });
     expect(s.status).toBe("FREE");
     expect(s.openUntil).toBe(iso(`${TODAY} 17:55`));
+  });
+
+  it("E17: homework added after Part 1 is done does not block free time", () => {
+    const now = vn(`${TODAY} 19:00`);
+    const s = computeDayState(
+      normalDay({
+        homework: [hw("h1", { doneAt: iso(`${TODAY} 15:00`) }), hw("new", { createdAt: iso(`${TODAY} 17:00`) })],
+        sessions: [session(TODAY, P1_DONE)],
+        runs: [
+          run({ templateId: "e1", startedAt: iso(`${TODAY} 15:10`), doneAt: iso(`${TODAY} 15:40`) }),
+          run({ templateId: "s1", startedAt: iso(`${TODAY} 18:30`), doneAt: iso(`${TODAY} 18:55`) }),
+        ],
+      }),
+      now,
+    );
+    expect(s.status).toBe("FREE");
+    expect(s.milestones).toEqual({ part2DoneAt: now.toISOString(), freeStartedAt: now.toISOString() });
+  });
+
+  it("a skill enabled after part2_done_at is listed but Part 2 stays done (interpretation 13)", () => {
+    const s = computeDayState(
+      normalDay({
+        templates: [tpl("e1", "extra"), tpl("s1", "skill"), tpl("s2", "skill")],
+        sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:00`) })],
+        runs: [run({ templateId: "s1", startedAt: iso(`${TODAY} 16:30`), doneAt: iso(`${TODAY} 16:55`) })],
+      }),
+      vn(`${TODAY} 18:00`),
+    );
+    expect(s.part2.complete).toBe(true);
+    expect(s.part2.total).toBe(2);
+    expect(s.status).toBe("LOCK_P1");
   });
 });
 
@@ -855,55 +913,145 @@ describe("free time during a parent lock override", () => {
     expect(s.status).toBe("FREE");
     expect(s.openUntil).toBe(MIDNIGHT);
   });
+
+  it("E23: no skills, Part 1 done at 20:00 under a lock until 22:00 → both milestones at 20:00 (day OK), free at 22:00", () => {
+    const at20 = vn(`${TODAY} 20:00`);
+    const lockDay = (patch: Partial<DaySessionInput>) =>
+      input({
+        homework: [hw("h1", { doneAt: iso(`${TODAY} 19:58`) })],
+        overrides: [ov("lock_until", `${TODAY} 22:00`, `${TODAY} 19:00`)],
+        sessions: [session(TODAY, patch)],
+      });
+    const s = computeDayState(lockDay({}), at20);
+    expect(s.milestones).toEqual({ part1DoneAt: at20.toISOString(), part2DoneAt: at20.toISOString() });
+    expect(s.status).toBe("LOCK_OVERRIDE");
+    const at22 = vn(`${TODAY} 22:00`);
+    const after = computeDayState(lockDay({ part1DoneAt: at20.toISOString(), part2DoneAt: at20.toISOString() }), at22);
+    expect(after.milestones).toEqual({ freeStartedAt: at22.toISOString() });
+    expect(after.status).toBe("FREE");
+    expect(after.week.at(-1)?.result).toBe("ok");
+  });
 });
 
 // ---------------------------------------------------------------------------
-// part2.locked is derived from data, not from web status
+// R1 (parent decisions 07/11/2026): parallel parts and the break (docs/MAN_CHINH_MOI.md §1.4)
 // ---------------------------------------------------------------------------
 
-describe("part2.locked", () => {
-  const now = vn(`${TODAY} 15:00`);
+describe("parallel parts and the break (R1)", () => {
+  const now = vn(`${TODAY} 17:05`);
+  const skillsDone = [run({ templateId: "s1", startedAt: iso(`${TODAY} 17:15`), doneAt: iso(`${TODAY} 17:38`) })];
 
-  it("is true in OPEN_TRUST / OPEN_SICK / OPEN_OVERRIDE while Part 1 is not done", () => {
-    const trust = computeDayState(normalDay({ trustMode: "trust" }), now);
-    const sick = computeDayState(normalDay({ sessions: [session(TODAY, { dayType: "sick" })] }), now);
-    const over = computeDayState(
-      normalDay({ overrides: [ov("open_until", `${TODAY} 18:00`, `${TODAY} 14:00`)] }),
-      now,
-    );
-    expect([trust.status, sick.status, over.status]).toEqual(["OPEN_TRUST", "OPEN_SICK", "OPEN_OVERRIDE"]);
-    for (const s of [trust, sick, over]) {
-      expect(s.open).toBe(true);
-      expect(s.part2.locked).toBe(true);
-      expect(s.milestones).toEqual({});
-    }
+  it("E1: skills are listed with nothing done; the web stays locked", () => {
+    const s = computeDayState(normalDay(), now);
+    expect(s.status).toBe("LOCK_P1");
+    expect(s.part2.items.map((i) => i.state)).toEqual(["todo"]);
   });
 
-  it("in trust mode stays locked until the break is used or skipped", () => {
-    const offer = computeDayState(normalDay({ trustMode: "trust", sessions: [session(TODAY, P1_DONE)] }), now);
-    expect(offer.part2.locked).toBe(true);
-    expect(offer.break.state).toBe("offer");
-    const skipped = computeDayState(
-      normalDay({ trustMode: "trust", sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true })] }),
-      now,
-    );
-    expect(skipped.part2.locked).toBe(false);
-    expect(skipped.status).toBe("OPEN_TRUST");
+  it("E5: no part done → no break", () => {
+    expect(computeDayState(normalDay(), now).break).toMatchObject({ state: "not_yet", canStart: false });
   });
 
-  it("is true in LOCK_P1, BREAK_OFFER, BREAK and false in LOCK_P2", () => {
-    expect(computeDayState(normalDay(), now).part2.locked).toBe(true);
-    expect(computeDayState(normalDay({ sessions: [session(TODAY, P1_DONE)] }), vn(`${TODAY} 16:01`)).part2.locked).toBe(true);
-    expect(
-      computeDayState(
-        normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:01`) })] }),
-        vn(`${TODAY} 16:02`),
-      ).part2.locked,
-    ).toBe(true);
-    expect(
-      computeDayState(normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true })] }), vn(`${TODAY} 16:02`))
-        .part2.locked,
-    ).toBe(false);
+  it("E5b: Part 2 done, Part 1 not → break may start; when running it opens until +10', then LOCK_P1", () => {
+    const at = vn(`${TODAY} 17:40`);
+    const offer = computeDayState(normalDay({ runs: skillsDone, sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`) })] }), at);
+    expect(offer.break.canStart).toBe(true);
+    const running = normalDay({ runs: skillsDone, sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`), breakStartedAt: iso(`${TODAY} 17:40`) })] });
+    expect(computeDayState(running, vn(`${TODAY} 17:49:59`)).status).toBe("BREAK");
+    expect(computeDayState(running, vn(`${TODAY} 17:50:00`)).status).toBe("LOCK_P1");
+  });
+
+  it("E5c: Part 1 done → break may start, then LOCK_P2", () => {
+    const s = computeDayState(normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 18:30`) })] }), vn(`${TODAY} 18:40`));
+    expect(s.status).toBe("LOCK_P2");
+  });
+
+  it("E6: once used, no second break", () => {
+    const s = computeDayState(
+      normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`) })] }),
+      vn(`${TODAY} 17:00`),
+    );
+    expect(s.break).toMatchObject({ state: "done", canStart: false });
+  });
+
+  it("E7: no break while a timed task is running", () => {
+    const s = computeDayState(
+      normalDay({ sessions: [session(TODAY, P1_DONE)], runs: [run({ templateId: "s1", startedAt: iso(`${TODAY} 17:00`) })] }),
+      now,
+    );
+    expect(s.status).toBe("LOCK_P2");
+    expect(s.break.canStart).toBe(false);
+  });
+
+  it("a running homework (no timer) does not block the break", () => {
+    const s = computeDayState(
+      normalDay({
+        sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:00`) })],
+        runs: [...skillsDone, run({ source: "homework", homeworkItemId: "h1", startedAt: iso(`${TODAY} 17:01`) })],
+      }),
+      now,
+    );
+    expect(s.break.canStart).toBe(true);
+  });
+
+  it("E9 + E10: never taking the break is fine; no break once free time started", () => {
+    const s = computeDayState(input({ sessions: [session(TODAY, { ...P1_DONE, part2DoneAt: iso(`${TODAY} 19:00`), freeStartedAt: iso(`${TODAY} 19:00`) })] }), vn(`${TODAY} 19:10`));
+    expect(s.status).toBe("FREE");
+    expect(s.break.canStart).toBe(false);
+  });
+
+  it("E11: break at 23:55 is clipped at 00:00", () => {
+    const s = computeDayState(normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 23:55`) })] }), vn(`${TODAY} 23:58`));
+    expect(s.openUntil).toBe(MIDNIGHT);
+  });
+
+  it("E12 + E13: no break during a parent lock, trust, sick day or a parent open", () => {
+    const base = { sessions: [session(TODAY, P1_DONE)] };
+    const lock = computeDayState(normalDay({ ...base, overrides: [ov("lock_until", `${TODAY} 18:00`, `${TODAY} 16:30`)] }), now);
+    const trust = computeDayState(normalDay({ ...base, trustMode: "trust" }), now);
+    const sick = computeDayState(normalDay({ sessions: [session(TODAY, { ...P1_DONE, dayType: "sick" })] }), now);
+    const open = computeDayState(normalDay({ ...base, overrides: [ov("open_until", `${TODAY} 18:00`, `${TODAY} 16:30`)] }), now);
+    for (const s of [lock, trust, sick, open]) expect(s.break.canStart).toBe(false);
+  });
+
+  it("a day without skills: the break still comes after the homework (empty Part 2 alone does not open it)", () => {
+    const noSkills = input({ homework: [hw("h1")], templates: [tpl("e1", "extra")] });
+    expect(computeDayState(noSkills, vn(`${TODAY} 06:00`)).break.canStart).toBe(false);
+  });
+
+  it("empty day: the free-time button only where it means something (locked, or trust)", () => {
+    const open = computeDayState(input({ overrides: [ov("open_until", `${TODAY} 18:00`, `${TODAY} 15:00`)] }), vn(`${TODAY} 15:10`));
+    expect(open.free.canStart).toBe(false);
+    const sick = computeDayState(input({ sessions: [session(TODAY, { dayType: "sick" })] }), vn(`${TODAY} 15:10`));
+    expect(sick.free.canStart).toBe(false);
+    const trust = computeDayState(input({ trustMode: "trust" }), vn(`${TODAY} 15:10`));
+    expect(trust.free.canStart).toBe(true);
+  });
+
+  it("break_minutes = 0 → no break button", () => {
+    const s = computeDayState(normalDay({ settings: { ...SETTINGS, breakMinutes: 0 }, sessions: [session(TODAY, P1_DONE)] }), now);
+    expect(s.break.canStart).toBe(false);
+  });
+
+  it("E22: free time starts during a break → FREE (the rest of the break is dropped)", () => {
+    const at = vn(`${TODAY} 18:05`);
+    const s = computeDayState(
+      normalDay({
+        homework: [hw("h1", { doneAt: iso(`${TODAY} 18:04`) })],
+        sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`), breakStartedAt: iso(`${TODAY} 18:00`) })],
+        runs: [...skillsDone, run({ templateId: "e1", startedAt: iso(`${TODAY} 17:00`), doneAt: iso(`${TODAY} 17:25`) })],
+      }),
+      at,
+    );
+    expect(s.status).toBe("FREE");
+    expect(s.openUntil).toBe(iso(`${TODAY} 18:50`));
+    expect(s.break.state).toBe("done");
+  });
+
+  it("milestones are still computed in OPEN_TRUST / OPEN_SICK / OPEN_OVERRIDE", () => {
+    const at = vn(`${TODAY} 17:40`);
+    const trust = computeDayState(normalDay({ trustMode: "trust", runs: skillsDone }), at);
+    expect(trust.status).toBe("OPEN_TRUST");
+    expect(trust.milestones).toEqual({ part2DoneAt: at.toISOString() });
   });
 });
 
@@ -1017,7 +1165,24 @@ describe("task views", () => {
 
 describe("ngày đạt / week strip", () => {
   const done = (date: string, time: string, patch: Partial<DaySessionInput> = {}) =>
-    session(date, { part2DoneAt: iso(`${date} ${time}`), ...patch });
+    session(date, { part1DoneAt: iso(`${date} ${time}`), part2DoneAt: iso(`${date} ${time}`), ...patch });
+
+  it("E18: both milestones are needed before bedtime (parts finish in any order)", () => {
+    const s = computeDayState(
+      input({
+        sessions: [
+          // skills 18:00, homework 22:00 → not OK
+          session("2026-10-11", { part2DoneAt: iso("2026-10-11 18:00"), part1DoneAt: iso("2026-10-11 22:00") }),
+          // homework 18:00, skills 21:00 → OK
+          session("2026-10-12", { part1DoneAt: iso("2026-10-12 18:00"), part2DoneAt: iso("2026-10-12 21:00") }),
+          // skills only → not OK
+          session(YESTERDAY, { part2DoneAt: iso(`${YESTERDAY} 18:00`) }),
+        ],
+      }),
+      vn(`${TODAY} 15:00`),
+    );
+    expect(s.week.slice(-4, -1).map((d) => d.result)).toEqual(["miss", "ok", "miss"]);
+  });
 
   it("covers bedtime, pass, sick, holiday, exam and missing days", () => {
     const s = computeDayState(
@@ -1092,7 +1257,7 @@ describe("trust progress", () => {
       const date = new Date(`${monday}T00:00:00Z`);
       date.setUTCDate(date.getUTCDate() + d);
       const day = date.toISOString().slice(0, 10);
-      out.push(d < okDays ? session(day, { part2DoneAt: iso(`${day} 20:00`) }) : session(day));
+      out.push(d < okDays ? session(day, { part1DoneAt: iso(`${day} 19:00`), part2DoneAt: iso(`${day} 20:00`) }) : session(day));
     }
     return out;
   }
@@ -1100,7 +1265,7 @@ describe("trust progress", () => {
   it("3 consecutive weeks ≥ 90% → weeksMet 3 and suggestTrust (never auto-switch)", () => {
     const s = computeDayState(input({ sessions: [...week(W1, 7), ...week(W2, 7), ...week(W3, 7)] }), NOW);
     expect(s.trust).toEqual({ mode: "lock", weeksMet: 3, weeksNeeded: 3, suggestTrust: true, suggestLock: false });
-    expect(s.status).toBe("BREAK_OFFER"); // still the normal locked flow
+    expect(s.status).toBe("FREE_READY"); // still the normal locked flow
   });
 
   it("counts only consecutive most-recent weeks", () => {
@@ -1220,7 +1385,7 @@ describe("homework groups and the empty-day quota (interpretation 17)", () => {
     expect(s.part1.done).toBe(1);
     expect(s.part1.complete).toBe(true);
     expect(s.milestones.part1DoneAt).toBe(NOW.toISOString());
-    expect(s.status).toBe("BREAK_OFFER");
+    expect(s.status).toBe("FREE"); // no skills today: empty Part 2 is frozen with Part 1
   });
 
   it("quota never exceeds the upcoming items that exist", () => {
@@ -1238,7 +1403,7 @@ describe("homework groups and the empty-day quota (interpretation 17)", () => {
     );
     expect(s.part1.pick.needed).toBe(0);
     expect(s.part1.total).toBe(0);
-    expect(s.status).toBe("BREAK_OFFER");
+    expect(s.status).toBe("FREE_READY"); // both parts empty
     expect(s.milestones.part1DoneAt).toBeUndefined(); // still not frozen (interpretation 15)
   });
 
@@ -1283,7 +1448,7 @@ describe("homework groups and the empty-day quota (interpretation 17)", () => {
       vn(`${TODAY} 18:00`),
     );
     expect(s.part1.complete).toBe(true);
-    expect(s.status).toBe("BREAK_OFFER");
+    expect(s.status).toBe("FREE");
   });
 
   it("templates carry group null", () => {

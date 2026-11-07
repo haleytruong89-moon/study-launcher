@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
-import { decideBreak, decideFinish, decidePass, decideProof, decideStart, isProofPath, passOffered, runningTimedTask } from "@/lib/today/rules";
-import { bannerFor, clock, dayLabel, dayProgress, dueTone, earlyUntil, longDate, nextTask, shade, statusPill, stepIndex, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
+import { decideBreak, decideConfirmRequest, decideFinish, decideFreeStart, decidePass, decideProof, decideStart, isProofPath, ON_BREAK_TEXT, passOffered, runningTimedTask } from "@/lib/today/rules";
+import { bannerFor, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, longDate, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
 
 // Wednesday 2026-10-14, Vietnam time.
 const TODAY = "2026-10-14";
@@ -14,6 +14,7 @@ const EXTRA = "22222222-2222-4222-8222-222222222222";
 const SKILL = "33333333-3333-4333-8333-333333333333";
 const RUN_HW = "44444444-4444-4444-8444-444444444444";
 const RUN_EX = "55555555-5555-4555-8555-555555555555";
+const RUN_SK = "66666666-6666-4666-8666-666666666666";
 const FAMILY = "66666666-6666-4666-8666-666666666666";
 const CHILD = "77777777-7777-4777-8777-777777777777";
 
@@ -79,9 +80,31 @@ describe("decideStart", () => {
     expect(d).toMatchObject({ ok: true, value: { alreadyRunning: false } });
   });
 
-  it("refuses a Part 2 task while Part 2 is locked", () => {
+  it("E1 (R1): starts a skill before any homework (both parts are open)", () => {
     const d = decideStart(computeDayState(day(), vn("15:00")), "template", SKILL);
-    expect(d).toMatchObject({ ok: false, status: 409 });
+    expect(d).toMatchObject({ ok: true, value: { alreadyRunning: false } });
+  });
+
+  it("E8: no task action during the break; 'Học tiếp' first", () => {
+    const onBreak = computeDayState(
+      day({
+        sessions: [session({ part1DoneAt: at("16:00"), breakStartedAt: at("16:01") })],
+        runs: [run(RUN_HW, { source: "homework", ref: HW, startedAt: at("15:00") })],
+      }),
+      vn("16:05"),
+    );
+    expect(onBreak.status).toBe("BREAK");
+    expect(decideStart(onBreak, "template", SKILL)).toMatchObject({ ok: false, status: 409, error: ON_BREAK_TEXT });
+    expect(decideProof(onBreak, RUN_HW)).toMatchObject({ ok: false, status: 409, error: ON_BREAK_TEXT });
+    expect(decideConfirmRequest(onBreak, RUN_HW)).toMatchObject({ ok: false, status: 409, error: ON_BREAK_TEXT });
+    const withProof = computeDayState(
+      day({
+        sessions: [session({ part1DoneAt: at("16:00"), breakStartedAt: at("16:01") })],
+        runs: [run(RUN_HW, { source: "homework", ref: HW, startedAt: at("15:00"), proofs: ["p.jpg"] })],
+      }),
+      vn("16:05"),
+    );
+    expect(decideFinish(withProof, RUN_HW, vn("16:05"))).toMatchObject({ ok: false, status: 409, error: ON_BREAK_TEXT });
   });
 
   it("refuses an unknown task, and a task of another weekday", () => {
@@ -180,18 +203,60 @@ describe("decideProof", () => {
   });
 });
 
-describe("decideBreak", () => {
+describe("decideBreak (R1, parent decision 07/11/2026)", () => {
   const p1Done = day({ sessions: [session({ part1DoneAt: at("16:00") })] });
 
-  it("start / skip only on offer; not before Part 1 is done", () => {
-    expect(decideBreak(computeDayState(day(), vn("15:00")), "start")).toMatchObject({ ok: false });
+  it("E5: refused while no part is done; E5c: allowed once Part 1 is done", () => {
+    const none = decideBreak(computeDayState(day(), vn("15:00")), "start");
+    expect(none).toMatchObject({ ok: false, status: 409 });
+    if (!none.ok) expect(none.error).toBe("Xong bài tập hoặc xong kỹ năng là được nghỉ.");
     expect(decideBreak(computeDayState(p1Done, vn("16:05")), "start")).toMatchObject({ ok: true });
-    expect(decideBreak(computeDayState(p1Done, vn("16:05")), "skip")).toMatchObject({ ok: true });
   });
 
-  it("only once a day", () => {
+  it("E5b: allowed once the skills are done, homework still open", () => {
+    const skillDone = day({
+      sessions: [session({ part2DoneAt: at("15:40") })],
+      runs: [run(RUN_SK, { source: "template", ref: SKILL, startedAt: at("15:15"), doneAt: at("15:38") })],
+    });
+    expect(decideBreak(computeDayState(skillDone, vn("15:41")), "start")).toMatchObject({ ok: true });
+  });
+
+  it("E6: only once a day (a legacy skip counts as used)", () => {
     const used = day({ sessions: [session({ part1DoneAt: at("16:00"), breakStartedAt: at("16:01"), breakEndedAt: at("16:05") })] });
-    expect(decideBreak(computeDayState(used, vn("17:00")), "start")).toMatchObject({ ok: false, status: 409 });
+    expect(decideBreak(computeDayState(used, vn("17:00")), "start")).toMatchObject({ ok: false, status: 409, error: "Hôm nay con đã nghỉ rồi." });
+    const skipped = day({ sessions: [session({ part1DoneAt: at("16:00"), breakSkipped: true })] });
+    expect(decideBreak(computeDayState(skipped, vn("17:00")), "start")).toMatchObject({ ok: false, status: 409 });
+  });
+
+  it("E7: refused while a timed task is running", () => {
+    const running = day({
+      sessions: [session({ part1DoneAt: at("16:00") })],
+      runs: [run(RUN_SK, { source: "template", ref: SKILL, startedAt: at("16:02") })],
+    });
+    const d = decideBreak(computeDayState(running, vn("16:05")), "start");
+    expect(d).toMatchObject({ ok: false, status: 409 });
+    if (!d.ok) expect(d.error).toContain("Xong việc đang làm");
+  });
+
+  it("E12: refused during a parent lock", () => {
+    const locked = day({
+      sessions: [session({ part1DoneAt: at("16:00") })],
+      overrides: [{ id: "o", localDate: TODAY, kind: "lock_until", until: at("18:00"), createdAt: at("16:01") }],
+    });
+    expect(decideBreak(computeDayState(locked, vn("16:05")), "start")).toMatchObject({ ok: false, error: "Bố mẹ đang khóa máy." });
+  });
+
+  it("a break still running under a parent lock keeps tasks paused (no timer resumes inside the break)", () => {
+    const s = computeDayState(
+      day({
+        sessions: [session({ part1DoneAt: at("16:00"), breakStartedAt: at("16:01") })],
+        overrides: [{ id: "o", localDate: TODAY, kind: "lock_until", until: at("16:20"), createdAt: at("16:02") }],
+      }),
+      vn("16:05"),
+    );
+    expect(s.status).toBe("LOCK_OVERRIDE");
+    expect(decideStart(s, "template", SKILL)).toMatchObject({ ok: false, error: ON_BREAK_TEXT });
+    expect(decideBreak(s, "end")).toMatchObject({ ok: true });
   });
 
   it("end only while running", () => {
@@ -201,7 +266,33 @@ describe("decideBreak", () => {
   });
 });
 
+describe("decideFreeStart (empty day, parent decision 07/11/2026)", () => {
+  const empty = day({ homework: [], templates: [] });
+
+  it("allowed only on a day with no task at all, once", () => {
+    expect(decideFreeStart(computeDayState(empty, vn("09:00")))).toMatchObject({ ok: true });
+    expect(decideFreeStart(computeDayState(day(), vn("09:00")))).toMatchObject({ ok: false, status: 409 });
+    const started = day({ homework: [], templates: [], sessions: [session({ part1DoneAt: at("09:00"), part2DoneAt: at("09:00"), freeStartedAt: at("09:00") })] });
+    expect(decideFreeStart(computeDayState(started, vn("09:10")))).toMatchObject({ ok: false });
+  });
+
+  it("refused during a parent lock", () => {
+    const locked = day({
+      homework: [],
+      templates: [],
+      overrides: [{ id: "o", localDate: TODAY, kind: "lock_until", until: at("18:00"), createdAt: at("08:00") }],
+    });
+    expect(decideFreeStart(computeDayState(locked, vn("09:00")))).toMatchObject({ ok: false, error: "Bố mẹ đang khóa máy." });
+  });
+});
+
 describe("decidePass", () => {
+  it("not offered on an empty day (the free-time button is there)", () => {
+    const empty = computeDayState(day({ homework: [], templates: [] }), vn("09:00"));
+    expect(passOffered(empty)).toBe(false);
+    expect(decidePass(empty)).toMatchObject({ ok: false, status: 409 });
+  });
+
   it("available once per week, not when free time already started", () => {
     expect(decidePass(computeDayState(day(), vn("15:00")))).toMatchObject({ ok: true });
     const usedMonday = day({ sessions: [session({ localDate: "2026-10-12", passUsedAt: "2026-10-12T10:00:00Z", freeStartedAt: "2026-10-12T10:00:00Z" })] });
@@ -219,13 +310,15 @@ describe("decidePass", () => {
 
 describe("screen wording", () => {
   it("banners follow the status", () => {
-    expect(bannerFor(computeDayState(day(), vn("15:00")), RULES).title).toBe("Còn 2 việc ở Phần 1");
-    const offer = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00") })] }), vn("16:05"));
-    expect(bannerFor(offer, RULES)).toMatchObject({ title: "Xong Phần 1 — giỏi lắm!", tone: "dark" });
+    expect(bannerFor(computeDayState(day(), vn("15:00")), RULES).title).toBe("Còn 2 bài tập · 1 kỹ năng");
+    const p1 = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00") })] }), vn("16:05"));
+    expect(bannerFor(p1, RULES)).toMatchObject({ title: "Xong bài tập — còn 1 kỹ năng", tone: "lock" });
+    expect(bannerFor(p1, RULES).sub).toContain("nghỉ 10 phút");
     const free = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00"), passUsedAt: at("16:10"), freeStartedAt: at("16:10") })] }), vn("16:20"));
     expect(bannerFor(free, RULES).tone).toBe("open");
-    expect(stepIndex(free, vn("16:20").getTime())).toBe(3);
-    expect(stepIndex(free, vn("17:00").getTime())).toBe(4);
+    expect(daySteps(free).map((st) => st.done)).toEqual([true, false, true]);
+    const empty = computeDayState(day({ homework: [], templates: [] }), vn("09:00"));
+    expect(bannerFor(empty, RULES).title).toBe("Hôm nay không có việc nào");
   });
 
   it("empty-day banner asks to pick upcoming work, then falls back to the normal count", () => {
@@ -234,7 +327,7 @@ describe("screen wording", () => {
     expect(bannerFor(pick, RULES)).toMatchObject({ title: "Hôm nay không có bài đến hạn" });
     expect(bannerFor(pick, RULES).sub).toContain("Tự chọn 1 bài");
     const picked = computeDayState(day({ homework: [{ ...upcoming, doneAt: at("14:00") }] }), vn("15:00"));
-    expect(bannerFor(picked, RULES).title).toBe("Còn 1 việc ở Phần 1");
+    expect(bannerFor(picked, RULES).title).toBe("Còn 1 bài tập · 1 kỹ năng");
   });
 
   it("dates, clocks and task lines", () => {
@@ -255,17 +348,15 @@ describe("screen wording", () => {
 });
 
 describe("S2d screen helpers", () => {
-  it("next task: due homework, then extras, then Part 2 once unlocked; a running task wins", () => {
+  it("next task: due homework, then extras, then skills; a running task wins", () => {
     const s0 = computeDayState(day(), vn("15:00"));
     expect(nextTask(s0)?.id).toBe(HW);
     const hwDone = computeDayState(day({ homework: [{ id: HW, subject: "Toán", dueDate: "2026-10-15", note: null, doneAt: at("14:00"), archivedAt: null, createdAt: at("06:00") }] }), vn("15:00"));
     expect(nextTask(hwDone)?.id).toBe(EXTRA);
     const running = computeDayState(day({ runs: [run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("14:50") })] }), vn("15:00"));
     expect(nextTask(running)?.id).toBe(EXTRA);
-    const offer = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00") })] }), vn("16:05"));
-    expect(nextTask(offer)).toBeNull(); // Part 2 still locked during the break offer
-    const p2 = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00"), breakSkipped: true })] }), vn("16:05"));
-    expect(nextTask(p2)?.id).toBe(SKILL);
+    const p2 = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00") })] }), vn("16:05"));
+    expect(nextTask(p2)?.id).toBe(SKILL); // no break step in between (R1)
   });
 
   it("next task on an empty day is an upcoming item to pick", () => {

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
-import { bannerFor, clock, dayProgress, longDate, nextTask, shade, statusPill, stepIndex, upcomingHint, weekSummary } from "@/lib/today/view";
+import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, shade, statusPill, upcomingHint, weekSummary } from "@/lib/today/view";
 import { SignOutButton } from "../sign-out-button";
 import { TalkPanel } from "../binh-yen/talk-panel";
 import { FeedbackButton } from "./feedback";
@@ -26,7 +26,6 @@ interface Child {
 }
 
 const POLL_MS = 30_000;
-const STEPS = ["Phần 1", "Nghỉ", "Phần 2", "Giờ tự do"];
 
 function subscribeStorage(onChange: () => void) {
   window.addEventListener("storage", onChange);
@@ -234,7 +233,10 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
 
   const s = view.state;
   const banner = bannerFor(s, view.rules);
-  const idx = stepIndex(s, nowMs);
+  const steps = daySteps(s);
+  const currentStep = steps.findIndex((st) => !st.done);
+  // R1 E8: during the 10' break the task buttons pause ("Học tiếp" resumes).
+  const paused = s.break.state === "running";
   const pill = statusPill(s, nowMs);
   // Special day (S3d): the sick status pill already says "Ngày ốm" when the sick day decides the state.
   const dayNote = s.status === "OPEN_SICK" ? null : childDayTypeNote(s.dayType);
@@ -246,11 +248,12 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
   const mustToday = s.part1.items.filter((i) => i.group !== "upcoming");
   const upcoming = s.part1.items.filter((i) => i.group === "upcoming");
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
-  const focusItem = next?.state === "running" && minimized !== next.key ? next : null;
+  const focusItem = !paused && next?.state === "running" && minimized !== next.key ? next : null;
   const proofItem = proofKey ? (s.part1.items.find((i) => i.key === proofKey) ?? null) : null;
   // Finished (e.g. from the phone) or gone: the sheet closes by itself.
   const proofOpen = proofItem !== null && proofItem.state === "running";
   const ctx: TaskCtx = {
+    paused,
     today: s.localDate,
     nowMs,
     busy,
@@ -345,13 +348,13 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
               <SignOutButton onDark />
             </span>
           </div>
-          <ol aria-label="Tiến trình hôm nay" className="grid grid-cols-4 gap-1.5">
-            {STEPS.map((label, i) => (
-              <li key={label} aria-current={i === idx ? "step" : undefined} className="flex flex-col gap-1.5">
-                <span className="h-1.5 rounded-full" style={{ background: i <= idx ? "#FFFFFF" : "rgba(255,255,255,0.3)" }} />
-                <span className={`text-xs ${i === idx ? "font-bold" : "opacity-85"}`}>
-                  {i < idx ? "✓ " : ""}
-                  {label}
+          <ol aria-label="Tiến trình hôm nay" className="grid grid-cols-3 gap-1.5">
+            {steps.map((st, i) => (
+              <li key={st.label} aria-current={i === currentStep ? "step" : undefined} className="flex flex-col gap-1.5">
+                <span className="h-1.5 rounded-full" style={{ background: st.done ? "#FFFFFF" : "rgba(255,255,255,0.3)" }} />
+                <span className={`text-xs ${st.done ? "font-bold" : "opacity-85"}`}>
+                  {st.done ? "✓ " : ""}
+                  {st.label}
                 </span>
               </li>
             ))}
@@ -413,16 +416,18 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
                 </span>
               )}
             </div>
-            {s.break.state === "offer" && (
+            {(s.break.canStart || s.free.canStart) && (
               <div className="flex flex-wrap gap-2">
-                {view.rules.breakMinutes > 0 && (
-                  <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "start" } })} className="btn text-white disabled:opacity-60" style={{ background: color }}>
-                    Nghỉ {view.rules.breakMinutes} phút
+                {s.free.canStart && (
+                  <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/free" })} className="btn text-white disabled:opacity-60" style={{ background: color }}>
+                    Bắt đầu giờ tự do
                   </button>
                 )}
-                <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "skip" } })} className="btn border-[1.5px] bg-white disabled:opacity-60" style={{ borderColor: color, color }}>
-                  Học tiếp luôn
-                </button>
+                {s.break.canStart && (
+                  <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "start" } })} className="btn border-[1.5px] bg-white disabled:opacity-60" style={{ borderColor: color, color }}>
+                    ☕ Nghỉ {view.rules.breakMinutes} phút (1 lần/ngày)
+                  </button>
+                )}
               </div>
             )}
             {s.break.state === "running" && (
@@ -430,7 +435,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
                 Học tiếp
               </button>
             )}
-            {next && s.break.state !== "offer" && s.break.state !== "running" && (
+            {next && !paused && (
               <div className="border-t border-ink/10 pt-4">
                 <NextTask item={next} ctx={ctx} />
               </div>
@@ -469,7 +474,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
             ) : (
               <ul className="flex flex-col gap-2">
                 {mustToday.map((item) => (
-                  <TaskRow key={item.key} item={item} ctx={ctx} />
+                  <TaskRow key={item.key} item={item} ctx={ctx} locked={paused} />
                 ))}
               </ul>
             )}
@@ -487,7 +492,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
             ) : (
               <ul className="flex flex-col gap-2">
                 {upcoming.map((item) => (
-                  <TaskRow key={item.key} item={item} ctx={ctx} />
+                  <TaskRow key={item.key} item={item} ctx={ctx} locked={paused} />
                 ))}
               </ul>
             )}
@@ -501,7 +506,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
                 Phần 2 · Kỹ năng
               </h2>
               <span className="ml-auto text-[13px] font-semibold text-ink/70">
-                {s.part2.locked ? "🔒 mở khi xong Phần 1 (và giờ nghỉ)" : `${s.part2.done}/${s.part2.total} xong`}
+                {`${s.part2.done}/${s.part2.total} xong · làm song song với bài tập`}
               </span>
             </div>
             {s.part2.items.length === 0 ? (
@@ -509,7 +514,7 @@ export function TodayScreen({ child, initial }: { child: Child; initial: TodayVi
             ) : (
               <ul className="flex flex-col gap-2">
                 {s.part2.items.map((item) => (
-                  <TaskRow key={item.key} item={item} ctx={ctx} locked={s.part2.locked} />
+                  <TaskRow key={item.key} item={item} ctx={ctx} locked={paused} />
                 ))}
               </ul>
             )}

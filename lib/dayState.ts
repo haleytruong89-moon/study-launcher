@@ -17,16 +17,23 @@
  * Interpretations (confirm with parent)
  * ---------------------------------------------------------------------------
  * Where DESIGN/SPEC is silent or ambiguous, the stricter (fail-closed) reading
- * was chosen; items 4, 9 and 15 were decided by the parent on 14/10/2026. The priority order of DESIGN section 5 is never changed.
+ * was chosen; items 4, 9 and 15 were decided by the parent on 14/10/2026. The priority
+ * order of DESIGN section 5 changes only by parent decision: R1 (07/11/2026,
+ * docs/MAN_CHINH_MOI.md section 1) opened Part 2 in parallel and moved the break.
  *
- *  1. Empty Part 2 counts as done only once Part 2 is UNLOCKED (Part 1 done AND
- *     break used/skipped/expired). The web is never opened earlier than the normal
- *     flow would open it. The same "unlocked" condition applies to a non-empty
- *     Part 2 whose tasks are all done.
- *  2. Break: BREAK_OFFER until break_started_at is set or break_skipped. The break
- *     counts as used when break_skipped, or it was started and (break_ended_at is
- *     set or now >= break_started_at + break_minutes). Only once per day. With
- *     break_minutes = 0 the offer is still shown (the child starts or skips it).
+ *  1. R1 (parent decision 07/11/2026): Part 1 and Part 2 are open together from the start
+ *     of the day, in any order. A part with tasks is done when all of them are; free time
+ *     needs BOTH parts. Status LOCK_P1 = Part 1 not done (whatever Part 2 is), LOCK_P2 =
+ *     Part 1 done, Part 2 not done.
+ *  2. Break (parent decision 07/11/2026): optional, once per day, `break.canStart` when
+ *     Part 1 is done (an empty Part 1 counts, E5d) or Part 2 is really done (an empty Part 2
+ *     alone does not count: on a day without skills the break still follows the homework),
+ *     free time has not started,
+ *     break_minutes > 0, the laptop is in a locked study status (LOCK_P1 / LOCK_P2 /
+ *     FREE_READY; not a parent lock, trust, sick or a parent open) and no timed task is
+ *     running (so the 10' are never counted as task minutes). BREAK (row 7) is open until
+ *     break_started_at + break_minutes or "Học tiếp" (break_ended_at). A legacy
+ *     break_skipped = true means the break of that day is used.
  *  3. OPEN_TRUST and OPEN_SICK: openUntil = next 00:00. Every locked status
  *     (LOCK_*): openUntil = null.
  *  4. Overrides (parent decision 14/10/2026): the NEWEST override of today (by
@@ -41,14 +48,17 @@
  *     sick > pass > ok > miss. A holiday shows as 'ok'. Today shows 'today' unless
  *     it is already sick / pass / ok (an unfinished today after bedtime is still
  *     'today', not 'miss').
- *  7. "Ngày đạt": part2_done_at strictly BEFORE bedtime on that local date (bedtime
- *     is read as a time on the same date), or pass used, or day_type sick/holiday.
- *     Exam days only via part2_done_at (or a pass).
+ *  7. "Ngày đạt": part1_done_at AND part2_done_at both strictly BEFORE bedtime on that
+ *     local date (bedtime is read as a time on the same date), or pass used, or day_type
+ *     sick/holiday. Exam days only via the milestones (or a pass). Every row written since
+ *     the first deploy (PR #4) has part1_done_at whenever part2_done_at is set, so past
+ *     weeks keep their result.
  *  8. Lazily written milestones use `now` (the read time), as DESIGN says, not the
- *     last task's done_at. If free time already started today (pass), finishing
- *     Part 2 writes only part2_done_at (free time is once per day). Whenever
- *     part2_done_at is set and free_started_at is not, free time starts at the read
- *     (unless a parent lock is in effect, see 9).
+ *     last task's done_at. If free time already started today (pass), finishing the
+ *     parts writes only their milestones (free time is once per day). Whenever both
+ *     part milestones are set and free_started_at is not, free time starts at the read
+ *     (unless a parent lock is in effect, see 9). A running break ends when free time
+ *     starts (FREE is above BREAK; the rest of the break is not added).
  *  9. Milestones are computed from data in every status, including OPEN_TRUST,
  *     OPEN_SICK and overrides. Parent decision 14/10/2026: while a LOCK override is
  *     in effect, free time does NOT start; it starts at the first read after the
@@ -67,14 +77,20 @@
  *     template's `active` flag removes a task.
  * 13. Items added after part1_done_at (homework or newly enabled templates) are
  *     listed and counted in total/done, but Part 1 stays done (no re-lock); homework
- *     rows created after the milestone are flagged `addedAfterPart1Done`.
+ *     rows created after the milestone are flagged `addedAfterPart1Done`. Same for
+ *     skills enabled after part2_done_at: Part 2 stays done.
  * 14. Pass availability follows DESIGN exactly: passes used in this Monday-week
  *     (by day_sessions.local_date) < passes_per_week AND no free_started_at today.
  *     No extra restriction is added for sick / trust / override days.
- * 15. Empty Part 1 (parent decision 14/10/2026): it lets the day move on (break
- *     offer, then Part 2) but is NOT frozen as part1_done_at until the child moves
- *     past it (break started or skipped, or Part 2 done). Homework assigned before
- *     that (e.g. 06:00 nothing yet, homework at 17:00) brings back LOCK_P1.
+ * 15. Empty part (parent decisions 14/10 and 07/11/2026): an empty part counts as done
+ *     (the break may start, the other part may finish the day) but is NOT frozen as its
+ *     milestone until the OTHER part has its milestone; then it is frozen at that read,
+ *     even under a parent lock. Work assigned before that (e.g. 06:00 nothing yet,
+ *     homework at 06:30) brings back LOCK_P1 / LOCK_P2. When BOTH parts are empty the
+ *     status is FREE_READY (locked) and nothing is frozen until the child presses
+ *     "Bắt đầu giờ tự do" (/api/day/free writes both milestones and free_started_at),
+ *     so free time never starts on a read the child did not ask for. A pass never
+ *     freezes a part.
  * 16. Any malformed instant in the input throws; the caller should then answer with
  *     an error so the extension stays fail-closed.
  * 17. Homework groups (parent decision 17/10/2026, "kiểu C"): the parent enters only the
@@ -100,9 +116,9 @@ const startOfLocalDayMs = (date: string): number => startOfLocalDay(date).getTim
 
 export type Status =
   | "LOCK_P1"
-  | "BREAK_OFFER"
   | "BREAK"
   | "LOCK_P2"
+  | "FREE_READY"
   | "FREE"
   | "LOCK_END"
   | "OPEN_SICK"
@@ -260,20 +276,25 @@ export interface PartView {
   /** Counted tasks (placeholders excluded). */
   total: number;
   done: number;
-  /** The part's milestone is set (part1_done_at / part2_done_at). */
+  /** The part is done: its milestone is set, or it has no task (empty part, interpretation 15). */
   complete: boolean;
   doneAt: string | null;
   items: TaskView[];
 }
 
 export interface BreakView {
+  /** 'offer' = the child may start the break right now (same as canStart). */
   state: "not_yet" | "offer" | "running" | "done" | "skipped";
+  /** Interpretation 2: the break button is shown and /api/day/break start is allowed. */
+  canStart: boolean;
   startedAt: string | null;
   /** break_started_at + break_minutes, clipped at 00:00. */
   endsAt: string | null;
 }
 
 export interface FreeView {
+  /** Empty day (both parts have no task): the child may press "Bắt đầu giờ tự do". */
+  canStart: boolean;
   startedAt: string | null;
   /** free_started_at + free_minutes, clipped at 00:00. */
   endsAt: string | null;
@@ -305,7 +326,7 @@ export interface DayState {
   localDate: string;
   dayType: DayType;
   part1: PartView & { pick: PickView };
-  part2: PartView & { locked: boolean };
+  part2: PartView;
   break: BreakView;
   free: FreeView;
   passAvailable: boolean;
@@ -508,8 +529,10 @@ function pickQuota(items: TaskView[], minUpcoming: number): PickView {
 export function isDayOk(s: DaySessionInput, bedtime: string): boolean {
   if (s.dayType === "sick" || s.dayType === "holiday") return true;
   if (s.passUsedAt !== null) return true;
-  if (s.part2DoneAt === null) return false;
-  return toMs(s.part2DoneAt, "day_sessions.part2_done_at") < atLocalTime(s.localDate, bedtime).getTime();
+  // Interpretation 7 (R1): both parts done before bedtime (they may finish in any order).
+  if (s.part1DoneAt === null || s.part2DoneAt === null) return false;
+  const bed = atLocalTime(s.localDate, bedtime).getTime();
+  return toMs(s.part1DoneAt, "day_sessions.part1_done_at") < bed && toMs(s.part2DoneAt, "day_sessions.part2_done_at") < bed;
 }
 
 function weekResult(s: DaySessionInput | undefined, bedtime: string, isToday: boolean): WeekResult {
@@ -573,21 +596,43 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const counted = countPart(part1Items);
   const part1Count = { total: counted.total + pick.needed, done: counted.done + Math.min(pick.done, pick.needed) };
   const part1Empty = part1Count.total === 0;
-  // Parent decision 14/10/2026: an EMPTY Part 1 is not final. It lets the day move on
-  // (break offer, Part 2) but is only frozen as part1_done_at once the child has moved
-  // past it (break started/skipped, or Part 2 done), so homework assigned later still locks.
+
+  // --- Part 2: skill templates of today. Open in parallel with Part 1 (R1, 07/11/2026) ---
+  const part2Items = templateViews(input, "skill", weekday, disabled, runsToday);
+  const part2Count = countPart(part2Items);
+  const part2Empty = part2Count.total === 0;
+
+  // A part with tasks is done once all of them are (any order, interpretation 1).
   if (session.part1DoneAt === null && !part1Empty && part1Count.done === part1Count.total) {
     session.part1DoneAt = nowIso;
     milestones.part1DoneAt = nowIso;
   }
-  const freezeEmptyPart1 = () => {
-    if (session.part1DoneAt === null && part1Empty) {
+  if (session.part2DoneAt === null && !part2Empty && part2Count.done === part2Count.total) {
+    session.part2DoneAt = nowIso;
+    milestones.part2DoneAt = nowIso;
+  }
+  // Interpretation 15 (revised R1): an EMPTY part is frozen as done only once the OTHER part
+  // has a milestone, even while a parent lock is in effect (so "ngày đạt" is not delayed by the
+  // lock). When BOTH parts are empty nothing is frozen: the child presses "Bắt đầu giờ tự do"
+  // (route /api/day/free writes the three milestones), so free time never starts on a read
+  // nobody asked for (e.g. the extension polling at 00:00). A pass never freezes a part.
+  const part1Ready = session.part1DoneAt !== null || part1Empty;
+  const part2Ready = session.part2DoneAt !== null || part2Empty;
+  if (part1Ready && part2Ready && (session.part1DoneAt !== null || session.part2DoneAt !== null)) {
+    if (session.part1DoneAt === null) {
       session.part1DoneAt = nowIso;
       milestones.part1DoneAt = nowIso;
     }
-  };
-  if (session.breakStartedAt !== null || session.breakSkipped || session.part2DoneAt !== null) freezeEmptyPart1();
-  const part1Done = session.part1DoneAt !== null || part1Empty;
+    if (session.part2DoneAt === null) {
+      session.part2DoneAt = nowIso;
+      milestones.part2DoneAt = nowIso;
+    }
+  }
+  const part1Done = part1Ready;
+  const part2Done = part2Ready;
+  const bothDone = session.part1DoneAt !== null && session.part2DoneAt !== null;
+  const emptyDay = part1Ready && part2Ready && !bothDone; // both parts empty, not started
+
   const part1DoneMs = toMsOrNull(session.part1DoneAt, "day_sessions.part1_done_at");
   if (part1DoneMs !== null) {
     const created = new Map(input.homework.map((h) => [h.id, h.createdAt]));
@@ -598,33 +643,13 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     }
   }
 
-  // --- Break ---
-  const breakStartMs = toMsOrNull(session.breakStartedAt, "day_sessions.break_started_at");
-  const breakEndMs = breakStartMs === null ? null : breakStartMs + settings.breakMinutes * MINUTE_MS;
-  const breakRunning = breakStartMs !== null && session.breakEndedAt === null && nowMs < (breakEndMs as number);
-  const breakUsed = session.breakSkipped || (breakStartMs !== null && !breakRunning);
-  let breakState: BreakView["state"];
-  if (breakStartMs !== null) breakState = breakRunning ? "running" : "done";
-  else if (session.breakSkipped) breakState = "skipped";
-  else breakState = part1Done ? "offer" : "not_yet";
-
-  // --- Part 2: skill templates of today; locked from data, not web status ---
-  const part2Locked = !part1Done || !breakUsed;
-  const part2Items = templateViews(input, "skill", weekday, disabled, runsToday);
-  const part2Count = countPart(part2Items);
-  if (!part2Locked && session.part2DoneAt === null && part2Count.done === part2Count.total) {
-    session.part2DoneAt = nowIso;
-    milestones.part2DoneAt = nowIso;
-    freezeEmptyPart1();
-  }
-
   // --- Overrides: the NEWEST override of today supersedes all older ones ---
   const override = pickOverride(input.overrides, today, nowMs);
 
-  // Free time starts once Part 2 is done (once per day). Parent decision 14/10/2026:
+  // Free time starts once BOTH parts are done (once per day). Parent decision 14/10/2026:
   // while a parent LOCK override is in effect, free time is deferred and starts at the
   // first read after the lock ends (still clipped at 00:00).
-  if (session.part2DoneAt !== null && session.freeStartedAt === null && override?.kind !== "lock_until") {
+  if (bothDone && session.freeStartedAt === null && override?.kind !== "lock_until") {
     session.freeStartedAt = nowIso;
     milestones.freeStartedAt = nowIso;
   }
@@ -632,6 +657,12 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   // --- Free time ---
   const freeStartMs = toMsOrNull(session.freeStartedAt, "day_sessions.free_started_at");
   const freeEndMs = freeStartMs === null ? null : freeStartMs + settings.freeMinutes * MINUTE_MS;
+
+  // --- Break (interpretation 2) ---
+  const breakStartMs = toMsOrNull(session.breakStartedAt, "day_sessions.break_started_at");
+  const breakEndMs = breakStartMs === null ? null : breakStartMs + settings.breakMinutes * MINUTE_MS;
+  const breakRunning =
+    breakStartMs !== null && session.breakEndedAt === null && nowMs < (breakEndMs as number) && freeStartMs === null;
 
   // --- Status: DESIGN section 5 priority table, top-down, first match wins ---
   let status: Status;
@@ -654,18 +685,37 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   } else if (freeEndMs !== null) {
     status = "FREE"; // row 6
     openUntilMs = freeEndMs;
-  } else if (!part1Done) {
-    status = "LOCK_P1"; // row 7
-  } else if (breakStartMs === null && !session.breakSkipped) {
-    status = "BREAK_OFFER"; // row 8
   } else if (breakRunning) {
-    status = "BREAK"; // row 9
+    status = "BREAK"; // row 7
     openUntilMs = breakEndMs;
+  } else if (!part1Done) {
+    status = "LOCK_P1"; // row 8
+  } else if (!part2Done) {
+    status = "LOCK_P2"; // row 9
   } else {
-    status = "LOCK_P2"; // row 10
+    status = "FREE_READY"; // row 10: empty day, waiting for "Bắt đầu giờ tự do"
   }
   if (openUntilMs !== null) openUntilMs = Math.min(openUntilMs, midnightMs);
   const open = openUntilMs !== null;
+
+  const timedRunning = [...part1Items, ...part2Items].some(
+    (i) => i.state === "running" && i.source === "template" && i.minMinutes > 0,
+  );
+  const breakTaken = session.breakSkipped || breakStartMs !== null;
+  const lockedStatus = status === "LOCK_P1" || status === "LOCK_P2" || status === "FREE_READY";
+  // "A part is done" for the break (parent 07/11/2026): Part 1 done (an empty Part 1 counts, as
+  // before R1, E5d) or Part 2 really finished. An empty Part 2 alone does not open the break:
+  // on a day without skills the break still comes after the homework, as before.
+  const partDoneForBreak = part1Done || session.part2DoneAt !== null;
+  const breakCanStart =
+    !breakTaken && settings.breakMinutes > 0 && session.freeStartedAt === null && partDoneForBreak && lockedStatus && !timedRunning;
+  let breakState: BreakView["state"];
+  if (breakStartMs !== null) breakState = breakRunning ? "running" : "done";
+  else if (session.breakSkipped) breakState = "skipped";
+  else breakState = breakCanStart ? "offer" : "not_yet";
+  // Only where it means something: the locked empty day, or trust mode (to mark the day). Not
+  // during a parent lock / open window or a sick day (it would spend the day's 45' for nothing).
+  const freeCanStart = emptyDay && session.freeStartedAt === null && (status === "FREE_READY" || status === "OPEN_TRUST");
 
   // --- Passes (Monday-week) ---
   const monday = weekStart(today);
@@ -716,17 +766,18 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     part1: { ...part1Count, complete: part1Done, doneAt: session.part1DoneAt, items: part1Items, pick },
     part2: {
       ...part2Count,
-      complete: session.part2DoneAt !== null,
+      complete: part2Done,
       doneAt: session.part2DoneAt,
-      locked: part2Locked,
       items: part2Items,
     },
     break: {
       state: breakState,
+      canStart: breakCanStart,
       startedAt: session.breakStartedAt,
       endsAt: breakEndMs === null ? null : iso(Math.min(breakEndMs, midnightMs)),
     },
     free: {
+      canStart: freeCanStart,
       startedAt: session.freeStartedAt,
       endsAt: freeEndMs === null ? null : iso(Math.min(freeEndMs, midnightMs)),
     },

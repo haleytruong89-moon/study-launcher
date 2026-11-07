@@ -3,7 +3,9 @@
  * clock and computeDayState's result; the child's laptop clock never matters.
  *
  * - Study time = the day's work is not done, the laptop is locked and it is not free time
- *   (LOCK_P1, BREAK_OFFER, LOCK_P2, or a parent lock while work is still open).
+ *   (LOCK_P1, LOCK_P2, or a parent lock while work is still open). R1 (07/11/2026): the parts
+ *   finish in any order, so study time lasts until BOTH are done (finishing the skills first
+ *   must not lift the limit while homework is still open).
  *   Break, free time, sick day, trust mode, a parent's "open" and a finished day: no limit.
  * - In study time each visit (one by_sessions row, from the moment the child opened the corner) lasts at most
  *   `by_study_minutes`. At the limit the session ends; the child may come back at once
@@ -17,11 +19,11 @@ import type { DayState } from "@/lib/dayState";
 export const STUDY_CAP_TEXT = "Quay lại học nhé, lúc nào cần thì vào lại.";
 
 /** True while the child is supposed to be studying (see above). */
-export function isStudyTime(state: Pick<DayState, "status" | "open" | "free" | "part2">): boolean {
+export function isStudyTime(state: Pick<DayState, "status" | "open" | "free" | "part1" | "part2">): boolean {
   if (state.open) return false;
-  if (state.status === "LOCK_END") return false;
+  if (state.status === "LOCK_END" || state.status === "FREE_READY") return false;
   if (state.free.startedAt) return false;
-  if (state.part2.complete) return false;
+  if (state.part1.complete && state.part2.complete) return false;
   return true;
 }
 

@@ -56,8 +56,9 @@ describe("day plan (display only)", () => {
     expect(cleanPlan(s, ["homework:zz"])).toBeNull();
   });
 
-  it("next task follows the plan, skips Part 2 while locked, and a running task wins", () => {
-    expect(nextFromPlan(s, ["template:s1", "homework:h2", "homework:h1"])?.id).toBe("h2");
+  it("next task follows the plan (skills too: both parts are open, R1), and a running task wins", () => {
+    expect(nextFromPlan(s, ["template:s1", "homework:h2", "homework:h1"])?.id).toBe("s1");
+    expect(nextFromPlan(s, ["homework:h2", "template:s1"])?.id).toBe("h2");
     expect(nextFromPlan(s, ["homework:h3"])?.id).toBe("h3"); // the child may plan upcoming work first
     expect(nextFromPlan(s, null)).toBeNull();
     const running = computeDayState(
@@ -97,8 +98,8 @@ describe("week stats", () => {
       weekStart: W,
       bedtime: "21:30",
       sessions: [
-        session("2026-10-12", { part2DoneAt: iso("2026-10-12", "19:00") }),
-        session("2026-10-13", { part2DoneAt: iso("2026-10-13", "22:00") }), // after bedtime
+        session("2026-10-12", { part1DoneAt: iso("2026-10-12", "18:00"), part2DoneAt: iso("2026-10-12", "19:00") }),
+        session("2026-10-13", { part1DoneAt: iso("2026-10-13", "18:00"), part2DoneAt: iso("2026-10-13", "22:00") }), // after bedtime
         session("2026-10-14", { passUsedAt: iso("2026-10-14", "18:00") }),
         session("2026-10-15", { dayType: "sick" }),
         session("2026-10-19", { part2DoneAt: iso("2026-10-19", "19:00") }), // next week

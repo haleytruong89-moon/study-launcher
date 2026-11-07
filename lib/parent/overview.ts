@@ -94,9 +94,9 @@ export function taskTag(item: TaskView, verdict: Verdict, nowMs: number, asked =
 export function parentPill(state: DayState): string {
   const labels: Record<Status, string> = {
     LOCK_P1: "Đang học",
-    BREAK_OFFER: "Xong phần bắt buộc",
     BREAK: "Đang nghỉ",
-    LOCK_P2: "Đang làm kỹ năng",
+    LOCK_P2: "Xong bài tập · còn kỹ năng",
+    FREE_READY: "Không có việc · chưa bấm giờ tự do",
     FREE: "Xong hết · giờ tự do",
     LOCK_END: "Xong hết",
     OPEN_SICK: "Ngày ốm",

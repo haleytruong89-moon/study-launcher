@@ -37,6 +37,7 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
 - Mọi khoảng mở (nghỉ, giờ tự do, override) **dừng ở 00:00**. Phần không có việc = đã xong. Override **mới nhất** thắng.
 - Bài trên lớp: **không có thời gian tối thiểu**, bắt buộc ảnh bằng chứng **hoặc bố mẹ xác nhận trực tiếp** (con xin, bố mẹ bấm; 19/10/2026). Bài bổ sung + kỹ năng: **tối thiểu 20 phút**.
 - Bài bổ sung **bắt buộc** (thuộc Phần 1). Kỹ năng v1 = **danh sách cố định theo thứ trong tuần**.
+- *(R1, 07/11/2026)* Bài tập (Phần 1) và kỹ năng (Phần 2) **làm song song**; giờ tự do khi xong **cả hai**; nghỉ 10' khi xong **một** phần. Chi tiết + ví dụ: `docs/MAN_CHINH_MOI.md` §1.
 - Nghỉ 10' (tùy chọn, 1 lần/ngày) · giờ tự do **45'** (1 lần/ngày) · thẻ miễn 1/tuần.
 - Khi khóa: chỉ allowlist (app học + từ điển/dịch). **Không** Google Search, **không** YouTube. Luôn chặn `*.translate.goog`.
 - Chế độ Tin tưởng: hệ thống **chỉ gợi ý**, phụ huynh xác nhận mới chuyển.
@@ -84,6 +85,7 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 ## Current status
 
 - Phase: 3 — Implementation. Last updated: 07/11/2026
+- **07/11 màn chính mới:** spec R0 (#43, chỉ tài liệu) → **R1 luật song song** (PR mở, nối tiếp #42, không SQL) → R2 khung 5 tab + Góc học tập → R3 nhân vật (#41) → R4 khu rừng An → R5 Tập của tuần Nguyên
 - Đã merge: S0 (#1–#3), S2a (#4), S1 (#5), S2b (#6), S4a (#7), S3a (#8), S2c (#9, SQL 0002), S2d (#10), S2e (#11, SQL 0003), S3c-1 (#12), S4b extension (#13, SQL 0004), #14 zip, S3d-1 Trang học + Xin mở (#15), #16, Zalo cả tên miền (#17), **UI phụ huynh mới** (#18–#20), **UI của con** (#21 nộp nhiều ảnh, #22 PIN 6 số – SQL 0005, #23 nhờ bố mẹ xem trực tiếp – SQL 0006), #24 docs, Trang học nhanh + file trên máy (#25, SQL 0007), Next.js 16.4.3 (#26), báo khung bị chặn (#27), vá bảo mật audit 24/10 (#28), extension 0.3.2 fail-closed (#29 → #31), Góc bình yên Phase 1.5 docs (#30), **S5 thông báo đẩy** (#32), spike mã hóa + phát hiện câu nguy hiểm (#33), S3d ngày đặc biệt (#34), S6 báo extension bị gỡ (#35, extension 0.3.3), S3e tự xóa ảnh (#36), S3d Tin tưởng + Nhật ký (#37), **Góc bình yên S-BY0** (#38, SQL 0008), **S-BY1** chọn cảm xúc + lượt ghé + giới hạn giờ học (#39, SQL 0009)
 - Đang mở: #40 (chữ Luật trong nhà) và PR A `feature/pr-a-bot-phien` (nối tiếp #40): Góc bình yên **bỏ PIN** (07/11, theo ý 2 con), "Ai thấy gì?" 4 dòng, "Xóa hết" phải gõ XÓA, **Góp ý của con** (SQL 0010), nhắc tối qua **Vercel Cron** (21:00–21:59)
 - Góc bình yên (`/binh-yen`, mặc định tắt): S-BY0 + S-BY1 chạy thật; sau PR A **không còn PIN riêng** — tài khoản con là vào được, máy chủ giữ lượt ghé cho giới hạn 10' giờ học. Cột/hàm PIN cũ để nguyên, không dùng (chỉ xóa khi phụ huynh đồng ý). Bố mẹ không có trang xem lượt ghé, chỉ tín hiệu "Con muốn nói chuyện" (không nhắc lại sau 10'). Điểm mở S-BY2: khóa mã hóa chữ không lấy từ PIN được nữa; job tự xóa 12 tháng chưa làm (`docs/BINH_YEN.md` §13)

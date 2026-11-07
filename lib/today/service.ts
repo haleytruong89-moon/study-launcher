@@ -79,38 +79,41 @@ export async function ensureSession(ctx: ChildContext, date: string) {
 }
 
 /**
- * Persists lazily derived milestones. Each update only fills a column that is still NULL,
- * so two concurrent reads can never move a milestone (first writer wins).
+ * Persists lazily derived milestones. Each value only fills a column that is still NULL, so two
+ * concurrent reads can never move a milestone (first writer wins).
+ *
+ * R1 (07/11/2026): the parts finish in any order, so any subset of the three milestones can
+ * appear in one read. They are first written in ONE statement (all guarded columns still NULL).
+ * If a concurrent read already wrote one of them, each column is filled on its own, parts
+ * first and free time last, so free_started_at is never stored without both part milestones.
  */
 async function persistMilestones(ctx: ChildContext, date: string, m: DayMilestones) {
   const admin = createAdminClient();
   await ensureSession(ctx, date);
+  const cols: [keyof DayMilestones, string][] = [
+    ["part1DoneAt", "part1_done_at"],
+    ["part2DoneAt", "part2_done_at"],
+    ["freeStartedAt", "free_started_at"],
+  ];
+  const present = cols.filter(([k]) => m[k]);
+  if (present.length === 0) return;
 
-  if (m.part1DoneAt) {
-    const { error } = await admin
+  const row: Record<string, string> = {};
+  for (const [k, col] of present) row[col] = m[k] as string;
+  let q = admin.from("day_sessions").update(row).eq("child_id", ctx.childId).eq("local_date", date);
+  for (const [, col] of present) q = q.is(col, null);
+  const { data, error } = await q.select("child_id");
+  if (error) throw new Error(`milestones: ${error.message}`);
+  if ((data ?? []).length > 0 || present.length === 1) return;
+
+  for (const [k, col] of present) {
+    const { error: e } = await admin
       .from("day_sessions")
-      .update({ part1_done_at: m.part1DoneAt })
+      .update({ [col]: m[k] as string })
       .eq("child_id", ctx.childId)
       .eq("local_date", date)
-      .is("part1_done_at", null);
-    if (error) throw new Error(`milestone part1: ${error.message}`);
-  }
-  if (m.part2DoneAt) {
-    // part2_done_at and free_started_at in ONE statement (DESIGN section 5).
-    const row: Record<string, string> = { part2_done_at: m.part2DoneAt };
-    if (m.freeStartedAt) row.free_started_at = m.freeStartedAt;
-    let q = admin.from("day_sessions").update(row).eq("child_id", ctx.childId).eq("local_date", date).is("part2_done_at", null);
-    if (m.freeStartedAt) q = q.is("free_started_at", null);
-    const { error } = await q;
-    if (error) throw new Error(`milestone part2: ${error.message}`);
-  } else if (m.freeStartedAt) {
-    const { error } = await admin
-      .from("day_sessions")
-      .update({ free_started_at: m.freeStartedAt })
-      .eq("child_id", ctx.childId)
-      .eq("local_date", date)
-      .is("free_started_at", null);
-    if (error) throw new Error(`milestone free: ${error.message}`);
+      .is(col, null);
+    if (e) throw new Error(`milestone ${col}: ${e.message}`);
   }
 }
 
