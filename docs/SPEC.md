@@ -59,8 +59,9 @@ Vai trò trong hub:
 - *(S2c)* Bài xong khi còn **≥ 2 ngày** tới hạn được dấu **★ sớm**; màn con hiện "Tuần này làm sớm N bài", Xem gộp của bố mẹ cũng hiện. Chỉ để ghi nhận — **không** đổi trạng thái khóa/mở, không cộng điểm, không tự tính vào Tin tưởng.
 - Bài bổ sung / kỹ năng: nút Xong bị khóa cho đến khi *giờ server − lúc bắt đầu ≥ số phút tối thiểu*. Gọi API Xong sớm hơn → bị từ chối, không ghi nhận.
 - Bài trên lớp: bấm Xong bắt buộc tải ≥ 1 ảnh bài đã làm thì việc mới thành "xong".
-- Phần 2 không bấm Bắt đầu được cho đến khi Phần 1 xong **và** giờ nghỉ đã dùng hoặc bỏ qua.
-- Xong Phần 2 → giờ tự do bắt đầu tại thời điểm server ghi nhận; đúng 45' sau chuyển sang KHÓA_HẾT_NGÀY.
+- *(R1, chốt 07/11/2026 — `docs/MAN_CHINH_MOI.md` §1.4, E1–E24)* Phần 1 và Phần 2 **mở cùng lúc**: con bắt đầu kỹ năng trước bài tập được.
+- Xong **cả hai** phần → giờ tự do bắt đầu tại thời điểm server ghi nhận; đúng 45' sau chuyển sang KHÓA_HẾT_NGÀY. Ngày **không có việc nào** → con bấm "Bắt đầu giờ tự do" thì 45' mới bắt đầu.
+- Nghỉ 10' (tùy chọn) mở khi con xong **Phần 1 hoặc Phần 2**, trước giờ tự do; không nghỉ được khi đang chạy đồng hồ một việc có giờ tối thiểu, khi bố mẹ khóa tay, hoặc khi máy đang mở sẵn. Trong lúc nghỉ, nút việc tạm khóa; "Học tiếp" kết thúc nghỉ sớm.
 - Nghỉ 10' và giờ tự do mỗi thứ tối đa 1 lần/ngày.
 - Thẻ miễn chỉ dùng được khi còn thẻ trong tuần (tuần bắt đầu thứ Hai); dùng → giờ tự do bắt đầu ngay, ngày tính "đạt".
 - 00:00 giờ Việt Nam: trạng thái về KHÓA_BÀI_TẬP; nghỉ/giờ tự do không cộng dồn sang ngày sau.
@@ -132,20 +133,20 @@ Cả nhà cùng chốt luật; con được quyền quyết: thứ tự 2 phần
 1. Mở trình duyệt hoặc tab mới là vào Launcher (extension đảm nhiệm, không dựa vào cài đặt trang chủ) → chọn profile → PIN.
 2. Dashboard hôm nay — mỗi việc đi qua 3 bước: **Bắt đầu → đồng hồ chạy → Xong**.
    - **Phần 1 — Bài tập**: (a) bài trên lớp theo từng môn (ảnh phụ huynh gửi) — bấm Xong thì **chụp ảnh bài đã làm**; (b) bài bổ sung Toán/Anh (deep-link). Môn "đang xây" không tính.
-   - **Phần 2 — Kỹ năng**: hoạt động SkillGrow của ngày.
+   - **Phần 2 — Kỹ năng**: hoạt động SkillGrow của ngày. *(R1, 07/11/2026)* Làm song song với Phần 1, thứ tự do con chọn.
    - **Bài trên lớp**: không có thời gian tối thiểu (độ dài do cô giáo quyết định) — đồng hồ vẫn chạy để ghi nhận thời gian; làm xong bấm Xong và **chụp ảnh** làm bằng chứng.
    - **Bài bổ sung + kỹ năng**: nút **Xong** chỉ bật khi đồng hồ đạt **tối thiểu 20 phút** (phụ huynh chỉnh riêng được từng việc).
-3. Xong Phần 1 → **nghỉ 10 phút** (tùy chọn, mở mọi trang) → khóa lại → Phần 2.
-4. Xong Phần 2 → **giờ tự do 45 phút** → hết giờ khóa lại đến hết ngày.
+3. Xong **một** phần (bài tập hoặc kỹ năng) → được **nghỉ 10 phút** (tùy chọn, mở mọi trang) → khóa lại → làm phần còn lại.
+4. Xong **cả hai** phần → **giờ tự do 45 phút** → hết giờ khóa lại đến hết ngày.
 5. Gặp trang bị khóa mà cần cho bài → bấm **"Xin mở trang này"** → phụ huynh duyệt trên điện thoại.
 
 ## 6. Máy trạng thái (laptop, chế độ Khóa)
 
 ```
-🔒 KHÓA_BÀI_TẬP ──(xong Phần 1)──▶ ☕ NGHỈ 10' ──(hết giờ / "học tiếp")──▶ 🔒 KHÓA_KỸ_NĂNG
-                                                                                │
-                                                          (xong Phần 2)        ▼
-🔒 KHÓA_HẾT_NGÀY ◀──(hết 45')── 🎮 GIỜ_TỰ_DO 45' ◀───────────────────────────────┘
+(R1, 07/11/2026: hai phần song song)
+🔒 GIỜ HỌC (Phần 1 + Phần 2 cùng mở) ──(xong 1 phần, con bấm Nghỉ)──▶ ☕ NGHỈ 10' ──(hết giờ / "học tiếp")──▶ 🔒 GIỜ HỌC
+        │
+        └──(xong cả 2 phần)──▶ 🎮 GIỜ_TỰ_DO 45' ──(hết 45')──▶ 🔒 KHÓA_HẾT_NGÀY
 ```
 
 | Trạng thái | Web được mở |
@@ -332,6 +333,7 @@ Quy tắc:
 | 05/11/2026 | **Chế độ Tin tưởng**: phụ huynh chốt ngưỡng lên **90% ngày đạt / 3 tuần liên tiếp** (trả lời §16 Q4 phần lên chế độ; 70% về Khóa vẫn đề xuất). Gợi ý ẩn đến thứ Hai tuần sau khi bố mẹ đã chuyển hoặc bấm "Để sau" (chốt). |
 | 07/11/2026 | **Góc bình yên bỏ PIN riêng** (theo ý kiến của 2 con: "nơi giải tỏa cảm xúc con không muốn hằng ngày vào lại phải nhập mã"). Thay quyết định Q1 (01/11): đăng nhập tài khoản của con là vào được; **không tự khóa** khi không chạm. Hệ quả nói rõ với con trong "Ai thấy gì?": ai đăng nhập bằng tài khoản con cũng vào được. Giữ nguyên: giới hạn giờ học 10'/lượt (giờ máy chủ), không trang nào cho bố mẹ xem, tín hiệu không nội dung. Bỏ nút "Xóa PIN Góc bình yên" của bố mẹ. Cột / hàm PIN cũ trong database để nguyên, không dùng (xóa chỉ khi phụ huynh đồng ý). "Xóa hết của con" chuyển vào mục gập "Dữ liệu của con", phải gõ **XÓA**. Điểm mở cho S-BY2: khóa mã hóa chữ trên máy không còn lấy từ PIN Góc bình yên được |
 | 07/11/2026 | **Góp ý của con** cho app (Thích / Chưa thích / Ý tưởng, ≤ 500 ký tự, ≤ 10/ngày): nút "💡 Góp ý" ở Hôm nay + link trong Góc bình yên; **không riêng tư** (con được báo "Bố mẹ sẽ đọc"); bố mẹ đọc ở Thêm › Góp ý của con, bấm "Đã đọc"; **không** push. **Nhắc buổi tối** chuyển sang Vercel Cron (tới trong 21:00–21:59; GitHub chạy trễ tới 03:34–04:13); app không gửi nhắc ngoài 20:00–23:00 |
+| 07/11/2026 | **R1 — luật mới màn chính** (spec `docs/MAN_CHINH_MOI.md`, PR #43; code PR R1): kỹ năng **làm song song** với bài tập; giờ tự do khi xong **cả hai** phần; **nghỉ 10' khi xong một trong hai phần** (bố mẹ sửa lại: không phải "lúc nào cũng được"), không nghỉ khi đang chạy đồng hồ, nút việc tạm khóa trong lúc nghỉ; ngày **không có việc nào** → con bấm "Bắt đầu giờ tự do" (extension hỏi cả lúc 00:00 nên không tự bắt đầu); giữ "Làm trước" bắt buộc 1 bài ngày không có bài đến hạn; chấp nhận làm bài trên lớp trong lúc chạy đồng hồ kỹ năng (giới hạn đã biết); "ngày đạt" = cả 2 mốc trước giờ ngủ. Bỏ BREAK_OFFER và nút "Học tiếp luôn" |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 

@@ -64,27 +64,31 @@ export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMi
           tone: "lock",
         };
       }
+      if (state.part2.complete) {
+        return {
+          title: `Xong kỹ năng — còn ${remaining(state.part1)} bài tập`,
+          sub: `${breakHint(state, rules)}Xong bài tập là đến giờ tự do ${rules.freeMinutes} phút.`,
+          tone: "lock",
+        };
+      }
       return {
-        title: `Còn ${remaining(state.part1)} việc ở Phần 1`,
-        sub: "Làm xong bài trên lớp và bài bổ sung để được nghỉ và mở Phần 2.",
+        title: `Còn ${remaining(state.part1)} bài tập · ${remaining(state.part2)} kỹ năng`,
+        sub: "Bài tập và kỹ năng làm song song, con chọn thứ tự. Xong một phần là được nghỉ.",
         tone: "lock",
-      };
-    case "BREAK_OFFER":
-      return {
-        title: state.part1.total === 0 ? "Hôm nay Phần 1 không có việc" : "Xong Phần 1 — giỏi lắm!",
-        sub:
-          rules.breakMinutes > 0
-            ? `Nghỉ ${rules.breakMinutes} phút (mở mọi trang) hoặc làm tiếp Phần 2 luôn.`
-            : "Bấm “Học tiếp luôn” để mở Phần 2.",
-        tone: "dark",
       };
     case "BREAK":
-      return { title: "Đang nghỉ", sub: "Hết giờ nghỉ máy tự khóa lại và mở Phần 2.", tone: "open" };
+      return { title: "Đang nghỉ", sub: "Hết giờ nghỉ máy tự khóa lại. Bấm “Học tiếp” để làm tiếp ngay.", tone: "open" };
     case "LOCK_P2":
       return {
-        title: `Còn ${remaining(state.part2)} việc ở Phần 2`,
-        sub: `Xong kỹ năng hôm nay là đến giờ tự do ${rules.freeMinutes} phút.`,
+        title: `Xong bài tập — còn ${remaining(state.part2)} kỹ năng`,
+        sub: `${breakHint(state, rules)}Xong kỹ năng là đến giờ tự do ${rules.freeMinutes} phút.`,
         tone: "lock",
+      };
+    case "FREE_READY":
+      return {
+        title: "Hôm nay không có việc nào",
+        sub: `Bấm “Bắt đầu giờ tự do” khi con muốn: ${rules.freeMinutes} phút tính từ lúc bấm.`,
+        tone: "dark",
       };
     case "FREE":
       return {
@@ -109,14 +113,20 @@ export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMi
   }
 }
 
-/** 0 = Bài tập, 1 = Nghỉ, 2 = Kỹ năng, 3 = Giờ tự do, 4 = all done (derived from data). */
-export function stepIndex(state: DayState, nowMs: number): number {
-  if (state.free.startedAt !== null) {
-    return state.free.endsAt !== null && nowMs < new Date(state.free.endsAt).getTime() ? 3 : 4;
-  }
-  if (!state.part1.complete) return 0;
-  if (state.break.state === "offer" || state.break.state === "running") return 1;
-  return 2;
+function breakHint(state: DayState, rules: { breakMinutes: number }): string {
+  return state.break.canStart ? `Con được nghỉ ${rules.breakMinutes} phút nếu muốn. ` : "";
+}
+
+/**
+ * Header steps (R1): Bài tập and Kỹ năng are done in any order, so each step is ticked on its
+ * own; "Giờ tự do" is ticked once it has started (or ended). Display only.
+ */
+export function daySteps(state: DayState): { label: string; done: boolean }[] {
+  return [
+    { label: "Bài tập", done: state.part1.complete },
+    { label: "Kỹ năng", done: state.part2.complete },
+    { label: "Giờ tự do", done: state.free.startedAt !== null },
+  ];
 }
 
 export function isOkResult(r: WeekResult): boolean {
@@ -185,8 +195,9 @@ export function taskProgress(item: TaskView, nowMs: number): number {
 
 /**
  * The one task the screen suggests next: a running task first; then due homework
- * (overdue first), extras, and (on an empty day) an upcoming item to pick; then Part 2
- * once it is unlocked. Display only: the server still decides what may start.
+ * (overdue first), extras, and (on an empty day) an upcoming item to pick; then skills.
+ * Both parts are open (R1), so skills come next as soon as Part 1 has nothing left to
+ * suggest. Display only: the server still decides what may start.
  */
 export function nextTask(state: DayState): TaskView | null {
   const all = [...state.part1.items, ...state.part2.items];
@@ -198,11 +209,12 @@ export function nextTask(state: DayState): TaskView | null {
     if (due) return due;
     const extra = state.part1.items.find((i) => i.source === "template" && todo(i));
     if (extra) return extra;
-    if (state.part1.pick.done < state.part1.pick.needed) return state.part1.items.find((i) => i.group === "upcoming" && todo(i)) ?? null;
-    return null;
+    if (state.part1.pick.done < state.part1.pick.needed) {
+      const pick = state.part1.items.find((i) => i.group === "upcoming" && todo(i));
+      if (pick) return pick;
+    }
   }
-  if (!state.part2.locked) return state.part2.items.find(todo) ?? null;
-  return null;
+  return state.part2.items.find(todo) ?? null;
 }
 
 /** Required tasks of the day (both parts) for the header ring. */

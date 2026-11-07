@@ -102,8 +102,8 @@ Hàm thuần, không I/O, test bằng Vitest với `now` truyền vào:
 computeDayState(input: DayInput, now: Date): DayState
 
 type Status =
-  | 'LOCK_P1' | 'BREAK_OFFER' | 'BREAK' | 'LOCK_P2'
-  | 'FREE' | 'LOCK_END'          // luồng thường
+  | 'LOCK_P1' | 'BREAK' | 'LOCK_P2' | 'FREE_READY'
+  | 'FREE' | 'LOCK_END'          // luồng thường (R1 07/11/2026: bỏ BREAK_OFFER, thêm FREE_READY)
   | 'OPEN_SICK' | 'OPEN_TRUST' | 'OPEN_OVERRIDE' | 'LOCK_OVERRIDE'
 
 interface DayState {
@@ -111,7 +111,9 @@ interface DayState {
   open: boolean                // extension chỉ cần trường này + allowlist
   openUntil: string | null     // ISO, để extension đặt alarm đúng lúc
   part1: { total: number; done: number; items: TaskView[] }
-  part2: { total: number; done: number; locked: boolean; items: TaskView[] }
+  part2: { total: number; done: number; items: TaskView[] }     // R1: không còn `locked`
+  break: { state; canStart: boolean; … }   // canStart: hiện nút Nghỉ, /api/day/break start được phép
+  free: { canStart: boolean; … }           // ngày không có việc nào: nút "Bắt đầu giờ tự do"
   passAvailable: boolean
   week: { date: string; result: 'ok' | 'pass' | 'miss' | 'today' | 'sick' }[]   // 7 ngày qua
   trust: { mode: 'lock' | 'trust'; weeksMet: number; weeksNeeded: number }
@@ -119,7 +121,7 @@ interface DayState {
 }
 ```
 
-Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đúng thì dừng):
+Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đúng thì dừng). **R1 — bố mẹ chốt 07/11/2026** (`docs/MAN_CHINH_MOI.md` §1, ví dụ E1–E24): kỹ năng làm song song với bài tập; giờ tự do khi xong **cả hai** phần; nghỉ 10' khi xong **một** trong hai phần.
 
 | # | Điều kiện | Status | open |
 |---|---|---|---|
@@ -127,25 +129,27 @@ Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đún
 | 3 | `trust_state.mode = trust` | OPEN_TRUST | ✓ (vẫn hiện việc + nhắc) |
 | 4 | `day_type = sick` | OPEN_SICK | ✓ cả ngày |
 | 5 | `free_started_at` có và `now ≥ free_started_at + free_minutes` | LOCK_END | ✗ |
-| 6 | `free_started_at` có (do xong Phần 2 hoặc dùng thẻ) | FREE | ✓ đến hết 45' |
-| 7 | Phần 1 chưa xong | LOCK_P1 | ✗ |
-| 8 | Chưa nghỉ, chưa bỏ qua nghỉ | BREAK_OFFER | ✗ |
-| 9 | `break_started_at` có, chưa `break_ended_at`, và `now < break_started_at + break_minutes` | BREAK | ✓ đến hết nghỉ |
-| 10 | còn lại (Phần 2 chưa xong) | LOCK_P2 | ✗ |
+| 6 | `free_started_at` có (do xong cả hai phần hoặc dùng thẻ) | FREE | ✓ đến hết 45' |
+| 7 | `break_started_at` có, chưa `break_ended_at`, và `now < break_started_at + break_minutes` | BREAK | ✓ đến hết nghỉ |
+| 8 | Phần 1 chưa xong | LOCK_P1 | ✗ |
+| 9 | Phần 1 xong, Phần 2 chưa xong | LOCK_P2 | ✗ |
+| 10 | Cả hai phần **không có việc nào**, con chưa bấm "Bắt đầu giờ tự do" (chốt 07/11/2026) | FREE_READY | ✗ |
 
 Quy tắc phụ:
 - **Mọi `openUntil` bị cắt ở 00:00** giờ VN của ngày hiện tại (nghỉ, giờ tự do, override).
-- **Phần không có việc nào** (vd ngày thi tắt hết mẫu việc, ngày không có kỹ năng) = coi như đã xong; mốc `part1_done_at` / `part2_done_at` + `free_started_at` được ghi lười ở lần đọc đầu tiên thấy điều kiện đúng (trong transaction).
-  - *Chốt 14/10/2026:* **Phần 1 rỗng** cho ngày đi tiếp nhưng **chưa ghi** `part1_done_at` cho đến khi con đã bắt đầu / bỏ qua nghỉ (hoặc xong Phần 2); bài giao trước thời điểm đó vẫn đưa về LOCK_P1.
-- **`part2.locked` tính từ dữ liệu, không từ status web**: khóa khi chưa có `part1_done_at` hoặc (chưa nghỉ xong và chưa bỏ qua nghỉ). Nhờ vậy ở OPEN_TRUST / OPEN_SICK / override, thứ tự Phần 1 → Phần 2 vẫn giữ.
+- **Phần không có việc nào** (vd ngày thi tắt hết mẫu việc, ngày không có kỹ năng) = coi như đã xong (nghỉ được, phần kia xong là xong ngày).
+  - *Chốt 14/10 + 07/11/2026:* phần rỗng **chưa ghi** mốc cho đến khi **phần kia có mốc**; lúc đó ghi luôn (kể cả đang bị khóa tay, để "ngày đạt" không bị trễ). Bài / kỹ năng giao trước lúc đó vẫn khóa lại.
+  - **Cả hai phần rỗng** → FREE_READY: không tự ghi gì (extension hỏi cả lúc 00:00). Con bấm "Bắt đầu giờ tự do" (`POST /api/day/free`) thì mới ghi 2 mốc + `free_started_at`. Dùng thẻ không bao giờ ghi mốc phần.
+- **Hai phần mở song song** (R1): bắt đầu / xong việc của phần nào cũng được, bất kể status. Mỗi lúc vẫn chỉ 1 việc có giờ tối thiểu (chốt 15/10).
+- **Nghỉ** (R1): `break.canStart` khi Phần 1 **hoặc** Phần 2 đã xong (phần rỗng tính là xong), chưa nghỉ hôm nay (kể cả dòng cũ có `break_skipped = true`), chưa có giờ tự do, `break_minutes > 0`, máy đang khóa giờ học (LOCK_P1 / LOCK_P2 / FREE_READY — không phải khóa tay, Tin tưởng, ngày ốm, bố mẹ mở), và **không** có việc có giờ tối thiểu đang chạy. Trong lúc nghỉ, route bắt đầu / xong / nộp ảnh / nhờ bố mẹ xem từ chối ("Đang nghỉ — bấm Học tiếp"). Giờ tự do bắt đầu trong lúc nghỉ (vd bố mẹ xác nhận bài cuối) → FREE ngay, phần nghỉ còn lại bỏ.
 - Phút tối thiểu của một việc = `task_templates.min_minutes` nếu có, nếu không lấy `extra_min_minutes` / `skill_min_minutes` trong `family_settings`.
 - *Chốt 17/10/2026 (S2c, `computeDayState` diễn giải 17–18):* **mọi** `homework_items` chưa xong, chưa `archived_at` đều trả về, với `group`: `due` (`due_date ≤ localDate + homework_lookahead_days`, bắt buộc từng bài) hoặc `upcoming` (không bắt buộc từng bài). Ngày không có bài `due` nào (kể cả đã xong hôm nay) → Phần 1 thêm `pick.needed = min(homework_min_upcoming, số bài upcoming)` "chỗ", lấp bằng bài upcoming xong hôm nay. `early` = xong vào ngày ≤ `due_date − 2`; `earlyThisWeek` đếm từ thứ Hai — chỉ hiển thị, không đổi trạng thái.
 - **Phần 1** = `homework_items` chưa `done_at`, chưa `archived_at`, `due_date ≤ localDate + homework_lookahead_days` + `task_templates` part `extra` có `weekday` hôm nay, không nằm trong `disabled_template_ids`. Slot `placeholder` **vẫn hiện** thành dòng "đang xây" (trả trong `items` với cờ `placeholder: true`) nhưng **không tính** vào total/done.
-- **Phần 2** = `task_templates` part `skill` của thứ hôm nay. Khóa khi status ∈ {LOCK_P1, BREAK_OFFER, BREAK}.
-- Phần 1 xong lần đầu → ghi `part1_done_at`. Phụ huynh giao thêm bài **sau** mốc này → bài hiện trong danh sách nhưng **không khóa lại** ngày đó.
-- Phần 2 xong → ghi `part2_done_at` và `free_started_at = now` (cùng một transaction). *Chốt 14/10/2026:* nếu lúc đó đang có override **khóa**, `free_started_at` được hoãn đến lần đọc đầu tiên sau khi hết khóa.
+- **Phần 2** = `task_templates` part `skill` của thứ hôm nay. Mở từ đầu ngày (R1).
+- Phần 1 xong lần đầu → ghi `part1_done_at`; Phần 2 xong lần đầu → ghi `part2_done_at` (thứ tự nào cũng được). Phụ huynh giao thêm bài / bật thêm kỹ năng **sau** mốc của phần đó → hiện trong danh sách nhưng **không khóa lại** ngày đó.
+- Có **cả hai** mốc → `free_started_at = now`. Các mốc của một lần đọc ghi trong **một** câu lệnh; nếu đã có lần đọc khác ghi trước thì ghi từng cột, phần trước, giờ tự do sau (không bao giờ có `free_started_at` mà thiếu mốc phần). *Chốt 14/10/2026:* nếu lúc đó đang có override **khóa**, `free_started_at` được hoãn đến lần đọc đầu tiên sau khi hết khóa.
 - Thẻ miễn: còn thẻ khi số `pass_used_at` trong tuần (T2–CN) < `passes_per_week` **và hôm nay chưa có `free_started_at`** (không cho dùng thẻ để có giờ tự do lần 2). Dùng → `pass_used_at = now`, `free_started_at = now`.
-- "Ngày đạt" (cho thống kê tuần và chế độ Tin tưởng): có `part2_done_at` trước `bedtime`, **hoặc** dùng thẻ, **hoặc** `day_type ∈ {sick, holiday}`. Ngày thi (`exam`) **không** tự tính đạt. Tính lười khi đọc, không cần cron.
+- "Ngày đạt" (cho thống kê tuần và chế độ Tin tưởng): có **cả** `part1_done_at` **và** `part2_done_at` trước `bedtime` (R1; mọi dòng đã ghi từ lần chạy đầu (PR #4) đều có `part1_done_at` khi có `part2_done_at`, nên các tuần cũ không đổi kết quả), **hoặc** dùng thẻ, **hoặc** `day_type ∈ {sick, holiday}`. Ngày thi (`exam`) **không** tự tính đạt. Tính lười khi đọc, không cần cron.
 - *(S3d, 01/11/2026)* **Ngày đặc biệt** do phụ huynh đặt (`POST /api/admin/special-days`, phiên của phụ huynh, ghi `audit_log` `day_type.set`): cho **hôm nay hoặc tối đa 60 ngày tới** (giờ server), **không sửa ngày đã qua**. `exam` / `holiday` tắt được **mẫu việc** (bài bổ sung / kỹ năng) **có lịch vào thứ của ngày đó**; bài trên lớp không tắt ở đây (dời hạn ở Giao bài). `normal` / `sick` xóa danh sách tắt. Về "Ngày thường" = ghi `day_type = normal`, không xóa dòng. Hiệu lực vẫn do `computeDayState` (không đổi).
 - Tiến độ Tin tưởng: đếm số tuần **liên tiếp gần nhất** có tỷ lệ ngày đạt ≥ `trust_up_pct`. Đủ `trust_up_weeks` → hiện gợi ý cho phụ huynh xác nhận. **Không tự chuyển chế độ.** Đang Tin tưởng mà 1 tuần < `trust_down_pct` → gợi ý quay lại Khóa.
   - *(S3d, 04/11/2026)* Gợi ý hiện thành thẻ trên thẻ của con ở **Hôm nay** của bố mẹ, nút "Chuyển sang Tin tưởng" / "Quay lại chế độ Khóa" và **"Để sau"**. Bố mẹ còn chuyển tay bất kỳ lúc nào ở **Thêm › Các con** (có bước xác nhận). Ghi bằng phiên bố mẹ (`trust_state`, RLS `parent_all`; `since = now`, `updated_by`), log `trust.set {child_id, mode, previous, via}`. "Để sau" chỉ ghi log `trust.dismissed {child_id, suggestion, week}`. *Đề xuất, chờ bố mẹ chốt:* đã chuyển (bất kỳ chiều) hoặc "Để sau" trong tuần (T2–CN) → **ẩn gợi ý đến thứ Hai tuần sau** (`lib/admin/trust.ts`, đọc lại từ `audit_log`, không thêm bảng). `computeDayState` không đổi.
@@ -162,7 +166,8 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/tasks/start` | con | Tạo `task_run` (chặn nếu Phần 2 đang khóa; chặn nếu đã có run mở cho việc đó) |
 | `POST /api/tasks/finish` | con | Kiểm `now − started_at ≥ min_minutes` (template) → nếu thiếu trả **409**. Homework: cần ≥ 1 `proof_path` → set `homework_items.done_at`. Cập nhật mốc phần |
 | `POST /api/tasks/proof` | con | Ghi đường dẫn ảnh đã tải lên Storage vào `task_run` |
-| `POST /api/day/break` | con | `start` / `skip` (chỉ ở BREAK_OFFER); `end` (chỉ ở BREAK — nút "Học tiếp", ghi `break_ended_at`) |
+| `POST /api/day/break` | con | `start` (khi `break.canStart`, R1); `end` (chỉ ở BREAK — nút "Học tiếp", ghi `break_ended_at`). `skip` bỏ ở R1 (trả 400) |
+| `POST /api/day/free` | con | Ngày không có việc nào (FREE_READY): ghi `part1_done_at` + `part2_done_at` + `free_started_at` trong 1 câu lệnh (R1, chốt 07/11/2026) |
 | `POST /api/day/pass` | con | Dùng thẻ miễn nếu còn; trả 409 nếu hôm nay đã có `free_started_at` |
 | `POST /api/unlock-requests` | con (hoặc trang khóa) | Tạo yêu cầu (bỏ qua nếu cùng domain đang `pending`) → gửi push cho phụ huynh |
 | `GET /api/unlock-requests/:id` | trang khóa | Trạng thái yêu cầu (hiện "đã duyệt" / "bị từ chối" / "bố mẹ chưa trả lời" sau 10 phút) |

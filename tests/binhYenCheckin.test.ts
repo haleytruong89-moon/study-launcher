@@ -65,22 +65,27 @@ describe("repeated 'rất to' (R3, no text; shown only to the child)", () => {
 });
 
 describe("R5 study time (server clock, computeDayState)", () => {
-  const day = (status: string, extra: { open?: boolean; free?: string | null; part2?: boolean } = {}) => ({
+  const day = (status: string, extra: { open?: boolean; free?: string | null; part1?: boolean; part2?: boolean } = {}) => ({
     status: status as never,
     open: extra.open ?? false,
-    free: { startedAt: extra.free ?? null, endsAt: null },
+    free: { canStart: false, startedAt: extra.free ?? null, endsAt: null },
+    part1: { complete: extra.part1 ?? false } as never,
     part2: { complete: extra.part2 ?? false } as never,
   });
   it.each([
     ["LOCK_P1", true],
-    ["BREAK_OFFER", true],
     ["LOCK_P2", true],
     ["LOCK_OVERRIDE", true],
   ])("%s → study time", (s, want) => expect(isStudyTime(day(s))).toBe(want));
+  it("R1: skills done first while homework is open → still study time; both done → no limit", () => {
+    expect(isStudyTime(day("LOCK_P1", { part2: true }))).toBe(true);
+    expect(isStudyTime(day("LOCK_OVERRIDE", { part1: true, part2: true }))).toBe(false);
+    expect(isStudyTime(day("FREE_READY", { part1: true, part2: true }))).toBe(false);
+  });
   it("break, free time, open days, a finished day → no limit (R5 #2)", () => {
     expect(isStudyTime(day("BREAK", { open: true }))).toBe(false);
     expect(isStudyTime(day("FREE", { open: true, free: "2026-11-06T11:00:00Z" }))).toBe(false);
-    expect(isStudyTime(day("LOCK_END", { free: "2026-11-06T10:00:00Z", part2: true }))).toBe(false);
+    expect(isStudyTime(day("LOCK_END", { free: "2026-11-06T10:00:00Z", part1: true, part2: true }))).toBe(false);
     expect(isStudyTime(day("OPEN_TRUST", { open: true }))).toBe(false);
     expect(isStudyTime(day("OPEN_SICK", { open: true }))).toBe(false);
     expect(isStudyTime(day("OPEN_OVERRIDE", { open: true }))).toBe(false);

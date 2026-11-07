@@ -28,7 +28,14 @@ export function passOffered(state: DayState): boolean {
   return state.passAvailable && state.status !== "LOCK_OVERRIDE";
 }
 
-/** Start a task: it must be today's, countable, not done, and (Part 2) unlocked. */
+/** R1 E8 (07/11/2026): during the 10' break the task buttons pause; "Học tiếp" ends the break. */
+export const ON_BREAK_TEXT = "Đang nghỉ — bấm Học tiếp để làm tiếp.";
+
+function onBreak(state: DayState): boolean {
+  return state.status === "BREAK";
+}
+
+/** Start a task: it must be today's, countable and not done; never during the break. Both parts are open (R1). */
 export function decideStart(
   state: DayState,
   source: "homework" | "template",
@@ -38,7 +45,7 @@ export function decideStart(
   if (!item) return deny(404, "Không có việc này hôm nay.");
   if (item.state === "placeholder") return deny(409, "App này đang xây, chưa làm được.");
   if (item.state === "done") return deny(409, "Việc này đã xong rồi.");
-  if (item.part === 2 && state.part2.locked) return deny(409, "Phần 2 mở sau khi xong Phần 1 và giờ nghỉ.");
+  if (onBreak(state)) return deny(409, ON_BREAK_TEXT);
   if (item.state !== "running" && isTimed(item)) {
     // Parent decision 15/10/2026: one timed task at a time, so one wait cannot count twice.
     const other = runningTimedTask(state);
@@ -56,6 +63,7 @@ export function decideFinish(state: DayState, runId: string, now: Date): Decisio
   if (!item) return deny(404, "Không tìm thấy lượt làm này.");
   if (item.state === "done") return deny(409, "Việc này đã xong rồi.");
   if (item.state !== "running" || item.canFinishAt === null) return deny(409, "Việc này chưa bắt đầu.");
+  if (onBreak(state)) return deny(409, ON_BREAK_TEXT);
   if (item.requiresProof && item.proofCount < 1) return deny(409, "Chụp ảnh bài đã làm trước khi bấm Xong.");
   const remainingMs = new Date(item.canFinishAt).getTime() - now.getTime();
   if (remainingMs > 0) {
@@ -71,6 +79,7 @@ export function decideProof(state: DayState, runId: string): Decision<{ item: Ta
   if (!item) return deny(404, "Không tìm thấy lượt làm này.");
   if (!item.requiresProof) return deny(409, "Việc này không cần ảnh.");
   if (item.state !== "running") return deny(409, "Chỉ gửi ảnh khi đang làm bài.");
+  if (onBreak(state)) return deny(409, ON_BREAK_TEXT);
   if (item.proofCount >= MAX_PROOFS) return deny(409, `Tối đa ${MAX_PROOFS} ảnh mỗi bài.`);
   return { ok: true, value: { item } };
 }
@@ -83,17 +92,37 @@ export function decideConfirmRequest(state: DayState, runId: string): Decision<{
   if (!item) return deny(404, "Không tìm thấy lượt làm này.");
   if (!item.requiresProof) return deny(409, "Việc này không cần bố mẹ xác nhận.");
   if (item.state !== "running") return deny(409, "Chỉ nhờ bố mẹ xem khi đang làm bài.");
+  if (onBreak(state)) return deny(409, ON_BREAK_TEXT);
   return { ok: true, value: { item } };
 }
 
-export type BreakAction = "start" | "skip" | "end";
+export type BreakAction = "start" | "end";
 
-/** start / skip only while the break is on offer; end ("Học tiếp") only while it runs. */
+/**
+ * Break (R1, parent decision 07/11/2026): start only when computeDayState says `break.canStart`
+ * (Part 1 or Part 2 done, once a day, before free time, no timed task running, not under a
+ * parent lock / open window); end ("Học tiếp") only while it runs.
+ */
 export function decideBreak(state: DayState, action: BreakAction): Decision<null> {
   if (action === "end") {
     return state.break.state === "running" ? { ok: true, value: null } : deny(409, "Không có giờ nghỉ đang chạy.");
   }
-  if (state.break.state !== "offer") return deny(409, "Giờ nghỉ chỉ có sau khi xong Phần 1, và mỗi ngày 1 lần.");
+  if (state.break.canStart) return { ok: true, value: null };
+  if (state.break.state === "running" || state.break.state === "done" || state.break.state === "skipped") {
+    return deny(409, "Hôm nay con đã nghỉ rồi.");
+  }
+  if (state.status === "LOCK_OVERRIDE") return deny(409, "Bố mẹ đang khóa máy.");
+  if (state.free.startedAt !== null) return deny(409, "Hôm nay đã có giờ tự do.");
+  if (state.open) return deny(409, "Máy đang mở rồi, không cần nghỉ.");
+  if (runningTimedTask(state)) return deny(409, "Bấm Xong việc đang làm trước rồi hãy nghỉ.");
+  if (!state.part1.complete && !state.part2.complete) return deny(409, "Xong bài tập hoặc xong kỹ năng là được nghỉ.");
+  return deny(409, "Bây giờ chưa nghỉ được.");
+}
+
+/** "Bắt đầu giờ tự do" on a day with no task at all (parent decision 07/11/2026). */
+export function decideFreeStart(state: DayState): Decision<null> {
+  if (state.status === "LOCK_OVERRIDE") return deny(409, "Bố mẹ đang khóa máy.");
+  if (!state.free.canStart) return deny(409, "Giờ tự do có khi con xong bài tập và kỹ năng.");
   return { ok: true, value: null };
 }
 

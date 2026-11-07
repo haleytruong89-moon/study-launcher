@@ -430,20 +430,24 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await login(page, childEmail, childPassword);
   await expect(page).toHaveURL(/\/today$/);
   const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
-  await expect(banner).toContainText("Còn 2 việc ở Phần 1");
+  await expect(banner).toContainText("Còn 2 bài tập · 1 kỹ năng");
   await expect(page.getByText("Giờ học · máy chỉ mở trang học")).toBeVisible();
   // New screen (S2d): one "Việc tiếp theo" card suggests the overdue/near homework first.
   await expect(banner.getByText("Việc tiếp theo")).toBeVisible();
 
+  // R1 (07/11/2026): skills are open from the start, in parallel with homework.
   const skill = page.getByRole("listitem", { name: "Đọc sách e2e" });
-  await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
+  await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
 
-  // The server refuses Part 2 and an early finish, whatever the browser does.
+  // The server refuses a break before any part is done, and an early finish, whatever the browser does.
   const today1 = await page.evaluate(async () => (await (await fetch("/api/today")).json()) as { state: { part1: { items: { id: string; title: string }[] }; part2: { items: { id: string; title: string }[] } } });
   const skillId = today1.state.part2.items.find((i) => i.title === "Đọc sách e2e")?.id;
   const extraId = today1.state.part1.items.find((i) => i.title === "Luyện đề e2e")?.id;
-  const early = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
-  expect(early).toBe(409);
+  await expect(banner.getByRole("button", { name: /Nghỉ \d+ phút/ })).toHaveCount(0);
+  const earlyBreak = await page.evaluate(async () => (await fetch("/api/day/break", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start" }) })).status);
+  expect(earlyBreak).toBe(409);
+  const oldSkip = await page.evaluate(async () => (await fetch("/api/day/break", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) })).status);
+  expect(oldSkip).toBe(400);
 
   // Homework: start (focus mode opens), then "Nộp ảnh bài": 2 photos, one is removed, then send.
   const homework = page.getByRole("listitem", { name: "Ngữ văn" });
@@ -491,10 +495,17 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await focus.getByRole("button", { name: "Xong", exact: true }).click();
   await expect(page.getByRole("listitem", { name: "Luyện đề e2e" }).getByText("✓ Xong")).toBeVisible();
 
-  // Part 1 done -> break offer -> skip -> Part 2.
-  await expect(banner).toContainText("Xong Phần 1");
-  await banner.getByRole("button", { name: "Học tiếp luôn" }).click();
-  await expect(banner).toContainText("Còn 1 việc ở Phần 2");
+  // Part 1 done -> the break may start (optional). During it the task buttons pause; "Học tiếp" resumes.
+  await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
+  await banner.getByRole("button", { name: /Nghỉ \d+ phút/ }).click();
+  await expect(banner).toContainText("Đang nghỉ");
+  await expect(page.getByText(/Giờ nghỉ · còn \d\d:\d\d/)).toBeVisible();
+  await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
+  const duringBreak = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
+  expect(duringBreak).toBe(409);
+  await banner.getByRole("button", { name: "Học tiếp" }).click();
+  await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
+  await expect(banner.getByRole("button", { name: /Nghỉ \d+ phút/ })).toHaveCount(0); // once a day
   await skill.getByRole("button", { name: "Bắt đầu" }).click();
   await focus.getByRole("button", { name: "Xong", exact: true }).click();
 
@@ -503,11 +514,13 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(page.getByText(/Giờ tự do · còn \d\d:\d\d/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
 
-  const { data: day } = await db.from("day_sessions").select("part1_done_at, part2_done_at, free_started_at, break_skipped").eq("child_id", childId).eq("local_date", today).single();
+  const { data: day } = await db.from("day_sessions").select("part1_done_at, part2_done_at, free_started_at, break_started_at, break_ended_at, break_skipped").eq("child_id", childId).eq("local_date", today).single();
   expect(day?.part1_done_at).toBeTruthy();
   expect(day?.part2_done_at).toBeTruthy();
   expect(day?.free_started_at).toBe(day?.part2_done_at);
-  expect(day?.break_skipped).toBe(true);
+  expect(day?.break_started_at).toBeTruthy();
+  expect(day?.break_ended_at).toBeTruthy();
+  expect(day?.break_skipped).toBe(false);
   const { data: hwRow } = await db.from("homework_items").select("done_at").eq("subject", "Ngữ văn").single();
   expect(hwRow?.done_at).toBeTruthy();
   const { data: proofRun } = await db.from("task_runs").select("proof_paths").eq("source", "homework").not("done_at", "is", null).single();

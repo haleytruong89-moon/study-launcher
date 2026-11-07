@@ -74,10 +74,10 @@ export function BlockedView() {
         <p className="text-base text-ink/80">
           {host ? (
             <>
-              Trang <strong className="break-all">{host}</strong> mở lại khi con xong việc hôm nay (giờ nghỉ hoặc giờ tự do).
+              Trang <strong className="break-all">{host}</strong> mở lại lúc con nghỉ 10 phút (sau khi xong bài tập hoặc kỹ năng) hoặc vào giờ tự do.
             </>
           ) : (
-            "Trang này mở lại khi con xong việc hôm nay (giờ nghỉ hoặc giờ tự do)."
+            "Trang này mở lại lúc con nghỉ 10 phút (sau khi xong bài tập hoặc kỹ năng) hoặc vào giờ tự do."
           )}
         </p>
       </div>
