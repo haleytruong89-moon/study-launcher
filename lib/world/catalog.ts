@@ -1,5 +1,7 @@
+import { BIEN } from "./bien";
 import { RUNG } from "./rung";
 import type { Animal, Pillar, Thing, World } from "./types";
+import { VU_TRU } from "./vu_tru";
 
 /**
  * The 12 worlds of the year (parent decision 07/11/2026): An picks one at the start of each month
@@ -21,7 +23,7 @@ export const WORLD_ORDER = [
   "khung_long",
 ] as const;
 
-export const WORLDS: Readonly<Record<string, World>> = { rung: RUNG };
+export const WORLDS: Readonly<Record<string, World>> = { rung: RUNG, bien: BIEN, vu_tru: VU_TRU };
 
 /** The first month with a world (R4a shipped in November 2026). Earlier days grow nothing. */
 export const WORLD_START_MONTH = "2026-11";

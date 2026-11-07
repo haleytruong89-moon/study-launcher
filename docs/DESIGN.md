@@ -203,6 +203,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `GET /api/files/avatar?path=` | cả nhà | *(R3b)* Trả 1 ảnh nhân vật, tải bằng **phiên của người xem** (RLS: cùng gia đình), `nosniff`, kiểu ảnh cố định theo đuôi |
 | `POST /api/admin/children/:id/avatar-pics` | phụ huynh | *(R3b)* Gỡ **hết** ảnh Picrew của con (khi là ảnh chụp, không phải hình vẽ); kiểm con thuộc gia đình bằng phiên bố mẹ; ghi `audit_log` `child.avatar_pics_removed`. Nhân vật tự tạo giữ nguyên |
 | `GET /api/world?month=YYYY-MM` | con (giọng nhà khoa học, An) | *(R4a)* Thế giới của tháng (mặc định tháng này) + album các tháng cũ. Trước khi đọc, **trồng** các mảng đã xong từ `day_sessions` / `by_checkins` (tháng này + tháng trước, idempotent). Chỉ gửi các điều thú vị **đã mở**. Bố mẹ 403; giọng thám tử (Nguyên) 404; trước khi 0013 chạy → 503. `POST /api/by/checkins` cũng trồng ngay sau một lượt ghé (lỗi không làm hỏng lượt ghé) |
+| `POST /api/world/choose` | con (An) | *(R4b)* `{world}`: An chọn thế giới của **tháng này**. Chỉ nhận thế giới đang được mời (có gói, không dùng trong 11 tháng trước) → 400; tháng đã chọn hoặc đã có cây → 409. Ghi `world_months` rồi trồng ngay mọi mảng đã xong từ ngày 1. `GET /api/world` trả `choose: [...]` khi tháng này đang chờ An chọn (khi đó chưa trồng gì) |
 | `POST /api/admin/feedback/:id/seen` | phụ huynh | *(07/11/2026)* "Đã đọc" bằng phiên của bố mẹ (RLS: gia đình mình, chỉ cột `seen_at`) |
 
 ## 7. Extension (thư mục `extension/`)

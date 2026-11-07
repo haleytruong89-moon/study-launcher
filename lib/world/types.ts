@@ -8,7 +8,35 @@ export type Pillar = "feel" | "study" | "skill" | "play";
 export const PILLARS: readonly Pillar[] = ["feel", "study", "skill", "play"];
 
 /** A small drawing for things that have no good emoji (drawn by app/world-icon.tsx). */
-export type SvgShape = "bloom" | "tree" | "fruit" | "pod" | "pitcher" | "patch" | "bark" | "glow" | "figs" | "fern" | "star";
+export type SvgShape =
+  | "bloom"
+  | "tree"
+  | "fruit"
+  | "pod"
+  | "pitcher"
+  | "patch"
+  | "bark"
+  | "glow"
+  | "figs"
+  | "fern"
+  | "star"
+  // R4b
+  | "orb"
+  | "spark"
+  | "swirl"
+  | "hole"
+  | "branch"
+  | "brain"
+  | "blades"
+  | "shell"
+  | "seahorse"
+  | "urchin"
+  | "slug"
+  | "jelly"
+  | "dugong"
+  | "probe"
+  | "rover"
+  | "aurora";
 export interface SvgIcon {
   shape: SvgShape;
   /** Main colour. */
@@ -57,6 +85,8 @@ export interface World {
   pillarNames: Record<Pillar, string>;
   things: Record<Pillar, readonly Thing[]>;
   animals: readonly Animal[];
+  /** What the visitors are called: "con vật" (rừng, biển), "vị khách" (vũ trụ). */
+  visitorWord: string;
   /** Scene colours: sky, land. */
   sky: string;
   land: string;

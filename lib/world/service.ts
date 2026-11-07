@@ -4,8 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { localDate } from "@/lib/time";
 import type { ChildContext } from "@/lib/today/service";
 import { findWorld } from "./catalog";
-import { defaultWorld, monthOf, monthView, plantsToAdd, prevMonth, worldStarted, type WorldResponse, type WorldRow } from "./rules";
-import type { Pillar } from "./types";
+import { monthOf, monthView, plantsToAdd, prevMonth, worldOfMonth, worldStarted, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
+import { PILLARS, type Pillar } from "./types";
 
 /** The world of the month is An's (scientist voice). Nguyên gets her comic in R5. */
 export function hasWorld(ctx: ChildContext): boolean {
@@ -18,7 +18,13 @@ const lastDay = (month: string) => {
   return `${month}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, "0")}`;
 };
 
-async function usedWorlds(childId: string): Promise<{ month: string; worldKey: string }[]> {
+interface Known {
+  planted: Map<string, string>;
+  picked: Map<string, string>;
+}
+
+/** Which world each month is in: from its plants (fixed) and from An's picks (world_months). */
+async function knownWorlds(childId: string): Promise<Known> {
   const admin = createAdminClient();
   const [items, picks] = await Promise.all([
     admin.from("world_items").select("local_date, world_key").eq("child_id", childId),
@@ -26,16 +32,11 @@ async function usedWorlds(childId: string): Promise<{ month: string; worldKey: s
   ]);
   if (items.error) throw new Error(`world.used: ${items.error.message}`);
   if (picks.error) throw new Error(`world.picks: ${picks.error.message}`);
-  const out = new Map<string, string>();
-  for (const p of picks.data ?? []) out.set(monthOf(p.month as string), p.world_key as string);
-  // A month with plants keeps the world it was planted in.
-  for (const r of items.data ?? []) out.set(monthOf(r.local_date as string), r.world_key as string);
-  return [...out].map(([month, worldKey]) => ({ month, worldKey }));
-}
-
-/** The world a month is (or will be) in: its plants' world, else the child's pick, else the default (null = waits). */
-function worldOf(month: string, used: { month: string; worldKey: string }[]): string | null {
-  return used.find((u) => u.month === month)?.worldKey ?? defaultWorld(month, used);
+  const planted = new Map<string, string>();
+  for (const r of items.data ?? []) if (!planted.has(monthOf(r.local_date as string))) planted.set(monthOf(r.local_date as string), r.world_key as string);
+  const picked = new Map<string, string>();
+  for (const p of picks.data ?? []) picked.set(monthOf(p.month as string), p.world_key as string);
+  return { planted, picked };
 }
 
 /** Finished areas from the durable records (milestones, finished Góc bình yên visits) between two dates. */
@@ -71,7 +72,7 @@ export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<vo
   const months = [prevMonth(month), month].filter(worldStarted);
   if (months.length === 0) return;
   const admin = createAdminClient();
-  const used = await usedWorlds(ctx.childId);
+  const known = await knownWorlds(ctx.childId);
   for (const m of months) {
     const to = m === month ? today : lastDay(m);
     const { data: existing, error } = await admin
@@ -81,15 +82,16 @@ export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<vo
       .gte("local_date", firstDay(m))
       .lte("local_date", lastDay(m));
     if (error) throw new Error(`world.items: ${error.message}`);
-    const worldKey = worldOf(m, used);
-    if (!worldKey) continue; // no new world pack yet: plant later from the stored milestones
+    // No world yet (An has not picked this month's, or no new pack): plant later from the stored milestones.
+    const worldKey = worldOfMonth(m, m === month, known).key;
+    if (!worldKey) continue;
     const add = plantsToAdd(await finishedAreas(ctx, firstDay(m), to), (existing ?? []) as WorldRow[], worldKey);
     if (add.length === 0) continue;
     const { error: insErr } = await admin
       .from("world_items")
       .upsert(add.map((r) => ({ ...r, family_id: ctx.familyId, child_id: ctx.childId })), { onConflict: "child_id,local_date,pillar", ignoreDuplicates: true });
     if (insErr) throw new Error(`world.plant: ${insErr.message}`);
-    if (!used.some((u) => u.month === m)) used.push({ month: m, worldKey });
+    if (!known.planted.has(m)) known.planted.set(m, worldKey);
   }
 }
 
@@ -102,7 +104,14 @@ export async function syncWorldQuietly(ctx: ChildContext): Promise<void> {
   }
 }
 
-/** A month of the child's world (default: this month) + the album of months with plants. */
+function choiceOf(key: string): WorldChoice | null {
+  const w = findWorld(key);
+  if (!w) return null;
+  const peek = PILLARS.map((p) => w.things[p][0]).filter((t) => t !== undefined).slice(0, 3);
+  return { key: w.key, name: w.name, emoji: w.emoji, intro: w.intro, peek: peek.map((t) => ({ name: t.name, icon: t.icon })) };
+}
+
+/** A month of the child's world (default: this month) + the album of months with plants (+ the choice, R4b). */
 export async function readWorld(ctx: ChildContext, month: string | null, now = new Date()): Promise<WorldResponse | null> {
   const today = localDate(now);
   const current = monthOf(today);
@@ -115,9 +124,7 @@ export async function readWorld(ctx: ChildContext, month: string | null, now = n
   const byMonth = new Map<string, WorldRow[]>();
   for (const r of rows) byMonth.set(monthOf(r.local_date), [...(byMonth.get(monthOf(r.local_date)) ?? []), r]);
   if (want !== current && !byMonth.has(want)) return null;
-  const used = [...byMonth].map(([m, rs]) => ({ month: m, worldKey: rs[0]?.world_key ?? "rung" }));
-  const { data: picks } = await admin.from("world_months").select("month, world_key").eq("child_id", ctx.childId);
-  for (const p of picks ?? []) if (!used.some((u) => u.month === monthOf(p.month as string))) used.push({ month: monthOf(p.month as string), worldKey: p.world_key as string });
+  const known = await knownWorlds(ctx.childId);
   const album = [...byMonth]
     .filter(([m]) => m !== current)
     .map(([m, rs]) => {
@@ -125,8 +132,31 @@ export async function readWorld(ctx: ChildContext, month: string | null, now = n
       return { month: m, key: w?.key ?? "", name: w?.name ?? "Thế giới cũ", emoji: w?.emoji ?? "🌍", plants: rs.length };
     })
     .sort((a, b) => (a.month < b.month ? 1 : -1));
-  const key = worldOf(want, used);
-  return { view: key ? monthView(want, key, byMonth.get(want) ?? [], today) : null, current: want === current, album };
+  const { key, choose } = worldOfMonth(want, want === current, known);
+  return {
+    view: key ? monthView(want, key, byMonth.get(want) ?? [], today) : null,
+    choose: choose.map(choiceOf).filter((c): c is WorldChoice => c !== null),
+    current: want === current,
+    album,
+  };
+}
+
+/**
+ * R4b: An picks this month's world. Only a world on offer (a pack not used in the last 11
+ * months), only while the month has no pick and no plants. Then what grew since the 1st is
+ * planted at once. false = not allowed now (already picked / planted, or not on offer).
+ */
+export async function chooseWorld(ctx: ChildContext, key: string, now = new Date()): Promise<"ok" | "not_offered" | "already"> {
+  const month = monthOf(localDate(now));
+  const known = await knownWorlds(ctx.childId);
+  const { key: fixed, choose } = worldOfMonth(month, true, known);
+  if (fixed) return "already";
+  if (!choose.includes(key)) return "not_offered";
+  const { error } = await createAdminClient().from("world_months").insert({ family_id: ctx.familyId, child_id: ctx.childId, month: `${month}-01`, world_key: key });
+  if (error?.code === "23505") return "already";
+  if (error) throw new Error(`world.choose: ${error.message}`);
+  await syncWorld(ctx, now);
+  return "ok";
 }
 
 /** "Table does not exist" (Postgres 42P01, PostgREST PGRST205) — never a missing column or anything else. */

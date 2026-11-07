@@ -2470,8 +2470,11 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
   const runId = randomUUID();
   await db.from("profiles").update({ grade: 6 }).eq("id", childId);
   await db.from("world_items").delete().eq("child_id", childId);
+  await db.from("world_months").delete().eq("child_id", childId);
   const { data: before } = await db.from("day_sessions").select("*").eq("child_id", childId).eq("local_date", first).maybeSingle();
   try {
+    // R4b: An picks the month's world; this test is about Rừng.
+    expect((await db.from("world_months").insert({ family_id: familyId, child_id: childId, month: first, world_key: "rung" })).error).toBeNull();
     const at = `${first}T10:00:00+07:00`;
     expect((await db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, local_date: first, part1_done_at: at, part2_done_at: at, free_started_at: at }, { onConflict: "child_id,local_date" })).error).toBeNull();
     expect((await db.from("by_checkins").insert({ family_id: familyId, child_id: childId, local_date: first, quad: "green", word_key: "binh_yen", client_run_id: runId })).error).toBeNull();
@@ -2544,6 +2547,68 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
   } finally {
     await db.from("by_checkins").delete().eq("client_run_id", runId);
     await db.from("world_items").delete().eq("child_id", childId);
+    await db.from("world_months").delete().eq("child_id", childId);
+    if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
+    else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", first);
+    await db.from("profiles").update({ grade }).eq("id", childId);
+  }
+});
+
+test("R4b An chọn thế giới: a new month waits for An's pick (nothing planted, nothing lost); only offered worlds; picked once; then everything since the 1st grows there", async ({ browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const today = localDate(new Date());
+  test.skip(today.endsWith("-01"), "needs a day before today in this month");
+  const first = `${today.slice(0, 7)}-01`;
+  await db.from("profiles").update({ grade: 6 }).eq("id", childId);
+  await db.from("world_items").delete().eq("child_id", childId);
+  await db.from("world_months").delete().eq("child_id", childId);
+  const { data: before } = await db.from("day_sessions").select("*").eq("child_id", childId).eq("local_date", first).maybeSingle();
+  try {
+    const at = `${first}T10:00:00+07:00`;
+    expect((await db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, local_date: first, part1_done_at: at, part2_done_at: at, free_started_at: at }, { onConflict: "child_id,local_date" })).error).toBeNull();
+    const monthRows = async () => (await db.from("world_items").select("local_date, pillar, world_key, item_key").eq("child_id", childId).gte("local_date", first)).data ?? [];
+
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/today");
+    await k.getByRole("button", { name: /Tháng mới! Chọn thế giới của con/ }).click();
+    await expect(k).toHaveURL(/\/today\?tab=tuan$/);
+    await expect(k.getByRole("heading", { name: /Tháng mới! Con chọn thế giới cho tháng này/ })).toBeVisible();
+    const worlds = k.getByRole("radiogroup", { name: "Các thế giới" });
+    await expect(worlds.getByRole("radio")).toHaveCount(3);
+    // Nothing grows before the pick (it is not lost: it grows once An picks).
+    expect(await monthRows()).toEqual([]);
+
+    // Only an offered world, only with a well-formed body.
+    expect(await byCall(k, "POST", "/api/world/choose", { world: "sa_mac" })).toBe(400);
+    expect(await byCall(k, "POST", "/api/world/choose", { world: "Biển!" })).toBe(400);
+    expect(await byCall(k, "POST", "/api/world/choose", {})).toBe(400);
+
+    await worlds.getByRole("radio", { name: /Biển và rạn san hô/ }).click();
+    await k.getByRole("button", { name: "Vào Biển và rạn san hô" }).click();
+    await expect(k.getByRole("heading", { name: /Biển và rạn san hô · tháng/ })).toBeVisible();
+    const rows = await monthRows();
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    expect(rows.every((r) => r.world_key === "bien")).toBe(true);
+    expect(rows.find((r) => r.local_date === first && r.pillar === "study")?.item_key).toBe("co_bien");
+    expect((await db.from("world_months").select("world_key").eq("child_id", childId)).data).toEqual([{ world_key: "bien" }]);
+    await k.getByRole("list", { name: "Những thứ đã mọc" }).getByRole("button", { name: /^Cỏ biển, đã mọc/ }).click();
+    await expect(k.getByRole("dialog", { name: "Cỏ biển" })).toContainText("cây có hoa");
+    await k.getByRole("dialog", { name: "Cỏ biển" }).getByRole("button", { name: "Đóng" }).click();
+
+    // Picked once: the month stays in Biển.
+    expect(await byCall(k, "POST", "/api/world/choose", { world: "vu_tru" })).toBe(409);
+    await k.reload();
+    await expect(k.getByRole("heading", { name: /Biển và rạn san hô · tháng/ })).toBeVisible();
+    await kCtx.close();
+  } finally {
+    await db.from("world_items").delete().eq("child_id", childId);
+    await db.from("world_months").delete().eq("child_id", childId);
     if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
     else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", first);
     await db.from("profiles").update({ grade }).eq("id", childId);

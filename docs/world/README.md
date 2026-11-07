@@ -9,7 +9,7 @@
 |---|---|---|
 | 1 | **Cách 2 — loài mới + lớn lên.** Lượt trồng thứ *k* (đếm từ 0) của một mảng trong tháng là thứ số *k mod 6* của mảng đó, ở mức lớn *⌊k/6⌋*. 6 lượt đầu ra 6 thứ mới; các lượt sau làm chúng lớn thêm và mở điều thú vị thứ 2, rồi thứ 3 | Thay "lượt thứ n ra loài thứ n, hết danh sách thì không vòng lại". Mỗi lượt vẫn có điều mới, và gặp lại thứ cũ giúp nhớ lâu |
 | 2 | **12 thế giới / năm**, mỗi thế giới một lần trong 12 tháng: rừng nhiệt đới, biển và rạn san hô, vũ trụ, núi lửa và động đất, Bắc Cực – Nam Cực, sa mạc, đồng cỏ châu Phi, hang động, sông và đầm lầy, bầu trời và thời tiết, thế giới tí hon, khủng long | Mỗi thế giới ~33 thẻ (4 mảng × 6 + 8 con vật), mỗi thẻ 3 điều → ~1.200 điều / năm |
-| 3 | **An tự chọn đầu tháng** (làm ở R4b). Chưa chọn mà đã có cây đầu tiên → thế giới theo thứ tự trên (bỏ qua cái đã dùng trong 11 tháng trước). Có cây rồi thì thế giới tháng đó không đổi. **Chưa có gói thế giới mới** → tháng đó hiện "sắp mở", **không lặp lại** thế giới cũ; khi gói tới, các mảng đã xong từ đầu tháng vẫn được trồng (lấy từ mốc đã lưu) | Bảng `world_months` (0013) giữ lựa chọn |
+| 3 | **An tự chọn đầu tháng** (R4b). Tháng mới chưa chọn và còn ≥ 2 thế giới để chọn → **cây chờ An chọn** (không mất gì: chọn xong, mọi mảng đã xong từ ngày 1 mọc ngay, lấy từ mốc đã lưu). Chọn một lần cho cả tháng. Hết tháng vẫn chưa chọn → theo thứ tự trên. Chỉ còn 1 thế giới chưa dùng → tự vào, không hỏi. **Không còn gói mới** → "sắp mở", **không lặp lại** thế giới đã dùng trong 11 tháng | Thay cách cũ "chưa chọn mà có cây đầu tiên thì theo vòng" (07/11): cây đầu tiên thường mọc trước khi An kịp mở tab, nên An sẽ mất quyền chọn. Bảng `world_months` (0013) giữ lựa chọn |
 | 4 | **Hình: emoji khi có, hình vẽ SVG khi không có emoji hợp** | Có sẵn trong app, không tải từ ngoài |
 | 5 | Chia lát: **R4a** khung + Rừng (tháng 11) + album; **R4b** Biển + Vũ trụ + màn chọn thế giới, xong trước 1/12; sau đó mỗi tháng một gói | Mỗi gói đọc lại trước khi vào app |
 
@@ -42,4 +42,5 @@
 ## Nội dung
 
 - `lib/world/<thế giới>.ts`: chỉ **thêm** ở cuối danh sách, không xóa hay đổi mã.
-- Bản đọc lại cho bố mẹ và An: `docs/world/<THẾ GIỚI>.md` (sinh từ file `.ts`). Rừng: [`RUNG.md`](RUNG.md).
+- Bản đọc lại cho bố mẹ và An: `docs/world/<THẾ GIỚI>.md`, sinh bằng `scripts/world-doc.ts`. Có: [`RUNG.md`](RUNG.md), [`BIEN.md`](BIEN.md), [`VU_TRU.md`](VU_TRU.md).
+- Vũ trụ gọi "vị khách" (trạm vũ trụ, tàu thăm dò, mưa sao băng, cực quang, phi hành gia Phạm Tuân…) thay cho "con vật" (`visitorWord`).
