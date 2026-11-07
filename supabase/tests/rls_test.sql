@@ -321,6 +321,29 @@ begin
   end;
 end $$;
 select test_helpers.expect_count('child1 can read own icon column', (select count(*) from public.profiles where icon is null), 1);
+-- 0011 (R3a): the character is read like the icon; never written by a browser.
+do $$
+begin
+  begin
+    update public.profiles set avatar = '{"hair":"den"}'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: child updated own avatar directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write profiles.avatar';
+  end;
+end $$;
+select test_helpers.expect_count('child1 can read own avatar column', (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1' and avatar is null), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+do $$
+begin
+  begin
+    update public.profiles set avatar = '{"hair":"den"}'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: parent updated a child avatar directly';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot write profiles.avatar (the child makes it)';
+  end;
+end $$;
+select test_helpers.expect_count('parentA can read the child avatar column', (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1' and avatar is null), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB cannot read a family A avatar', (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1'), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
 select test_helpers.expect_count('parentA sees family day plans (2)',      (select count(*) from public.day_plans), 2);
@@ -879,6 +902,135 @@ begin
 exception when insufficient_privilege then raise notice 'ok: anon cannot read app_feedback';
 end $$;
 reset role;
+
+-- 0011 (R3a): only a small JSON object fits in profiles.avatar.
+reset role;
+do $$
+begin
+  begin
+    update public.profiles set avatar = '"x"'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: a non-object avatar was stored';
+  exception when check_violation then raise notice 'ok: avatar must be a JSON object';
+  end;
+  begin
+    update public.profiles set avatar = jsonb_build_object('name', repeat('x', 2000)) where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: an oversized avatar was stored';
+  exception when check_violation then raise notice 'ok: avatar is size-limited';
+  end;
+end $$;
+
+-- 0012 (R3b): Picrew pictures. The whole family looks; no browser writes; other families see nothing.
+reset role;
+insert into storage.buckets (id, name, public) values ('avatars', 'avatars', false) on conflict do nothing;
+insert into storage.objects (bucket_id, name) values
+  ('avatars', '10000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-0000000000c1/11111111-1111-4111-8111-111111111111.png');
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees own avatar picture', (select count(*) from storage.objects where bucket_id = 'avatars'), 1);
+select test_helpers.expect_count('child1 can read avatar_pics column', (select count(*) from public.profiles where avatar_pics is null), 1);
+do $$
+begin
+  begin
+    insert into storage.objects (bucket_id, name)
+    values ('avatars', '10000000-0000-0000-0000-00000000000a/00000000-0000-0000-0000-0000000000c1/22222222-2222-4222-8222-222222222222.png');
+    raise exception 'FAIL: child wrote an avatar picture directly';
+  exception when insufficient_privilege or check_violation then raise notice 'ok: child cannot upload avatar pictures directly';
+  end;
+  delete from storage.objects where bucket_id = 'avatars';
+  if found then raise exception 'FAIL: child deleted an avatar picture directly'; end if;
+  raise notice 'ok: child cannot delete avatar pictures directly';
+  begin
+    update public.profiles set avatar_pics = '{}'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: child updated avatar_pics directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write profiles.avatar_pics';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c2', false);
+select test_helpers.expect_count('sibling sees the family avatar picture', (select count(*) from storage.objects where bucket_id = 'avatars'), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees the family avatar picture', (select count(*) from storage.objects where bucket_id = 'avatars'), 1);
+do $$
+begin
+  begin
+    update public.profiles set avatar_pics = '{}'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: parent updated avatar_pics directly';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot write profiles.avatar_pics (server removes)';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees no family A avatar picture', (select count(*) from storage.objects where bucket_id = 'avatars'), 0);
+reset role;
+do $$
+begin
+  begin
+    update public.profiles set avatar_pics = '"x"'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: a non-object avatar_pics was stored';
+  exception when check_violation then raise notice 'ok: avatar_pics must be a JSON object';
+  end;
+end $$;
+delete from storage.objects where bucket_id = 'avatars';
+
+-- 0013 (R4a): world of the month — server only, like by_checkins. No feeling column.
+reset role;
+select test_helpers.expect_count('world tables have RLS on and no policy',
+  (select count(*) from pg_class c where c.oid in ('public.world_items'::regclass, 'public.world_months'::regclass) and c.relrowsecurity
+     and not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname)), 2);
+select test_helpers.expect_count('browsers have no privilege on world tables',
+  (select count(*) from (values ('public.world_items'), ('public.world_months')) t(tbl), (values ('authenticated'), ('anon')) r(rl), (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) p(priv)
+    where has_table_privilege(r.rl, t.tbl, p.priv)), 0);
+select test_helpers.expect_count('world_items has no feeling column',
+  (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'world_items'
+     and column_name not in ('id', 'family_id', 'child_id', 'local_date', 'pillar', 'world_key', 'item_key', 'variant', 'created_at')), 0);
+insert into public.world_items (family_id, child_id, local_date, pillar, world_key, item_key) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-05', 'study', 'rung', 'cho_ngan_nam');
+do $$
+begin
+  begin
+    insert into public.world_items (family_id, child_id, local_date, pillar, world_key, item_key) values
+      ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-05', 'study', 'rung', 'cay_da');
+    raise exception 'FAIL: two plants for one area on one day';
+  exception when unique_violation then raise notice 'ok: one plant per area per day';
+  end;
+  begin
+    insert into public.world_items (family_id, child_id, local_date, pillar, world_key, item_key) values
+      ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000c1', '2026-11-05', 'feel', 'rung', 'lan_hai');
+    raise exception 'FAIL: world row with a child of another family';
+  exception when foreign_key_violation then raise notice 'ok: world row must match the child family';
+  end;
+  begin
+    insert into public.world_items (family_id, child_id, local_date, pillar, world_key, item_key) values
+      ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-06', 'feel', 'rung', 'Con buồn');
+    raise exception 'FAIL: free text accepted as item_key';
+  exception when check_violation then raise notice 'ok: item_key is a short key, never free text';
+  end;
+  begin
+    insert into public.world_months (family_id, child_id, month, world_key) values
+      ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-05', 'rung');
+    raise exception 'FAIL: world_months month not the 1st';
+  exception when check_violation then raise notice 'ok: world_months.month is the first of a month';
+  end;
+end $$;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+do $$
+begin
+  begin
+    perform 1 from public.world_items;
+    raise exception 'FAIL: parent read world_items';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot read world_items';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  begin
+    perform 1 from public.world_items;
+    raise exception 'FAIL: child read world_items directly';
+  exception when insufficient_privilege then raise notice 'ok: child reads the world only through the server';
+  end;
+end $$;
+reset role;
+delete from public.world_items;
 
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;

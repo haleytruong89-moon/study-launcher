@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Avatar } from "@/lib/avatar";
+import type { AvatarPics } from "@/lib/avatarPics";
 import type { Voice } from "@/lib/binhYen/catalog";
 import { HOTLINE_TEXT, VISIT_PING_MS } from "@/lib/binhYen/rules";
 import { STUDY_CAP_TEXT } from "@/lib/binhYen/studyCap";
@@ -27,6 +29,12 @@ interface Child {
   id: string;
   name: string;
   color: string | null;
+  icon: string | null;
+  /** R3a: the child's character (or the default "Hình tạm" when avatarMine is false). */
+  avatar: Avatar;
+  /** R3b: Picrew pictures by face (shown instead of the drawn character). */
+  pics: AvatarPics;
+  avatarMine: boolean;
 }
 
 /** After the study-time limit: the message stays this long, then back to Hôm nay. */
@@ -184,6 +192,10 @@ export function BinhYenScreen({ child, voice, initial, initialTalk }: { child: C
         voice={voice}
         firstName={firstName}
         color={color}
+        icon={child.icon}
+        avatar={child.avatar}
+        pics={child.pics}
+        avatarMine={child.avatarMine}
         state={state}
         onState={accept}
         onTalkInline={setTalkInline}
@@ -214,7 +226,7 @@ export function BinhYenScreen({ child, voice, initial, initialTalk }: { child: C
         {talk}
       </main>
       {/* R2: the child's 5 tabs. This page exists only when the corner is on, so it is listed. */}
-      <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} />
+      <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} world={voice === "scientist"} />
     </div>
   );
 }

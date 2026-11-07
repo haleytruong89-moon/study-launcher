@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { storedAvatar } from "@/lib/avatar";
+import { hasPics } from "@/lib/avatarPics";
+import { readAvatar, type StoredLook } from "@/lib/avatarServer";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { byState, type ByState } from "@/lib/binhYen/session";
 import { escalateSoon, talkInfo, type TalkInfo } from "@/lib/binhYen/talk";
@@ -31,13 +34,23 @@ export default async function BinhYenPage() {
 
   let state: ByState | null = null;
   let talk: TalkInfo | null = null;
+  let look: StoredLook = { avatar: null, pics: {}, icon: null };
+  const voice = voiceFor(ctx.grade);
   try {
     // Opening the page: a visit going on in this browser continues (or reports the study-time
     // limit). A page cannot set cookies, so a NEW visit is started by the screen (POST /api/by/open).
-    [state, talk] = await Promise.all([byState(ctx, "page", true), talkInfo(ctx)]);
+    [state, talk, look] = await Promise.all([byState(ctx, "page", true), talkInfo(ctx), readAvatar(ctx)]);
   } catch {
     console.error("by.page failed");
   }
 
-  return <BinhYenScreen child={{ id: ctx.childId, name: ctx.displayName, color: ctx.color }} voice={voiceFor(ctx.grade)} initial={state} initialTalk={talk} />;
+  const { avatar, mine } = storedAvatar(look.avatar, voice);
+  return (
+    <BinhYenScreen
+      child={{ id: ctx.childId, name: ctx.displayName, color: ctx.color, icon: look.icon, avatar, pics: look.pics, avatarMine: mine || hasPics(look.pics) }}
+      voice={voice}
+      initial={state}
+      initialTalk={talk}
+    />
+  );
 }

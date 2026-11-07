@@ -35,3 +35,31 @@ export async function compressImage(file: Blob, maxEdge = MAX_EDGE, quality = JP
     bitmap.close();
   }
 }
+
+/**
+ * Browser only (R3b): a Picrew picture, redrawn so nothing but the pixels is sent (no file
+ * details, no location). Longest side <= maxEdge. PNG keeps a transparent background; if the
+ * PNG is still too big it becomes a JPEG on white.
+ */
+export async function shrinkPicture(file: Blob, maxEdge: number, maxBytes: number): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  try {
+    const { width, height } = fitWithin(bitmap.width, bitmap.height, maxEdge);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas không dùng được trên trình duyệt này");
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (png && png.size <= maxBytes) return png;
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    const jpg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    if (!jpg) throw new Error("Không thu nhỏ được ảnh");
+    return jpg;
+  } finally {
+    bitmap.close();
+  }
+}

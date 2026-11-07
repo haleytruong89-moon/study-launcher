@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { TAB_LABELS, tabHref, type ChildTab } from "@/lib/childTabs";
+import { tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
 
 /**
  * The child's 5 tabs (R2, docs/MAN_CHINH_MOI.md §2.1): a bar at the bottom on the phone, a
@@ -9,7 +9,7 @@ import { TAB_LABELS, tabHref, type ChildTab } from "@/lib/childTabs";
  * screen, one state: switching does not reload); Góc bình yên is its own page (/binh-yen,
  * server-gated) and is hidden when the family has not turned it on.
  */
-export { TAB_LABELS, isChildTab, tabHref, type ChildTab } from "@/lib/childTabs";
+export { TAB_LABELS, isChildTab, tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
 
 const ICONS: Record<ChildTab, string> = {
   "hom-nay": "☀️",
@@ -23,11 +23,15 @@ export function ChildNav({
   active,
   byEnabled,
   color,
+  world = false,
   onSelect,
 }: {
-  active: ChildTab;
+  /** null: a page that is not one of the tabs (e.g. /nhan-vat). */
+  active: ChildTab | null;
   byEnabled: boolean;
   color: string;
+  /** R4: An's 4th tab is "Thế giới" (her world of the month). */
+  world?: boolean;
   /** Inside /today: switch the tab without reloading (the link still works without script). */
   onSelect?: (tab: Exclude<ChildTab, "binh-yen">) => void;
 }) {
@@ -55,9 +59,9 @@ export function ChildNav({
                 style={on ? { color, background: `${color}14` } : { color: "#4A4F4C" }}
               >
                 <span aria-hidden className="text-xl leading-none lg:text-lg">
-                  {ICONS[t]}
+                  {world && t === "tuan" ? "🌳" : ICONS[t]}
                 </span>
-                <span className="text-center leading-tight">{TAB_LABELS[t]}</span>
+                <span className="text-center leading-tight">{tabLabel(t, world)}</span>
               </Link>
             </li>
           );

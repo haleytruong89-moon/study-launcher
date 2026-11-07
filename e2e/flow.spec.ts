@@ -2133,7 +2133,7 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   await k.getByRole("region", { name: "Xong rồi" }).getByRole("button", { name: "Về góc của con" }).click();
   const recent = k.getByRole("region", { name: "Lần ghé gần đây" });
   await expect(recent.getByRole("listitem")).toHaveCount(2);
-  await expect(recent).toContainText("lo lắng · Thở cho dịu lại");
+  await expect(recent).toContainText(/lo lắng · \S* ?Thở cho dịu lại/);
   await recent.getByRole("button", { name: /^Xóa lượt .* lo lắng$/ }).click();
   await expect(recent.getByRole("listitem")).toHaveCount(1);
   const { data: left } = await db.from("by_checkins").select("word_key").eq("child_id", childId);
@@ -2279,4 +2279,343 @@ test("Góp ý: the child sends from the Góp ý tab (told parents read it); limi
   expect(seen?.body).toBe("Cho con chọn màu nền tối");
   await page.goto("/parent/more");
   await expect(page.getByRole("link", { name: /Góp ý của con/ })).not.toContainText("chưa đọc");
+});
+
+test("R3a nhân vật: the child makes a character (codes only); bad codes refused; parent and anon refused; no direct writes; emoji beside words", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  // Nguyên's voice (lớp 9): the quadrants show her character.
+  await db.from("profiles").update({ grade: 9, avatar: null }).eq("id", childId);
+  await db.from("family_settings").update({ by_enabled: true }).eq("family_id", familyId);
+  try {
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/binh-yen");
+    const corner = k.getByRole("region", { name: "Góc của con" });
+    await expect(corner).toBeVisible();
+    await corner.getByRole("link", { name: "Hình tạm — chạm để tạo nhân vật của con" }).click();
+    await expect(k).toHaveURL(/\/nhan-vat\?tu=binh-yen$/);
+    await expect(k.getByText("Đang là hình tạm.")).toBeVisible();
+    await k.getByRole("group", { name: "Kiểu tóc" }).getByRole("button", { name: "Đuôi ngựa" }).click();
+    await k.getByRole("group", { name: /^Màu tóc/ }).getByRole("button", { name: "Tím" }).click();
+    await k.getByRole("group", { name: "Phụ kiện" }).getByRole("button", { name: "Tai nghe" }).click();
+    await k.getByLabel("Tên nhân vật (không bắt buộc)").fill("  Mèo   Thám Tử ");
+    await k.getByRole("button", { name: "Lưu nhân vật" }).click();
+    await expect(k.getByRole("status")).toContainText("Đã lưu nhân vật của con.");
+    const { data: saved } = await db.from("profiles").select("avatar").eq("id", childId).single();
+    expect(saved?.avatar).toEqual({ style: "ponytail", hair: "tim", eye: "nau", skin: "sang", outfit: "nau", acc: "phones", name: "Mèo Thám Tử" });
+
+    // The server takes known codes only; the child is always the session's.
+    const good = { style: "short", hair: "nau", eye: "nau", skin: "vua", outfit: "do", acc: "none", name: "" };
+    expect(await byCall(k, "POST", "/api/profile/avatar", { avatar: { ...good, hair: "xanhneon" } })).toBe(400);
+    expect(await byCall(k, "POST", "/api/profile/avatar", { avatar: { ...good, photo: "https://x" } })).toBe(400);
+    expect(await byCall(k, "POST", "/api/profile/avatar", { avatar: { ...good, name: "x".repeat(25) } })).toBe(400);
+    expect(await byCall(k, "POST", "/api/profile/avatar", {})).toBe(400);
+    expect((await request.post("/api/profile/avatar", { data: { avatar: good } })).status()).toBe(401);
+    expect((await db.from("profiles").select("avatar").eq("id", childId).single()).data?.avatar).toMatchObject({ style: "ponytail" });
+
+    // Straight to the database: the child reads it but cannot write it.
+    const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
+    expect((await asChild.from("profiles").select("avatar").eq("id", childId).single()).data?.avatar).toMatchObject({ name: "Mèo Thám Tử" });
+    expect((await asChild.from("profiles").update({ avatar: good }).eq("id", childId)).error).not.toBeNull();
+
+    // Back in the corner: her character, no "Hình tạm" line; emoji sit beside the words.
+    await k.getByRole("link", { name: "‹ Góc bình yên" }).click();
+    await expect(corner.getByRole("link", { name: "Đổi nhân vật của con" })).toBeVisible();
+    await expect(corner.getByText("Hình tạm — chạm để tạo nhân vật của con")).toHaveCount(0);
+    await corner.getByRole("button", { name: /^Hồ sơ đỏ/ }).click();
+    await expect(k.getByRole("button", { name: "lo lắng", exact: true })).toContainText("😟");
+
+    // "Về hình tạm" clears it.
+    await k.goto("/nhan-vat");
+    await k.getByRole("button", { name: "Về hình tạm" }).click();
+    await expect(k.getByRole("status")).toContainText("Đã về hình tạm.");
+    expect((await db.from("profiles").select("avatar").eq("id", childId).single()).data?.avatar).toBeNull();
+    await kCtx.close();
+
+    // A parent cannot save a character for the child.
+    await login(page, env.parentEmail, env.parentPassword);
+    expect(await byCall(page, "POST", "/api/profile/avatar", { avatar: good })).toBe(403);
+    const asParent = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asParent.auth.signInWithPassword({ email: env.parentEmail, password: env.parentPassword });
+    expect((await asParent.from("profiles").update({ avatar: good }).eq("id", childId)).error).not.toBeNull();
+  } finally {
+    await db.from("profiles").update({ grade, avatar: null }).eq("id", childId);
+  }
+});
+
+test("R3b Picrew: the child puts pictures on faces (shrunk, checked); family sees them; replace/remove deletes files; parent removes all; no direct writes", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade, display_name").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const folder = `${familyId}/${childId}`;
+  const files = async () => ((await db.storage.from("avatars").list(folder)).data ?? []).map((o) => `${folder}/${o.name}`).sort();
+  const pics = async () => (await db.from("profiles").select("avatar_pics").eq("id", childId).single()).data?.avatar_pics as Record<string, string> | null;
+  await db.from("profiles").update({ grade: 9, avatar: null, avatar_pics: null }).eq("id", childId);
+  await db.from("family_settings").update({ by_enabled: true }).eq("family_id", familyId);
+  try {
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/nhan-vat");
+    const box = k.getByRole("region", { name: "Ảnh từ Picrew" });
+    await expect(box).toContainText("Chỉ hình vẽ, không dùng ảnh chụp con.");
+    await box.getByLabel("Chọn ảnh khi bình yên").setInputFiles({ name: "picrew.png", mimeType: "image/png", buffer: makePng(1200, 1200) });
+    await expect(box.getByRole("status")).toContainText("Đã thêm ảnh khi bình yên.");
+    const first = (await pics())?.calm as string;
+    expect(first).toMatch(new RegExp(`^${folder}/[0-9a-f-]{36}\\.(png|jpg)$`));
+    expect(await files()).toEqual([first]);
+    // The browser redrew it: longest side 800 px at most.
+    const blob = (await db.storage.from("avatars").download(first)).data as Blob;
+    const head = Buffer.from(await blob.arrayBuffer());
+    if (first.endsWith(".png")) expect(head.readUInt32BE(16)).toBeLessThanOrEqual(800);
+    await expect(k.getByText("Đang dùng ảnh Picrew của con.")).toBeVisible();
+
+    // Served from our own address to the family; never to anyone else.
+    const served = await k.evaluate(async (u) => {
+      const r = await fetch(u);
+      return [r.status, r.headers.get("content-type"), r.headers.get("x-content-type-options")];
+    }, `/api/files/avatar?path=${encodeURIComponent(first)}`);
+    expect(served).toEqual([200, first.endsWith(".png") ? "image/png" : "image/jpeg", "nosniff"]);
+    expect((await request.get(`/api/files/avatar?path=${encodeURIComponent(first)}`)).status()).toBe(401);
+    expect(await byCall(k, "GET", `/api/files/avatar?path=${encodeURIComponent(`${randomUUID()}/${childId}/${randomUUID()}.png`)}`)).toBe(404);
+
+    // The server checks again: type by its first bytes, size, the face.
+    const sendRaw = (slot: string, bytes: number[] | string, type: string) =>
+      k.evaluate(
+        async ([s, b, t]) => {
+          const form = new FormData();
+          form.set("slot", s as string);
+          form.set("file", new Blob([typeof b === "string" ? b : new Uint8Array(b as number[])], { type: t as string }), "x.png");
+          return (await fetch("/api/profile/avatar/pics", { method: "POST", body: form })).status;
+        },
+        [slot, bytes, type] as const,
+      );
+    expect(await sendRaw("sad", "<svg onload=alert(1)>", "image/png")).toBe(400);
+    expect(await sendRaw("photo", [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], "image/png")).toBe(400);
+    expect(await sendRaw("sad", "x".repeat(1_100_000), "image/png")).toBe(413);
+    expect((await request.post("/api/profile/avatar/pics", { multipart: { slot: "sad", file: { name: "a.png", mimeType: "image/png", buffer: makePng(10, 10) } } })).status()).toBe(401);
+    expect(await byCall(k, "POST", "/api/profile/avatar/pics/delete", { slot: "photo" })).toBe(400);
+    expect(await byCall(k, "POST", "/api/admin/children/" + childId + "/avatar-pics", {})).toBe(403);
+
+    // Straight to storage / the database: refused.
+    const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
+    expect((await asChild.storage.from("avatars").upload(`${folder}/${randomUUID()}.png`, makePng(10, 10), { contentType: "image/png" })).error).not.toBeNull();
+    expect((await asChild.from("profiles").update({ avatar_pics: {} }).eq("id", childId)).error).not.toBeNull();
+
+    // A second face, then a new picture on the first face: the old file is deleted.
+    await box.getByLabel("Chọn ảnh khi buồn").setInputFiles({ name: "buon.png", mimeType: "image/png", buffer: makePng(600, 600) });
+    await expect(box.getByRole("status")).toContainText("Đã thêm ảnh khi buồn.");
+    await box.getByLabel("Đổi ảnh khi bình yên").setInputFiles({ name: "moi.png", mimeType: "image/png", buffer: makePng(500, 500) });
+    await expect(box.getByRole("status")).toContainText("Đã thêm ảnh khi bình yên.");
+    const now = (await pics()) ?? {};
+    expect(now.calm).not.toBe(first);
+    expect(await files()).toEqual([now.calm, now.sad].sort());
+
+    // Góc bình yên shows the pictures (greeting + the 4 quadrants: buồn its own, others the first).
+    await k.goto("/binh-yen");
+    const corner = k.getByRole("region", { name: "Góc của con" });
+    await expect(corner.getByRole("link", { name: "Đổi nhân vật của con" })).toBeVisible();
+    await expect(corner.locator('img[src*="/api/files/avatar"]')).toHaveCount(5);
+    await expect(corner.locator(`img[src*="${encodeURIComponent(now.sad as string)}"]`)).toHaveCount(1);
+
+    // The child takes one off.
+    await k.goto("/nhan-vat");
+    await box.getByRole("button", { name: "Gỡ ảnh khi buồn" }).click();
+    await expect(box.getByRole("status")).toContainText("Đã gỡ ảnh.");
+    expect(await pics()).toEqual({ calm: now.calm });
+    expect(await files()).toEqual([now.calm]);
+    await kCtx.close();
+
+    // The parent sees it in Các con and removes all (the app cannot tell a drawing from a photo).
+    await login(page, env.parentEmail, env.parentPassword);
+    await page.goto("/parent/children");
+    await page.getByRole("listitem").filter({ hasText: kid?.display_name ?? "" }).locator("summary").click();
+    const card = page.getByRole("region", { name: `Nhân vật của ${kid?.display_name}` });
+    await expect(card).toContainText("Con đang dùng ảnh tải lên (Picrew).");
+    await expect(card.locator('img[src*="/api/files/avatar"]')).toHaveCount(4);
+    page.on("dialog", (d) => void d.accept());
+    await card.getByRole("button", { name: "Gỡ ảnh nhân vật của con" }).click();
+    await expect(card).toContainText("Con chưa tạo — đang là hình tạm.");
+    expect(await pics()).toBeNull();
+    expect(await files()).toEqual([]);
+    const { data: log } = await db.from("audit_log").select("action, payload").eq("family_id", familyId).eq("action", "child.avatar_pics_removed");
+    expect(log?.some((l) => (l.payload as { child_id?: string }).child_id === childId)).toBe(true);
+    expect(await byCall(page, "POST", "/api/profile/avatar/pics/delete", { all: true })).toBe(403);
+  } finally {
+    const left = ((await db.storage.from("avatars").list(folder)).data ?? []).map((o) => `${folder}/${o.name}`);
+    if (left.length) await db.storage.from("avatars").remove(left);
+    await db.from("profiles").update({ grade, avatar: null, avatar_pics: null }).eq("id", childId);
+  }
+});
+
+test("R4a thế giới: An's tab shows what grew from finished areas (stored once, never twice); cards open facts; parents and Nguyên's voice have no route", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const today = localDate(new Date());
+  test.skip(today.endsWith("-01"), "needs a day before today in this month");
+  const month = today.slice(0, 7);
+  const first = `${month}-01`;
+  const runId = randomUUID();
+  await db.from("profiles").update({ grade: 6 }).eq("id", childId);
+  await db.from("world_items").delete().eq("child_id", childId);
+  await db.from("world_months").delete().eq("child_id", childId);
+  const { data: before } = await db.from("day_sessions").select("*").eq("child_id", childId).eq("local_date", first).maybeSingle();
+  try {
+    // R4b: An picks the month's world; this test is about Rừng.
+    expect((await db.from("world_months").insert({ family_id: familyId, child_id: childId, month: first, world_key: "rung" })).error).toBeNull();
+    const at = `${first}T10:00:00+07:00`;
+    expect((await db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, local_date: first, part1_done_at: at, part2_done_at: at, free_started_at: at }, { onConflict: "child_id,local_date" })).error).toBeNull();
+    expect((await db.from("by_checkins").insert({ family_id: familyId, child_id: childId, local_date: first, quad: "green", word_key: "binh_yen", client_run_id: runId })).error).toBeNull();
+
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/today");
+    const nav = k.getByRole("navigation", { name: "Các mục của con" });
+    await expect(nav.getByRole("link", { name: "Thế giới" })).toBeVisible();
+    await expect(k.getByRole("button", { name: /Rừng nhiệt đới của con · \d+ thứ đã mọc/ })).toBeVisible();
+    await nav.getByRole("link", { name: "Thế giới" }).click();
+    await expect(k).toHaveURL(/\/today\?tab=tuan$/);
+    await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+
+    // What should grow: one plant per finished area per day this month (from the durable records).
+    const { data: days } = await db.from("day_sessions").select("local_date, part1_done_at, part2_done_at, free_started_at").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
+    const { data: visits } = await db.from("by_checkins").select("local_date").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
+    const expected = new Set<string>();
+    for (const d of days ?? []) {
+      if (d.part1_done_at) expected.add(`${d.local_date}|study`);
+      if (d.part2_done_at) expected.add(`${d.local_date}|skill`);
+      if (d.free_started_at) expected.add(`${d.local_date}|play`);
+    }
+    for (const v of visits ?? []) expected.add(`${v.local_date}|feel`);
+
+    const rows = async () => (await db.from("world_items").select("local_date, pillar, world_key, item_key, variant").eq("child_id", childId).gte("local_date", first)).data ?? [];
+    const planted = await rows();
+    expect(new Set(planted.map((r) => `${r.local_date}|${r.pillar}`))).toEqual(expected);
+    expect(planted.every((r) => r.world_key === "rung")).toBe(true);
+    // The first Học tập plant of the month is always the first big tree.
+    const firstStudy = planted.filter((r) => r.pillar === "study").sort((a, b) => (a.local_date < b.local_date ? -1 : 1))[0];
+    expect(firstStudy?.item_key).toBe("cho_ngan_nam");
+
+    const grown = k.getByRole("list", { name: "Những thứ đã mọc" });
+    await grown.getByRole("button", { name: /^Chò ngàn năm, đã mọc \d+ lần/ }).click();
+    const card = k.getByRole("dialog", { name: "Chò ngàn năm" });
+    await expect(card).toContainText("Cúc Phương");
+    await expect(card.getByRole("region", { name: "Nhiệm vụ ngoài đời" })).toBeVisible();
+    await expect(card.getByRole("region", { name: "Tối nay dạy cả nhà" })).toBeVisible();
+    await card.getByRole("button", { name: "Đóng" }).click();
+
+    // Opening again never plants twice.
+    await k.reload();
+    await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+    expect((await rows()).length).toBe(expected.size);
+    // Deleting the visit does not take the flower away (BINH_YEN D2).
+    await db.from("by_checkins").delete().eq("client_run_id", runId);
+    await k.reload();
+    await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+    expect((await rows()).some((r) => r.local_date === first && r.pillar === "feel")).toBe(true);
+
+    // The server checks the month; Nguyên's voice has no world (R5 is her comic).
+    expect(await byCall(k, "GET", "/api/world?month=2026-13")).toBe(400);
+    expect(await byCall(k, "GET", "/api/world?month=2099-01")).toBe(404);
+    expect(await byCall(k, "GET", "/api/world?month=2026-10")).toBe(404);
+    await db.from("profiles").update({ grade: 9 }).eq("id", childId);
+    expect(await byCall(k, "GET", "/api/world")).toBe(404);
+    await k.goto("/today");
+    await expect(nav.getByRole("link", { name: "Tuần của con" })).toBeVisible();
+    await kCtx.close();
+
+    expect((await request.get("/api/world")).status()).toBe(401);
+    await login(page, env.parentEmail, env.parentPassword);
+    expect(await byCall(page, "GET", "/api/world")).toBe(403);
+    // Straight to the database: neither parent nor child can read the world.
+    const asParent = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asParent.auth.signInWithPassword({ email: env.parentEmail, password: env.parentPassword });
+    expect((await asParent.from("world_items").select("id")).error).not.toBeNull();
+  } finally {
+    await db.from("by_checkins").delete().eq("client_run_id", runId);
+    await db.from("world_items").delete().eq("child_id", childId);
+    await db.from("world_months").delete().eq("child_id", childId);
+    if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
+    else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", first);
+    await db.from("profiles").update({ grade }).eq("id", childId);
+  }
+});
+
+test("R4b An chọn thế giới: a new month waits for An's pick (nothing planted, nothing lost); only offered worlds; picked once; then everything since the 1st grows there", async ({ browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const today = localDate(new Date());
+  test.skip(today.endsWith("-01"), "needs a day before today in this month");
+  const first = `${today.slice(0, 7)}-01`;
+  await db.from("profiles").update({ grade: 6 }).eq("id", childId);
+  await db.from("world_items").delete().eq("child_id", childId);
+  await db.from("world_months").delete().eq("child_id", childId);
+  const { data: before } = await db.from("day_sessions").select("*").eq("child_id", childId).eq("local_date", first).maybeSingle();
+  try {
+    const at = `${first}T10:00:00+07:00`;
+    expect((await db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, local_date: first, part1_done_at: at, part2_done_at: at, free_started_at: at }, { onConflict: "child_id,local_date" })).error).toBeNull();
+    const monthRows = async () => (await db.from("world_items").select("local_date, pillar, world_key, item_key").eq("child_id", childId).gte("local_date", first)).data ?? [];
+
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/today");
+    await k.getByRole("button", { name: /Tháng mới! Chọn thế giới của con/ }).click();
+    await expect(k).toHaveURL(/\/today\?tab=tuan$/);
+    await expect(k.getByRole("heading", { name: /Tháng mới! Con chọn thế giới cho tháng này/ })).toBeVisible();
+    const worlds = k.getByRole("list", { name: "Các thế giới" });
+    // Every world with a pack is on offer in a first month; Núi lửa only from January 2027.
+    const volcano = today >= "2027-01";
+    await expect(worlds.getByRole("button")).toHaveCount(volcano ? 4 : 3);
+    await expect(worlds.getByRole("button", { name: /Núi lửa và động đất/ })).toHaveCount(volcano ? 1 : 0);
+    // Nothing grows before the pick (it is not lost: it grows once An picks).
+    expect(await monthRows()).toEqual([]);
+
+    // Only an offered world, only with a well-formed body.
+    expect(await byCall(k, "POST", "/api/world/choose", { world: "sa_mac" })).toBe(400);
+    expect(await byCall(k, "POST", "/api/world/choose", { world: "Biển!" })).toBe(400);
+    expect(await byCall(k, "POST", "/api/world/choose", {})).toBe(400);
+
+    await worlds.getByRole("button", { name: /Biển và rạn san hô/ }).click();
+    await expect(worlds.getByRole("button", { name: /Biển và rạn san hô/ })).toHaveAttribute("aria-pressed", "true");
+    await k.getByRole("button", { name: "Vào Biển và rạn san hô" }).click();
+    await expect(k.getByRole("heading", { name: /Biển và rạn san hô · tháng/ })).toBeVisible();
+    const rows = await monthRows();
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    expect(rows.every((r) => r.world_key === "bien")).toBe(true);
+    expect(rows.find((r) => r.local_date === first && r.pillar === "study")?.item_key).toBe("co_bien");
+    expect((await db.from("world_months").select("world_key").eq("child_id", childId)).data).toEqual([{ world_key: "bien" }]);
+    await k.getByRole("list", { name: "Những thứ đã mọc" }).getByRole("button", { name: /^Cỏ biển, đã mọc/ }).click();
+    await expect(k.getByRole("dialog", { name: "Cỏ biển" })).toContainText("cây có hoa");
+    await k.getByRole("dialog", { name: "Cỏ biển" }).getByRole("button", { name: "Đóng" }).click();
+
+    // Picked once: the month stays in Biển.
+    expect(await byCall(k, "POST", "/api/world/choose", { world: "vu_tru" })).toBe(409);
+    expect(await byCall(k, "POST", "/api/world/choose", { world: "vu_tru", month: "2020-01" })).toBe(409);
+    await k.reload();
+    await expect(k.getByRole("heading", { name: /Biển và rạn san hô · tháng/ })).toBeVisible();
+    await kCtx.close();
+  } finally {
+    await db.from("world_items").delete().eq("child_id", childId);
+    await db.from("world_months").delete().eq("child_id", childId);
+    if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
+    else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", first);
+    await db.from("profiles").update({ grade }).eq("id", childId);
+  }
 });

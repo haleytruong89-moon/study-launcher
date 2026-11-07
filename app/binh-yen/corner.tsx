@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { QUAD_EXPRESSION, type Avatar } from "@/lib/avatar";
+import type { AvatarPics } from "@/lib/avatarPics";
 import {
   BRAIN,
   INTENSITY_LABELS,
@@ -22,9 +25,11 @@ import {
 } from "@/lib/binhYen/catalog";
 import { DELETE_ALL_WORD, HEAVY_REPEAT_TEXT, NOT_SAVED_TEXT, typedDeleteWord, type CheckinView } from "@/lib/binhYen/checkin";
 import { whoSeesWhat } from "@/lib/binhYen/copy";
+import { activityEmoji, wordEmoji } from "@/lib/binhYen/emoji";
 import { studyChip } from "@/lib/binhYen/studyCap";
 import { suggest } from "@/lib/binhYen/suggest";
 import { vnTime } from "@/lib/today/view";
+import { Character } from "../avatar-face";
 import { FeedbackButton } from "../today/feedback";
 import { ActivityBody } from "./activities";
 
@@ -106,6 +111,10 @@ export function Corner({
   voice,
   firstName,
   color,
+  icon,
+  avatar,
+  pics,
+  avatarMine,
   state,
   onState,
   onTalkInline,
@@ -114,6 +123,11 @@ export function Corner({
   voice: Voice;
   firstName: string;
   color: string;
+  /** R3a: the child's icon (S2e) and character; the default character until they make one. */
+  icon: string | null;
+  avatar: Avatar;
+  pics: AvatarPics;
+  avatarMine: boolean;
   state: CornerState;
   onState: (s: unknown) => void;
   onTalkInline: (inline: boolean) => void;
@@ -158,10 +172,32 @@ export function Corner({
     return (
       <>
         <section aria-label="Góc của con" className="flex flex-col gap-4 rounded-2xl bg-white p-5">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-2xl font-bold">{copy.greeting}</h2>
-            <p className="text-ink/75">{copy.sub}</p>
+          <div className="flex items-start gap-3">
+            <Link
+              href="/nhan-vat?tu=binh-yen"
+              // Until the child makes one, the text link below says it; this picture is not read twice.
+              aria-label={avatarMine ? "Đổi nhân vật của con" : undefined}
+              aria-hidden={avatarMine ? undefined : true}
+              tabIndex={avatarMine ? undefined : -1}
+              className="relative shrink-0 rounded-2xl bg-bg p-1"
+            >
+              <Character look={avatar} pics={pics} expr="calm" className="size-16" />
+              {icon && (
+                <span aria-hidden className="absolute -right-1 -bottom-1 text-xl leading-none">
+                  {icon}
+                </span>
+              )}
+            </Link>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-bold">{copy.greeting}</h2>
+              <p className="text-ink/75">{copy.sub}</p>
+            </div>
           </div>
+          {!avatarMine && (
+            <Link href="/nhan-vat?tu=binh-yen" className="inline-flex min-h-11 items-center self-start text-sm font-semibold underline" style={{ color }}>
+              Hình tạm — chạm để tạo nhân vật của con
+            </Link>
+          )}
           {state.study && (
             <p role="status" className="self-start rounded-full bg-bg px-3 py-1 text-xs font-semibold text-ink/80">
               ⏱ {studyChip(state.study.minutes, vnTime(state.study.endsAt))}
@@ -181,9 +217,14 @@ export function Corner({
                     className="flex min-h-28 flex-col justify-between gap-1 rounded-2xl p-3 text-left transition-transform hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                     style={{ background: QUAD_COLORS[q].soft }}
                   >
-                    <svg viewBox="0 0 32 32" aria-hidden className="size-8" style={{ color: QUAD_COLORS[q].c }}>
-                      {ICONS[info.icon]}
-                    </svg>
+                    {voice === "detective" ? (
+                      // R3a: Nguyên's quadrants show her own character with that quadrant's face.
+                      <Character look={avatar} pics={pics} expr={QUAD_EXPRESSION[q]} className="size-12" />
+                    ) : (
+                      <svg viewBox="0 0 32 32" aria-hidden className="size-8" style={{ color: QUAD_COLORS[q].c }}>
+                        {ICONS[info.icon]}
+                      </svg>
+                    )}
                     <b className="text-base">{info.label}</b>
                     <span className="text-sm text-ink/70">{info.sub}</span>
                   </button>
@@ -247,7 +288,12 @@ export function Corner({
                   onClick={() => go({ k: "activity", quad: step.quad, word: step.word, intensity: step.intensity, activity: key })}
                   className="grid min-h-16 w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-2xl border-[1.5px] border-ink/15 bg-white p-3 text-left"
                 >
-                  <b>{t.title}</b>
+                  <b>
+                    <span aria-hidden className="mr-1.5">
+                      {activityEmoji(key)}
+                    </span>
+                    {t.title}
+                  </b>
                   <i className="row-span-2 text-sm font-semibold not-italic" style={{ color }}>
                     {t.minutes}
                   </i>
@@ -339,6 +385,9 @@ function Words({ quad, words, title, hint, color, onBack, onPick }: { quad: Quad
             className="min-h-11 rounded-full border-[1.5px] bg-white px-4 font-medium"
             style={pick === w.key ? { borderColor: QUAD_COLORS[quad].c, background: QUAD_COLORS[quad].soft } : { borderColor: "rgb(28 31 29 / 0.15)" }}
           >
+            <span aria-hidden className="mr-1.5">
+              {wordEmoji(w.key, quad)}
+            </span>
             {w.label}
           </button>
         ))}
@@ -450,8 +499,20 @@ function Recent({ voice, onState }: { voice: Voice; onState: (s: unknown) => voi
               <li key={c.id} className="flex items-center gap-3 py-2">
                 <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ background: c.quad ? QUAD_COLORS[c.quad].c : "#999" }} />
                 <span className="flex-1 text-sm">
-                  <span className="text-ink/60">{c.date}</span> · <b>{c.word}</b>
-                  {c.activity ? ` · ${c.activity}` : " · gọi tên là đủ"}
+                  <span className="text-ink/60">{c.date}</span> ·{" "}
+                  <b>
+                    {c.wordIcon && <span aria-hidden>{c.wordIcon} </span>}
+                    {c.word}
+                  </b>
+                  {c.activity ? (
+                    <>
+                      {" · "}
+                      {c.activityIcon && <span aria-hidden>{c.activityIcon} </span>}
+                      {c.activity}
+                    </>
+                  ) : (
+                    " · gọi tên là đủ"
+                  )}
                 </span>
                 <button type="button" disabled={busy} onClick={() => void remove({ id: c.id })} aria-label={`Xóa lượt ${c.date} ${c.word}`} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-ink/70 underline disabled:opacity-50">
                   Xóa
@@ -468,6 +529,7 @@ function Recent({ voice, onState }: { voice: Voice; onState: (s: unknown) => voi
             <p>
               <b>Xóa hết của con</b> xóa mọi lượt ghé con đã lưu, không lấy lại được. Muốn xóa thì gõ <b>{DELETE_ALL_WORD}</b> vào ô dưới.
             </p>
+            {voice === "scientist" && <p className="text-ink/75">Những thứ đã mọc ở mảng Cảm xúc trong Thế giới của con (hoa, san hô, ngôi sao…) vẫn giữ nguyên. Chúng không ghi con thấy thế nào.</p>}
             <label className="flex flex-col gap-1 font-semibold">
               Gõ {DELETE_ALL_WORD} để xác nhận
               <input
