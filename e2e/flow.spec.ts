@@ -2133,7 +2133,7 @@ test("Góc bình yên S-BY1: red → lo lắng → 5 → 'Nhắn bố mẹ' firs
   await k.getByRole("region", { name: "Xong rồi" }).getByRole("button", { name: "Về góc của con" }).click();
   const recent = k.getByRole("region", { name: "Lần ghé gần đây" });
   await expect(recent.getByRole("listitem")).toHaveCount(2);
-  await expect(recent).toContainText("lo lắng · Thở cho dịu lại");
+  await expect(recent).toContainText(/lo lắng · \S* ?Thở cho dịu lại/);
   await recent.getByRole("button", { name: /^Xóa lượt .* lo lắng$/ }).click();
   await expect(recent.getByRole("listitem")).toHaveCount(1);
   const { data: left } = await db.from("by_checkins").select("word_key").eq("child_id", childId);
@@ -2279,4 +2279,72 @@ test("Góp ý: the child sends from the Góp ý tab (told parents read it); limi
   expect(seen?.body).toBe("Cho con chọn màu nền tối");
   await page.goto("/parent/more");
   await expect(page.getByRole("link", { name: /Góp ý của con/ })).not.toContainText("chưa đọc");
+});
+
+test("R3a nhân vật: the child makes a character (codes only); bad codes refused; parent and anon refused; no direct writes; emoji beside words", async ({ page, browser, request }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  // Nguyên's voice (lớp 9): the quadrants show her character.
+  await db.from("profiles").update({ grade: 9, avatar: null }).eq("id", childId);
+  await db.from("family_settings").update({ by_enabled: true }).eq("family_id", familyId);
+  try {
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+    await k.goto("/binh-yen");
+    const corner = k.getByRole("region", { name: "Góc của con" });
+    await expect(corner).toBeVisible();
+    await corner.getByRole("link", { name: "Hình tạm — chạm để tạo nhân vật của con" }).click();
+    await expect(k).toHaveURL(/\/nhan-vat\?tu=binh-yen$/);
+    await expect(k.getByText("Đang là hình tạm.")).toBeVisible();
+    await k.getByRole("group", { name: "Kiểu tóc" }).getByRole("button", { name: "Đuôi ngựa" }).click();
+    await k.getByRole("group", { name: /^Màu tóc/ }).getByRole("button", { name: "Tím" }).click();
+    await k.getByRole("group", { name: "Phụ kiện" }).getByRole("button", { name: "Tai nghe" }).click();
+    await k.getByLabel("Tên nhân vật (không bắt buộc)").fill("  Mèo   Thám Tử ");
+    await k.getByRole("button", { name: "Lưu nhân vật" }).click();
+    await expect(k.getByRole("status")).toContainText("Đã lưu nhân vật của con.");
+    const { data: saved } = await db.from("profiles").select("avatar").eq("id", childId).single();
+    expect(saved?.avatar).toEqual({ style: "ponytail", hair: "tim", eye: "nau", skin: "sang", outfit: "nau", acc: "phones", name: "Mèo Thám Tử" });
+
+    // The server takes known codes only; the child is always the session's.
+    const good = { style: "short", hair: "nau", eye: "nau", skin: "vua", outfit: "do", acc: "none", name: "" };
+    expect(await byCall(k, "POST", "/api/profile/avatar", { avatar: { ...good, hair: "xanhneon" } })).toBe(400);
+    expect(await byCall(k, "POST", "/api/profile/avatar", { avatar: { ...good, photo: "https://x" } })).toBe(400);
+    expect(await byCall(k, "POST", "/api/profile/avatar", { avatar: { ...good, name: "x".repeat(25) } })).toBe(400);
+    expect(await byCall(k, "POST", "/api/profile/avatar", {})).toBe(400);
+    expect((await request.post("/api/profile/avatar", { data: { avatar: good } })).status()).toBe(401);
+    expect((await db.from("profiles").select("avatar").eq("id", childId).single()).data?.avatar).toMatchObject({ style: "ponytail" });
+
+    // Straight to the database: the child reads it but cannot write it.
+    const asChild = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asChild.auth.signInWithPassword({ email: childEmail, password: childPassword });
+    expect((await asChild.from("profiles").select("avatar").eq("id", childId).single()).data?.avatar).toMatchObject({ name: "Mèo Thám Tử" });
+    expect((await asChild.from("profiles").update({ avatar: good }).eq("id", childId)).error).not.toBeNull();
+
+    // Back in the corner: her character, no "Hình tạm" line; emoji sit beside the words.
+    await k.getByRole("link", { name: "‹ Góc bình yên" }).click();
+    await expect(corner.getByRole("link", { name: "Đổi nhân vật của con" })).toBeVisible();
+    await expect(corner.getByText("Hình tạm — chạm để tạo nhân vật của con")).toHaveCount(0);
+    await corner.getByRole("button", { name: /^Hồ sơ đỏ/ }).click();
+    await expect(k.getByRole("button", { name: "lo lắng", exact: true })).toContainText("😟");
+
+    // "Về hình tạm" clears it.
+    await k.goto("/nhan-vat");
+    await k.getByRole("button", { name: "Về hình tạm" }).click();
+    await expect(k.getByRole("status")).toContainText("Đã về hình tạm.");
+    expect((await db.from("profiles").select("avatar").eq("id", childId).single()).data?.avatar).toBeNull();
+    await kCtx.close();
+
+    // A parent cannot save a character for the child.
+    await login(page, env.parentEmail, env.parentPassword);
+    expect(await byCall(page, "POST", "/api/profile/avatar", { avatar: good })).toBe(403);
+    const asParent = createClient(env.supabaseUrl, env.anonKey, { auth: { persistSession: false } });
+    await asParent.auth.signInWithPassword({ email: env.parentEmail, password: env.parentPassword });
+    expect((await asParent.from("profiles").update({ avatar: good }).eq("id", childId)).error).not.toBeNull();
+  } finally {
+    await db.from("profiles").update({ grade, avatar: null }).eq("id", childId);
+  }
 });

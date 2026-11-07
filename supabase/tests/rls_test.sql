@@ -321,6 +321,29 @@ begin
   end;
 end $$;
 select test_helpers.expect_count('child1 can read own icon column', (select count(*) from public.profiles where icon is null), 1);
+-- 0011 (R3a): the character is read like the icon; never written by a browser.
+do $$
+begin
+  begin
+    update public.profiles set avatar = '{"hair":"den"}'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: child updated own avatar directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot write profiles.avatar';
+  end;
+end $$;
+select test_helpers.expect_count('child1 can read own avatar column', (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1' and avatar is null), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+do $$
+begin
+  begin
+    update public.profiles set avatar = '{"hair":"den"}'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: parent updated a child avatar directly';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot write profiles.avatar (the child makes it)';
+  end;
+end $$;
+select test_helpers.expect_count('parentA can read the child avatar column', (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1' and avatar is null), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB cannot read a family A avatar', (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1'), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
 select test_helpers.expect_count('parentA sees family day plans (2)',      (select count(*) from public.day_plans), 2);
@@ -879,6 +902,22 @@ begin
 exception when insufficient_privilege then raise notice 'ok: anon cannot read app_feedback';
 end $$;
 reset role;
+
+-- 0011 (R3a): only a small JSON object fits in profiles.avatar.
+reset role;
+do $$
+begin
+  begin
+    update public.profiles set avatar = '"x"'::jsonb where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: a non-object avatar was stored';
+  exception when check_violation then raise notice 'ok: avatar must be a JSON object';
+  end;
+  begin
+    update public.profiles set avatar = jsonb_build_object('name', repeat('x', 2000)) where id = '00000000-0000-0000-0000-0000000000c1';
+    raise exception 'FAIL: an oversized avatar was stored';
+  exception when check_violation then raise notice 'ok: avatar is size-limited';
+  end;
+end $$;
 
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;

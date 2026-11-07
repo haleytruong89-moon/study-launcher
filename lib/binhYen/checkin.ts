@@ -5,6 +5,7 @@
  */
 import { z } from "zod";
 import { activityAllowed, activityText, findActivity, findWord, isPleasant, isQuad, type Quad, type Voice } from "./catalog";
+import { activityEmoji, wordEmoji } from "./emoji";
 
 /** How many recent visits the child's home lists ("Lần ghé gần đây"). */
 export const RECENT_LIMIT = 7;
@@ -64,6 +65,9 @@ export interface CheckinView {
   quad: Quad | null;
   word: string;
   activity: string | null;
+  /** R3a: little pictures shown beside the word / activity (never stored). */
+  wordIcon: string;
+  activityIcon: string;
 }
 
 /** What "Lần ghé gần đây" shows: date, word, activity. No counts, no streaks (SPEC §15). */
@@ -76,6 +80,8 @@ export function checkinView(row: CheckinRow, voice: Voice): CheckinView {
     quad: isQuad(row.quad) ? row.quad : null,
     word: w?.label ?? "(từ cũ)",
     activity: row.activity_key ? (a ? activityText(a, voice).title : "(hoạt động cũ)") : null,
+    wordIcon: wordEmoji(row.word_key, isQuad(row.quad) ? row.quad : undefined),
+    activityIcon: row.activity_key ? activityEmoji(row.activity_key) : "",
   };
 }
 

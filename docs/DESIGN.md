@@ -92,6 +92,8 @@ Tất cả bảng có `id uuid default gen_random_uuid()` (trừ khi ghi khác),
 
 **Góp ý (0010, 07/11/2026)** — `app_feedback` (id, family_id, child_id, kind `like`/`dislike`/`idea`, body 1–500 ký tự, created_at, seen_at). RLS bật. Bố mẹ trong gia đình **select** + **update chỉ cột `seen_at`**; con **select** dòng của mình; **không** grant insert/delete cho trình duyệt (chỉ `POST /api/feedback`). Không riêng tư: con được báo "Bố mẹ sẽ đọc góp ý này."
 
+**Nhân vật của con (0011, R3a, 07/11/2026)** — `profiles.avatar jsonb` (null = "Hình tạm", nhân vật mặc định theo giọng). Chỉ lưu **mã** `{style, hair, eye, skin, outfit, acc, name}` (danh sách trong `lib/avatar.ts`, mã không bao giờ bị xóa) + tên ≤ 24 ký tự; check `jsonb_typeof = object` và ≤ 1 KB. Cả nhà **select** được (cột grant cho `authenticated`); trình duyệt **không** update cột này (revoke) — chỉ `POST /api/profile/avatar`. Không có ảnh nào của con (ảnh Picrew là R3b, bucket riêng).
+
 **Seed (sau khi tạo gia đình):** allowlist mặc định — domain Launcher, `math-app-gules.vercel.app`, `translate.google.com`, `dictionary.cambridge.org`, `tratu.soha.vn`, `accounts.google.com`; 2 profile con; `family_settings` mặc định.
 
 ## 5. Máy trạng thái — `lib/dayState.ts`
@@ -192,6 +194,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/admin/talk/:id/seen` · `GET /api/admin/talk/count` | phụ huynh | *(S-BY0)* "Đã thấy" bằng phiên của phụ huynh (RLS: chỉ `seen_at`, `seen_by` = mình) · số tín hiệu chưa xem (dải đỏ trên mọi trang) |
 | `GET/POST /api/by/checkins` · `POST /api/by/checkins/delete` | con, **cần lượt ghé Góc bình yên** (`/api/by/open`) | *(S-BY1)* GET = 7 lượt gần nhất của chính con. POST `{clientRunId, quad, word, intensity, activity}` (activity null = "Vậy là đủ") → kiểm theo danh sách **trước** khi ghi; cùng `clientRunId` chỉ 1 dòng. Delete `{id}` hoặc `{all: true}` → xóa hẳn, chỉ của con. Không `audit_log`. **R5:** mọi route `/api/by/*` + trang tính giới hạn giờ học (`computeDayState`, giờ máy chủ): quá `by_study_minutes` kể từ lúc bắt đầu lượt ghé → lượt kết thúc, trả 409 `capped` |
 | `POST /api/feedback` | con | *(07/11/2026)* **Góp ý** cho app `{kind: like\|dislike\|idea, body ≤ 500}` (zod, trim) → `app_feedback` (service_role; gia đình + con lấy từ phiên). ≤ **10 / con / ngày** (đếm ở máy chủ, ngày VN) → 429. Không push, không `audit_log` |
+| `POST /api/profile/avatar` | con | *(R3a, 07/11/2026)* Lưu nhân vật `{avatar: {...}}` hoặc về hình tạm `{avatar: null}`. Máy chủ chỉ nhận mã có trong danh sách, không nhận khóa lạ, tên ≤ 24 ký tự (bỏ ký tự điều khiển) → 400. Ghi bằng service_role **chỉ dòng của con trong phiên** (`.eq(id).eq(role, child)`); bố mẹ 403, chưa đăng nhập 401 |
 | `POST /api/admin/feedback/:id/seen` | phụ huynh | *(07/11/2026)* "Đã đọc" bằng phiên của bố mẹ (RLS: gia đình mình, chỉ cột `seen_at`) |
 
 ## 7. Extension (thư mục `extension/`)
