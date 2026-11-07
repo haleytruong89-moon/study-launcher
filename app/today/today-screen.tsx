@@ -488,7 +488,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               />
             )}
 
-            {hasWorld && <WorldMini onOpen={() => selectTab("tuan")} />}
+            {hasWorld && <WorldMini key={`${s.part1.doneAt}|${s.part2.doneAt}|${s.free.startedAt}`} onOpen={() => selectTab("tuan")} />}
 
             {byEnabled && (
               <section aria-labelledby="by-invite" className="flex flex-col gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}>

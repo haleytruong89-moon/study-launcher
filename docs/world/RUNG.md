@@ -1,14 +1,16 @@
 # Thế giới "Rừng nhiệt đới" — nội dung để bố mẹ và An đọc lại
 
-> Tự sinh từ `lib/world/rung.ts` (R4a). Sửa chữ ở file đó, không sửa ở đây. Mã (`key`) không bao giờ đổi.
+> Sinh từ `lib/world/rung.ts` (R4a); test `tests/world.test.ts` kiểm hai file khớp nhau. Sửa chữ ở file `.ts` rồi sinh lại. Mã (`key`) không bao giờ đổi.
 > Mỗi thứ có 3 điều thú vị: điều 1 mở khi mọc lần đầu, điều 2 và 3 mở khi mọc lại.
+
+**Lời mở đầu:** Mỗi mảng con làm xong trong ngày, khu rừng mọc thêm một thứ. Con vật tự tìm đến khi rừng có thứ chúng cần.
 
 ## Xong mảng Cảm xúc → Hoa
 
 ### (hình vẽ) Lan hài (`lan_hai`)
 
 1. Lan hài có một cánh hoa phồng lên như chiếc hài (giày). Côn trùng chui vào, muốn ra phải đi qua chỗ có phấn hoa — thế là hoa được thụ phấn.
-2. Hạt lan nhỏ như bụi. Muốn nảy mầm, hạt phải gặp đúng một loại nấm giúp nó lấy chất dinh dưỡng.
+2. Hạt lan nhỏ như bụi. Muốn nảy mầm, hạt phải gặp được loại nấm phù hợp giúp nó lấy chất dinh dưỡng.
 3. Việt Nam có nhiều loài lan hài quý. Lan hài rừng được bảo vệ: không được hái, không mua bán.
 
 - **Nhiệm vụ ngoài đời:** Tìm một bông hoa quanh nhà và xem: nhị hoa (chỗ có phấn) nằm ở đâu?
@@ -34,12 +36,12 @@
 
 ### 🌼 Dã quỳ (`da_quy`)
 
-1. Dã quỳ nở vàng rực ở Đà Lạt, Tây Nguyên vào đúng tháng 11.
-2. Mỗi “bông” dã quỳ thật ra là hàng trăm bông hoa nhỏ ghép lại, giống hoa cúc và hướng dương.
+1. Dã quỳ nở vàng rực ở Đà Lạt, Tây Nguyên, rộ nhất vào khoảng tháng 11.
+2. Mỗi “bông” dã quỳ thật ra là rất nhiều bông hoa nhỏ ghép lại, giống hoa cúc và hướng dương.
 3. Dã quỳ có quê ở Trung Mỹ, sau được mang tới và mọc khắp Tây Nguyên.
 
 - **Nhiệm vụ ngoài đời:** Nhìn thật kỹ giữa một bông cúc hoặc hướng dương: con có thấy nhiều bông hoa tí hon không?
-- **Tối nay dạy cả nhà:** Một bông hoa cúc thật ra là cả trăm bông hoa nhỏ đứng chung.
+- **Tối nay dạy cả nhà:** Một bông hoa cúc thật ra là rất nhiều bông hoa nhỏ đứng chung.
 
 ### (hình vẽ) Hoa mua (`hoa_mua`)
 
@@ -65,7 +67,7 @@
 
 1. Ở Vườn quốc gia Cúc Phương có một cây chò được gọi là “chò ngàn năm”, người ta ước tính nó đã sống khoảng 1.000 năm.
 2. Cây to trong rừng nhiệt đới có rễ bạnh: rễ dựng đứng như những tấm vách, giữ cây không đổ khi đất mỏng.
-3. Cúc Phương (Ninh Bình) là vườn quốc gia đầu tiên của Việt Nam, thành lập năm 1962.
+3. Cúc Phương (phần lớn ở Ninh Bình) là vườn quốc gia đầu tiên của Việt Nam, được bảo vệ từ năm 1962.
 
 - **Nhiệm vụ ngoài đời:** Ôm thử một thân cây to. Cần mấy người nắm tay nhau mới ôm hết một cây chò ngàn năm, con đoán xem?
 - **Tối nay dạy cả nhà:** Cây to trong rừng có rễ bạnh như vách tường để đứng vững.
@@ -81,12 +83,12 @@
 
 ### 🎋 Tre (`tre`)
 
-1. Tre không phải là cây gỗ mà là một loài cỏ — loài cỏ khổng lồ.
+1. Tre không phải cây gỗ: tre thuộc họ Lúa (họ Hòa thảo), cùng họ với cỏ và cây lúa.
 2. Có loài tre lớn rất nhanh, có ngày cao thêm gần một mét.
 3. Nhiều loài tre rất hiếm khi ra hoa; khi ra hoa thì cả bụi cùng nở, rồi cây tre già chết đi.
 
 - **Nhiệm vụ ngoài đời:** Tìm quanh nhà một đồ vật làm bằng tre.
-- **Tối nay dạy cả nhà:** Tre là một loài cỏ khổng lồ, có loài cao thêm gần một mét mỗi ngày.
+- **Tối nay dạy cả nhà:** Tre cùng họ với cỏ và cây lúa, và có loài tre có ngày cao thêm gần một mét.
 
 ### (hình vẽ) Cây dầu (`cay_dau`)
 
@@ -139,7 +141,7 @@
 
 1. Gia vị quế là vỏ của cây quế, được bóc ra rồi phơi khô.
 2. Khi khô, vỏ quế tự cuộn tròn lại thành những thanh nhỏ.
-3. Yên Bái và Quảng Nam là những nơi trồng nhiều quế ở Việt Nam.
+3. Văn Yên (nay thuộc Lào Cai) và Trà My (nay thuộc TP Đà Nẵng) là những nơi trồng quế nổi tiếng.
 
 - **Nhiệm vụ ngoài đời:** Ngửi thử một thanh quế trong bếp (nếu có). Mùi giống món ăn nào?
 - **Tối nay dạy cả nhà:** Thanh quế là vỏ cây cuộn lại khi phơi khô.
@@ -171,7 +173,7 @@
 - **Nhiệm vụ ngoài đời:** Hỏi ông bà: ngày xưa gội đầu bằng gì?
 - **Tối nay dạy cả nhà:** Quả bồ kết tạo được bọt nên là “dầu gội” của ông bà ngày xưa.
 
-## Xong mảng Vui chơi → Dưới tán rừng
+## Xong mảng Vui chơi → Mặt đất rừng
 
 ### 🍄 Nấm (`nam`)
 
@@ -186,7 +188,7 @@
 
 1. Rêu không có rễ thật, không có hoa, không có hạt.
 2. Rêu hút và giữ nước như một miếng bọt biển, giúp đất trong rừng luôn ẩm.
-3. Rêu là một trong những loài cây đầu tiên rời biển để lên sống trên cạn.
+3. Rêu thuộc nhóm thực vật đầu tiên lên sống trên cạn; tổ tiên của chúng là tảo sống ở nước ngọt.
 
 - **Nhiệm vụ ngoài đời:** Tìm rêu ở chân tường hoặc gốc cây. Rêu mọc ở phía có nắng hay phía râm?
 - **Tối nay dạy cả nhà:** Rêu giữ nước như bọt biển và không cần rễ.
@@ -195,7 +197,7 @@
 
 1. Nắp ấm là cây ăn côn trùng: côn trùng trượt chân rơi vào chiếc “ấm” có nước tiêu hóa.
 2. Chiếc nắp trên miệng ấm giúp che bớt nước mưa.
-3. Việt Nam có nhiều loài nắp ấm mọc hoang.
+3. Nắp ấm thường mọc ở nơi nhiều nắng, đất nghèo chất dinh dưỡng — nên phải bắt côn trùng để có thêm.
 
 - **Nhiệm vụ ngoài đời:** Vẽ một chiếc bẫy côn trùng con nghĩ ra, giống hoặc khác nắp ấm.
 - **Tối nay dạy cả nhà:** Cây nắp ấm có “ấm” bẫy côn trùng để lấy thêm chất dinh dưỡng.
@@ -204,9 +206,9 @@
 
 1. Chạm vào lá cây xấu hổ (cây trinh nữ), lá cụp lại ngay.
 2. Lá cụp được là vì nước trong các tế bào ở gốc lá rút đi rất nhanh.
-3. Vài phút sau, khi không bị chạm nữa, lá từ từ mở ra lại.
+3. Một lúc sau (thường vài phút đến vài chục phút) lá mở lại. Xấu hổ ưa nắng, mọc ở bãi đất trống; quê gốc ở châu Mỹ.
 
-- **Nhiệm vụ ngoài đời:** Nếu gặp cây xấu hổ, chạm nhẹ một lá và đếm xem bao lâu thì lá mở lại.
+- **Nhiệm vụ ngoài đời:** Nếu gặp cây xấu hổ, chạm nhẹ một lá (cẩn thận gai nhỏ trên thân) và xem bao lâu thì lá mở lại.
 - **Tối nay dạy cả nhà:** Lá xấu hổ cụp lại vì nước rút khỏi gốc lá trong chớp mắt.
 
 ### (hình vẽ) Địa y (`dia_y`)
@@ -245,7 +247,7 @@
 Điều kiện: 3 thứ có nhãn `flower`
 
 1. Bướm nếm vị bằng chân: đậu xuống là biết lá đó có hợp để đẻ trứng không.
-2. Cánh bướm phủ đầy những vảy rất nhỏ; chạm vào sẽ thấy bột dính tay — đó là vảy cánh.
+2. Cánh bướm phủ đầy những vảy rất nhỏ — lớp bột dính tay khi chạm vào. Đừng chạm nhé: mất vảy, cánh bướm dễ hỏng.
 3. Rừng Cúc Phương có mùa bướm vào khoảng tháng 4, tháng 5, bướm bay thành từng đàn.
 
 - **Nhiệm vụ ngoài đời:** Vẽ vòng đời của bướm: trứng → sâu → nhộng → bướm.
@@ -267,11 +269,11 @@
 Điều kiện: 3 thứ có nhãn `bigtree`
 
 1. Chim gõ kiến mổ vào thân cây để tìm sâu và để đục tổ.
-2. Lưỡi chim gõ kiến rất dài, khi không dùng thì quấn vòng quanh bên trong đầu.
+2. Lưỡi chim gõ kiến rất dài, khi không dùng thì cuộn vòng quanh hộp sọ, nằm dưới da.
 3. Lông đuôi cứng giúp chim chống vào thân cây như một chiếc ghế ba chân.
 
 - **Nhiệm vụ ngoài đời:** Gõ nhẹ vào gỗ, vào kim loại, vào nhựa: tiếng nào vang nhất?
-- **Tối nay dạy cả nhà:** Lưỡi chim gõ kiến dài đến mức phải quấn quanh trong đầu.
+- **Tối nay dạy cả nhà:** Lưỡi chim gõ kiến dài đến mức phải cuộn vòng quanh hộp sọ.
 
 ### 🐒 Voọc mông trắng (`voc_mong_trang`) — đến vì rừng có nhiều cây lớn để leo và ăn lá
 
@@ -311,7 +313,7 @@
 Điều kiện: 3 thứ có nhãn `moist`
 
 1. Đom đóm phát sáng nhờ một phản ứng hóa học trong bụng; ánh sáng này gần như không nóng.
-2. Mỗi loài đom đóm nhấp nháy theo một kiểu riêng để tìm bạn cùng loài.
+2. Nhiều loài đom đóm nhấp nháy theo một kiểu riêng để tìm bạn cùng loài.
 3. Ấu trùng của nhiều loài đom đóm ăn ốc sên.
 
 - **Nhiệm vụ ngoài đời:** Bật tắt đèn pin theo một nhịp, xem người trong nhà có bắt chước lại được không.

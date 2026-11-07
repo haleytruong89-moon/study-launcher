@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { WORLDS, WORLD_ORDER, findThing } from "@/lib/world/catalog";
 import { defaultWorld, isMonth, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
@@ -30,6 +31,14 @@ describe("world packs (content rules)", () => {
       }
     });
   }
+});
+
+describe("the reading copy for parents and An", () => {
+  it("docs/world/RUNG.md has every name, fact, mission and teach line of lib/world/rung.ts", () => {
+    const md = readFileSync("docs/world/RUNG.md", "utf8");
+    const items = [...PILLARS.flatMap((p) => RUNG.things[p]), ...RUNG.animals];
+    for (const s of [RUNG.intro, ...items.flatMap((t) => [t.name, ...t.facts, t.mission, t.teach])]) expect(md, s).toContain(s);
+  });
 });
 
 describe("what grows (cách 2)", () => {
@@ -100,9 +109,11 @@ describe("months and the world of a month", () => {
     expect(isMonth("2026-13")).toBe(false);
     expect(isMonth("2026-11-01")).toBe(false);
   });
-  it("defaults to the first world not used in the last 11 months; else the one used longest ago", () => {
+  it("defaults to the first world with a pack not used in the last 11 months; none left → the month waits", () => {
     expect(defaultWorld("2026-11", [])).toBe("rung");
-    // Only Rừng has a pack so far: it comes back rather than leaving a month empty.
-    expect(defaultWorld("2026-12", [{ month: "2026-11", worldKey: "rung" }])).toBe("rung");
+    // Only Rừng has a pack so far: December waits for a new world instead of repeating Rừng.
+    expect(defaultWorld("2026-12", [{ month: "2026-11", worldKey: "rung" }])).toBeNull();
+    // 12 months later Rừng is new again.
+    expect(defaultWorld("2027-11", [{ month: "2026-11", worldKey: "rung" }])).toBe("rung");
   });
 });

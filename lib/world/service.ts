@@ -33,8 +33,8 @@ async function usedWorlds(childId: string): Promise<{ month: string; worldKey: s
   return [...out].map(([month, worldKey]) => ({ month, worldKey }));
 }
 
-/** The world a month is (or will be) in: its plants' world, else the child's pick, else the default. */
-function worldOf(month: string, used: { month: string; worldKey: string }[]): string {
+/** The world a month is (or will be) in: its plants' world, else the child's pick, else the default (null = waits). */
+function worldOf(month: string, used: { month: string; worldKey: string }[]): string | null {
   return used.find((u) => u.month === month)?.worldKey ?? defaultWorld(month, used);
 }
 
@@ -54,8 +54,8 @@ async function finishedAreas(ctx: ChildContext, from: string, to: string): Promi
     if (d.part2_done_at) out.push({ date, pillar: "skill" });
     if (d.free_started_at) out.push({ date, pillar: "play" });
   }
-  // Before Góc bình yên existed (no table) there are simply no "feel" plants.
-  for (const v of visits.error ? [] : (visits.data ?? [])) out.push({ date: v.local_date as string, pillar: "feel" });
+  if (visits.error) throw new Error(`world.visits: ${visits.error.message}`);
+  for (const v of visits.data ?? []) out.push({ date: v.local_date as string, pillar: "feel" });
   return out;
 }
 
@@ -82,6 +82,7 @@ export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<vo
       .lte("local_date", lastDay(m));
     if (error) throw new Error(`world.items: ${error.message}`);
     const worldKey = worldOf(m, used);
+    if (!worldKey) continue; // no new world pack yet: plant later from the stored milestones
     const add = plantsToAdd(await finishedAreas(ctx, firstDay(m), to), (existing ?? []) as WorldRow[], worldKey);
     if (add.length === 0) continue;
     const { error: insErr } = await admin
@@ -124,13 +125,19 @@ export async function readWorld(ctx: ChildContext, month: string | null, now = n
       return { month: m, key: w?.key ?? "", name: w?.name ?? "Thế giới cũ", emoji: w?.emoji ?? "🌍", plants: rs.length };
     })
     .sort((a, b) => (a.month < b.month ? 1 : -1));
-  return { view: monthView(want, worldOf(want, used), byMonth.get(want) ?? [], today), current: want === current, album };
+  const key = worldOf(want, used);
+  return { view: key ? monthView(want, key, byMonth.get(want) ?? [], today) : null, current: want === current, album };
+}
+
+/** "Table does not exist" (Postgres 42P01, PostgREST PGRST205) — never a missing column or anything else. */
+function missingTable(e: { code?: string; message: string }): boolean {
+  return e.code === "42P01" || e.code === "PGRST205" || /relation .* does not exist|could not find the table/i.test(e.message);
 }
 
 /** Before migration 0013 runs (the preview, until the parents merge) the tables do not exist. */
 export async function worldReady(): Promise<boolean> {
   const { error } = await createAdminClient().from("world_items").select("id").limit(1);
   if (!error) return true;
-  if (error.code === "42P01" || error.code === "PGRST205" || /does not exist|schema cache/i.test(error.message)) return false;
+  if (missingTable(error)) return false;
   throw new Error(`world.ready: ${error.message}`);
 }

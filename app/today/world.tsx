@@ -144,13 +144,25 @@ export function WorldTab({ color }: { color: string }) {
         <p role="alert" className="text-sm">
           {load.text}
         </p>
-        <button type="button" onClick={retry} className="btn self-start border border-ink/20 bg-white text-sm">
-          Thử lại
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={retry} className="btn border border-ink/20 bg-white text-sm">
+            Thử lại
+          </button>
+          {month && (
+            <button type="button" onClick={() => setMonth(null)} className="btn border border-ink/20 bg-white text-sm">
+              ← Về tháng này
+            </button>
+          )}
+        </div>
       </section>
     );
   const { view, current, album } = load.data;
-  if (!view) return <p className="rounded-2xl bg-white p-4 text-sm">Tháng này chưa có thế giới.</p>;
+  if (!view)
+    return (
+      <p className="rounded-2xl bg-white p-4 text-sm">
+        🌍 Thế giới của tháng này sắp mở. Những mảng con làm xong từ đầu tháng vẫn được tính, không mất gì.
+      </p>
+    );
 
   return (
     <>
@@ -236,6 +248,7 @@ export function WorldMini({ onOpen }: { onOpen: () => void }) {
           {today.length > 0 ? (
             <>
               Hôm nay: {today.map((t) => <WorldIcon key={t.key} icon={t.icon} size={22} />)}
+              <span className="sr-only">{today.map((t) => t.name).join(", ")}</span>
             </>
           ) : (
             "Xong một mảng hôm nay là có thứ mới mọc."

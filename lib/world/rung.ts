@@ -10,7 +10,7 @@ export const RUNG: World = {
   key: "rung",
   name: "Rừng nhiệt đới",
   emoji: "🌳",
-  pillarNames: { feel: "Hoa", study: "Cây lớn", skill: "Cây có quả, có hạt", play: "Dưới tán rừng" },
+  pillarNames: { feel: "Hoa", study: "Cây lớn", skill: "Cây có quả, có hạt", play: "Mặt đất rừng" },
   sky: "#CFE6F5",
   land: "#A9D18E",
   intro: "Mỗi mảng con làm xong trong ngày, khu rừng mọc thêm một thứ. Con vật tự tìm đến khi rừng có thứ chúng cần.",
@@ -24,7 +24,7 @@ export const RUNG: World = {
         tags: ["flower"],
         facts: [
           "Lan hài có một cánh hoa phồng lên như chiếc hài (giày). Côn trùng chui vào, muốn ra phải đi qua chỗ có phấn hoa — thế là hoa được thụ phấn.",
-          "Hạt lan nhỏ như bụi. Muốn nảy mầm, hạt phải gặp đúng một loại nấm giúp nó lấy chất dinh dưỡng.",
+          "Hạt lan nhỏ như bụi. Muốn nảy mầm, hạt phải gặp được loại nấm phù hợp giúp nó lấy chất dinh dưỡng.",
           "Việt Nam có nhiều loài lan hài quý. Lan hài rừng được bảo vệ: không được hái, không mua bán.",
         ],
         mission: "Tìm một bông hoa quanh nhà và xem: nhị hoa (chỗ có phấn) nằm ở đâu?",
@@ -62,12 +62,12 @@ export const RUNG: World = {
         icon: { emoji: "🌼" },
         tags: ["flower"],
         facts: [
-          "Dã quỳ nở vàng rực ở Đà Lạt, Tây Nguyên vào đúng tháng 11.",
-          "Mỗi “bông” dã quỳ thật ra là hàng trăm bông hoa nhỏ ghép lại, giống hoa cúc và hướng dương.",
+          "Dã quỳ nở vàng rực ở Đà Lạt, Tây Nguyên, rộ nhất vào khoảng tháng 11.",
+          "Mỗi “bông” dã quỳ thật ra là rất nhiều bông hoa nhỏ ghép lại, giống hoa cúc và hướng dương.",
           "Dã quỳ có quê ở Trung Mỹ, sau được mang tới và mọc khắp Tây Nguyên.",
         ],
         mission: "Nhìn thật kỹ giữa một bông cúc hoặc hướng dương: con có thấy nhiều bông hoa tí hon không?",
-        teach: "Một bông hoa cúc thật ra là cả trăm bông hoa nhỏ đứng chung.",
+        teach: "Một bông hoa cúc thật ra là rất nhiều bông hoa nhỏ đứng chung.",
       },
       {
         key: "hoa_mua",
@@ -106,7 +106,7 @@ export const RUNG: World = {
         facts: [
           "Ở Vườn quốc gia Cúc Phương có một cây chò được gọi là “chò ngàn năm”, người ta ước tính nó đã sống khoảng 1.000 năm.",
           "Cây to trong rừng nhiệt đới có rễ bạnh: rễ dựng đứng như những tấm vách, giữ cây không đổ khi đất mỏng.",
-          "Cúc Phương (Ninh Bình) là vườn quốc gia đầu tiên của Việt Nam, thành lập năm 1962.",
+          "Cúc Phương (phần lớn ở Ninh Bình) là vườn quốc gia đầu tiên của Việt Nam, được bảo vệ từ năm 1962.",
         ],
         mission: "Ôm thử một thân cây to. Cần mấy người nắm tay nhau mới ôm hết một cây chò ngàn năm, con đoán xem?",
         teach: "Cây to trong rừng có rễ bạnh như vách tường để đứng vững.",
@@ -130,12 +130,12 @@ export const RUNG: World = {
         icon: { emoji: "🎋" },
         tags: ["bigtree"],
         facts: [
-          "Tre không phải là cây gỗ mà là một loài cỏ — loài cỏ khổng lồ.",
+          "Tre không phải cây gỗ: tre thuộc họ Lúa (họ Hòa thảo), cùng họ với cỏ và cây lúa.",
           "Có loài tre lớn rất nhanh, có ngày cao thêm gần một mét.",
           "Nhiều loài tre rất hiếm khi ra hoa; khi ra hoa thì cả bụi cùng nở, rồi cây tre già chết đi.",
         ],
         mission: "Tìm quanh nhà một đồ vật làm bằng tre.",
-        teach: "Tre là một loài cỏ khổng lồ, có loài cao thêm gần một mét mỗi ngày.",
+        teach: "Tre cùng họ với cỏ và cây lúa, và có loài tre có ngày cao thêm gần một mét.",
       },
       {
         key: "cay_dau",
@@ -213,7 +213,7 @@ export const RUNG: World = {
         facts: [
           "Gia vị quế là vỏ của cây quế, được bóc ra rồi phơi khô.",
           "Khi khô, vỏ quế tự cuộn tròn lại thành những thanh nhỏ.",
-          "Yên Bái và Quảng Nam là những nơi trồng nhiều quế ở Việt Nam.",
+          "Văn Yên (nay thuộc Lào Cai) và Trà My (nay thuộc TP Đà Nẵng) là những nơi trồng quế nổi tiếng.",
         ],
         mission: "Ngửi thử một thanh quế trong bếp (nếu có). Mùi giống món ăn nào?",
         teach: "Thanh quế là vỏ cây cuộn lại khi phơi khô.",
@@ -258,7 +258,7 @@ export const RUNG: World = {
         teach: "Quả bồ kết tạo được bọt nên là “dầu gội” của ông bà ngày xưa.",
       },
     ],
-    // Vui chơi → dưới tán rừng.
+    // Vui chơi → mặt đất rừng (cả ven rừng, bãi trống).
     play: [
       {
         key: "nam",
@@ -281,7 +281,7 @@ export const RUNG: World = {
         facts: [
           "Rêu không có rễ thật, không có hoa, không có hạt.",
           "Rêu hút và giữ nước như một miếng bọt biển, giúp đất trong rừng luôn ẩm.",
-          "Rêu là một trong những loài cây đầu tiên rời biển để lên sống trên cạn.",
+          "Rêu thuộc nhóm thực vật đầu tiên lên sống trên cạn; tổ tiên của chúng là tảo sống ở nước ngọt.",
         ],
         mission: "Tìm rêu ở chân tường hoặc gốc cây. Rêu mọc ở phía có nắng hay phía râm?",
         teach: "Rêu giữ nước như bọt biển và không cần rễ.",
@@ -294,7 +294,7 @@ export const RUNG: World = {
         facts: [
           "Nắp ấm là cây ăn côn trùng: côn trùng trượt chân rơi vào chiếc “ấm” có nước tiêu hóa.",
           "Chiếc nắp trên miệng ấm giúp che bớt nước mưa.",
-          "Việt Nam có nhiều loài nắp ấm mọc hoang.",
+          "Nắp ấm thường mọc ở nơi nhiều nắng, đất nghèo chất dinh dưỡng — nên phải bắt côn trùng để có thêm.",
         ],
         mission: "Vẽ một chiếc bẫy côn trùng con nghĩ ra, giống hoặc khác nắp ấm.",
         teach: "Cây nắp ấm có “ấm” bẫy côn trùng để lấy thêm chất dinh dưỡng.",
@@ -307,9 +307,9 @@ export const RUNG: World = {
         facts: [
           "Chạm vào lá cây xấu hổ (cây trinh nữ), lá cụp lại ngay.",
           "Lá cụp được là vì nước trong các tế bào ở gốc lá rút đi rất nhanh.",
-          "Vài phút sau, khi không bị chạm nữa, lá từ từ mở ra lại.",
+          "Một lúc sau (thường vài phút đến vài chục phút) lá mở lại. Xấu hổ ưa nắng, mọc ở bãi đất trống; quê gốc ở châu Mỹ.",
         ],
-        mission: "Nếu gặp cây xấu hổ, chạm nhẹ một lá và đếm xem bao lâu thì lá mở lại.",
+        mission: "Nếu gặp cây xấu hổ, chạm nhẹ một lá (cẩn thận gai nhỏ trên thân) và xem bao lâu thì lá mở lại.",
         teach: "Lá xấu hổ cụp lại vì nước rút khỏi gốc lá trong chớp mắt.",
       },
       {
@@ -363,7 +363,7 @@ export const RUNG: World = {
       because: "rừng có nhiều loài hoa",
       facts: [
         "Bướm nếm vị bằng chân: đậu xuống là biết lá đó có hợp để đẻ trứng không.",
-        "Cánh bướm phủ đầy những vảy rất nhỏ; chạm vào sẽ thấy bột dính tay — đó là vảy cánh.",
+        "Cánh bướm phủ đầy những vảy rất nhỏ — lớp bột dính tay khi chạm vào. Đừng chạm nhé: mất vảy, cánh bướm dễ hỏng.",
         "Rừng Cúc Phương có mùa bướm vào khoảng tháng 4, tháng 5, bướm bay thành từng đàn.",
       ],
       mission: "Vẽ vòng đời của bướm: trứng → sâu → nhộng → bướm.",
@@ -394,11 +394,11 @@ export const RUNG: World = {
       because: "rừng có nhiều cây lớn",
       facts: [
         "Chim gõ kiến mổ vào thân cây để tìm sâu và để đục tổ.",
-        "Lưỡi chim gõ kiến rất dài, khi không dùng thì quấn vòng quanh bên trong đầu.",
+        "Lưỡi chim gõ kiến rất dài, khi không dùng thì cuộn vòng quanh hộp sọ, nằm dưới da.",
         "Lông đuôi cứng giúp chim chống vào thân cây như một chiếc ghế ba chân.",
       ],
       mission: "Gõ nhẹ vào gỗ, vào kim loại, vào nhựa: tiếng nào vang nhất?",
-      teach: "Lưỡi chim gõ kiến dài đến mức phải quấn quanh trong đầu.",
+      teach: "Lưỡi chim gõ kiến dài đến mức phải cuộn vòng quanh hộp sọ.",
     },
     {
       key: "voc_mong_trang",
@@ -453,7 +453,7 @@ export const RUNG: World = {
       because: "rừng ẩm, có nhiều ốc sên nhỏ",
       facts: [
         "Đom đóm phát sáng nhờ một phản ứng hóa học trong bụng; ánh sáng này gần như không nóng.",
-        "Mỗi loài đom đóm nhấp nháy theo một kiểu riêng để tìm bạn cùng loài.",
+        "Nhiều loài đom đóm nhấp nháy theo một kiểu riêng để tìm bạn cùng loài.",
         "Ấu trùng của nhiều loài đom đóm ăn ốc sên.",
       ],
       mission: "Bật tắt đèn pin theo một nhịp, xem người trong nhà có bắt chước lại được không.",

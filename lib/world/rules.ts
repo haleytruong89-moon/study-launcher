@@ -46,15 +46,14 @@ export function isMonth(v: unknown): v is string {
 
 /**
  * The world of a month when the child has not picked one: the first world (fixed order) that has
- * a pack and was not used in the 11 months before; if all were used, the one used longest ago.
+ * a pack and was not used in the 11 months before. null = no new pack yet: the month waits
+ * ("sắp mở") instead of repeating a world — nothing is lost, the plants are made from the
+ * stored milestones once the pack arrives.
  */
-export function defaultWorld(month: string, used: readonly { month: string; worldKey: string }[]): string {
+export function defaultWorld(month: string, used: readonly { month: string; worldKey: string }[]): string | null {
   const available = WORLD_ORDER.filter((k) => WORLDS[k]);
   const before = used.filter((u) => u.month < month && monthsBetween(u.month, month) <= 11);
-  const fresh = available.find((k) => !before.some((u) => u.worldKey === k));
-  if (fresh) return fresh;
-  const last = (k: string) => before.filter((u) => u.worldKey === k).reduce((m, u) => (u.month > m ? u.month : m), "");
-  return [...available].sort((a, b) => (last(a) < last(b) ? -1 : last(a) > last(b) ? 1 : 0))[0] ?? "rung";
+  return available.find((k) => !before.some((u) => u.worldKey === k)) ?? null;
 }
 
 /** What the k-th plant (0-based) of an area in this world's month is. */

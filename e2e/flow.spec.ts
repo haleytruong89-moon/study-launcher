@@ -2476,17 +2476,6 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     expect((await db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, local_date: first, part1_done_at: at, part2_done_at: at, free_started_at: at }, { onConflict: "child_id,local_date" })).error).toBeNull();
     expect((await db.from("by_checkins").insert({ family_id: familyId, child_id: childId, local_date: first, quad: "green", word_key: "binh_yen", client_run_id: runId })).error).toBeNull();
 
-    // What should grow: one plant per finished area per day this month (from the durable records).
-    const { data: days } = await db.from("day_sessions").select("local_date, part1_done_at, part2_done_at, free_started_at").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
-    const { data: visits } = await db.from("by_checkins").select("local_date").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
-    const expected = new Set<string>();
-    for (const d of days ?? []) {
-      if (d.part1_done_at) expected.add(`${d.local_date}|study`);
-      if (d.part2_done_at) expected.add(`${d.local_date}|skill`);
-      if (d.free_started_at) expected.add(`${d.local_date}|play`);
-    }
-    for (const v of visits ?? []) expected.add(`${v.local_date}|feel`);
-
     const kCtx = await browser.newContext();
     const k = await kCtx.newPage();
     await login(k, childEmail, childPassword);
@@ -2497,6 +2486,17 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     await nav.getByRole("link", { name: "Thế giới" }).click();
     await expect(k).toHaveURL(/\/today\?tab=tuan$/);
     await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+
+    // What should grow: one plant per finished area per day this month (from the durable records).
+    const { data: days } = await db.from("day_sessions").select("local_date, part1_done_at, part2_done_at, free_started_at").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
+    const { data: visits } = await db.from("by_checkins").select("local_date").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
+    const expected = new Set<string>();
+    for (const d of days ?? []) {
+      if (d.part1_done_at) expected.add(`${d.local_date}|study`);
+      if (d.part2_done_at) expected.add(`${d.local_date}|skill`);
+      if (d.free_started_at) expected.add(`${d.local_date}|play`);
+    }
+    for (const v of visits ?? []) expected.add(`${v.local_date}|feel`);
 
     const rows = async () => (await db.from("world_items").select("local_date, pillar, world_key, item_key, variant").eq("child_id", childId).gte("local_date", first)).data ?? [];
     const planted = await rows();

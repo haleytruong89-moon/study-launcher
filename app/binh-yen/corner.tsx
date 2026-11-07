@@ -529,6 +529,7 @@ function Recent({ voice, onState }: { voice: Voice; onState: (s: unknown) => voi
             <p>
               <b>Xóa hết của con</b> xóa mọi lượt ghé con đã lưu, không lấy lại được. Muốn xóa thì gõ <b>{DELETE_ALL_WORD}</b> vào ô dưới.
             </p>
+            {voice === "scientist" && <p className="text-ink/75">Hoa đã mọc trong Thế giới của con vẫn giữ nguyên. Hoa không ghi con thấy thế nào.</p>}
             <label className="flex flex-col gap-1 font-semibold">
               Gõ {DELETE_ALL_WORD} để xác nhận
               <input

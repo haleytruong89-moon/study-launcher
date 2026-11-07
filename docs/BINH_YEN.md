@@ -408,3 +408,4 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 | P2 | Tự xóa sau 12 tháng (Q7, L3) | "Ai thấy gì?" nói "sẽ tự xóa" (đã chốt) nhưng job tự xóa **chưa làm** — cần lát riêng trước khi có lượt nào đủ 12 tháng |
 | P3 | Xóa hẳn cột / hàm PIN cũ | Chỉ khi phụ huynh đồng ý (migration xóa cột là việc một chiều) |
 
+> **R4a (07/11/2026):** mỗi lượt ghé xong làm mọc 1 hoa trong Thế giới của An (`world_items`, pillar `feel`, không có cột cảm xúc). "Xóa hết" và job tự xóa 12 tháng **không** xóa hoa (D2: không phạt con vì giữ riêng tư); hoa chỉ cho biết ngày đó con đã ghé. Màn "Dữ liệu của con" của An nói rõ. Bố mẹ không đọc được `world_items`.
