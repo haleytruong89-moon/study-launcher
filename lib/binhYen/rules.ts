@@ -1,19 +1,14 @@
 /**
- * Góc bình yên — S-BY0 rules (docs/BINH_YEN.md R3, R6, §4, §6). PURE: no I/O, no clock of its
+ * Góc bình yên — S-BY0 rules (docs/BINH_YEN.md R3, R5, §4, §6). PURE: no I/O, no clock of its
  * own (every function takes `now` from the SERVER), so tests pin the exact behaviour and the
  * Vietnamese wording. Safe in browser and server code.
  */
-import { pinProblem } from "@/lib/pin/rules";
 import { vnTime } from "@/lib/today/view";
-import { localDate } from "@/lib/time";
 
 /** httpOnly cookie holding the Góc bình yên session token (only its SHA-256 is stored). */
 export const BY_SESSION_COOKIE = "sl_by";
 /** The cookie is sent only to these paths (one cookie per path, same token). */
 export const BY_COOKIE_PATHS = ["/binh-yen", "/api/by"] as const;
-
-export const BY_PIN_MAX_TRIES = 5;
-export const BY_PIN_LOCK_MINUTES = 15;
 
 /** "Con muốn nói chuyện": at most one per child (per kind) every 2 minutes. */
 export const TALK_GAP_SECONDS = 120;
@@ -39,36 +34,19 @@ export function isSignalKind(v: unknown): v is SignalKind {
 export const HOTLINE_TEXT = "gọi 111 (miễn phí, 24/7)";
 
 // ---------------------------------------------------------------------------
-// PIN (R6)
+// Visit (R5). Parent decision 07/11/2026: NO Góc bình yên PIN and NO idle lock — being logged
+// in as the child opens the corner. The server still holds one "visit" (by_sessions) so the
+// study-time limit counts from the moment the child came in (server clock).
 // ---------------------------------------------------------------------------
 
-/** Why a new Góc bình yên PIN is not accepted, or null. `sameAsLogin`: the server compared it with the login PIN. */
-export function byPinProblem(pin: string, again: string, sameAsLogin: boolean): string | null {
-  const basic = pinProblem(pin);
-  if (basic) return basic;
-  if (pin !== again) return "Hai lần gõ chưa giống nhau. Gõ lại nhé.";
-  if (sameAsLogin) return "PIN này giống PIN đăng nhập (bố mẹ biết PIN đó). Chọn số khác để chỉ mình con biết.";
-  return null;
-}
-
-export function byWrongPinMessage(tryNumber: number): string {
-  const left = BY_PIN_MAX_TRIES - tryNumber;
-  return left > 0 ? `PIN chưa đúng. Còn ${left} lần thử.` : `Sai ${BY_PIN_MAX_TRIES} lần. Đợi ${BY_PIN_LOCK_MINUTES} phút rồi thử lại.`;
-}
-
-export function byLockedMessage(lockedUntil: string): string {
-  return `Góc bình yên đang khóa vì gõ sai nhiều lần. Thử lại sau ${vnTime(lockedUntil)}.`;
-}
-
-/** "PIN Góc bình yên vừa được bố mẹ xóa lúc 19:05 ngày 05/11." */
-export function pinWipedNotice(resetAt: string): string {
-  const d = localDate(new Date(resetAt));
-  return `PIN Góc bình yên vừa được bố mẹ xóa lúc ${vnTime(resetAt)} ngày ${d.slice(8, 10)}/${d.slice(5, 7)}. Những gì con viết trên máy này cũng đã được xóa. Con đặt PIN mới để vào lại.`;
-}
-
-// ---------------------------------------------------------------------------
-// Session (R6: idle lock on the SERVER clock)
-// ---------------------------------------------------------------------------
+/**
+ * A visit the child left for longer than this (no request from the corner's screen, which asks
+ * the server every minute while it is visible) is over: the next opening starts a new visit.
+ * Nothing locks and nothing is asked — it only decides where the study-time limit starts.
+ */
+export const VISIT_GAP_MINUTES = 5;
+/** While the corner is visible, the screen tells the server it is still there this often. */
+export const VISIT_PING_MS = 60_000;
 
 export interface SessionRow {
   started_at: string;
@@ -76,19 +54,17 @@ export interface SessionRow {
   ended_at: string | null;
 }
 
-export type SessionVerdict = "open" | "idle" | "ended" | "wiped" | "none";
+export type SessionVerdict = "open" | "stale" | "ended" | "none";
 
 /**
- * Whether a Góc bình yên session still opens the corner at `now` (server time).
- * - ended (locked by hand, or a parent wiped the PIN) → closed
- * - PIN wiped (or set again) after the session started → closed
- * - no request for longer than `idleMinutes` → closed ("idle")
+ * Whether a Góc bình yên visit is still going on at `now` (server time).
+ * - ended (study-time limit reached, or replaced by a newer visit) → "ended"
+ * - no request for longer than VISIT_GAP_MINUTES → "stale" (the child left; a new visit starts next time)
  */
-export function sessionVerdict(row: SessionRow | null, now: Date, idleMinutes: number, pinResetAt: string | null): SessionVerdict {
+export function sessionVerdict(row: SessionRow | null, now: Date): SessionVerdict {
   if (!row) return "none";
   if (row.ended_at) return "ended";
-  if (pinResetAt && Date.parse(pinResetAt) >= Date.parse(row.started_at)) return "wiped";
-  if (now.getTime() - Date.parse(row.last_seen_at) > idleMinutes * 60_000) return "idle";
+  if (now.getTime() - Date.parse(row.last_seen_at) > VISIT_GAP_MINUTES * 60_000) return "stale";
   return "open";
 }
 

@@ -6,8 +6,8 @@ import { requireChild } from "@/lib/today/service";
 export const dynamic = "force-dynamic";
 
 /**
- * Góc bình yên state for the child's screen. A PEEK: it does not count as activity, so the
- * screen can poll it and still lock after N idle minutes (server clock).
+ * Góc bình yên state for the child's screen. A PEEK: it never starts a visit nor keeps one
+ * going (POST /api/by/open, /api/by/ping do that), so it can be asked at any time.
  */
 export async function GET() {
   const guard = await requireChild();

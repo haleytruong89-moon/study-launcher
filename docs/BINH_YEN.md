@@ -1,6 +1,7 @@
 # Góc bình yên — Quy tắc & dữ liệu (Phase 1.5)
 
-> **Trạng thái:** bản nháp 01/11/2026. **05/11/2026: lát S-BY0 đã merge** (PIN riêng của con, phiên do máy chủ giữ, "Con muốn nói chuyện" + trang bố mẹ "Đã thấy", SQL `0008_binh_yen_base.sql`) — xem §11. **06/11/2026: lát S-BY1 có PR** (chọn cảm xúc → gợi ý → hoạt động → lưu lượt ghé, giới hạn giờ học R5, SQL `0009_binh_yen_checkins.sql`) — xem §12.
+> **Trạng thái:** bản nháp 01/11/2026. **05/11/2026: lát S-BY0 đã merge** (PIN riêng của con, phiên do máy chủ giữ, "Con muốn nói chuyện" + trang bố mẹ "Đã thấy", SQL `0008_binh_yen_base.sql`) — xem §11. **07/11/2026: lát S-BY1 đã merge** (chọn cảm xúc → gợi ý → hoạt động → lưu lượt ghé, giới hạn giờ học R5, SQL `0009_binh_yen_checkins.sql`) — xem §12.
+> **07/11/2026: BỎ PIN Góc bình yên** theo ý kiến của 2 con — vào bằng tài khoản của con, không tự khóa (§7 dòng Q1′, §13). Các đoạn nói về PIN Góc bình yên bên dưới là **lịch sử**, không còn đúng.
 > Bản này đã qua một vòng review độc lập; các điểm review sửa được đánh dấu *(review)*.
 > Các câu hỏi ở §7 đã được phụ huynh chốt ngày 01/11/2026.
 >
@@ -47,7 +48,7 @@ Khác mọi phần còn lại của app: **dữ liệu ở đây là của con, 
 |---|---|---|
 | `by_checkins` | Mỗi lượt con đi hết | `quad`, `word_key`, `intensity` (1–5, chỉ khi khó chịu), `activity_key`, `cause_key` (mã cố định hoặc `custom`), `understood_at`, `local_date`, **`client_run_id` unique** (bấm Xong 2 lần chỉ tạo 1 dòng) |
 | `by_rewards` | Phần thưởng đã mở, không có nội dung cảm xúc | `local_date`, `reward_key` (loài cây / trang). **Unique `(child_id, local_date)`** khi giới hạn 1/ngày, để hai lượt cùng lúc không mở 2 lần |
-| `by_sessions` | Phiên Góc bình yên do máy chủ giữ (PIN, tự khóa 5', giới hạn 10' trong giờ học) | `token_hash`, `device_id`, `started_at`, `last_seen_at`, `ended_at` |
+| `by_sessions` | Lượt ghé Góc bình yên do máy chủ giữ (giới hạn 10' trong giờ học; *07/11/2026: không còn PIN, không tự khóa*) | `token_hash`, `device_id`, `started_at`, `last_seen_at`, `ended_at` |
 | `by_signals` | Tín hiệu cho bố mẹ, **không có nội dung** | `kind` (`want_talk` · `needs_care`), `to_parent_id` (null = cả hai), `created_at`, `seen_at`, `seen_by` |
 | `by_child_cards` | Thẻ "Do An thêm" (ngoại lệ D1) | `title` ≤ 80, `fact` ≤ 300 ký tự, `status` (`pending` · `checked`) |
 | `by_catalog` | Danh sách cố định cho từng con | `kind` (word · cause · activity · lesson · risk_phrase), `key`, `label`, `child_id` (null = cả hai), `weight`/`data` (jsonb), `retired` |
@@ -57,7 +58,7 @@ Khác mọi phần còn lại của app: **dữ liệu ở đây là của con, 
 Giá trị kiểu `quad`, `kind`, `status` được kiểm ở route máy chủ và bằng `by_catalog`, **không** dùng CHECK cố định. Muốn thêm giá trị sau này thì chỉ cần thêm dòng, không phải sửa ràng buộc (giữ luật "migration chỉ thêm") *(review)*.
 
 **Dữ liệu chỉ ở trên máy con:** câu kể, "Hỏi lại cái đầu", nhật ký tối, tên nguyên nhân tự đặt.
-- **Mã hóa** bằng khóa sinh từ PIN Góc bình yên của con (Q2). **Chỉ trên laptop riêng**: iPad dùng chung không lưu chữ (Q3).
+- **Mã hóa** bằng khóa sinh từ PIN Góc bình yên của con (Q2). *07/11/2026: không còn PIN Góc bình yên → **điểm thiết kế mở cho S-BY2**: khóa mã hóa phải lấy từ nguồn khác (hoặc bỏ mã hóa / không lưu chữ trên máy) — hỏi phụ huynh trước khi làm S-BY2.* **Chỉ trên laptop riêng**: iPad dùng chung không lưu chữ (Q3).
 - Mã hóa bằng PIN 6 số chặn được người xem lướt, nhưng không chặn được người rành kỹ thuật cố tình dò. Phải nói rõ điều này với con *(review)*.
 
 ---
@@ -67,6 +68,8 @@ Giá trị kiểu `quad`, `kind`, `status` được kiểm ở route máy chủ 
 **Con không có quyền đọc trực tiếp các bảng `by_*`.** Mọi đọc / ghi đi qua route `/api/by/*`. Route kiểm tra **phiên Góc bình yên** (`by_sessions`) ở máy chủ trước.
 
 Lý do: phiên đăng nhập thường của con kéo dài và trình duyệt đọc được. Nếu bảng mở quyền đọc, ai cầm máy đang đăng nhập đều truy vấn thẳng được, bỏ qua PIN Góc bình yên *(review)*.
+
+> *07/11/2026:* không còn PIN Góc bình yên — "phiên Góc bình yên" nay là **lượt ghé** con mở bằng chính tài khoản của mình (`POST /api/by/open`). Vẫn **không** grant `by_*` cho trình duyệt: mọi đọc / ghi qua route, để giới hạn giờ học (R5) và việc chỉ con xóa được vẫn do máy chủ giữ.
 
 | Dữ liệu | Con (qua route, có phiên BY) | Anh/chị/em | Bố mẹ (trang web) |
 |---|---|---|---|
@@ -94,6 +97,14 @@ Lý do: phiên đăng nhập thường của con kéo dài và trình duyệt đ
 4. Chữ con viết chỉ nằm trên laptop của con, được khóa bằng PIN của con. Xóa dữ liệu trình duyệt là mất.
 5. **Về kỹ thuật, quản trị hệ thống (bố mẹ) vẫn có thể mở bảng dữ liệu.** Bố mẹ hứa không làm vậy, và hệ thống không có trang nào cho bố mẹ xem.
 6. Nếu bố mẹ xóa PIN Góc bình yên: dữ liệu trên máy bị xóa theo, và con được báo ngay lần mở sau.
+
+> *07/11/2026 — bản đang hiện cho con (`lib/binhYen/copy.ts`, 4 dòng ngắn, đúng với việc không còn PIN):*
+> - Bố mẹ không có trang nào xem cảm xúc hay hoạt động con chọn ở đây.
+> - Bố mẹ chỉ nhận tín hiệu khi con bấm “Con muốn nói chuyện”: tên con và giờ bấm.
+> - Ai đăng nhập bằng tài khoản của con cũng vào được góc này — đừng để người khác dùng máy đang đăng nhập của con.
+> - Con xóa được lượt ghé bất cứ lúc nào; lượt cũ hơn 12 tháng sẽ tự xóa.
+>
+> Khi S-BY2 có ô gõ chữ, phải thêm lại dòng về tín hiệu `needs_care` (mục 2) và nơi lưu chữ (mục 4).
 
 ---
 
@@ -234,6 +245,8 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 
 ### R6. PIN Góc bình yên
 
+> **Đã bỏ 07/11/2026** (§7 Q1′): không PIN riêng, không tự khóa. Phần dưới đây là lịch sử.
+
 - **PIN riêng do con tự đặt** (Q1), khác PIN đăng nhập mà bố mẹ đặt.
   - Lý do: bố mẹ biết PIN đăng nhập, nên dùng chung thì bố mẹ mở được Góc bình yên trên máy con bất cứ lúc nào *(review)*.
 - Sai 5 lần thì khóa 15'.
@@ -273,6 +286,7 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 | Q5 | Nhắc lại `needs_care` khi chưa ai thấy | Sau **10 phút** |
 | Q6 | Giới hạn số lần vào trong giờ học | **Không giới hạn số lần**, mỗi lần tối đa 10'; xem lại sau 2 tuần |
 | Q7 | Xóa, giữ dữ liệu | Con xóa thì **xóa hẳn**; tự xóa sau **12 tháng** |
+| Q1′ | *07/11/2026* — PIN mở Góc bình yên (thay Q1) | **Bỏ PIN Góc bình yên** theo ý kiến của 2 con ("nơi giải tỏa cảm xúc con không muốn hằng ngày vào lại phải nhập mã"). **Vào bằng tài khoản của con**, không tự khóa. Hệ quả: **ai đăng nhập tài khoản con cũng vào được** (nói rõ trong "Ai thấy gì?"). Bố mẹ không còn nút xóa PIN. Điểm mở S-BY2: khóa mã hóa chữ trên máy (Q2) không lấy từ PIN Góc bình yên được nữa |
 
 ---
 
@@ -300,9 +314,9 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 
 ## 10. Lát build dự kiến
 
-1. **S-BY0:** PIN Góc bình yên + `by_sessions` + `by_signals` + trang bố mẹ "Đã thấy" + kênh báo (S4). Có nút "Con muốn nói chuyện" ở màn Hôm nay. Cần có trước mọi thứ khác. → **PR mở 05/11/2026** (§11).
-2. **S-BY1:** chọn ô → từ → mức → 3 gợi ý (R1) → hoạt động → Xong → `by_checkins` + test quyền. Chưa có ô gõ chữ. → **PR mở 06/11/2026** (§12).
-3. **S-BY2:** ô gõ chữ + R3 (cùng lát, bắt buộc) + chữ mã hóa trên máy.
+1. **S-BY0:** PIN Góc bình yên + `by_sessions` + `by_signals` + trang bố mẹ "Đã thấy" + kênh báo (S4). Có nút "Con muốn nói chuyện" ở màn Hôm nay. Cần có trước mọi thứ khác. → **Đã merge** (PR #38, §11). PIN bỏ ngày 07/11/2026 (§13).
+2. **S-BY1:** chọn ô → từ → mức → 3 gợi ý (R1) → hoạt động → Xong → `by_checkins` + test quyền. Chưa có ô gõ chữ. → **Đã merge** (PR #39, §12).
+3. **S-BY2:** ô gõ chữ + R3 (cùng lát, bắt buộc) + chữ mã hóa trên máy. *Cần chốt trước: khóa mã hóa lấy từ đâu khi không còn PIN Góc bình yên (§13).*
 4. **S-BY3:** hiểu nguyên nhân + bài học R2 + Bảng điều tra / Bàn pha chế.
 5. **S-BY4:** phần thưởng R4 (khu rừng An, trang manga Nguyên).
 
@@ -370,3 +384,27 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 | L3 | Tự xóa sau 12 tháng (Q7) | **Chưa làm** (có chỉ mục `created_at` sẵn); màn "Ai thấy gì?" nói rõ là sẽ có | Cần cron riêng; làm ở lát sau |
 | L4 | Giọng theo lớp | Lớp ≤ 7 → nhà khoa học, còn lại → thám tử | Không ghi cứng tên con |
 | L5 | `pin_devices.shared` (iPad dùng chung), xuất dữ liệu | Chưa làm | Chỉ cần khi có chữ lưu trên máy (S-BY2) |
+
+## 13. Bỏ PIN Góc bình yên + "Xóa hết" khó bấm nhầm — đã làm gì (07/11/2026)
+
+**Quyết định phụ huynh 07/11/2026** (§7 Q1′), theo ý kiến của 2 con: không có PIN riêng; đăng nhập tài khoản của con (mật khẩu đã lưu / PIN đăng nhập) là vào được.
+
+**Không đụng database cho phần này.** Cột `profiles.by_pin_hash`, `by_pin_failed_count`, `by_pin_locked_until`, `by_pin_reset_at`, hàm `by_pin_try`, cột `family_settings.by_idle_lock_minutes` **để nguyên, không dùng nữa**. Chỉ xóa ở một PR sau, khi phụ huynh đồng ý.
+
+**Đã làm:**
+- Bỏ màn đặt PIN / gõ PIN và tự khóa khi không chạm. Mở `/binh-yen` (khi `by_enabled = true`) → vào thẳng trang chủ của góc. Bỏ nút "Khóa lại".
+- Máy chủ vẫn giữ **một lượt ghé** cho mỗi trình duyệt (`by_sessions`, cookie httpOnly + Secure + SameSite=Strict như cũ): `POST /api/by/open` đi tiếp lượt đang có, hoặc tạo lượt mới. Màn hình báo "còn đây" mỗi 60 giây khi đang hiện. Rời đi quá **5 phút** (giờ máy chủ) → lần mở sau là **lượt mới** (không khóa, không hỏi gì; chỉ để giới hạn giờ học không tính từ một lượt chiều nay).
+- **R5 giữ nguyên:** trong giờ học mỗi lượt tối đa `by_study_minutes` tính từ lúc bắt đầu lượt; hết giờ → "Quay lại học nhé…" → về Hôm nay; mở lại ngay = lượt mới (Q6). Tải lại trang không đặt lại đồng hồ.
+- `/api/by/pin/set`, `/api/by/pin/verify` trả **410**; bỏ `/api/by/lock`, bỏ nút + route **Xóa PIN Góc bình yên** của bố mẹ; ẩn ô "Tự khóa sau … phút" ở Luật trong nhà. Mục nhật ký cũ `child.by_pin_wiped` vẫn hiện được câu tiếng Việt.
+- "🔒 Ai thấy gì?" rút còn **4 dòng** (§3).
+- **"Xóa hết của con"** ra khỏi thẻ "Lần ghé gần đây", vào mục gập **"Dữ liệu của con"**; nút chỉ bấm được khi con gõ **XÓA** (không phân biệt hoa/thường, bỏ khoảng trắng). "Xóa" từng lượt giữ nguyên.
+- Giữ nguyên: không grant `by_*` cho trình duyệt, không trang nào cho bố mẹ xem lượt ghé, push không có nội dung, "Con muốn nói chuyện" không đổi.
+- Trong trang chủ của góc có link nhỏ **"Góp ý cho app"** — ghi rõ góp ý **không riêng tư** như góc này (bố mẹ đọc).
+
+**Điểm mở:**
+| # | Điểm | Ghi chú |
+|---|---|---|
+| P1 | S-BY2: khóa mã hóa chữ trên máy | Không lấy từ PIN Góc bình yên được nữa. Lựa chọn: khóa ngẫu nhiên lưu trên máy (chặn người lấy file, không chặn người dùng máy đang đăng nhập), hoặc không lưu chữ (viết xong là buông) — phụ huynh chốt trước S-BY2 |
+| P2 | Tự xóa sau 12 tháng (Q7, L3) | "Ai thấy gì?" nói "sẽ tự xóa" (đã chốt) nhưng job tự xóa **chưa làm** — cần lát riêng trước khi có lượt nào đủ 12 tháng |
+| P3 | Xóa hẳn cột / hàm PIN cũ | Chỉ khi phụ huynh đồng ý (migration xóa cột là việc một chiều) |
+

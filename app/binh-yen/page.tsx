@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 /**
  * Góc bình yên (BINH_YEN.md). The child's own corner: the server decides whether it is on and
- * whether this browser holds an open session; the page only shows it. Parents are sent away.
+ * whether this browser has a visit going on; the page only shows it. No separate PIN (07/11/2026). Parents are sent away.
  * No third-party script runs here (Content-Security-Policy in next.config.ts).
  */
 export default async function BinhYenPage() {
@@ -32,7 +32,8 @@ export default async function BinhYenPage() {
   let state: ByState | null = null;
   let talk: TalkInfo | null = null;
   try {
-    // Opening the page is activity: an open session is kept alive, an idle one is closed.
+    // Opening the page: a visit going on in this browser continues (or reports the study-time
+    // limit). A page cannot set cookies, so a NEW visit is started by the screen (POST /api/by/open).
     [state, talk] = await Promise.all([byState(ctx, "page", true), talkInfo(ctx)]);
   } catch {
     console.error("by.page failed");

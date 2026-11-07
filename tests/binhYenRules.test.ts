@@ -5,11 +5,9 @@ import {
   ESCALATE_AFTER_MINUTES,
   NOT_DELIVERED_TEXT,
   OFFLINE_TEXT,
-  byPinProblem,
-  byWrongPinMessage,
+  VISIT_GAP_MINUTES,
   escalationTarget,
   isSignalKind,
-  pinWipedNotice,
   rateLimited,
   sessionVerdict,
   shouldEscalate,
@@ -25,48 +23,19 @@ const at = (iso: string) => new Date(iso);
 const NOW = at("2026-11-05T12:00:00Z"); // 19:00 in Viet Nam
 const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000).toISOString();
 
-describe("Góc bình yên PIN (R6, Q1)", () => {
-  it("accepts 6 digits typed twice, different from the login PIN", () => {
-    expect(byPinProblem("482917", "482917", false)).toBeNull();
-  });
-  it("refuses easy PINs like the login PIN rules do", () => {
-    expect(byPinProblem("111111", "111111", false)).toMatch(/dễ đoán/);
-    expect(byPinProblem("123456", "123456", false)).toMatch(/dễ đoán/);
-    expect(byPinProblem("12345", "12345", false)).toMatch(/6 chữ số/);
-  });
-  it("refuses two different entries", () => {
-    expect(byPinProblem("482917", "482918", false)).toMatch(/chưa giống/);
-  });
-  it("refuses the login PIN (the parents know it)", () => {
-    expect(byPinProblem("482917", "482917", true)).toMatch(/giống PIN đăng nhập/);
-  });
-  it("counts down tries, then locks for 15 minutes", () => {
-    expect(byWrongPinMessage(1)).toBe("PIN chưa đúng. Còn 4 lần thử.");
-    expect(byWrongPinMessage(4)).toBe("PIN chưa đúng. Còn 1 lần thử.");
-    expect(byWrongPinMessage(5)).toBe("Sai 5 lần. Đợi 15 phút rồi thử lại.");
-  });
-  it("tells the child when and that the private text went with it", () => {
-    const n = pinWipedNotice("2026-11-05T12:05:00Z");
-    expect(n).toContain("vừa được bố mẹ xóa lúc 19:05 ngày 05/11");
-    expect(n).toContain("đã được xóa");
-  });
-});
-
-describe("Góc bình yên session (idle lock on the server clock)", () => {
+describe("Góc bình yên visit (no PIN, no idle lock — parent decision 07/11/2026)", () => {
   const open = (lastSeenMin: number, startedMin = 30) => ({ started_at: minutesAgo(startedMin), last_seen_at: minutesAgo(lastSeenMin), ended_at: null });
-  it("no session → closed", () => expect(sessionVerdict(null, NOW, 5, null)).toBe("none"));
-  it("touched 4 minutes ago with a 5-minute lock → open", () => expect(sessionVerdict(open(4), NOW, 5, null)).toBe("open"));
-  it("exactly 5 minutes → still open; 5 min 1 s → idle", () => {
-    expect(sessionVerdict(open(5), NOW, 5, null)).toBe("open");
-    expect(sessionVerdict({ ...open(5), last_seen_at: new Date(NOW.getTime() - 5 * 60_000 - 1000).toISOString() }, NOW, 5, null)).toBe("idle");
+  it("no visit yet → none (the screen opens one)", () => expect(sessionVerdict(null, NOW)).toBe("none"));
+  it("the screen said it is still there a minute ago → the visit goes on", () => expect(sessionVerdict(open(1), NOW)).toBe("open"));
+  it("the gap is 5 minutes: exactly 5 → still the same visit; 5 min 1 s → the child left", () => {
+    expect(VISIT_GAP_MINUTES).toBe(5);
+    expect(sessionVerdict(open(5), NOW)).toBe("open");
+    expect(sessionVerdict({ ...open(5), last_seen_at: new Date(NOW.getTime() - 5 * 60_000 - 1000).toISOString() }, NOW)).toBe("stale");
   });
-  it("6 minutes away (e.g. iPad in the background) → PIN again (spike S1)", () => expect(sessionVerdict(open(6), NOW, 5, null)).toBe("idle"));
-  it("the family's own idle setting decides (15 minutes)", () => expect(sessionVerdict(open(10), NOW, 15, null)).toBe("open"));
-  it("locked by hand → closed", () => expect(sessionVerdict({ ...open(1), ended_at: minutesAgo(0) }, NOW, 5, null)).toBe("ended"));
-  it("a parent wiped the PIN after it opened → closed", () => expect(sessionVerdict(open(1, 10), NOW, 5, minutesAgo(5))).toBe("wiped"));
-  it("a wipe BEFORE the session (new PIN set since) does not close it", () => expect(sessionVerdict(open(1, 10), NOW, 5, minutesAgo(20))).toBe("open"));
+  it("a visit from this afternoon never counts for tonight's study-time limit", () => expect(sessionVerdict(open(300, 305), NOW)).toBe("stale"));
+  it("ended (study-time limit, or replaced) → ended", () => expect(sessionVerdict({ ...open(1), ended_at: minutesAgo(0) }, NOW)).toBe("ended"));
   it("the laptop clock plays no part: only `now` from the server counts", () => {
-    expect(sessionVerdict(open(1), at("2030-01-01T00:00:00Z"), 5, null)).toBe("idle");
+    expect(sessionVerdict(open(1), at("2030-01-01T00:00:00Z"))).toBe("stale");
   });
 });
 
@@ -149,18 +118,23 @@ describe("push to the parents: generic, no feelings", () => {
   });
 });
 
-describe("“🔒 Ai thấy gì?” tells the truth (§3)", () => {
-  const text = whoSeesWhat(5).join("\n");
+describe("“🔒 Ai thấy gì?” tells the truth, in 4 short lines (§3, 07/11/2026)", () => {
+  const lines = whoSeesWhat();
+  const text = lines.join("\n");
+  it("is short", () => {
+    expect(lines.length).toBeGreaterThanOrEqual(3);
+    expect(lines.length).toBeLessThanOrEqual(4);
+    for (const l of lines) expect(l.length).toBeLessThan(130);
+  });
   it.each([
-    ["parents do not see content", "Bố mẹ không xem được cảm xúc"],
-    ["want_talk is a signal", "Con muốn nói chuyện"],
-    ["unsafe writing will signal, without text", "không kèm chữ"],
-    ["text stays on the laptop", "chỉ nằm trên laptop của con"],
-    ["the PIN's honest limit", "không chặn được người rành máy tính"],
-    ["admins can technically open tables", "Về kỹ thuật"],
-    ["a wipe deletes the text and the child is told", "con sẽ được báo"],
-    ["the idle lock uses the family setting", "tự khóa sau 5 phút"],
+    ["no parent page for feelings or activities", "Bố mẹ không có trang nào xem cảm xúc hay hoạt động"],
+    ["want_talk is a signal with name and time only", "tên con và giờ bấm"],
+    ["anyone logged in as the child can open it (no PIN)", "Ai đăng nhập bằng tài khoản của con cũng vào được"],
+    ["the child deletes; 12 months auto-delete", "lượt cũ hơn 12 tháng"],
   ])("%s", (_label, phrase) => expect(text).toContain(phrase));
+  it("no longer talks about a Góc bình yên PIN or an idle lock", () => {
+    expect(text).not.toMatch(/PIN|tự khóa/);
+  });
 });
 
 describe("family settings for Góc bình yên (0008)", () => {

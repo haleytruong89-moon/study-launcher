@@ -2,12 +2,18 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { eveningMessage } from "@/lib/push/messages";
 import { notifyParents, vapidConfig } from "@/lib/push/send";
+import { inEveningWindow } from "@/lib/push/window";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { localDate } from "@/lib/time";
 
+export const dynamic = "force-dynamic";
+
 /**
- * Evening reminder (S5; parent decision 01/11/2026: 21:45, only when something waits).
- * Called once a day by .github/workflows/evening-reminder.yml with the CRON_SECRET.
+ * Evening reminder (S5; only when something waits). Parent decision 07/11/2026: called once a
+ * day by Vercel Cron (vercel.json, 14:00 UTC → fires within 21:00–21:59 Vietnam), which sends
+ * `Authorization: Bearer $CRON_SECRET` by itself. GitHub's schedule ran ~6 hours late, so it is
+ * no longer used (the workflow stays for manual runs). Outside 20:00–23:00 Vietnam time nothing
+ * is sent, whoever calls.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET?.trim();
@@ -15,11 +21,13 @@ export async function GET(request: Request) {
   const expected = `Bearer ${secret ?? ""}`;
   const ok = !!secret && given.length === expected.length && timingSafeEqual(Buffer.from(given), Buffer.from(expected));
   if (!ok) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const now = new Date();
+  if (!inEveningWindow(now)) return NextResponse.json({ ok: true, skipped: "outside_window" });
   if (!vapidConfig()) return NextResponse.json({ ok: true, skipped: "push not configured" });
 
   try {
     const admin = createAdminClient();
-    const date = localDate(new Date());
+    const date = localDate(now);
     const families = await admin.from("families").select("id");
     if (families.error) throw new Error(families.error.message);
     let sent = 0;

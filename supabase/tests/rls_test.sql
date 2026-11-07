@@ -773,6 +773,113 @@ set role service_role;
 select test_helpers.expect_count('service_role (server routes) reads the check-ins', (select count(*) from public.by_checkins), 2);
 reset role;
 
+-- 0010: app_feedback ("Góp ý", 07/11/2026) — inserts only via the server route -------
+reset role;
+insert into public.app_feedback (id, family_id, child_id, kind, body) values
+  ('50000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'like', 'Con thích nút mới'),
+  ('50000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c2', 'idea', 'Thêm màu tối'),
+  ('50000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', 'dislike', 'Chậm quá');
+select test_helpers.expect_count('app_feedback has RLS on',
+  (select count(*) from pg_class where oid = 'public.app_feedback'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('browsers have no insert / delete on app_feedback',
+  (select count(*) from (values ('authenticated'), ('anon')) r(role), (values ('INSERT'), ('DELETE'), ('TRUNCATE')) p(priv)
+    where has_table_privilege(r.role, 'public.app_feedback', p.priv)), 0);
+select test_helpers.expect_count('anon has no privilege on app_feedback',
+  (select count(*) from (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) p(priv) where has_table_privilege('anon', 'public.app_feedback', p.priv)), 0);
+select test_helpers.expect_count('the only column browsers may update is seen_at',
+  (select count(*) from information_schema.column_privileges where table_schema = 'public' and table_name = 'app_feedback'
+     and grantee = 'authenticated' and privilege_type = 'UPDATE' and column_name <> 'seen_at'), 0);
+do $$
+begin
+  begin
+    insert into public.app_feedback (family_id, child_id, kind, body) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'angry', 'x');
+    raise exception 'FAIL: unknown feedback kind accepted';
+  exception when check_violation then raise notice 'ok: feedback kind is like / dislike / idea';
+  end;
+  begin
+    insert into public.app_feedback (family_id, child_id, kind, body) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'idea', '');
+    raise exception 'FAIL: empty feedback accepted';
+  exception when check_violation then raise notice 'ok: feedback text is not empty';
+  end;
+  begin
+    insert into public.app_feedback (family_id, child_id, kind, body) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'idea', repeat('x', 501));
+    raise exception 'FAIL: 501-character feedback accepted';
+  exception when check_violation then raise notice 'ok: feedback text is at most 500 characters';
+  end;
+  begin
+    insert into public.app_feedback (family_id, child_id, kind, body) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000d1', 'idea', 'x');
+    raise exception 'FAIL: feedback of another family child accepted';
+  exception when foreign_key_violation then raise notice 'ok: feedback belongs to a child of the same family';
+  end;
+end $$;
+
+-- Child 1: reads only their own; cannot insert, update or delete directly.
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees only own feedback (1)', (select count(*) from public.app_feedback), 1);
+select test_helpers.expect_count('child1 cannot see the sibling feedback', (select count(*) from public.app_feedback where child_id = '00000000-0000-0000-0000-0000000000c2'), 0);
+do $$
+begin
+  begin
+    insert into public.app_feedback (family_id, child_id, kind, body) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'like', 'x');
+    raise exception 'FAIL: child inserted feedback directly';
+  exception when insufficient_privilege then raise notice 'ok: child cannot insert feedback directly (only via /api/feedback)';
+  end;
+  begin
+    update public.app_feedback set body = 'changed';
+    raise exception 'FAIL: child changed feedback text';
+  exception when insufficient_privilege then raise notice 'ok: child cannot change feedback text';
+  end;
+  update public.app_feedback set seen_at = now();
+  if found then raise exception 'FAIL: child marked feedback as read'; end if;
+  raise notice 'ok: child cannot mark feedback as read (0 rows)';
+  begin
+    delete from public.app_feedback;
+    raise exception 'FAIL: child deleted feedback';
+  exception when insufficient_privilege then raise notice 'ok: child cannot delete feedback';
+  end;
+end $$;
+
+-- Parent A1: reads the family's feedback (both children), marks read, changes nothing else.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA1 reads the family feedback (2)', (select count(*) from public.app_feedback), 2);
+select test_helpers.expect_count('parentA1 does not read another family feedback', (select count(*) from public.app_feedback where family_id = '10000000-0000-0000-0000-00000000000b'), 0);
+do $$
+begin
+  update public.app_feedback set seen_at = now() where id = '50000000-0000-0000-0000-000000000001';
+  if not found then raise exception 'FAIL: parent could not mark feedback as read'; end if;
+  raise notice 'ok: parent marks feedback as read';
+  update public.app_feedback set seen_at = now() where id = '50000000-0000-0000-0000-000000000003';
+  if found then raise exception 'FAIL: parent marked another family feedback'; end if;
+  raise notice 'ok: parent cannot touch another family feedback (0 rows)';
+  begin
+    update public.app_feedback set body = 'changed' where id = '50000000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: parent changed feedback text';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot change feedback text';
+  end;
+  begin
+    delete from public.app_feedback;
+    raise exception 'FAIL: parent deleted feedback';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot delete feedback';
+  end;
+  begin
+    insert into public.app_feedback (family_id, child_id, kind, body) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'like', 'x');
+    raise exception 'FAIL: parent inserted feedback';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot insert feedback';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB reads only family B feedback (1)', (select count(*) from public.app_feedback), 1);
+reset role;
+set role anon;
+do $$
+begin
+  perform 1 from public.app_feedback;
+  raise exception 'FAIL: anon read app_feedback';
+exception when insufficient_privilege then raise notice 'ok: anon cannot read app_feedback';
+end $$;
+reset role;
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

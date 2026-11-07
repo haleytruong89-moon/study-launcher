@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { sendJson } from "@/lib/api-client";
 import { CHILD_COLORS } from "@/lib/childColors";
-import { ByPinWipe } from "./by-pin-wipe";
 import { PinForm } from "./pin-form";
 
 interface Child {
@@ -117,8 +116,6 @@ export function ChildEdit({ child, pinSet = false, remembered = 0 }: { child: Ch
           Đăng xuất con khỏi mọi máy
         </button>
       </div>
-
-      <ByPinWipe childId={child.id} name={child.displayName} />
 
       {error && (
         <p role="alert" className="text-sm font-medium text-red-700">

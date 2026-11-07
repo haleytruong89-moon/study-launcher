@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { whoSeesWhat } from "@/lib/binhYen/copy";
 import { ackFor, enoughLine, homeCopy, mentorLine, voiceFor } from "@/lib/binhYen/catalog";
-import { checkinBodySchema, checkinProblem, checkinView, deleteBodySchema, heavyRepeat, HEAVY_REPEAT_TEXT, type CheckinBody } from "@/lib/binhYen/checkin";
+import { DELETE_ALL_WORD, checkinBodySchema, checkinProblem, checkinView, deleteBodySchema, heavyRepeat, HEAVY_REPEAT_TEXT, typedDeleteWord, type CheckinBody } from "@/lib/binhYen/checkin";
 import { STUDY_CAP_TEXT, isStudyTime, studyCap, studyChip } from "@/lib/binhYen/studyCap";
 
 // Góc bình yên S-BY1 (docs/BINH_YEN.md §2.2, §4, R5, D1, Q6, Q7).
@@ -126,17 +125,10 @@ describe("voices", () => {
   });
 });
 
-describe("🔒 Ai thấy gì? (S-BY1 wording)", () => {
-  const text = whoSeesWhat(5, 10).join("\n");
-  it.each([
-    ["check-ins are stored, without text", "không có chữ nào con viết"],
-    ["no parent page", "Không có trang nào cho bố mẹ xem những điều này"],
-    ["the child can delete", "Xóa hết của con"],
-    ["12 months is not built yet", "12 tháng"],
-    ["study-time limit uses the setting", "tối đa 10 phút"],
-    ["a wiped PIN keeps the server check-ins", "đặt PIN mới là thấy lại"],
-  ])("%s", (_l, phrase) => expect(text).toContain(phrase));
-  it("no longer claims the server records nothing of what the child does", () => expect(text).not.toContain("không ghi con làm gì"));
+describe("“Xóa hết của con” needs XÓA typed (07/11/2026)", () => {
+  it.each(["XÓA", "xóa", " Xóa ", "XÓA\n", "xo\u0301a"])("accepts %j", (v) => expect(typedDeleteWord(v)).toBe(true));
+  it.each(["", "X", "XOA", "xoa", "XÓA HẾT", "ok"])("refuses %j", (v) => expect(typedDeleteWord(v)).toBe(false));
+  it("the word shown is XÓA", () => expect(DELETE_ALL_WORD).toBe("XÓA"));
 });
 
 describe("repeated level 5 note (parent 06/11/2026)", () => {

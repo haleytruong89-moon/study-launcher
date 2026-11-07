@@ -17,8 +17,8 @@ const RETRIES = 2;
 const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
 
 /**
- * "Con muốn nói chuyện" (BINH_YEN.md §4, §6). Shown on Hôm nay and inside Góc bình yên, never
- * behind the Góc bình yên PIN. Hidden when no parent phone has notifications on, so the child
+ * "Con muốn nói chuyện" (BINH_YEN.md §4, §6). Shown on Hôm nay and inside Góc bình yên; it
+ * never needs a Góc bình yên visit. Hidden when no parent phone has notifications on, so the child
  * is never told "đã báo" when nothing can arrive. `variant="header"`: a small button in the
  * coloured header of Hôm nay that opens the same panel.
  */

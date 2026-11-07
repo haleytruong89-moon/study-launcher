@@ -1,11 +1,11 @@
-name: Evening reminder (21:45)
+name: Evening reminder (manual run)
 
-# S5 (parent decision 01/11/2026): at 21:45 Viet Nam time, push the parents ONLY when today's
-# work still waits for them. The app decides; this job only calls /api/cron/evening.
-# GitHub may start a scheduled job a few minutes late, so it never arrives before 21:45.
+# S5: push the parents ONLY when today's work still waits for them. The app decides; this job
+# only calls /api/cron/evening. Parent decision 07/11/2026: the DAILY run now comes from Vercel
+# Cron (vercel.json, fires within 21:00–21:59 Vietnam time) because GitHub's schedule ran about
+# 6 hours late (03:34–04:13). This workflow is kept for a manual run only ("Run workflow"); the
+# route sends nothing outside 20:00–23:00 Vietnam time anyway.
 on:
-  schedule:
-    - cron: "45 14 * * *" # 14:45 UTC = 21:45 Asia/Ho_Chi_Minh
   workflow_dispatch:
 
 permissions: {}
