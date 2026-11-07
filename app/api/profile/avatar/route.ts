@@ -23,6 +23,8 @@ export async function POST(request: Request) {
 
   try {
     const { error } = await createAdminClient().from("profiles").update({ avatar }).eq("id", ctx.childId).eq("role", "child");
+    // Before migration 0011 runs (the preview, until the parents merge): say so plainly.
+    if (error?.code === "42703") return jsonError("Lưu nhân vật sẽ chạy sau khi bố mẹ cập nhật app. Con cứ thử chọn trước nhé.", 503);
     if (error) throw new Error(error.message);
     return NextResponse.json({ avatar });
   } catch (e) {

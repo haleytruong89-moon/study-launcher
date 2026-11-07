@@ -69,11 +69,11 @@ export function defaultAvatar(voice: Voice): Avatar {
 
 const has = <T extends object>(map: T, k: unknown): k is keyof T => typeof k === "string" && Object.prototype.hasOwnProperty.call(map, k);
 
-/** Tidies a character name: trims, collapses spaces, drops control characters. */
+/** Tidies a character name: trims, collapses spaces, drops control / direction characters (keeps U+200D so joined emoji stay whole). */
 export function cleanAvatarName(raw: unknown): string | null {
   if (raw === undefined || raw === null) return "";
   if (typeof raw !== "string") return null;
-  const s = raw.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "").replace(/\s+/g, " ").trim();
+  const s = raw.replace(/[\u0000-\u001f\u007f-\u009f\u200b\u200c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "").replace(/\s+/g, " ").trim();
   return [...s].length > AVATAR_NAME_MAX ? null : s;
 }
 

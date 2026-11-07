@@ -172,7 +172,10 @@ export function Corner({
           <div className="flex items-start gap-3">
             <Link
               href="/nhan-vat?tu=binh-yen"
-              aria-label={avatarMine ? "Đổi nhân vật của con" : "Hình tạm: chạm để tạo nhân vật của con"}
+              // Until the child makes one, the text link below says it; this picture is not read twice.
+              aria-label={avatarMine ? "Đổi nhân vật của con" : undefined}
+              aria-hidden={avatarMine ? undefined : true}
+              tabIndex={avatarMine ? undefined : -1}
               className="relative shrink-0 rounded-2xl bg-bg p-1"
             >
               <AvatarFace look={avatar} expr="calm" className="size-16" />

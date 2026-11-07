@@ -100,13 +100,16 @@ export function Creator({
     setMsg(null);
     try {
       const res = await fetch("/api/profile/avatar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ avatar }), cache: "no-store" });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      const data = (await res.json().catch(() => null)) as { error?: string; avatar?: Avatar | null } | null;
       if (!res.ok) {
         setMsg({ ok: false, text: data?.error ?? "Chưa lưu được, thử lại sau." });
         return;
       }
       if (avatar) {
-        setSaved(avatar);
+        // What the server stored (the name tidied), so "Lưu" greys out on exactly that.
+        const stored = data?.avatar ?? avatar;
+        setLook(stored);
+        setSaved(stored);
         setMsg({ ok: true, text: "Đã lưu nhân vật của con." });
       } else {
         const d = defaultAvatar(voice);
@@ -160,13 +163,17 @@ export function Creator({
             <input
               type="text"
               autoComplete="off"
-              maxLength={AVATAR_NAME_MAX}
+              // The server counts letters (an emoji is 1); the browser counts code units, so allow 2 per letter here.
+              maxLength={AVATAR_NAME_MAX * 2}
+              aria-describedby="avatar-name-hint"
               value={look.name}
               onChange={(e) => set("name", e.target.value)}
               className="min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal"
             />
-            <span className="text-xs font-normal text-ink/65">Cả nhà đều thấy tên này. Đừng ghi tên thật hay địa chỉ.</span>
           </label>
+          <p id="avatar-name-hint" className="-mt-4 text-xs text-ink/65">
+            Tối đa {AVATAR_NAME_MAX} chữ. Cả nhà đều thấy tên này. Đừng ghi tên thật hay địa chỉ.
+          </p>
         </section>
 
         {msg && (

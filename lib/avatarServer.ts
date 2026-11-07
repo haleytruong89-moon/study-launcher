@@ -9,6 +9,7 @@ import type { ChildContext } from "@/lib/today/service";
 export async function readAvatar(ctx: ChildContext): Promise<{ avatar: unknown; icon: string | null }> {
   const full = await ctx.db.from("profiles").select("avatar, icon").eq("id", ctx.childId).maybeSingle();
   if (!full.error && full.data) return { avatar: full.data.avatar ?? null, icon: (full.data.icon as string | null) ?? null };
+  if (full.error) console.error("avatar.read", full.error.code);
   const iconOnly = await ctx.db.from("profiles").select("icon").eq("id", ctx.childId).maybeSingle();
   return { avatar: null, icon: (iconOnly.data?.icon as string | null | undefined) ?? null };
 }

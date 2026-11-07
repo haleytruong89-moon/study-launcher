@@ -340,6 +340,9 @@ begin
   exception when insufficient_privilege then raise notice 'ok: parent cannot write profiles.avatar (the child makes it)';
   end;
 end $$;
+select test_helpers.expect_count('parentA can read the child avatar column', (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1' and avatar is null), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB cannot read a family A avatar', (select count(*) from public.profiles where id = '00000000-0000-0000-0000-0000000000c1'), 0);
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
@@ -900,15 +903,6 @@ exception when insufficient_privilege then raise notice 'ok: anon cannot read ap
 end $$;
 reset role;
 
--- Service role bypasses RLS ----------------------------------------------------
-reset role;
-set role service_role;
-select test_helpers.expect_count('service_role sees all homework (3)', (select count(*) from public.homework_items), 3);
-
-reset role;
-drop schema test_helpers cascade;
-\echo RLS OK
-
 -- 0011 (R3a): only a small JSON object fits in profiles.avatar.
 reset role;
 do $$
@@ -924,3 +918,12 @@ begin
   exception when check_violation then raise notice 'ok: avatar is size-limited';
   end;
 end $$;
+
+-- Service role bypasses RLS ----------------------------------------------------
+reset role;
+set role service_role;
+select test_helpers.expect_count('service_role sees all homework (3)', (select count(*) from public.homework_items), 3);
+
+reset role;
+drop schema test_helpers cascade;
+\echo RLS OK

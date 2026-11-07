@@ -23,6 +23,8 @@ describe("avatar codes (R3a)", () => {
   it("cleans the name (spaces, control and direction characters)", () => {
     expect(cleanAvatarName("  Mèo‮   Đen\n ")).toBe("Mèo Đen");
     expect(cleanAvatarName("🐱".repeat(24))).toBe("🐱".repeat(24));
+    // Joined emoji stay whole (U+200D kept); zero-width spaces go.
+    expect(cleanAvatarName("🧑\u200d🎨 Họa\u200b sĩ")).toBe("🧑\u200d🎨 Họa sĩ");
   });
   it("a bad stored value falls back to the default character", () => {
     expect(storedAvatar({ hair: "??" }, "detective")).toEqual({ avatar: defaultAvatar("detective"), mine: false });
