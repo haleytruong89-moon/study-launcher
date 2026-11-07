@@ -342,6 +342,7 @@ Quy tắc:
 | 08/11/2026 | **R4c — gói "Núi lửa và động đất"** (cho tháng 1/2027): 24 thứ (tinh thể, núi lửa, đá, hiện tượng lạ) + 8 vị khách, 3 điều thú vị mỗi thẻ; có bài tập an toàn khi động đất, sóng thần. Chỉ thêm nội dung, không đổi luật, không SQL |
 | 08/11/2026 | **R6a — thấy ngay, rõ việc** (audit so với bản bấm thử đã chốt + 5 phản hồi của phụ huynh): phần thưởng ở "Xong rồi" của Góc bình yên (thứ vừa mọc); môn + tên app cho bài bổ sung / kỹ năng; Góc bình yên mở nhanh; biểu tượng vùng / mặt nhân vật cho cảm xúc theo ngày; 4 ô vùng + thẻ thế giới ở Hôm nay. Không đổi luật khóa/mở, không SQL |
 | 08/11/2026 | **R6b — thế giới sống** theo bản bấm thử: cảnh 4 tầng có chuyển động cho cả 4 thế giới, thẻ mở dưới cảnh, "Đang chờ dọn đến" (chỉ tên + cần gì, không lộ điều thú vị chưa mở), "Con đã làm" / "Tối nay dạy cả nhà" chỉ nhớ trên máy của con (phụ huynh chọn 08/11). Chuyển động tắt khi máy bật "giảm chuyển động". Không SQL |
+| 08/11/2026 | **R6d — Hôm nay 4 mảng đủ ý** (bản bấm thử `vHome`, audit mục I): mỗi thẻ nói việc tiếp theo và bấm làm được ngay (cùng route máy chủ, máy chủ vẫn quyết định). Tuần của con có thêm khóa hoạt động của lượt ghé (chỉ route của con). "Chọn trước con sẽ làm gì" trong giờ tự do **chỉ nhớ trên máy của con** (localStorage `play-plans`, 31 ngày; phụ huynh chọn 08/11). "Còn N việc" = việc chưa xong của 2 phần + số bài làm trước còn phải chọn (ngày không có bài đến hạn), bằng đúng tổng − đã xong. Không đổi luật khóa/mở. Không SQL. |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 
