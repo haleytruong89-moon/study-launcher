@@ -1,10 +1,10 @@
 import "server-only";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { localDate } from "@/lib/time";
+import { addDays, localDate } from "@/lib/time";
 import type { ChildContext } from "@/lib/today/service";
 import { findWorld } from "./catalog";
-import { feelGrowthOf, monthOf, monthView, plantsToAdd, prevMonth, worldOfMonth, worldStarted, type FeelGrowth, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
+import { feelGrowthOf, monthOf, monthView, plantsToAdd, prevMonth, recentGrowth, worldOfMonth, worldStarted, type FeelGrowth, type MonthView, type RecentDay, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
 import { PILLARS, type Pillar } from "./types";
 
 /** The world of the month is An's (scientist voice). Nguyên gets her comic in R5. */
@@ -180,6 +180,55 @@ export async function worldReady(): Promise<boolean> {
   if (!error) return true;
   if (missingTable(error)) return false;
   throw new Error(`world.ready: ${error.message}`);
+}
+
+/** Before a migration adds a table or a column: "not ready yet", never a crash. */
+function notReady(e: { code?: string; message: string }): boolean {
+  return missingTable(e) || e.code === "42703" || e.code === "PGRST204";
+}
+
+export interface RecentResponse {
+  /** The local date the 7 days end on (server clock, Asia/Ho_Chi_Minh). */
+  today: string;
+  /** This month's world (null while An has not picked it, or no pack yet). */
+  view: MonthView | null;
+  /** The last 7 days, newest first (days with nothing are left out). */
+  days: RecentDay[];
+  /** No world this month yet and An can pick one now (else "sắp mở"). */
+  choose: boolean;
+}
+
+/**
+ * R7b "Nhìn lại 7 ngày" (Góc bình yên, An only): what grew and who came in the last 7 days,
+ * plus this month's world for the small scene. Plants what grew since last time first, best
+ * effort. Reads every row of the months the window touches (from the 1st) so each growth's
+ * fact is the right one. null = the tables or columns are not there yet.
+ */
+export async function readRecent(ctx: ChildContext, now = new Date()): Promise<RecentResponse | null> {
+  await syncWorldQuietly(ctx, now);
+  const today = localDate(now);
+  const month = monthOf(today);
+  const from = addDays(today, -6);
+  const { data, error } = await createAdminClient()
+    .from("world_items")
+    .select("local_date, pillar, world_key, item_key, variant")
+    .eq("child_id", ctx.childId)
+    .gte("local_date", firstDay(monthOf(from)))
+    .lte("local_date", today)
+    .order("local_date");
+  if (error) {
+    if (notReady(error)) return null;
+    throw new Error(`world.recent: ${error.message}`);
+  }
+  const rows = (data ?? []) as WorldRow[];
+  let view: MonthView | null = null;
+  let choose = false;
+  if (worldStarted(month)) {
+    const of = worldOfMonth(month, true, await knownWorlds(ctx.childId));
+    view = of.key ? monthView(month, of.key, rows, today) : null;
+    choose = !of.key && of.choose.length > 0;
+  }
+  return { today, view, days: recentGrowth(rows, today), choose };
 }
 
 /** Best effort: null when there is no world for this child, the tables are not there yet, or anything fails. */

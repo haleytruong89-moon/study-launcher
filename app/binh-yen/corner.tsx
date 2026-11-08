@@ -37,6 +37,9 @@ import { FeedbackButton } from "../today/feedback";
 import { ActivityBody } from "./activities";
 import { FeelFrameBody } from "../today/comic";
 
+/** Fired after a check-in is stored (R7b: the "Nhìn lại" column refreshes). */
+export const CHECKIN_EVENT = "binh-yen:checkin";
+
 /**
  * Góc bình yên — one visit (BINH_YEN.md §4, S-BY1): chọn ô → chọn từ → công nhận (+ mức 1–5 khi
  * khó chịu) → 3 gợi ý (R1) → làm → Xong → one by_checkins row (keys only) → a short closing line.
@@ -242,6 +245,8 @@ export function Corner({
         growth: asGrowth(r.data?.world),
         comic: voice === "detective" ? asComic(r.data?.comic) : null,
       });
+      // R7b: the "Nhìn lại" column beside the corner shows what this visit just grew.
+      window.dispatchEvent(new Event(CHECKIN_EVENT));
       return;
     }
     // Visit over (the screen opens a new one) or study-time limit: nothing was stored — say so.

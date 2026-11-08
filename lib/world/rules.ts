@@ -1,3 +1,4 @@
+import { addDays, isoWeekday } from "@/lib/time";
 import { WORLDS, WORLD_ORDER, WORLD_START_MONTH, findThing, findWorld } from "./catalog";
 import type { Animal, Icon, Move, Pillar, World } from "./types";
 import { PILLARS } from "./types";
@@ -181,13 +182,16 @@ function animalReady(a: Animal, tagCount: Map<string, number>): boolean {
   return a.needs.every((n) => (tagCount.get(n.tag) ?? 0) >= n.n);
 }
 
+/** Rows in the order they grew: day by day, then feel, study, skill, play (a new array). */
+function inGrowthOrder(rows: readonly WorldRow[]): WorldRow[] {
+  return [...rows].sort((a, b) => (a.local_date === b.local_date ? PILLARS.indexOf(a.pillar) - PILLARS.indexOf(b.pillar) : a.local_date < b.local_date ? -1 : 1));
+}
+
 /** The month as the child sees it. Rows of another world (or unknown keys) are skipped, never break the page. */
 export function monthView(month: string, worldKey: string, rows: readonly WorldRow[], today: string): MonthView | null {
   const world = findWorld(worldKey);
   if (!world) return null;
-  const mine = rows
-    .filter((r) => r.world_key === worldKey && monthOf(r.local_date) === month)
-    .sort((a, b) => (a.local_date === b.local_date ? PILLARS.indexOf(a.pillar) - PILLARS.indexOf(b.pillar) : a.local_date < b.local_date ? -1 : 1));
+  const mine = inGrowthOrder(rows.filter((r) => r.world_key === worldKey && monthOf(r.local_date) === month));
   const things = new Map<string, ThingView>();
   const tagged = new Map<string, Set<string>>();
   const animals: AnimalView[] = [];
@@ -285,4 +289,85 @@ export interface WorldResponse {
 
 export function worldStarted(month: string): boolean {
   return month >= WORLD_START_MONTH;
+}
+
+// ---------------------------------------------------------------------------
+// R7b: "Nhìn lại 7 ngày" (Góc bình yên's side column, An only)
+// ---------------------------------------------------------------------------
+
+export interface RecentItem {
+  kind: "thing" | "animal";
+  key: string;
+  name: string;
+  icon: Icon;
+  /** The area that grew it (null for a visitor). */
+  pillar: Pillar | null;
+  /** The first time this thing grew in its month (a visitor is always new). */
+  isNew: boolean;
+  /** The fact this growth opened (the k-th growth of the month opens fact k, up to MAX_FACTS). */
+  fact: string | null;
+  /** "2026-11": the month (and so the world) it grew in. */
+  month: string;
+  /** The world's name ("Rừng nhiệt đới"). */
+  world: string;
+}
+
+export interface RecentDay {
+  date: string;
+  items: RecentItem[];
+}
+
+/**
+ * What grew (and who came) in the last `days` days up to `today`, newest day first; days with
+ * nothing are left out. `rows` must hold every row of each month the window touches (from the
+ * 1st), so a growth's rank in its month — and the fact it opened — is right. Only facts the
+ * child has already opened are named. Rows of an unknown world or key are skipped.
+ */
+export function recentGrowth(rows: readonly WorldRow[], today: string, days = 7): RecentDay[] {
+  const from = addDays(today, -(days - 1));
+  const byDate = new Map<string, RecentItem[]>();
+  const add = (date: string, item: RecentItem) => byDate.set(date, [...(byDate.get(date) ?? []), item]);
+  const inWindow = (d: string) => d >= from && d <= today;
+
+  // Each month the window touches, in the world its rows grew in.
+  const groups = new Map<string, WorldRow[]>();
+  for (const r of rows) {
+    if (monthOf(r.local_date) < monthOf(from) || r.local_date > today) continue;
+    const g = `${monthOf(r.local_date)}|${r.world_key}`;
+    groups.set(g, [...(groups.get(g) ?? []), r]);
+  }
+  for (const [g, list] of groups) {
+    const [month = "", worldKey = ""] = g.split("|");
+    const world = findWorld(worldKey);
+    if (!world) continue;
+    const rank = new Map<string, number>();
+    for (const r of inGrowthOrder(list)) {
+      const found = findThing(world, r.item_key);
+      if (!found) continue;
+      const k = (rank.get(r.item_key) ?? 0) + 1;
+      rank.set(r.item_key, k);
+      if (!inWindow(r.local_date)) continue;
+      const { thing, pillar } = found;
+      add(r.local_date, { kind: "thing", key: thing.key, name: thing.name, icon: thing.icon, pillar, isNew: k === 1, fact: k <= MAX_FACTS ? (thing.facts[k - 1] ?? null) : null, month, world: world.name });
+    }
+    // Visitors: when each one came is worked out exactly as the month view does.
+    const view = monthView(month, worldKey, list, today);
+    for (const a of view?.animals ?? []) {
+      const date = list.map((r) => r.local_date).find((d) => dm(d) === a.arrived && inWindow(d));
+      if (date) add(date, { kind: "animal", key: a.key, name: a.name, icon: a.icon, pillar: null, isNew: true, fact: null, month, world: world.name });
+    }
+  }
+  const order = (i: RecentItem) => (i.pillar ? PILLARS.indexOf(i.pillar) : PILLARS.length);
+  return [...byDate]
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .map(([date, items]) => ({ date, items: items.map((item, i) => ({ item, i })).sort((x, y) => order(x.item) - order(y.item) || x.i - y.i).map((x) => x.item) }));
+}
+
+const WEEKDAY_VI = ["", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ nhật"] as const;
+
+/** "Hôm nay", "Hôm qua", then "Thứ Năm 05/11". */
+export function recentDayLabel(date: string, today: string): string {
+  if (date === today) return "Hôm nay";
+  if (date === addDays(today, -1)) return "Hôm qua";
+  return `${WEEKDAY_VI[isoWeekday(date)] ?? ""} ${dm(date)}`;
 }

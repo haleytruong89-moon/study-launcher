@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
 import type { Quad, Voice } from "@/lib/binhYen/catalog";
@@ -10,6 +10,7 @@ import { HOTLINE_TEXT, VISIT_PING_MS } from "@/lib/binhYen/rules";
 import { STUDY_CAP_TEXT } from "@/lib/binhYen/studyCap";
 import { Breadcrumb, ChildNav } from "../child-nav";
 import { Corner } from "./corner";
+import { LookBack } from "./look-back";
 import { TalkPanel, type TalkInfoView } from "./talk-panel";
 
 /** What the server answers (lib/binhYen/session.ts ByState). */
@@ -35,6 +36,52 @@ interface Child {
   /** R3b: Picrew pictures by face (shown instead of the drawn character). */
   pics: AvatarPics;
   avatarMine: boolean;
+}
+
+/** R7b: the "Nhìn lại" column sits beside the corner from this width (Tailwind `lg`). */
+const WIDE = "(min-width: 1024px)";
+function subscribeWide(onChange: () => void) {
+  const m = window.matchMedia(WIDE);
+  m.addEventListener("change", onChange);
+  return () => m.removeEventListener("change", onChange);
+}
+/** Read in the browser only (the server and the first render say "narrow"). */
+function useWide(): boolean {
+  return useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE).matches, () => false);
+}
+
+/**
+ * R7b "Nhìn lại 7 ngày": on a laptop a sticky column on the right; on a phone a closed
+ * <details> after the talk card (loaded only once opened).
+ */
+function LookBackColumn(props: React.ComponentProps<typeof LookBack>) {
+  const wide = useWide();
+  const [open, setOpen] = useState(false);
+  if (wide) {
+    return (
+      <aside aria-label="Nhìn lại 7 ngày" className="sticky top-5 flex max-h-[calc(100dvh-2.5rem)] flex-col gap-3 self-start overflow-y-auto rounded-2xl bg-white p-4">
+        <h2 className="text-lg font-bold">Nhìn lại 7 ngày</h2>
+        <LookBack {...props} />
+      </aside>
+    );
+  }
+  return (
+    <aside aria-label="Nhìn lại 7 ngày" className="rounded-2xl bg-white">
+      <details onToggle={(e) => setOpen(e.currentTarget.open)} className="group/look">
+        <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-2 px-4 text-lg font-bold marker:content-none">
+          Nhìn lại 7 ngày
+          <span aria-hidden className="text-ink/50 transition-transform group-open/look:rotate-90 motion-reduce:transition-none">
+            ›
+          </span>
+        </summary>
+        {open && (
+          <div className="px-4 pb-4">
+            <LookBack {...props} />
+          </div>
+        )}
+      </details>
+    </aside>
+  );
 }
 
 /** After the study-time limit: the message stays this long, then back to Hôm nay. */
@@ -211,20 +258,28 @@ export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = 
     );
   }
 
+  // R7b: the "Nhìn lại" column only beside an open corner (not on the limit or "chưa mở" messages).
+  const side = !!state?.enabled && shown && !capped;
+  // Laptop: corner (28rem) + gap + column (380px) + padding; the header lines up with it.
+  const width = side ? "max-w-md lg:max-w-[55.25rem]" : "max-w-md";
+
   return (
     <div className="min-h-dvh bg-bg pb-24 lg:pb-0 lg:pl-52">
       <header className="text-white" style={{ background: color }}>
-        <div className="mx-auto flex max-w-md items-center gap-3 px-4 pt-5 pb-4">
+        <div className={`mx-auto flex ${width} items-center gap-3 px-4 pt-5 pb-4`}>
           <Link href="/today" className="-ml-1 inline-flex min-h-11 items-center px-1 text-sm font-bold">
             ‹ Hôm nay
           </Link>
           <h1 className="ml-auto text-xl font-bold">🌿 Góc bình yên</h1>
         </div>
       </header>
-      <main className="mx-auto flex max-w-md flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={["Hôm nay", "Góc bình yên"]} onBack={() => (window.history.length > 1 ? router.back() : router.push("/today"))} />
-        {content}
-        {talk}
+      <main className={`mx-auto flex ${width} flex-col gap-5 px-4 py-5 ${side ? "lg:grid lg:grid-cols-[minmax(0,28rem)_380px] lg:items-start lg:gap-6" : ""}`}>
+        <div className="flex min-w-0 flex-col gap-5">
+          <Breadcrumb trail={["Hôm nay", "Góc bình yên"]} onBack={() => (window.history.length > 1 ? router.back() : router.push("/today"))} />
+          {content}
+          {talk}
+        </div>
+        {side && <LookBackColumn voice={voice} firstName={firstName} color={color} look={child.avatar} pics={child.pics} />}
       </main>
       {/* R2: the child's 5 tabs. This page exists only when the corner is on, so it is listed. */}
       <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} voice={voice} />
