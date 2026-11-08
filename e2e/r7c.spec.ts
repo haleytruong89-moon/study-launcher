@@ -106,12 +106,12 @@ test("R7c Nguyên: after a visit she can open today's Hồ sơ mật, switch top
 
     // The notebook in the "Nhìn lại 7 ngày" column lists it; tapping opens the full card.
     const side = k.getByRole("complementary", { name: "Nhìn lại 7 ngày" });
-    const notebook = side.getByRole("region", { name: "Sổ tay thám tử" });
+    const notebook = side.getByRole("region", { name: /Sổ tay thám tử/ });
     await expect(notebook).toContainText("Trên máy này · chỉ con thấy");
     const kept = notebook.getByRole("list", { name: "Hồ sơ đã cất" }).getByRole("listitem");
     await expect(kept).toHaveCount(1);
     await expect(kept.first()).toContainText(card.title);
-    await kept.first().getByText(card.title).click();
+    await kept.first().locator("summary").click();
     await expect(kept.first().getByRole("heading", { name: card.title })).toBeVisible();
     await expect(kept.first()).toContainText(card.body.slice(0, 40));
 
@@ -126,7 +126,7 @@ test("R7c Nguyên: after a visit she can open today's Hồ sơ mật, switch top
 
     // Still there after a reload (this browser).
     await k.reload();
-    await expect(k.getByRole("complementary", { name: "Nhìn lại 7 ngày" }).getByRole("region", { name: "Sổ tay thám tử" })).toContainText(card.title);
+    await expect(k.getByRole("complementary", { name: "Nhìn lại 7 ngày" }).getByRole("region", { name: /Sổ tay thám tử/ })).toContainText(card.title);
 
     await kCtx.close();
   } finally {
@@ -160,7 +160,7 @@ test("R7c An: her \"Xong rồi\" has no Hồ sơ mật and her column no noteboo
     await expect(done.getByRole("button", { name: "Về góc của con" })).toBeVisible();
     await expect(done.getByRole("button", { name: /hồ sơ mật/i })).toHaveCount(0);
     await expect(done.getByRole("region", { name: "Hồ sơ mật" })).toHaveCount(0);
-    await expect(k.getByRole("region", { name: "Sổ tay thám tử" })).toHaveCount(0);
+    await expect(k.getByRole("region", { name: /Sổ tay thám tử/ })).toHaveCount(0);
     await kCtx.close();
   } finally {
     await db.from("by_checkins").delete().eq("child_id", childId);
