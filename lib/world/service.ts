@@ -188,6 +188,8 @@ function notReady(e: { code?: string; message: string }): boolean {
 }
 
 export interface RecentResponse {
+  /** The local date the 7 days end on (server clock, Asia/Ho_Chi_Minh). */
+  today: string;
   /** This month's world (null while An has not picked it, or no pack yet). */
   view: MonthView | null;
   /** The last 7 days, newest first (days with nothing are left out). */
@@ -222,7 +224,7 @@ export async function readRecent(ctx: ChildContext, now = new Date()): Promise<R
     const { key } = worldOfMonth(month, true, await knownWorlds(ctx.childId));
     view = key ? monthView(month, key, rows, today) : null;
   }
-  return { view, days: recentGrowth(rows, today) };
+  return { today, view, days: recentGrowth(rows, today) };
 }
 
 /** Best effort: null when there is no world for this child, the tables are not there yet, or anything fails. */
