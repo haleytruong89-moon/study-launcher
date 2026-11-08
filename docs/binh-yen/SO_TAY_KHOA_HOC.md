@@ -155,7 +155,7 @@ Năm 2009, nhà khoa học Marina Davila Ross ghi âm tiếng “cười” khi 
 
 ### 13. Sao la, “kỳ lân châu Á” (`sao_la`)
 
-Năm 1992, các nhà khoa học Việt Nam và WWF tìm thấy ở rừng Vũ Quang một hộp sọ có hai chiếc sừng song song rất lạ. Đó là sao la, loài thú lớn đầu tiên mới với khoa học sau hơn 50 năm. Sao la kín đáo đến mức phải tới năm 2013, một máy ảnh tự động trong rừng Trường Sơn mới chụp được một con đang đi bên suối.
+Năm 1992, các nhà khoa học Việt Nam và WWF tìm thấy ở rừng Vũ Quang một cặp sừng dài, song song rất lạ. Đó là sao la, loài thú lớn đầu tiên mới với khoa học sau hơn 50 năm. Sao la kín đáo đến mức khi một máy ảnh tự động trong rừng Trường Sơn chụp được một con đi bên suối năm 2013, đó là lần đầu sau 15 năm người ta lại thấy sao la ở Việt Nam.
 
 - **Thử nhỏ:** Vẽ một chú sao la với hai chiếc sừng song song, đứng giữa một khu rừng thật xanh.
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
@@ -164,7 +164,7 @@ Năm 1992, các nhà khoa học Việt Nam và WWF tìm thấy ở rừng Vũ Qu
 
 ### 14. Voọc chà vá chân nâu, “nữ hoàng linh trưởng” (`vooc_cha_va`)
 
-Voọc chà vá chân nâu được gọi là “nữ hoàng linh trưởng” nhờ bộ lông nhiều màu: thân xám, cẳng tay và đuôi trắng, còn bắp chân như đi đôi tất màu nâu đỏ. Ở Việt Nam, có thể gặp chúng trên bán đảo Sơn Trà, ngay cạnh thành phố Đà Nẵng. Chúng hay nhảy từ cành này sang cành khác bằng cú đẩy của hai chân sau, và thường đi theo những “con đường quen” trên tán rừng.
+Voọc chà vá chân nâu được gọi là “nữ hoàng linh trưởng” nhờ bộ lông nhiều màu: thân xám, cẳng tay và đuôi trắng, còn cẳng chân như đi đôi tất màu nâu đỏ. Ở Việt Nam, có thể gặp chúng trên bán đảo Sơn Trà, ngay cạnh thành phố Đà Nẵng. Chúng hay nhảy từ cành này sang cành khác bằng cú đẩy của hai chân sau, và thường đi theo những “con đường quen” trên tán rừng.
 
 - **Thử nhỏ:** Tô màu một chú voọc chà vá: xám, trắng, đen và nâu đỏ. Màu nào mình thấy đẹp nhất?
 - **Hợp với:** mọi lúc
@@ -174,23 +174,25 @@ Voọc chà vá chân nâu được gọi là “nữ hoàng linh trưởng” n
 
 ### 15. Gấu nước đi du hành vũ trụ (`gau_nuoc_vu_tru`)
 
-Gấu nước (tardigrade) là những con vật tí hon, dài chỉ 0,1 đến 1,5 mi-li-mét. Năm 2007, các nhà khoa học Thụy Điển gửi những chú gấu nước đã được làm khô lên quỹ đạo, cách mặt đất khoảng 270 ki-lô-mét, để chúng ở thẳng ngoài không gian. Về lại Trái Đất, phần lớn vẫn sống khỏe và còn sinh con bình thường.
+Gấu nước (tardigrade) là những con vật tí hon, dài chỉ 0,1 đến 1,5 mi-li-mét. Năm 2007, các nhà khoa học Thụy Điển gửi những chú gấu nước đã được làm khô lên quỹ đạo, cách mặt đất khoảng 270 ki-lô-mét, để chúng ở thẳng ngoài không gian. Về lại Trái Đất, phần lớn vẫn khỏe, còn đẻ trứng nở ra gấu nước con bình thường.
 
 - **Thử nhỏ:** Vẽ một chú gấu nước tám chân mặc bộ đồ phi hành gia.
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** Jönsson và cộng sự, 2008 · Current Biology
+- **Link:** [Jönsson, K. I., Rabbow, E., Schill, R. O., Harms-Ringdahl, M. & Rettberg, P. Tardigrades survive exposure to space in low Earth orbit (18(17): R729–R731)](https://doi.org/10.1016/j.cub.2008.06.048) — Current Biology, 2008 (kiểm 08/11/2026)
 - **Link:** [Jönsson, K. I. và cộng sự. Tardigrades survive exposure to space in low Earth orbit (FOTON-M3, 9/2007, khoảng 270 km; gấu nước khô; phần lớn sống, sinh sản bình thường; dài 0,1–1,5 mm)](https://www.sciencedaily.com/releases/2008/09/080908135906.htm) — Current Biology (tin trên ScienceDaily), 2008 (kiểm 08/11/2026)
 
 ### 16. Nhạn biển Bắc Cực đi theo mùa hè (`nhan_bien_bac_cuc`)
 
-Nhạn biển Bắc Cực nặng chưa tới 125 gam, nhưng mỗi năm bay từ vùng Bắc Cực xuống tận Nam Cực rồi quay về. Năm 2010, các nhà khoa học gắn thiết bị nặng 1,4 gam lên 11 chú chim ở Greenland và Iceland, và thấy mỗi năm chúng bay hơn 70.000 ki-lô-mét, có chú hơn 80.000. Đó là chuyến di cư dài nhất từng đo được ở động vật.
+Nhạn biển Bắc Cực nặng chưa tới 125 gam, nhưng mỗi năm bay từ vùng Bắc Cực xuống tận Nam Cực rồi quay về. Năm 2010, các nhà khoa học gắn thiết bị nặng 1,4 gam lên 11 chú chim ở Greenland và Iceland, và thấy mỗi năm chúng bay hơn 70.000 ki-lô-mét, có chú hơn 80.000. Năm 2016, một chú nhạn biển ở Anh còn bay khoảng 96.000 ki-lô-mét, chuyến di cư dài nhất từng đo được lúc ấy.
 
 - **Thử nhỏ:** Tìm trên quả địa cầu hoặc bản đồ: từ Greenland xuống Nam Cực xa cỡ nào?
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
-- **Nguồn (hiện trong app):** Egevang và cộng sự, 2010 · PNAS
+- **Nguồn (hiện trong app):** Egevang và cộng sự, 2010 · PNAS; Đại học Newcastle, 2016
 - **Link:** [Egevang, C. và cộng sự. Tracking of Arctic terns Sterna paradisaea reveals longest animal migration (11 con, thiết bị 1,4 g, chim < 125 g, có con > 80.000 km/năm)](https://doi.org/10.1073/pnas.0909493107) — PNAS, 2010 (kiểm 08/11/2026)
 - **Link:** [Tóm tắt bài báo (bản lưu của NERC)](https://nora.nerc.ac.uk/id/eprint/14091/) — NERC Open Research Archive, 2010 (kiểm 08/11/2026)
 - **Link:** [Arctic terns confirmed to have the longest animal migration in the world (hơn 70.000 km mỗi năm, Greenland)](https://phys.org/news/2010-01-arctic-terns-longest-animal-migration.html) — Phys.org, 2010 (kiểm 08/11/2026)
+- **Link:** [Tin của Đại học Newcastle (07/06/2016): một chú nhạn biển gắn thiết bị ở quần đảo Farne (Northumberland, Anh) bay khoảng 96.000 km, chuyến bay dài nhất từng ghi được ở chim di cư lúc ấy](https://www.ncl.ac.uk/press/articles/archive/2016/06/arcticterns) — Newcastle University, 2016 (kiểm 08/11/2026)
 
 ### 17. Chim ruồi bay lùi được (`chim_ruoi_bay_lui`)
 
@@ -203,10 +205,11 @@ Theo National Geographic, chim ruồi là loài chim duy nhất thật sự bay 
 
 ### 18. Tắc kè hoa đổi màu bằng tinh thể tí hon (`tac_ke_hoa_doi_mau`)
 
-Năm 2015, nhóm của nhà khoa học Michel Milinkovitch ở Đại học Geneva (Thụy Sĩ) tìm ra cách tắc kè hoa báo đổi màu. Dưới da chúng có một lớp tế bào chứa vô số tinh thể nano xếp thành mạng lưới đều đặn. Khi tắc kè hoa hào hứng, mạng lưới giãn ra khoảng 30%, làm da phản chiếu ánh sáng khác đi: nền xanh lá chuyển sang vàng.
+Năm 2015, nhóm của nhà khoa học Michel Milinkovitch ở Đại học Geneva (Thụy Sĩ) tìm ra cách loài tắc kè hoa báo (không phải con tắc kè) đổi màu. Dưới da chúng có một lớp tế bào chứa vô số tinh thể nano xếp thành mạng lưới đều đặn. Khi tắc kè hoa hào hứng, mạng lưới giãn ra khoảng 30%, làm da phản chiếu ánh sáng khác đi: nền xanh lá chuyển sang vàng.
 
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** Teyssier và cộng sự, 2015 · Nature Communications
+- **Link:** [Teyssier, J., Saenko, S. V., van der Marel, D. & Milinkovitch, M. C. Photonic crystals cause active colour change in chameleons](https://doi.org/10.1038/ncomms7368) — Nature Communications, 2015 (kiểm 08/11/2026)
 - **Link:** [Researchers reveal how the chameleon changes colour (Teyssier, J. và cộng sự, Nature Communications 2015; Đại học Geneva, Milinkovitch; tinh thể nano guanine trong tế bào da; giãn ~30%; xanh lá → vàng)](https://cordis.europa.eu/article/id/116503-trending-science-researchers-reveal-how-the-chameleon-changes-colour) — CORDIS (Ủy ban châu Âu), 2015 (kiểm 08/11/2026)
 
 ### 19. Bọ hung nhìn dải Ngân Hà để đi thẳng (`bo_hung_ngan_ha`)
@@ -216,6 +219,7 @@ Bọ hung vo phân thành viên tròn rồi lăn đi thật thẳng, để khỏ
 - **Thử nhỏ:** Tối nay cùng người lớn nhìn trời: mình thấy được mấy ngôi sao? Ghi lại một dòng.
 - **Hợp với:** mọi lúc
 - **Nguồn (hiện trong app):** Dacke và cộng sự, 2013 · Current Biology
+- **Link:** [Dacke, M. và cộng sự. Dung beetles use the Milky Way for orientation](https://doi.org/10.1016/j.cub.2012.12.034) — Current Biology, 2013 (kiểm 08/11/2026)
 - **Link:** [Dung beetles use the Milky Way to navigate at night (Dacke và cộng sự, Current Biology 2013; Đại học Lund; nhà mô phỏng bầu trời; tấm che trên đầu thì đi lòng vòng; có lẽ là lần đầu thấy ở động vật)](https://earthsky.org/earth/dung-beetles-use-the-milky-way-to-navigate-at-night/) — EarthSky, 2013 (kiểm 08/11/2026)
 
 ### 20. Kiến cắt lá là nhà nông (`kien_trong_nam`)
@@ -234,6 +238,7 @@ Cá thòi lòi là loài cá sống được cả dưới nước lẫn trên c�
 - **Thử nhỏ:** Nhờ người nhà đếm xem trong 1 phút mình chớp mắt mấy lần.
 - **Hợp với:** mọi lúc
 - **Nguồn (hiện trong app):** Penn State & Georgia Tech, 2023 · PNAS
+- **Link:** [Aiello, B. R. và cộng sự. The origin of blinking in both mudskippers and tetrapods is linked to life on land](https://doi.org/10.1073/pnas.2220404120) — PNAS, 2023 (kiểm 08/11/2026)
 - **Link:** [Mudskippers could be key to understanding evolution of blinking (PNAS 2023; kéo mắt xuống hốc mắt; giữ ướt, sạch, bảo vệ; không cần cơ mới; phần lớn thời gian ở trên cạn)](https://sciencedaily.com/releases/2023/04/230424223105.htm) — ScienceDaily (tin của Penn State), 2023 (kiểm 08/11/2026)
 
 ### 22. Kiểm chứng lời đồn: dơi bị mù? (`doi_khong_mu`)
@@ -251,6 +256,7 @@ Cá voi lưng gù đực hát những bài hát dài, và các con đực cùng 
 - **Thử nhỏ:** Nghĩ ra một giai điệu ngắn, hát cho người nhà nghe, xem họ có hát lại được không.
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** Garland và cộng sự, 2011 · Current Biology
+- **Link:** [Garland, E. C. và cộng sự. Dynamic horizontal cultural transmission of humpback whale song at the ocean basin scale](https://doi.org/10.1016/j.cub.2011.03.019) — Current Biology, 2011 (kiểm 08/11/2026)
 - **Link:** [Humpback whales spread songs across Pacific (Garland, E. C. và cộng sự, Current Biology 2011; 11 năm, 6 quần thể; bài hát lan từ đông Úc tới Polynesia thuộc Pháp trong ~2 năm; chỉ con đực hát)](https://news.uq.edu.au/2011-04-15-humpback-whales-spread-songs-across-pacific) — University of Queensland, 2011 (kiểm 08/11/2026)
 
 ### 24. Thằn lằn bay lượn giữa rừng (`than_lan_bay`)
@@ -348,7 +354,7 @@ Năm 2015, các nhà khoa học theo dõi hơn 2.500 học sinh lớp 2 đến l
 
 ### 33. Sơn Đoòng, hang động có rừng và mây (`son_doong`)
 
-Khoảng năm 1990, anh Hồ Khanh đi rừng ở Phong Nha – Kẻ Bàng, trú mưa gần một vách đá và thấy sương mù tuôn ra từ một cửa hang. Năm 2009, anh dẫn các nhà thám hiểm hang động Anh tới hang Sơn Đoòng, nơi có đoạn rộng đến mức đặt vừa một dãy nhà 40 tầng. Chỗ trần hang sụt xuống, nắng lọt vào nuôi cả một khu rừng, và mây mỏng bay gần trần hang.
+Khoảng năm 1990, chú Hồ Khanh đi rừng ở Phong Nha – Kẻ Bàng, trú mưa gần một vách đá và thấy sương mù tuôn ra từ một cửa hang. Năm 2009, chú dẫn các nhà thám hiểm hang động Anh tới hang Sơn Đoòng, nơi có đoạn rộng đến mức đặt vừa một dãy nhà 40 tầng. Chỗ trần hang sụt xuống, nắng lọt vào nuôi cả một khu rừng, và mây mỏng bay gần trần hang.
 
 - **Thử nhỏ:** Vẽ một hang động có một khu rừng nhỏ bên trong và một đám mây gần trần.
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
@@ -395,7 +401,7 @@ Cầu vồng hiện ra khi ánh nắng đi vào những giọt nước trong kh�
 
 ### 38. Đỉnh Everest từng là đáy biển (`everest_day_bien`)
 
-Đá trên đỉnh Everest là một lớp đá vôi xám chứa mảnh vụn của sinh vật biển như bọ ba thùy và huệ biển. Theo Đại học Bang Montana (Hoa Kỳ), lớp đá này hình thành ở đáy biển khoảng 470 triệu năm trước. Khi mảng đất Ấn Độ trôi lên phía bắc và chạm vào châu Á, đáy biển xưa bị đẩy lên thành dãy Himalaya, và cú va chạm ấy vẫn đang tiếp diễn.
+Đá trên đỉnh Everest là một lớp đá vôi xám chứa mảnh vỏ hóa thạch của sinh vật biển như bọ ba thùy và huệ biển. Theo Đại học Bang Montana (Hoa Kỳ), lớp đá này hình thành ở đáy biển khoảng 470 triệu năm trước. Khi mảng đất Ấn Độ trôi lên phía bắc và chạm vào châu Á, đáy biển xưa bị đẩy lên thành dãy Himalaya, và cú va chạm ấy vẫn đang tiếp diễn.
 
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** Montana State University · Everest summit limestone
@@ -406,16 +412,18 @@ Cầu vồng hiện ra khi ánh nắng đi vào những giọt nước trong kh�
 Điểm sâu nhất đại dương mà ta biết là vực Challenger, ở rãnh Mariana giữa Thái Bình Dương, sâu khoảng 10.935 mét. Nếu đặt núi Everest (cao 8.849 mét) xuống đó, đỉnh núi vẫn còn nằm dưới mặt nước hơn 2 ki-lô-mét. Năm 1960, Jacques Piccard và Don Walsh là hai người đầu tiên xuống tới đáy vực.
 
 - **Hợp với:** mọi lúc
-- **Nguồn (hiện trong app):** BBC Science Focus · How deep is the ocean?
+- **Nguồn (hiện trong app):** NOAA Ocean Exploration · How deep is the ocean?; BBC Science Focus · How deep is the ocean?
+- **Link:** [How deep is the ocean? (điểm sâu nhất đại dương, ở rãnh Mariana, sâu 10.935 m)](https://oceanexplorer.noaa.gov/facts/ocean-depth.html) — NOAA Ocean Exploration, không ghi năm (kiểm 08/11/2026)
 - **Link:** [How deep is the ocean? (vực Challenger 10.935 m; Everest 8.849 m; Piccard và Walsh 1960)](https://www.sciencefocus.com/planet-earth/how-deep-is-the-ocean) — BBC Science Focus, không ghi năm (kiểm 08/11/2026)
 
 ### 40. Bụi sa mạc bón phân cho rừng Amazon (`bui_sahara_amazon`)
 
-Gió mang bụi từ sa mạc Sahara ở châu Phi bay qua cả Đại Tây Dương. Theo NASA, dựa vào vệ tinh CALIPSO từ năm 2007 đến 2013, trung bình mỗi năm có khoảng 27,7 triệu tấn bụi rơi xuống vùng rừng Amazon ở Nam Mỹ. Trong đó có khoảng 22.000 tấn phốt-pho, một chất cây cần để lớn, gần bằng lượng phốt-pho đất rừng mất đi mỗi năm vì nước mưa cuốn trôi.
+Gió mang bụi từ sa mạc Sahara ở châu Phi bay qua cả Đại Tây Dương. Theo NASA, dựa vào vệ tinh CALIPSO từ năm 2007 đến 2013, trung bình mỗi năm có khoảng 27,7 triệu tấn bụi rơi xuống vùng rừng Amazon ở Nam Mỹ. Trong đó có khoảng 22.000 tấn phosphorus, một chất cây cần để lớn, gần bằng lượng phosphorus đất rừng mất đi mỗi năm vì nước mưa cuốn trôi.
 
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** NASA Scientific Visualization Studio, 2015 · Saharan Dust to Amazon
-- **Link:** [Satellite Tracks Saharan Dust To Amazon In 3-D (CALIPSO 2007–2013; trung bình 27,7 triệu tấn/năm rơi xuống Amazon; ~22.000 tấn phốt-pho, gần bằng lượng mất vì mưa và lũ)](https://svs.gsfc.nasa.gov/11775) — NASA Scientific Visualization Studio, 2015 (kiểm 08/11/2026)
+- **Link:** [Yu, H. và cộng sự. The fertilizing role of African dust in the Amazon rainforest: A first multiyear assessment based on data from CALIPSO (42: 1984–1991)](https://doi.org/10.1002/2015GL063040) — Geophysical Research Letters, 2015 (kiểm 08/11/2026)
+- **Link:** [Satellite Tracks Saharan Dust To Amazon In 3-D (CALIPSO 2007–2013; trung bình 27,7 triệu tấn/năm rơi xuống Amazon; ~22.000 tấn phosphorus, gần bằng lượng mất vì mưa và lũ)](https://svs.gsfc.nasa.gov/11775) — NASA Scientific Visualization Studio, 2015 (kiểm 08/11/2026)
 
 ### 41. Băng chuyền 1.000 năm dưới lòng biển (`bang_chuyen_dai_duong`)
 
@@ -457,7 +465,7 @@ Năm 1969, các nhà du hành Apollo 11 đặt lên Mặt Trăng một tấm gư
 
 ### 45. Sao Thiên Vương lăn nghiêng (`thien_vuong_nam_nghieng`)
 
-Sao Thiên Vương nghiêng gần 98 độ, nên trông như vừa nằm nghiêng vừa đi quanh Mặt Trời. Một vòng quanh Mặt Trời của nó mất khoảng 84 năm Trái Đất, nên mỗi cực có mùa đông tối kéo dài khoảng 21 năm. Năm 1781, nhà thiên văn William Herschel tìm ra nó: hành tinh đầu tiên được phát hiện nhờ kính thiên văn.
+Sao Thiên Vương nghiêng gần 98 độ, nên trông như vừa nằm nghiêng vừa đi quanh Mặt Trời. Một vòng quanh Mặt Trời của nó mất khoảng 84 năm Trái Đất, nên mỗi nửa hành tinh lần lượt có một mùa đông tối kéo dài khoảng 21 năm. Năm 1781, nhà thiên văn William Herschel tìm ra nó: hành tinh đầu tiên được phát hiện nhờ kính thiên văn.
 
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** NASA Science · Uranus Facts
@@ -477,7 +485,8 @@ Ngày 15/4/2015, xe tự hành Curiosity chụp cảnh Mặt Trời lặn trên 
 Tháng 7/2015, tàu New Horizons của NASA bay ngang Sao Diêm Vương, một hành tinh lùn rất xa, và chụp được một vùng sáng hình trái tim. Vùng này mang tên Tombaugh, theo nhà thiên văn Clyde Tombaugh, người tìm ra Sao Diêm Vương năm 1930. Một phần trái tim là đồng bằng băng phẳng lì, có lẽ chưa tới 100 triệu năm tuổi, rất “trẻ” với một thế giới đá băng.
 
 - **Hợp với:** mọi lúc
-- **Nguồn (hiện trong app):** Astronomy Now, 2015 · New Horizons discovers frozen plains in Pluto's heart
+- **Nguồn (hiện trong app):** NASA, 2015 · New Horizons Discovers Frozen Plains in the Heart of Pluto's ‘Heart’
+- **Link:** [NASA's New Horizons Discovers Frozen Plains in the Heart of Pluto's ‘Heart’ (17/7/2015; Tombaugh Regio theo tên Clyde Tombaugh, người tìm ra Sao Diêm Vương năm 1930; đồng bằng “no more than 100 million years old”)](https://www.nasa.gov/news-release/nasas-new-horizons-discovers-frozen-plains-in-the-heart-of-plutos-heart) — NASA, 2015 (kiểm 08/11/2026)
 - **Link:** [New Horizons discovers frozen plains in Pluto's heart (Tombaugh Regio theo tên Clyde Tombaugh, người tìm ra Pluto năm 1930; đồng bằng băng “no more than 100 million years old”)](https://astronomynow.com/2015/07/17/new-horizons-discovers-frozen-plains-in-plutos-heart/) — Astronomy Now, 2015 (kiểm 08/11/2026)
 
 ### 48. Enceladus phun băng vào vũ trụ (`enceladus_phun_bang`)
@@ -492,19 +501,19 @@ Enceladus là một mặt trăng nhỏ của Sao Thổ, rộng chỉ khoảng 50
 
 Ánh sáng từ một ngôi sao rất xa đến mắt mình như một tia sáng mảnh. Trên đường đi, nó xuyên qua những túi không khí nóng lạnh khác nhau luôn chuyển động, nên bị bẻ cong qua lại và trông như lấp lánh. Hành tinh ở gần hơn, trông như một cái đĩa nhỏ chứ không phải một chấm, nên ánh sáng “bù trừ” cho nhau và hành tinh ít lấp lánh hơn.
 
-- **Thử nhỏ:** Tối nay nhìn trời: tìm một chấm sáng lấp lánh và một chấm sáng đứng yên. Chấm nào có thể là hành tinh?
+- **Thử nhỏ:** Tối nay cùng người lớn nhìn trời: tìm một chấm sáng lấp lánh và một chấm sáng đứng yên. Chấm nào có thể là hành tinh?
 - **Hợp với:** Biển sâu (buồn, chán, mệt) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** University of Wisconsin–Madison · Why do stars twinkle?
 - **Link:** [Curiosities: Why do stars appear to twinkle in the night sky? (James Lattis; túi khí nóng lạnh bẻ cong ánh sáng; hành tinh là đĩa nên ít lấp lánh)](https://news.wisc.edu/curiosities-why-do-stars-appear-to-twinkle-in-the-night-sky) — University of Wisconsin–Madison News, không ghi năm (kiểm 08/11/2026)
 
 ### 50. Mình được làm từ bụi sao (`bui_sao`)
 
-Theo Đài quan sát tia X Chandra (Harvard & Smithsonian), hydro trong nước của cơ thể mình có từ thuở Vũ trụ mới ra đời. Các-bon và ô-xy được tạo ra bên trong các ngôi sao, còn nhiều phần sắt trong cơ thể đến từ những vụ nổ sao rất lâu về trước. Nói cách khác, một phần cơ thể mình từng nằm trong các vì sao.
+Theo Đài quan sát tia X Chandra (Harvard & Smithsonian), hydrogen trong nước của cơ thể mình có từ thuở Vũ trụ mới ra đời. Carbon và oxygen được tạo ra bên trong các ngôi sao, còn khá nhiều sắt trong cơ thể mình đến từ những vụ nổ sao rất lâu về trước. Nói cách khác, một phần cơ thể mình từng nằm trong các vì sao.
 
 - **Thử nhỏ:** Viết một dòng: nếu mình là một ngôi sao, mình muốn tỏa sáng ở đâu?
 - **Hợp với:** mọi lúc
 - **Nguồn (hiện trong app):** Chandra X-ray Observatory · Chandra Chemistry
-- **Link:** [Chandra Chemistry (hydro từ Vụ Nổ Lớn; các-bon, ô-xy tạo trong sao; nhiều sắt trong cơ thể từ các vụ nổ siêu tân tinh)](https://chandra.cfa.harvard.edu/chemistry/) — Chandra X-ray Center (Harvard & Smithsonian / NASA), không ghi năm (kiểm 08/11/2026)
+- **Link:** [Chandra Chemistry (hydrogen từ Vụ Nổ Lớn; carbon, oxygen tạo trong sao; nhiều sắt trong cơ thể từ các vụ nổ siêu tân tinh)](https://chandra.cfa.harvard.edu/chemistry/) — Chandra X-ray Center (Harvard & Smithsonian / NASA), không ghi năm (kiểm 08/11/2026)
 
 ### 51. Hơn 6.000 thế giới ngoài Hệ Mặt Trời (`hanh_tinh_ngoai`)
 
@@ -533,6 +542,7 @@ Năm 2016, các nhà khoa học ở Đại học California, Davis thấy cây h
 - **Thử nhỏ:** Đặt một chậu cây cạnh cửa sổ. Vài ngày sau, ngọn cây có nghiêng về phía có nắng không?
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** Atamian và cộng sự, 2016 · Science
+- **Link:** [Atamian, H. S. và cộng sự. Circadian regulation of sunflower heliotropism, floral orientation, and pollinator visits (353: 587)](https://doi.org/10.1126/science.aaf9793) — Science, 2016 (kiểm 08/11/2026)
 - **Link:** [Sunflowers Move by the Clock (Atamian và cộng sự, Science 2016; cây non theo Mặt Trời và quay về hướng đông ban đêm; đồng hồ sinh học; hoa lớn nhìn hướng đông, côn trùng ghé gấp 5 lần)](https://www.ucdavis.edu/news/sunflowers-move-clock) — UC Davis, 2016 (kiểm 08/11/2026)
 
 ### 54. Cây kêu “tách tách” khi khát (`cay_keu_khi_khat`)
@@ -542,21 +552,23 @@ Năm 2023, các nhà khoa học ở Đại học Tel Aviv (Israel) đặt micro 
 - **Thử nhỏ:** Tưới nước cho một chậu cây trong nhà và tưởng tượng nó vừa “nói” gì với mình.
 - **Hợp với:** mọi lúc
 - **Nguồn (hiện trong app):** Khait và cộng sự, 2023 · Cell
+- **Link:** [Khait, I. và cộng sự. Sounds emitted by plants under stress are airborne and informative](https://doi.org/10.1016/j.cell.2023.03.009) — Cell, 2023 (kiểm 08/11/2026)
 - **Link:** [Stressed Plants ‘Cry’—and Some Animals Can Probably Hear Them (Khait và cộng sự, Cell 2023; cà chua, thuốc lá; ~35 tiếng/giờ khi thiếu nước, ~1 tiếng/giờ khi đủ nước; 20–100 kHz; cơ chế và việc động vật có nghe không còn chưa rõ)](https://www.scientificamerican.com/article/stressed-plants-cry-and-some-animals-can-probably-hear-them/) — Scientific American, 2023 (kiểm 08/11/2026)
 
 ### 55. Kiểm chứng: cây “nói chuyện” qua mạng nấm? (`mang_luoi_nam`)
 
-Dưới đất rừng, sợi nấm có thể nối rễ của nhiều cây với nhau thành mạng lưới, điều này đã được chứng minh. Nhiều sách báo còn kể cây “nói chuyện” và gửi thức ăn cho cây con qua mạng ấy. Năm 2023, ba nhà khoa học đọc lại các nghiên cứu ngoài rừng và thấy bằng chứng cho chuyện “gửi thức ăn” còn yếu. Ghi chép của nhà khoa học nhí: ý tưởng đẹp vẫn cần được kiểm chứng.
+Dưới đất rừng, sợi nấm có thể nối rễ của nhiều cây thành mạng lưới, nhưng mạng ấy mới được vẽ bản đồ ở rất ít khu rừng. Nhiều sách báo còn kể cây “nói chuyện” và gửi thức ăn cho cây con qua mạng ấy. Năm 2023, ba nhà khoa học đọc lại các nghiên cứu ngoài rừng và thấy bằng chứng cho chuyện “gửi thức ăn” còn yếu. Ghi chép của nhà khoa học nhí: ý tưởng đẹp vẫn cần được kiểm chứng.
 
 - **Hợp với:** mọi lúc
 - **Nguồn (hiện trong app):** Karst, Jones & Hoeksema, 2023 · Nature Ecology & Evolution
+- **Link:** [Karst, J., Jones, M. D. & Hoeksema, J. D. Positive citation bias and overinterpreted results lead to misinformation on common mycorrhizal networks in forests](https://doi.org/10.1038/s41559-023-01986-1) — Nature Ecology & Evolution, 2023 (kiểm 08/11/2026)
 - **Link:** [The “wood-wide web” concept, which has taken root in popular media, challenged by researchers (Karst, Jones & Hoeksema, Nature Ecology & Evolution 2023; mạng nấm có thật, nhưng chuyện chia thức ăn cho cây con còn ít bằng chứng ngoài rừng)](https://sciencedaily.com/releases/2023/02/230213113740.htm) — ScienceDaily (tin của Đại học Alberta), 2023 (kiểm 08/11/2026)
 
 ### 56. Lá sen tự làm sạch (`la_sen_tu_sach`)
 
 Nhỏ nước lên lá sen, nước vo tròn thành giọt và lăn đi, mang theo cả bụi bẩn. Bí mật nằm ở bề mặt lá: vô số u nhỏ li ti chỉ vài phần nghìn mi-li-mét, phủ thêm sáp, giữ lại không khí nên giọt nước gần như không chạm vào lá. Người ta gọi đó là “hiệu ứng lá sen” và học theo để làm sơn tường, ngói và vải chống bẩn.
 
-- **Thử nhỏ:** Lần tới thấy lá sen ở chợ hay ở ao sen (có người lớn đi cùng), nhỏ một giọt nước lên và nhìn nó lăn.
+- **Thử nhỏ:** Lần tới thấy lá sen ở ao (có người lớn đi cùng) hoặc lá khoai môn ngoài vườn, nhỏ một giọt nước lên và nhìn nó lăn.
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** Scientific American · Self-Cleaning Materials; Barthlott & Neinhuis, 1997 · Planta
 - **Link:** [Self-Cleaning Materials: Inspiration (u nhỏ vài micromet + sáp nano; giữ không khí; giọt nước lăn mang theo bụi; sơn, ngói, vải)](https://www.scientificamerican.com/article/self-cleaning-materials-inspiration/) — Scientific American, không ghi năm (kiểm 08/11/2026)
@@ -566,7 +578,7 @@ Nhỏ nước lên lá sen, nước vo tròn thành giọt và lăn đi, mang th
 
 Ở một số khu rừng, nhìn từ dưới lên sẽ thấy tán các cây cạnh nhau không chạm vào nhau, chừa lại những đường trời sáng như bản đồ. Hiện tượng này gọi là “tán cây ngại ngùng”, được ghi lại từ những năm 1920. Một giả thuyết là gió làm cành cọ vào nhau nên cây giữ khoảng cách, nhưng theo National Geographic, các nhà khoa học vẫn chưa hiểu hết vì sao.
 
-- **Thử nhỏ:** Đứng dưới một hàng cây và ngước nhìn lên: tán cây có chạm nhau không? Vẽ lại khoảng trời giữa các tán.
+- **Thử nhỏ:** Đứng dưới một hàng cây và ngước nhìn lên (đừng nhìn thẳng vào Mặt Trời nhé): tán cây có chạm nhau không? Vẽ lại khoảng trời giữa các tán.
 - **Hợp với:** Biển sâu (buồn, chán, mệt) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** National Geographic, 2020 · Tree crown shyness
 - **Link:** [Some trees may ‘social distance’ to avoid disease (crown shyness; mô tả từ những năm 1920; giả thuyết gió làm cành cọ nhau; nguyên nhân chưa ngã ngũ)](https://www.nationalgeographic.com/science/article/tree-crown-shyness-forest-canopy) — National Geographic, 2020 (kiểm 08/11/2026)
@@ -577,11 +589,12 @@ Nhỏ nước lên lá sen, nước vo tròn thành giọt và lăn đi, mang th
 
 - **Hợp với:** Mặt trời (vui, hào hứng, tò mò) · Khu rừng (bình yên, thư thái)
 - **Nguồn (hiện trong app):** Sallon và cộng sự, 2008 · Science
+- **Link:** [Sallon, S. và cộng sự. Germination, genetics, and growth of an ancient date seed (320(5882): 1464)](https://doi.org/10.1126/science.1153600) — Science, 2008 (kiểm 08/11/2026)
 - **Link:** [2,000 year old “Phoenix” seed rises from the ashes (Sallon và cộng sự, Science 2008; hạt ở Masada ~2.000 năm; gieo năm 2005, nảy mầm sau ~8 tuần; “Methuselah”; kỷ lục cũ là hạt sen ~1.300 năm)](https://www.nationalgeographic.com/science/article/2000-year-old-phoenix-seed-rises-from-the-ashes) — National Geographic, 2008 (kiểm 08/11/2026)
 
 ### 59. Cây lớn lên từ… không khí (`cay_lon_tu_khong_khi`)
 
-Khoảng 400 năm trước, Jan Baptist van Helmont trồng một cây liễu trong chậu đất và chăm nó suốt 5 năm. Cây lớn hẳn lên, nhưng đất trong chậu gần như không nhẹ đi. Ngày nay ta biết phần lớn chất khô của cây đến từ khí các-bon-níc trong không khí, được lá biến đổi nhờ ánh nắng, còn đất chỉ góp một ít khoáng chất.
+Khoảng 400 năm trước, Jan Baptist van Helmont trồng một cây liễu trong chậu đất và chăm nó suốt 5 năm. Cây lớn hẳn lên, nhưng đất trong chậu gần như không nhẹ đi. Ngày nay ta biết phần lớn chất khô của cây đến từ khí carbon dioxide trong không khí, được lá biến đổi nhờ ánh nắng, còn đất chỉ góp một ít khoáng chất.
 
 - **Thử nhỏ:** Nhìn một cái cây to và nghĩ: phần lớn thân cây ấy được làm từ không khí.
 - **Hợp với:** mọi lúc
@@ -833,106 +846,119 @@ Mỗi năm, trong 4 ngày giữa tháng Hai, rất nhiều người khắp thế
 | 30 | `sao_la` | Saola rediscovered! ‘Asian Unicorn’ sighted in Vietnam for first time in 15 years (1992, rừng Vũ Quang, Bộ Lâm nghiệp + WWF; thú lớn đầu tiên mới với khoa học sau hơn 50 năm; hai sừng song song; ảnh bẫy ảnh 7/9/2013 ở Trường Sơn) | WWF-Canada | 2013 | [link](https://wwf.ca/media-releases/saola-rediscovered-asian-unicorn-sighted-in-vietnam-for-first-time-in-15-years/) | 08/11/2026 |
 | 31 | `vooc_cha_va` | Pygathrix nemaeus (thân xám, đuôi trắng, cẳng tay trắng, “tất” nâu đỏ ở chân; nhảy bằng cú đẩy chân sau; đi theo đường quen trên tán) | Animal Diversity Web, University of Michigan | không ghi năm | [link](https://animaldiversity.org/accounts/Pygathrix_nemaeus) | 08/11/2026 |
 | 32 | `vooc_cha_va` | Save the Red-shanked Doucs of Sơn Trà (“queen of primates”, sống trên bán đảo Sơn Trà) | Việt Nam News | không ghi năm | [link](https://vietnamnews.vn/environment/519788/save-the-red-shanked-doucs-of-son-tra.html) | 08/11/2026 |
-| 33 | `gau_nuoc_vu_tru` | Jönsson, K. I. và cộng sự. Tardigrades survive exposure to space in low Earth orbit (FOTON-M3, 9/2007, khoảng 270 km; gấu nước khô; phần lớn sống, sinh sản bình thường; dài 0,1–1,5 mm) | Current Biology (tin trên ScienceDaily) | 2008 | [link](https://www.sciencedaily.com/releases/2008/09/080908135906.htm) | 08/11/2026 |
-| 34 | `nhan_bien_bac_cuc` | Egevang, C. và cộng sự. Tracking of Arctic terns Sterna paradisaea reveals longest animal migration (11 con, thiết bị 1,4 g, chim < 125 g, có con > 80.000 km/năm) | PNAS | 2010 | [link](https://doi.org/10.1073/pnas.0909493107) | 08/11/2026 |
-| 35 | `nhan_bien_bac_cuc` | Tóm tắt bài báo (bản lưu của NERC) | NERC Open Research Archive | 2010 | [link](https://nora.nerc.ac.uk/id/eprint/14091/) | 08/11/2026 |
-| 36 | `nhan_bien_bac_cuc` | Arctic terns confirmed to have the longest animal migration in the world (hơn 70.000 km mỗi năm, Greenland) | Phys.org | 2010 | [link](https://phys.org/news/2010-01-arctic-terns-longest-animal-migration.html) | 08/11/2026 |
-| 37 | `chim_ruoi_bay_lui` | Hummingbird secrets (loài chim duy nhất có “số lùi”; có loài vỗ cánh ~100 lần/giây; tim > 1.000 nhịp/phút; chim ruồi ong ở Cuba nặng hơn một hạt hạnh nhân một chút) | National Geographic | không ghi năm | [link](https://www.nationalgeographic.com/magazine/article/hummingbird-secrets-speed-worlds-smallest-bird) | 08/11/2026 |
-| 38 | `tac_ke_hoa_doi_mau` | Researchers reveal how the chameleon changes colour (Teyssier, J. và cộng sự, Nature Communications 2015; Đại học Geneva, Milinkovitch; tinh thể nano guanine trong tế bào da; giãn ~30%; xanh lá → vàng) | CORDIS (Ủy ban châu Âu) | 2015 | [link](https://cordis.europa.eu/article/id/116503-trending-science-researchers-reveal-how-the-chameleon-changes-colour) | 08/11/2026 |
-| 39 | `bo_hung_ngan_ha` | Dung beetles use the Milky Way to navigate at night (Dacke và cộng sự, Current Biology 2013; Đại học Lund; nhà mô phỏng bầu trời; tấm che trên đầu thì đi lòng vòng; có lẽ là lần đầu thấy ở động vật) | EarthSky | 2013 | [link](https://earthsky.org/earth/dung-beetles-use-the-milky-way-to-navigate-at-night/) | 08/11/2026 |
-| 40 | `kien_trong_nam` | Leafcutter ants (không ăn lá mà ăn nấm; trồng nấm gần 60 triệu năm; con người ~10.000 năm; tổ hàng triệu kiến thợ) | Smithsonian Tropical Research Institute | không ghi năm | [link](https://stri.si.edu/node/24899) | 08/11/2026 |
-| 41 | `ca_thoi_loi_chop_mat` | Mudskippers could be key to understanding evolution of blinking (PNAS 2023; kéo mắt xuống hốc mắt; giữ ướt, sạch, bảo vệ; không cần cơ mới; phần lớn thời gian ở trên cạn) | ScienceDaily (tin của Penn State) | 2023 | [link](https://sciencedaily.com/releases/2023/04/230424223105.htm) | 08/11/2026 |
-| 42 | `doi_khong_mu` | Are bats blind? (“No, bats are not blind”; mắt nhỏ nhưng rất nhạy, không thấy màu sắc rõ nét như người) | U.S. Geological Survey (USGS) | không ghi năm | [link](https://www.usgs.gov/faqs/are-bats-blind) | 08/11/2026 |
-| 43 | `ca_voi_hat` | Humpback whales spread songs across Pacific (Garland, E. C. và cộng sự, Current Biology 2011; 11 năm, 6 quần thể; bài hát lan từ đông Úc tới Polynesia thuộc Pháp trong ~2 năm; chỉ con đực hát) | University of Queensland | 2011 | [link](https://news.uq.edu.au/2011-04-15-humpback-whales-spread-songs-across-pacific) | 08/11/2026 |
-| 44 | `than_lan_bay` | Dehling, J. M. How lizards fly: A novel type of wing in animals (5–7 xương sườn dài đỡ màng da; chân trước áp vào mép cánh; lượn xa nhất ~26 m; Draco dussumieri ở Ấn Độ) | PLoS ONE (bản trên PMC) | 2017 | [link](https://pmc.ncbi.nlm.nih.gov/articles/PMC5728497) | 08/11/2026 |
-| 45 | `mai_nha_xanh` | Lee, K. E., Williams, K. J. H., Sargent, L. D., Williams, N. S. G. & Johnson, K. A. 40-second green roof views sustain attention: The role of micro-breaks in attention restoration | Journal of Environmental Psychology | 2015 | [link](https://doi.org/10.1016/j.jenvp.2015.04.003) | 08/11/2026 |
-| 46 | `mai_nha_xanh` | Tin của Đại học Melbourne (150 sinh viên, nghỉ 40 giây) | ScienceDaily | 2015 | [link](https://sciencedaily.com/releases/2015/05/150526093611.htm) | 08/11/2026 |
-| 47 | `tieng_chim` | Hammoud, R. và cộng sự. Smartphone-based ecological momentary assessment reveals mental health benefits of birdlife | Scientific Reports | 2022 | [link](https://doi.org/10.1038/s41598-022-20207-6) | 08/11/2026 |
-| 48 | `tieng_chim` | Feeling chirpy: being around birds is linked to lasting mental health benefits (1.292 người, ứng dụng Urban Mind; mối liên hệ, có thể kéo dài đến 8 giờ) | King's College London | 2022 | [link](https://www.kcl.ac.uk/news/feeling-chirpy-being-around-birds-is-linked-to-lasting-mental-health-benefits) | 08/11/2026 |
-| 49 | `cam_giac_kinh_ngac` | Sturm, V. E. và cộng sự. Big smile, small self: Awe walks promote prosocial positive emotions in older adults | Emotion | 2022 (đăng trực tuyến 2020) | [link](https://pubmed.ncbi.nlm.nih.gov/32955293/) | 08/11/2026 |
-| 50 | `cam_giac_kinh_ngac` | 'Awe walks' boost emotional well-being (52 người lớn tuổi, đi dạo ít nhất 15 phút mỗi tuần trong 8 tuần; ảnh tự chụp) | UCSF Psychiatry and Behavioral Sciences | 2020 | [link](https://psychiatry.ucsf.edu/news/awe-walks-boost-emotional-well-being) | 08/11/2026 |
-| 51 | `mui_mua` | Bear, I. J. & Thomas, R. G. Nature of argillaceous odour (bài đặt tên “petrichor”) | Nature | 1964 | [link](https://doi.org/10.1038/201993a0) | 08/11/2026 |
-| 52 | `mui_mua` | Joung, Y. S. & Buie, C. R. Aerosol generation by raindrop impact on soil | Nature Communications | 2015 | [link](https://doi.org/10.1038/ncomms7083) | 08/11/2026 |
-| 53 | `mui_mua` | How rain evolved its distinct scent (geosmin do vi khuẩn Streptomyces trong đất tạo ra; mũi người rất nhạy với geosmin) | Smithsonian Magazine | 2020 | [link](https://www.smithsonianmag.com/smart-news/smell-rain-explained-180974692/) | 08/11/2026 |
-| 54 | `canh_co_nuoc` | White, M. và cộng sự. Blue space: The importance of water for preference, affect, and restorativeness ratings of natural and built scenes | Journal of Environmental Psychology | 2010 | [link](https://doi.org/10.1016/j.jenvp.2010.04.004) | 08/11/2026 |
-| 55 | `canh_co_nuoc` | Trang công bố (120 bức ảnh; hai nghiên cứu) | University of Plymouth Research Portal | 2010 | [link](https://researchportal.plymouth.ac.uk/en/publications/blue-space-the-importance-of-water-for-preference-affect-and-rest/) | 08/11/2026 |
-| 56 | `thay_chau_cay` | Lee, M., Lee, J., Park, B.-J. & Miyazaki, Y. Interaction with indoor plants may reduce psychological and physiological stress by suppressing autonomic nervous system activity in young adults: a randomized crossover study | Journal of Physiological Anthropology | 2015 | [link](https://doi.org/10.1186/s40101-015-0060-8) | 08/11/2026 |
-| 57 | `thay_chau_cay` | Bản đầy đủ (24 nam thanh niên; thay chậu cây và gõ máy, mỗi việc 15 phút) | PubMed Central | 2015 | [link](https://pmc.ncbi.nlm.nih.gov/articles/PMC4419447) | 08/11/2026 |
-| 58 | `tam_rung` | Park, B. J. và cộng sự. The physiological effects of Shinrin-yoku (taking in the forest atmosphere or forest bathing): evidence from field experiments in 24 forests across Japan (15(1): 18–26) | Environmental Health and Preventive Medicine | 2010 (đăng trực tuyến 2009) | [link](https://doi.org/10.1007/s12199-009-0086-9) | 08/11/2026 |
-| 59 | `tam_rung` | Park, B. J. và cộng sự. The physiological effects of Shinrin-yoku: evidence from field experiments in 24 forests across Japan (280 nam sinh viên, 12 người mỗi khu rừng) | Environmental Health and Preventive Medicine | 2010 | [link](https://pubmed.ncbi.nlm.nih.gov/19568835/) | 08/11/2026 |
-| 60 | `truong_nhieu_cay` | Dadvand, P. và cộng sự. Green spaces and cognitive development in primary schoolchildren (2.593 học sinh, 36 trường ở Barcelona) | PNAS | 2015 | [link](https://doi.org/10.1073/pnas.1503402112) | 08/11/2026 |
-| 61 | `truong_nhieu_cay` | Tóm tắt trên PubMed | PubMed | 2015 | [link](https://pubmed.ncbi.nlm.nih.gov/26080420/) | 08/11/2026 |
-| 62 | `son_doong` | Vietnam Cave (đoàn Anh vào hang mùa xuân 2009; đặt vừa dãy nhà 40 tầng; trần sụt cho nắng vào, cây mọc; mây mỏng gần trần) | National Geographic | 2011 | [link](https://www.nationalgeographic.com/magazine/article/vietnam-cave) | 08/11/2026 |
-| 63 | `son_doong` | Hang Sơn Đoòng cave (Hồ Khanh, 1990, trú mưa và thấy sương tuôn ra từ cửa hang; 2009 khảo sát; rừng dưới hố sụt) | BBC Wildlife (Discover Wildlife) | không ghi năm | [link](https://www.discoverwildlife.com/environment/hang-son-doong-cave) | 08/11/2026 |
-| 64 | `giot_nuoc_9_ngay` | The Water Cycle (nước ở khí quyển ~9 ngày; đại dương vài nghìn năm; sông 12–20 ngày; băng > 1.000 năm) | NOAA JetStream | không ghi năm | [link](https://www.noaa.gov/jetstream/max-what-cycle) | 08/11/2026 |
-| 65 | `set_hai_lan` | Lightning Myths (sét hay đánh lại cùng chỗ; Empire State trung bình 23 lần/năm) | NOAA National Weather Service | không ghi năm | [link](https://www.weather.gov/safety/lightning-myths) | 08/11/2026 |
-| 66 | `set_hai_lan` | Lightning Temperature (làm không khí nóng ~50.000 °F, gấp 5 lần bề mặt Mặt Trời) | NOAA National Weather Service | không ghi năm | [link](https://weather.gov/safety/lightning-temperature) | 08/11/2026 |
-| 67 | `set_hai_lan` | Thunder (đếm giây từ chớp đến sấm, 5 giây ≈ 1 dặm; thẻ đổi thành ~3 giây ≈ 1 km) | NOAA National Weather Service | không ghi năm | [link](https://www.weather.gov/safety/lightning-science-thunder) | 08/11/2026 |
-| 68 | `cau_vong_tron` | What Causes a Rainbow? (ánh sáng khúc xạ, phản xạ trong giọt nước; Mặt Trời sau lưng; cầu vồng là vòng tròn, từ máy bay có thể thấy cả vòng) | NOAA SciJinks | không ghi năm | [link](https://scijinks.gov/rainbow) | 08/11/2026 |
-| 69 | `tam_trai_dat` | Core (lõi trong chủ yếu là sắt, bán kính ~1.220 km, ~5.200 °C, rắn vì áp suất ~3,6 triệu atm; ranh giới lõi trong–ngoài ~6.000 °C, “as hot as the surface of the sun”) | National Geographic Education | không ghi năm | [link](https://education.nationalgeographic.org/resource/core/) | 08/11/2026 |
-| 70 | `everest_day_bien` | Summit limestone (đá vôi Qomolangma; mảnh bọ ba thùy, tay cuộn, huệ biển; ~470 triệu năm; Ấn Độ va vào châu Á, vẫn đang tiếp diễn) | Montana State University | không ghi năm | [link](https://montana.edu/everest/facts/summit-limestone.html) | 08/11/2026 |
-| 71 | `vuc_mariana` | How deep is the ocean? (vực Challenger 10.935 m; Everest 8.849 m; Piccard và Walsh 1960) | BBC Science Focus | không ghi năm | [link](https://www.sciencefocus.com/planet-earth/how-deep-is-the-ocean) | 08/11/2026 |
-| 72 | `bui_sahara_amazon` | Satellite Tracks Saharan Dust To Amazon In 3-D (CALIPSO 2007–2013; trung bình 27,7 triệu tấn/năm rơi xuống Amazon; ~22.000 tấn phốt-pho, gần bằng lượng mất vì mưa và lũ) | NASA Scientific Visualization Studio | 2015 | [link](https://svs.gsfc.nasa.gov/11775) | 08/11/2026 |
-| 73 | `bang_chuyen_dai_duong` | The Global Conveyor Belt (nước lạnh, mặn chìm ở vùng cực; vài cm/giây; ~1.000 năm cho một mét khối nước đi hết vòng) | NOAA Ocean Service | không ghi năm | [link](https://oceanservice.noaa.gov/education/tutorial_currents/05conveyor2.html) | 08/11/2026 |
-| 74 | `nhat_trieu_vinh_bac_bo` | Geographical characteristics of Vietnam's coastal regions (nhật triều Vịnh Bắc Bộ “one of the most typical globally”, một lần nước lớn và một lần nước ròng mỗi ngày, rất đều đặn) | Trung tâm Phối hợp Tìm kiếm Cứu nạn Hàng hải Việt Nam (VMRCC) | không ghi năm | [link](https://www.vmrcc.gov.vn/en/hydrometeorological-information/geographical-characteristics-of-vietnam-s-coastal-regions-498.html) | 08/11/2026 |
-| 75 | `nhat_trieu_vinh_bac_bo` | Tidal cycles (định nghĩa nhật triều, bán nhật triều; nhiều bờ biển có hai lần nước lớn mỗi ngày) | NOAA Ocean Service | không ghi năm | [link](https://oceanservice.noaa.gov/education/tutorial_tides/tides07_cycles.html) | 08/11/2026 |
-| 76 | `nam_anh_sang` | What Is a Light-Year? (~300.000 km/giây; ~9 nghìn tỉ km; sao gần nhất sau Mặt Trời ~4,3 năm ánh sáng; tâm Ngân Hà ~26.000 năm ánh sáng) | NASA Space Place | không ghi năm | [link](https://spaceplace.nasa.gov/light-year) | 08/11/2026 |
-| 77 | `mat_trang_xa_dan` | The Apollo Experiment That Keeps on Giving (gương phản xạ Apollo 11; laser từ Mỹ, Pháp, Ý, Đức; chính xác vài mm; Mặt Trăng xa thêm 3,8 cm/năm) | NASA Jet Propulsion Laboratory | 2019 | [link](https://www.jpl.nasa.gov/news/the-apollo-experiment-that-keeps-on-giving/) | 08/11/2026 |
-| 78 | `thien_vuong_nam_nghieng` | Uranus: Facts (nghiêng ~97,77°; năm ~84 năm Trái Đất; mùa đông tối 21 năm; Herschel 1781, hành tinh đầu tiên tìm bằng kính thiên văn) | NASA Science | không ghi năm | [link](https://science.nasa.gov/Uranus/facts) | 08/11/2026 |
-| 79 | `hoang_hon_xanh_sao_hoa` | PIA19400: Sunset in Mars' Gale Crater (Curiosity, 15/4/2015, sol 956; bụi mịn cho ánh sáng xanh đi qua dễ hơn, xanh tụ gần phía Mặt Trời) | NASA Jet Propulsion Laboratory | 2015 | [link](https://www.jpl.nasa.gov/images/pia19400-sunset-in-mars-gale-crater/) | 08/11/2026 |
-| 80 | `trai_tim_diem_vuong` | New Horizons discovers frozen plains in Pluto's heart (Tombaugh Regio theo tên Clyde Tombaugh, người tìm ra Pluto năm 1930; đồng bằng băng “no more than 100 million years old”) | Astronomy Now | 2015 | [link](https://astronomynow.com/2015/07/17/new-horizons-discovers-frozen-plains-in-plutos-heart/) | 08/11/2026 |
-| 81 | `enceladus_phun_bang` | Enceladus (Cassini) (~500 km; phản chiếu tốt nhất Hệ Mặt Trời; hơi nước và hạt băng phun từ bốn “vằn hổ” ở cực nam; đại dương nước mặn; vành đai E) | NASA Science | không ghi năm | [link](https://science.nasa.gov/mission/cassini/science/enceladus) | 08/11/2026 |
-| 82 | `sao_lap_lanh` | Curiosities: Why do stars appear to twinkle in the night sky? (James Lattis; túi khí nóng lạnh bẻ cong ánh sáng; hành tinh là đĩa nên ít lấp lánh) | University of Wisconsin–Madison News | không ghi năm | [link](https://news.wisc.edu/curiosities-why-do-stars-appear-to-twinkle-in-the-night-sky) | 08/11/2026 |
-| 83 | `bui_sao` | Chandra Chemistry (hydro từ Vụ Nổ Lớn; các-bon, ô-xy tạo trong sao; nhiều sắt trong cơ thể từ các vụ nổ siêu tân tinh) | Chandra X-ray Center (Harvard & Smithsonian / NASA) | không ghi năm | [link](https://chandra.cfa.harvard.edu/chemistry/) | 08/11/2026 |
-| 84 | `hanh_tinh_ngoai` | The NASA Exoplanet Archive hits 6,000 planets (17/9/2025; hành tinh đầu tiên quanh sao giống Mặt Trời năm 1995; > 8.000 ứng viên; hành tinh quay quanh hai sao; hành tinh cỡ Sao Mộc gần sao hơn Sao Thủy gần Mặt Trời) | Caltech/IPAC (NASA Exoplanet Archive) | 2025 | [link](https://www.ipac.caltech.edu/news/the-nasa-exoplanet-archive-hits-6-000-planets) | 08/11/2026 |
-| 85 | `van_ly_truong_thanh` | Can you see the Great Wall of China from space? (không thấy bằng mắt thường từ Mặt Trăng) | Britannica | không ghi năm | [link](https://www.britannica.com/question/Can-you-see-the-Great-Wall-of-China-from-space) | 08/11/2026 |
-| 86 | `van_ly_truong_thanh` | China's Wall Less Great in View from Space (Dương Lợi Vĩ không thấy từ quỹ đạo; màu vật liệu giống đất xung quanh; dễ thấy nhất là thành phố sáng đèn ban đêm) | NASA (bản lưu) | 2005 | [link](https://webarchive.library.unt.edu/eot2008/20080917153200/http://www.nasa.gov/vision/space/workinginspace/great_wall.html) | 08/11/2026 |
-| 87 | `huong_duong_dong_ho` | Sunflowers Move by the Clock (Atamian và cộng sự, Science 2016; cây non theo Mặt Trời và quay về hướng đông ban đêm; đồng hồ sinh học; hoa lớn nhìn hướng đông, côn trùng ghé gấp 5 lần) | UC Davis | 2016 | [link](https://www.ucdavis.edu/news/sunflowers-move-clock) | 08/11/2026 |
-| 88 | `cay_keu_khi_khat` | Stressed Plants ‘Cry’—and Some Animals Can Probably Hear Them (Khait và cộng sự, Cell 2023; cà chua, thuốc lá; ~35 tiếng/giờ khi thiếu nước, ~1 tiếng/giờ khi đủ nước; 20–100 kHz; cơ chế và việc động vật có nghe không còn chưa rõ) | Scientific American | 2023 | [link](https://www.scientificamerican.com/article/stressed-plants-cry-and-some-animals-can-probably-hear-them/) | 08/11/2026 |
-| 89 | `mang_luoi_nam` | The “wood-wide web” concept, which has taken root in popular media, challenged by researchers (Karst, Jones & Hoeksema, Nature Ecology & Evolution 2023; mạng nấm có thật, nhưng chuyện chia thức ăn cho cây con còn ít bằng chứng ngoài rừng) | ScienceDaily (tin của Đại học Alberta) | 2023 | [link](https://sciencedaily.com/releases/2023/02/230213113740.htm) | 08/11/2026 |
-| 90 | `la_sen_tu_sach` | Self-Cleaning Materials: Inspiration (u nhỏ vài micromet + sáp nano; giữ không khí; giọt nước lăn mang theo bụi; sơn, ngói, vải) | Scientific American | không ghi năm | [link](https://www.scientificamerican.com/article/self-cleaning-materials-inspiration/) | 08/11/2026 |
-| 91 | `la_sen_tu_sach` | Barthlott, W. & Neinhuis, C. Purity of the sacred lotus, or escape from contamination in biological surfaces | Planta | 1997 | [link](https://doi.org/10.1007/s004250050096) | 08/11/2026 |
-| 92 | `tan_cay_ngai_ngung` | Some trees may ‘social distance’ to avoid disease (crown shyness; mô tả từ những năm 1920; giả thuyết gió làm cành cọ nhau; nguyên nhân chưa ngã ngũ) | National Geographic | 2020 | [link](https://www.nationalgeographic.com/science/article/tree-crown-shyness-forest-canopy) | 08/11/2026 |
-| 93 | `hat_cha_la_2000_nam` | 2,000 year old “Phoenix” seed rises from the ashes (Sallon và cộng sự, Science 2008; hạt ở Masada ~2.000 năm; gieo năm 2005, nảy mầm sau ~8 tuần; “Methuselah”; kỷ lục cũ là hạt sen ~1.300 năm) | National Geographic | 2008 | [link](https://www.nationalgeographic.com/science/article/2000-year-old-phoenix-seed-rises-from-the-ashes) | 08/11/2026 |
-| 94 | `cay_lon_tu_khong_khi` | What are plants made of? (van Helmont, ~400 năm trước, cây liễu 5 năm, đất gần như không nhẹ đi; phần lớn chất khô từ không khí, đất chỉ góp ít khoáng) | Davidson Institute of Science Education (Weizmann Institute) | 2025 | [link](https://davidson.org.il/read-experience/en/reasonabledoubt-en/what-plants-made-of) | 08/11/2026 |
-| 95 | `pando_mot_cay` | Pando (hơn 40.000 cây, 106 mẫu Anh ≈ 43 ha, gần 13 triệu pound, một dòng vô tính từ một hạt, sinh vật lớn nhất từng tìm thấy) | USDA Forest Service, Fishlake National Forest | không ghi năm | [link](https://www.fs.usda.gov/r04/fishlake/recreation/explore-forest/pando) | 08/11/2026 |
-| 96 | `pando_mot_cay` | Pando: A Forest of One (~6.000 tấn, sinh vật nặng nhất được biết; chung một bộ rễ) | EarthDate | không ghi năm | [link](https://www.earthdate.org/pando-a-forest-of-one) | 08/11/2026 |
-| 97 | `chu_cho_canh_cua` | Understanding the stress response | Harvard Health Publishing (Harvard Medical School) | 2011, duyệt lại 2024 | [link](https://www.health.harvard.edu/staying-healthy/understanding-the-stress-response) | 08/11/2026 |
-| 98 | `duong_mon_trong_nao` | Draganski, B. và cộng sự. Neuroplasticity: Changes in grey matter induced by training (427: 311–312) | Nature | 2004 | [link](https://doi.org/10.1038/427311a) | 08/11/2026 |
-| 99 | `duong_mon_trong_nao` | Juggling juggles the brain (về Draganski, B. và cộng sự. Neuroplasticity: Changes in grey matter induced by training, Nature 427: 311–312) | Neuroscience for Kids (Eric Chudler, University of Washington) | 2004 | [link](https://staff.washington.edu/chudler/jugg.html) | 08/11/2026 |
-| 100 | `chim_on_bai_hat` | Dave, A. S. & Margoliash, D. Song replay during sleep and computational rules for sensorimotor vocal learning (290(5492): 812–816) | Science | 2000 | [link](https://doi.org/10.1126/science.290.5492.812) | 08/11/2026 |
-| 101 | `chim_on_bai_hat` | Singing silently during sleep helps birds learn song (về Dave, A. S. & Margoliash, D., Science 2000) | UChicago Medicine | 2000 | [link](https://www.uchicagomedicine.org/forefront/news/singing-silently-during-sleep-helps-birds-learn-song) | 08/11/2026 |
-| 102 | `chim_on_bai_hat` | Sleep On It: How Snoozing Strengthens Memories | NIH News in Health (Viện Y tế Quốc gia Hoa Kỳ) | 2013 (số tháng 4) | [link](https://newsinhealth.nih.gov/node/1481) | 08/11/2026 |
-| 103 | `nao_dang_lon` | The Teen Brain: 7 Things to Know | National Institute of Mental Health (NIMH) | 2023 (bản sửa, NIH Publication No. 23-MH-8078) | [link](https://www.nimh.nih.gov/health/publications/the-teen-brain-7-things-to-know) | 08/11/2026 |
-| 104 | `to_mo_giup_nho` | Gruber, M. J., Gelman, B. D. & Ranganath, C. States of curiosity modulate hippocampus-dependent learning via the dopaminergic circuit (84(2): 486–496) | Neuron | 2014 | [link](https://doi.org/10.1016/j.neuron.2014.08.060) | 08/11/2026 |
-| 105 | `to_mo_giup_nho` | Tin của UC Davis về nghiên cứu | ScienceDaily | 2014 | [link](https://www.sciencedaily.com/releases/2014/10/141002123631.htm) | 08/11/2026 |
-| 106 | `bi_mat_hoi_tho_ra` | Balban và cộng sự. Brief structured respiration practices enhance mood and reduce physiological arousal (108 người lớn tham gia) | Cell Reports Medicine | 2023 | [link](https://pmc.ncbi.nlm.nih.gov/articles/PMC9873947) | 08/11/2026 |
-| 107 | `nghi_ngan_giup_hoc` | Bönstrup, M. và cộng sự. A rapid form of offline consolidation in skill learning (29(8): 1346–1351) | Current Biology | 2019 | [link](https://doi.org/10.1016/j.cub.2019.02.049) | 08/11/2026 |
-| 108 | `nghi_ngan_giup_hoc` | Want to learn a new skill? Take some short breaks (về Bönstrup, M. và cộng sự, Current Biology 2019) | NINDS, National Institutes of Health | 2019 | [link](https://www.ninds.nih.gov/News-Events/News-and-Press-Releases/Press-Releases/Want-learn-new-skill-Take-some-short-breaks) | 08/11/2026 |
-| 109 | `nao_an_nang_luong` | Boyd, R. Do People Only Use 10 Percent of Their Brains? (phỏng vấn nhà thần kinh học Barry Gordon, Johns Hopkins) | Scientific American | 2008 (07/02/2008) | [link](https://www.scientificamerican.com/article/do-people-only-use-10-percent-of-their-brains/) | 08/11/2026 |
-| 110 | `nguoi_dua_tin` | Keltner, D. & Gross, J. J. Functional accounts of emotions (13(5): 467–480) | Cognition and Emotion | 1999 | [link](https://www.personal.kent.edu/%7Edfresco/CBT_Readings/keltner_%26_gross.pdf) | 08/11/2026 |
-| 111 | `ngap_va_cuoi_lay` | Joly-Mascheroni, R. M., Senju, A. & Shepherd, A. J. Dogs catch human yawns (4(5): 446–448) | Biology Letters | 2008 | [link](https://doi.org/10.1098/rsbl.2008.0333) | 08/11/2026 |
-| 112 | `ngap_va_cuoi_lay` | Warren, J. E. và cộng sự. Positive emotions preferentially engage an auditory–motor “mirror” system (26(50): 13067–13075) | Journal of Neuroscience | 2006 | [link](https://doi.org/10.1523/JNEUROSCI.3907-06.2006) | 08/11/2026 |
-| 113 | `ngap_va_cuoi_lay` | Yong, E. Dogs catch yawns from humans (về Joly-Mascheroni, Senju & Shepherd, Biology Letters 2008; 21 trên 29 chú chó) | National Geographic | 2008 | [link](https://www.nationalgeographic.com/science/article/dogs-catch-yawns-from-humans) | 08/11/2026 |
-| 114 | `ngap_va_cuoi_lay` | Study shows laughter is contagious (về Warren và cộng sự, Journal of Neuroscience 2006; nhóm Sophie Scott, UCL) | ScienceDaily | 2006 | [link](https://sciencedaily.com/releases/2006/12/061212213922.htm) | 08/11/2026 |
-| 115 | `goi_ten_cam_xuc` | Lieberman, Eisenberger, Crockett, Tom, Pfeifer & Way. Putting feelings into words: Affect labeling disrupts amygdala activity in response to affective stimuli | Psychological Science | 2007 | [link](https://pubmed.ncbi.nlm.nih.gov/17576282/) | 08/11/2026 |
-| 116 | `goi_ten_cam_xuc` | Tin của UCLA về nghiên cứu (mô tả thí nghiệm, lời tác giả: hiệu ứng có lẽ không lớn) | ScienceDaily | 2007 | [link](https://www.sciencedaily.com/releases/2007/06/070622090727.htm) | 08/11/2026 |
-| 117 | `vui_buon_cung_luc` | Larsen, J. T., To, Y. M. & Fireman, G. Children's understanding and experience of mixed emotions | Psychological Science | 2007 | [link](https://doi.org/10.1111/j.1467-9280.2007.01870.x) | 08/11/2026 |
-| 118 | `vui_buon_cung_luc` | Trang bài báo (trẻ 5–12 tuổi) | Association for Psychological Science | 2007 | [link](https://www.psychologicalscience.org/journals/psychological-science/j.1467-9280.2007.01870.x/) | 08/11/2026 |
-| 119 | `dem_dieu_biet_on` | Froh, J. J., Sefick, W. J. & Emmons, R. A. Counting blessings in early adolescents: An experimental study of gratitude and subjective well-being | Journal of School Psychology | 2008 | [link](https://doi.org/10.1016/j.jsp.2007.03.005) | 08/11/2026 |
-| 120 | `dem_dieu_biet_on` | A lesson in thanks (về Froh, Sefick & Emmons, Counting blessings in early adolescents, Journal of School Psychology 2008; 221 học sinh cấp hai) | Greater Good Magazine (UC Berkeley) | 2007 | [link](https://greatergood.berkeley.edu/article/item/a_lesson_in_thanks/) | 08/11/2026 |
-| 121 | `goi_minh_bang_ten` | Kross, E. và cộng sự. Self-talk as a regulatory mechanism: How you do it matters | Journal of Personality and Social Psychology | 2014 | [link](https://doi.org/10.1037/a0035173) | 08/11/2026 |
-| 122 | `goi_minh_bang_ten` | Talking in the 3rd person lowers anxiety: Study (về Kross, E. và cộng sự, Journal of Personality and Social Psychology 2014) | University of Michigan, Department of Psychology | 2014 | [link](https://prod.lsa.umich.edu/psych/news-events/all-news/archived-news/2014/02/talking-in-the-3rd-person-lowers-anxiety--study.html) | 08/11/2026 |
-| 123 | `goi_minh_bang_ten` | Could this trick help you perform better in stressful situations? (mô tả thí nghiệm bài nói 5 phút, người chấm, ví dụ “You can do it, John”) | World Economic Forum | 2015 | [link](https://weforum.org/stories/2015/06/could-this-trick-help-you-perform-better-in-stressful-situations) | 08/11/2026 |
-| 124 | `dem_hoi_tho` | Zaccaro, A. và cộng sự. How breath-control can change your life: A systematic review on psycho-physiological correlates of slow breathing (15 nghiên cứu) | Frontiers in Human Neuroscience | 2018 | [link](https://www.frontiersin.org/articles/10.3389/fnhum.2018.00353/full) | 08/11/2026 |
-| 125 | `nam_dieu_quanh_minh` | Field Book Project (sổ tay thực địa ghi nơi sống, thời tiết, quan sát và cả cảm xúc; hơn 9.500 cuốn đã lập danh mục) | Smithsonian Institution Archives | không ghi năm | [link](https://siarchives.si.edu/about/field-book-project) | 08/11/2026 |
-| 126 | `mot_phut_ngam_may` | How much does a cloud weigh? (mây tích 1 km³ × 0,5 g/m³ ≈ 500.000 kg) | USGS Water Science School | không ghi năm | [link](https://www.usgs.gov/water-science-school/science/how-much-does-a-cloud-weigh) | 08/11/2026 |
-| 127 | `ban_do_cam_xuc` | Nummenmaa, L., Glerean, E., Hari, R. & Hietanen, J. K. Bodily maps of emotions | PNAS | 2014 | [link](https://doi.org/10.1073/pnas.1321664111) | 08/11/2026 |
-| 128 | `ban_do_cam_xuc` | Tóm tắt trên PubMed | PubMed | 2014 | [link](https://pubmed.ncbi.nlm.nih.gov/24379370/) | 08/11/2026 |
-| 129 | `ban_do_cam_xuc` | Mapping emotions on the body: love makes us warm all over (khoảng 700 người ở Phần Lan, Thụy Điển, Đài Loan) | WGBH | 2014 | [link](https://www.wgbh.org/news/2014-01-06/mapping-emotions-on-the-body-love-makes-us-warm-all-over) | 08/11/2026 |
-| 130 | `mui_goi_ky_niem` | Konnikova, M. Smells like old times (Herz; Willander & Larsson 2006, Đại học Stockholm) | Scientific American Mind | 2012 | [link](https://www.scientificamerican.com/article/smells-like-old-times) | 08/11/2026 |
-| 131 | `mui_goi_ky_niem` | Willander, J. & Larsson, M. Smell your way back to childhood: Autobiographical odor memory (13: 240–244) | Psychonomic Bulletin & Review | 2006 | [link](https://doi.org/10.3758/BF03193837) | 08/11/2026 |
-| 132 | `dem_chim_15_phut` | About the Great Backyard Bird Count (4 ngày giữa tháng Hai hằng năm, ít nhất 15 phút; gần đây hơn 450.000 người gửi ghi chép) | National Audubon Society | 2026 | [link](https://www.audubon.org/community-science/great-backyard-bird-count) | 08/11/2026 |
+| 33 | `gau_nuoc_vu_tru` | Jönsson, K. I., Rabbow, E., Schill, R. O., Harms-Ringdahl, M. & Rettberg, P. Tardigrades survive exposure to space in low Earth orbit (18(17): R729–R731) | Current Biology | 2008 | [link](https://doi.org/10.1016/j.cub.2008.06.048) | 08/11/2026 |
+| 34 | `gau_nuoc_vu_tru` | Jönsson, K. I. và cộng sự. Tardigrades survive exposure to space in low Earth orbit (FOTON-M3, 9/2007, khoảng 270 km; gấu nước khô; phần lớn sống, sinh sản bình thường; dài 0,1–1,5 mm) | Current Biology (tin trên ScienceDaily) | 2008 | [link](https://www.sciencedaily.com/releases/2008/09/080908135906.htm) | 08/11/2026 |
+| 35 | `nhan_bien_bac_cuc` | Egevang, C. và cộng sự. Tracking of Arctic terns Sterna paradisaea reveals longest animal migration (11 con, thiết bị 1,4 g, chim < 125 g, có con > 80.000 km/năm) | PNAS | 2010 | [link](https://doi.org/10.1073/pnas.0909493107) | 08/11/2026 |
+| 36 | `nhan_bien_bac_cuc` | Tóm tắt bài báo (bản lưu của NERC) | NERC Open Research Archive | 2010 | [link](https://nora.nerc.ac.uk/id/eprint/14091/) | 08/11/2026 |
+| 37 | `nhan_bien_bac_cuc` | Arctic terns confirmed to have the longest animal migration in the world (hơn 70.000 km mỗi năm, Greenland) | Phys.org | 2010 | [link](https://phys.org/news/2010-01-arctic-terns-longest-animal-migration.html) | 08/11/2026 |
+| 38 | `nhan_bien_bac_cuc` | Tin của Đại học Newcastle (07/06/2016): một chú nhạn biển gắn thiết bị ở quần đảo Farne (Northumberland, Anh) bay khoảng 96.000 km, chuyến bay dài nhất từng ghi được ở chim di cư lúc ấy | Newcastle University | 2016 | [link](https://www.ncl.ac.uk/press/articles/archive/2016/06/arcticterns) | 08/11/2026 |
+| 39 | `chim_ruoi_bay_lui` | Hummingbird secrets (loài chim duy nhất có “số lùi”; có loài vỗ cánh ~100 lần/giây; tim > 1.000 nhịp/phút; chim ruồi ong ở Cuba nặng hơn một hạt hạnh nhân một chút) | National Geographic | không ghi năm | [link](https://www.nationalgeographic.com/magazine/article/hummingbird-secrets-speed-worlds-smallest-bird) | 08/11/2026 |
+| 40 | `tac_ke_hoa_doi_mau` | Teyssier, J., Saenko, S. V., van der Marel, D. & Milinkovitch, M. C. Photonic crystals cause active colour change in chameleons | Nature Communications | 2015 | [link](https://doi.org/10.1038/ncomms7368) | 08/11/2026 |
+| 41 | `tac_ke_hoa_doi_mau` | Researchers reveal how the chameleon changes colour (Teyssier, J. và cộng sự, Nature Communications 2015; Đại học Geneva, Milinkovitch; tinh thể nano guanine trong tế bào da; giãn ~30%; xanh lá → vàng) | CORDIS (Ủy ban châu Âu) | 2015 | [link](https://cordis.europa.eu/article/id/116503-trending-science-researchers-reveal-how-the-chameleon-changes-colour) | 08/11/2026 |
+| 42 | `bo_hung_ngan_ha` | Dacke, M. và cộng sự. Dung beetles use the Milky Way for orientation | Current Biology | 2013 | [link](https://doi.org/10.1016/j.cub.2012.12.034) | 08/11/2026 |
+| 43 | `bo_hung_ngan_ha` | Dung beetles use the Milky Way to navigate at night (Dacke và cộng sự, Current Biology 2013; Đại học Lund; nhà mô phỏng bầu trời; tấm che trên đầu thì đi lòng vòng; có lẽ là lần đầu thấy ở động vật) | EarthSky | 2013 | [link](https://earthsky.org/earth/dung-beetles-use-the-milky-way-to-navigate-at-night/) | 08/11/2026 |
+| 44 | `kien_trong_nam` | Leafcutter ants (không ăn lá mà ăn nấm; trồng nấm gần 60 triệu năm; con người ~10.000 năm; tổ hàng triệu kiến thợ) | Smithsonian Tropical Research Institute | không ghi năm | [link](https://stri.si.edu/node/24899) | 08/11/2026 |
+| 45 | `ca_thoi_loi_chop_mat` | Aiello, B. R. và cộng sự. The origin of blinking in both mudskippers and tetrapods is linked to life on land | PNAS | 2023 | [link](https://doi.org/10.1073/pnas.2220404120) | 08/11/2026 |
+| 46 | `ca_thoi_loi_chop_mat` | Mudskippers could be key to understanding evolution of blinking (PNAS 2023; kéo mắt xuống hốc mắt; giữ ướt, sạch, bảo vệ; không cần cơ mới; phần lớn thời gian ở trên cạn) | ScienceDaily (tin của Penn State) | 2023 | [link](https://sciencedaily.com/releases/2023/04/230424223105.htm) | 08/11/2026 |
+| 47 | `doi_khong_mu` | Are bats blind? (“No, bats are not blind”; mắt nhỏ nhưng rất nhạy, không thấy màu sắc rõ nét như người) | U.S. Geological Survey (USGS) | không ghi năm | [link](https://www.usgs.gov/faqs/are-bats-blind) | 08/11/2026 |
+| 48 | `ca_voi_hat` | Garland, E. C. và cộng sự. Dynamic horizontal cultural transmission of humpback whale song at the ocean basin scale | Current Biology | 2011 | [link](https://doi.org/10.1016/j.cub.2011.03.019) | 08/11/2026 |
+| 49 | `ca_voi_hat` | Humpback whales spread songs across Pacific (Garland, E. C. và cộng sự, Current Biology 2011; 11 năm, 6 quần thể; bài hát lan từ đông Úc tới Polynesia thuộc Pháp trong ~2 năm; chỉ con đực hát) | University of Queensland | 2011 | [link](https://news.uq.edu.au/2011-04-15-humpback-whales-spread-songs-across-pacific) | 08/11/2026 |
+| 50 | `than_lan_bay` | Dehling, J. M. How lizards fly: A novel type of wing in animals (5–7 xương sườn dài đỡ màng da; chân trước áp vào mép cánh; lượn xa nhất ~26 m; Draco dussumieri ở Ấn Độ) | PLoS ONE (bản trên PMC) | 2017 | [link](https://pmc.ncbi.nlm.nih.gov/articles/PMC5728497) | 08/11/2026 |
+| 51 | `mai_nha_xanh` | Lee, K. E., Williams, K. J. H., Sargent, L. D., Williams, N. S. G. & Johnson, K. A. 40-second green roof views sustain attention: The role of micro-breaks in attention restoration | Journal of Environmental Psychology | 2015 | [link](https://doi.org/10.1016/j.jenvp.2015.04.003) | 08/11/2026 |
+| 52 | `mai_nha_xanh` | Tin của Đại học Melbourne (150 sinh viên, nghỉ 40 giây) | ScienceDaily | 2015 | [link](https://sciencedaily.com/releases/2015/05/150526093611.htm) | 08/11/2026 |
+| 53 | `tieng_chim` | Hammoud, R. và cộng sự. Smartphone-based ecological momentary assessment reveals mental health benefits of birdlife | Scientific Reports | 2022 | [link](https://doi.org/10.1038/s41598-022-20207-6) | 08/11/2026 |
+| 54 | `tieng_chim` | Feeling chirpy: being around birds is linked to lasting mental health benefits (1.292 người, ứng dụng Urban Mind; mối liên hệ, có thể kéo dài đến 8 giờ) | King's College London | 2022 | [link](https://www.kcl.ac.uk/news/feeling-chirpy-being-around-birds-is-linked-to-lasting-mental-health-benefits) | 08/11/2026 |
+| 55 | `cam_giac_kinh_ngac` | Sturm, V. E. và cộng sự. Big smile, small self: Awe walks promote prosocial positive emotions in older adults | Emotion | 2022 (đăng trực tuyến 2020) | [link](https://pubmed.ncbi.nlm.nih.gov/32955293/) | 08/11/2026 |
+| 56 | `cam_giac_kinh_ngac` | 'Awe walks' boost emotional well-being (52 người lớn tuổi, đi dạo ít nhất 15 phút mỗi tuần trong 8 tuần; ảnh tự chụp) | UCSF Psychiatry and Behavioral Sciences | 2020 | [link](https://psychiatry.ucsf.edu/news/awe-walks-boost-emotional-well-being) | 08/11/2026 |
+| 57 | `mui_mua` | Bear, I. J. & Thomas, R. G. Nature of argillaceous odour (bài đặt tên “petrichor”) | Nature | 1964 | [link](https://doi.org/10.1038/201993a0) | 08/11/2026 |
+| 58 | `mui_mua` | Joung, Y. S. & Buie, C. R. Aerosol generation by raindrop impact on soil | Nature Communications | 2015 | [link](https://doi.org/10.1038/ncomms7083) | 08/11/2026 |
+| 59 | `mui_mua` | How rain evolved its distinct scent (geosmin do vi khuẩn Streptomyces trong đất tạo ra; mũi người rất nhạy với geosmin) | Smithsonian Magazine | 2020 | [link](https://www.smithsonianmag.com/smart-news/smell-rain-explained-180974692/) | 08/11/2026 |
+| 60 | `canh_co_nuoc` | White, M. và cộng sự. Blue space: The importance of water for preference, affect, and restorativeness ratings of natural and built scenes | Journal of Environmental Psychology | 2010 | [link](https://doi.org/10.1016/j.jenvp.2010.04.004) | 08/11/2026 |
+| 61 | `canh_co_nuoc` | Trang công bố (120 bức ảnh; hai nghiên cứu) | University of Plymouth Research Portal | 2010 | [link](https://researchportal.plymouth.ac.uk/en/publications/blue-space-the-importance-of-water-for-preference-affect-and-rest/) | 08/11/2026 |
+| 62 | `thay_chau_cay` | Lee, M., Lee, J., Park, B.-J. & Miyazaki, Y. Interaction with indoor plants may reduce psychological and physiological stress by suppressing autonomic nervous system activity in young adults: a randomized crossover study | Journal of Physiological Anthropology | 2015 | [link](https://doi.org/10.1186/s40101-015-0060-8) | 08/11/2026 |
+| 63 | `thay_chau_cay` | Bản đầy đủ (24 nam thanh niên; thay chậu cây và gõ máy, mỗi việc 15 phút) | PubMed Central | 2015 | [link](https://pmc.ncbi.nlm.nih.gov/articles/PMC4419447) | 08/11/2026 |
+| 64 | `tam_rung` | Park, B. J. và cộng sự. The physiological effects of Shinrin-yoku (taking in the forest atmosphere or forest bathing): evidence from field experiments in 24 forests across Japan (15(1): 18–26) | Environmental Health and Preventive Medicine | 2010 (đăng trực tuyến 2009) | [link](https://doi.org/10.1007/s12199-009-0086-9) | 08/11/2026 |
+| 65 | `tam_rung` | Park, B. J. và cộng sự. The physiological effects of Shinrin-yoku: evidence from field experiments in 24 forests across Japan (280 nam sinh viên, 12 người mỗi khu rừng) | Environmental Health and Preventive Medicine | 2010 | [link](https://pubmed.ncbi.nlm.nih.gov/19568835/) | 08/11/2026 |
+| 66 | `truong_nhieu_cay` | Dadvand, P. và cộng sự. Green spaces and cognitive development in primary schoolchildren (2.593 học sinh, 36 trường ở Barcelona) | PNAS | 2015 | [link](https://doi.org/10.1073/pnas.1503402112) | 08/11/2026 |
+| 67 | `truong_nhieu_cay` | Tóm tắt trên PubMed | PubMed | 2015 | [link](https://pubmed.ncbi.nlm.nih.gov/26080420/) | 08/11/2026 |
+| 68 | `son_doong` | Vietnam Cave (đoàn Anh vào hang mùa xuân 2009; đặt vừa dãy nhà 40 tầng; trần sụt cho nắng vào, cây mọc; mây mỏng gần trần) | National Geographic | 2011 | [link](https://www.nationalgeographic.com/magazine/article/vietnam-cave) | 08/11/2026 |
+| 69 | `son_doong` | Hang Sơn Đoòng cave (Hồ Khanh, 1990, trú mưa và thấy sương tuôn ra từ cửa hang; 2009 khảo sát; rừng dưới hố sụt) | BBC Wildlife (Discover Wildlife) | không ghi năm | [link](https://www.discoverwildlife.com/environment/hang-son-doong-cave) | 08/11/2026 |
+| 70 | `giot_nuoc_9_ngay` | The Water Cycle (nước ở khí quyển ~9 ngày; đại dương vài nghìn năm; sông 12–20 ngày; băng > 1.000 năm) | NOAA JetStream | không ghi năm | [link](https://www.noaa.gov/jetstream/max-what-cycle) | 08/11/2026 |
+| 71 | `set_hai_lan` | Lightning Myths (sét hay đánh lại cùng chỗ; Empire State trung bình 23 lần/năm) | NOAA National Weather Service | không ghi năm | [link](https://www.weather.gov/safety/lightning-myths) | 08/11/2026 |
+| 72 | `set_hai_lan` | Lightning Temperature (làm không khí nóng ~50.000 °F, gấp 5 lần bề mặt Mặt Trời) | NOAA National Weather Service | không ghi năm | [link](https://weather.gov/safety/lightning-temperature) | 08/11/2026 |
+| 73 | `set_hai_lan` | Thunder (đếm giây từ chớp đến sấm, 5 giây ≈ 1 dặm; thẻ đổi thành ~3 giây ≈ 1 km) | NOAA National Weather Service | không ghi năm | [link](https://www.weather.gov/safety/lightning-science-thunder) | 08/11/2026 |
+| 74 | `cau_vong_tron` | What Causes a Rainbow? (ánh sáng khúc xạ, phản xạ trong giọt nước; Mặt Trời sau lưng; cầu vồng là vòng tròn, từ máy bay có thể thấy cả vòng) | NOAA SciJinks | không ghi năm | [link](https://scijinks.gov/rainbow) | 08/11/2026 |
+| 75 | `tam_trai_dat` | Core (lõi trong chủ yếu là sắt, bán kính ~1.220 km, ~5.200 °C, rắn vì áp suất ~3,6 triệu atm; ranh giới lõi trong–ngoài ~6.000 °C, “as hot as the surface of the sun”) | National Geographic Education | không ghi năm | [link](https://education.nationalgeographic.org/resource/core/) | 08/11/2026 |
+| 76 | `everest_day_bien` | Summit limestone (đá vôi Qomolangma; mảnh bọ ba thùy, tay cuộn, huệ biển; ~470 triệu năm; Ấn Độ va vào châu Á, vẫn đang tiếp diễn) | Montana State University | không ghi năm | [link](https://montana.edu/everest/facts/summit-limestone.html) | 08/11/2026 |
+| 77 | `vuc_mariana` | How deep is the ocean? (điểm sâu nhất đại dương, ở rãnh Mariana, sâu 10.935 m) | NOAA Ocean Exploration | không ghi năm | [link](https://oceanexplorer.noaa.gov/facts/ocean-depth.html) | 08/11/2026 |
+| 78 | `vuc_mariana` | How deep is the ocean? (vực Challenger 10.935 m; Everest 8.849 m; Piccard và Walsh 1960) | BBC Science Focus | không ghi năm | [link](https://www.sciencefocus.com/planet-earth/how-deep-is-the-ocean) | 08/11/2026 |
+| 79 | `bui_sahara_amazon` | Yu, H. và cộng sự. The fertilizing role of African dust in the Amazon rainforest: A first multiyear assessment based on data from CALIPSO (42: 1984–1991) | Geophysical Research Letters | 2015 | [link](https://doi.org/10.1002/2015GL063040) | 08/11/2026 |
+| 80 | `bui_sahara_amazon` | Satellite Tracks Saharan Dust To Amazon In 3-D (CALIPSO 2007–2013; trung bình 27,7 triệu tấn/năm rơi xuống Amazon; ~22.000 tấn phosphorus, gần bằng lượng mất vì mưa và lũ) | NASA Scientific Visualization Studio | 2015 | [link](https://svs.gsfc.nasa.gov/11775) | 08/11/2026 |
+| 81 | `bang_chuyen_dai_duong` | The Global Conveyor Belt (nước lạnh, mặn chìm ở vùng cực; vài cm/giây; ~1.000 năm cho một mét khối nước đi hết vòng) | NOAA Ocean Service | không ghi năm | [link](https://oceanservice.noaa.gov/education/tutorial_currents/05conveyor2.html) | 08/11/2026 |
+| 82 | `nhat_trieu_vinh_bac_bo` | Geographical characteristics of Vietnam's coastal regions (nhật triều Vịnh Bắc Bộ “one of the most typical globally”, một lần nước lớn và một lần nước ròng mỗi ngày, rất đều đặn) | Trung tâm Phối hợp Tìm kiếm Cứu nạn Hàng hải Việt Nam (VMRCC) | không ghi năm | [link](https://www.vmrcc.gov.vn/en/hydrometeorological-information/geographical-characteristics-of-vietnam-s-coastal-regions-498.html) | 08/11/2026 |
+| 83 | `nhat_trieu_vinh_bac_bo` | Tidal cycles (định nghĩa nhật triều, bán nhật triều; nhiều bờ biển có hai lần nước lớn mỗi ngày) | NOAA Ocean Service | không ghi năm | [link](https://oceanservice.noaa.gov/education/tutorial_tides/tides07_cycles.html) | 08/11/2026 |
+| 84 | `nam_anh_sang` | What Is a Light-Year? (~300.000 km/giây; ~9 nghìn tỉ km; sao gần nhất sau Mặt Trời ~4,3 năm ánh sáng; tâm Ngân Hà ~26.000 năm ánh sáng) | NASA Space Place | không ghi năm | [link](https://spaceplace.nasa.gov/light-year) | 08/11/2026 |
+| 85 | `mat_trang_xa_dan` | The Apollo Experiment That Keeps on Giving (gương phản xạ Apollo 11; laser từ Mỹ, Pháp, Ý, Đức; chính xác vài mm; Mặt Trăng xa thêm 3,8 cm/năm) | NASA Jet Propulsion Laboratory | 2019 | [link](https://www.jpl.nasa.gov/news/the-apollo-experiment-that-keeps-on-giving/) | 08/11/2026 |
+| 86 | `thien_vuong_nam_nghieng` | Uranus: Facts (nghiêng ~97,77°; năm ~84 năm Trái Đất; mùa đông tối 21 năm; Herschel 1781, hành tinh đầu tiên tìm bằng kính thiên văn) | NASA Science | không ghi năm | [link](https://science.nasa.gov/Uranus/facts) | 08/11/2026 |
+| 87 | `hoang_hon_xanh_sao_hoa` | PIA19400: Sunset in Mars' Gale Crater (Curiosity, 15/4/2015, sol 956; bụi mịn cho ánh sáng xanh đi qua dễ hơn, xanh tụ gần phía Mặt Trời) | NASA Jet Propulsion Laboratory | 2015 | [link](https://www.jpl.nasa.gov/images/pia19400-sunset-in-mars-gale-crater/) | 08/11/2026 |
+| 88 | `trai_tim_diem_vuong` | NASA's New Horizons Discovers Frozen Plains in the Heart of Pluto's ‘Heart’ (17/7/2015; Tombaugh Regio theo tên Clyde Tombaugh, người tìm ra Sao Diêm Vương năm 1930; đồng bằng “no more than 100 million years old”) | NASA | 2015 | [link](https://www.nasa.gov/news-release/nasas-new-horizons-discovers-frozen-plains-in-the-heart-of-plutos-heart) | 08/11/2026 |
+| 89 | `trai_tim_diem_vuong` | New Horizons discovers frozen plains in Pluto's heart (Tombaugh Regio theo tên Clyde Tombaugh, người tìm ra Pluto năm 1930; đồng bằng băng “no more than 100 million years old”) | Astronomy Now | 2015 | [link](https://astronomynow.com/2015/07/17/new-horizons-discovers-frozen-plains-in-plutos-heart/) | 08/11/2026 |
+| 90 | `enceladus_phun_bang` | Enceladus (Cassini) (~500 km; phản chiếu tốt nhất Hệ Mặt Trời; hơi nước và hạt băng phun từ bốn “vằn hổ” ở cực nam; đại dương nước mặn; vành đai E) | NASA Science | không ghi năm | [link](https://science.nasa.gov/mission/cassini/science/enceladus) | 08/11/2026 |
+| 91 | `sao_lap_lanh` | Curiosities: Why do stars appear to twinkle in the night sky? (James Lattis; túi khí nóng lạnh bẻ cong ánh sáng; hành tinh là đĩa nên ít lấp lánh) | University of Wisconsin–Madison News | không ghi năm | [link](https://news.wisc.edu/curiosities-why-do-stars-appear-to-twinkle-in-the-night-sky) | 08/11/2026 |
+| 92 | `bui_sao` | Chandra Chemistry (hydrogen từ Vụ Nổ Lớn; carbon, oxygen tạo trong sao; nhiều sắt trong cơ thể từ các vụ nổ siêu tân tinh) | Chandra X-ray Center (Harvard & Smithsonian / NASA) | không ghi năm | [link](https://chandra.cfa.harvard.edu/chemistry/) | 08/11/2026 |
+| 93 | `hanh_tinh_ngoai` | The NASA Exoplanet Archive hits 6,000 planets (17/9/2025; hành tinh đầu tiên quanh sao giống Mặt Trời năm 1995; > 8.000 ứng viên; hành tinh quay quanh hai sao; hành tinh cỡ Sao Mộc gần sao hơn Sao Thủy gần Mặt Trời) | Caltech/IPAC (NASA Exoplanet Archive) | 2025 | [link](https://www.ipac.caltech.edu/news/the-nasa-exoplanet-archive-hits-6-000-planets) | 08/11/2026 |
+| 94 | `van_ly_truong_thanh` | Can you see the Great Wall of China from space? (không thấy bằng mắt thường từ Mặt Trăng) | Britannica | không ghi năm | [link](https://www.britannica.com/question/Can-you-see-the-Great-Wall-of-China-from-space) | 08/11/2026 |
+| 95 | `van_ly_truong_thanh` | China's Wall Less Great in View from Space (Dương Lợi Vĩ không thấy từ quỹ đạo; màu vật liệu giống đất xung quanh; dễ thấy nhất là thành phố sáng đèn ban đêm) | NASA (bản lưu) | 2005 | [link](https://webarchive.library.unt.edu/eot2008/20080917153200/http://www.nasa.gov/vision/space/workinginspace/great_wall.html) | 08/11/2026 |
+| 96 | `huong_duong_dong_ho` | Atamian, H. S. và cộng sự. Circadian regulation of sunflower heliotropism, floral orientation, and pollinator visits (353: 587) | Science | 2016 | [link](https://doi.org/10.1126/science.aaf9793) | 08/11/2026 |
+| 97 | `huong_duong_dong_ho` | Sunflowers Move by the Clock (Atamian và cộng sự, Science 2016; cây non theo Mặt Trời và quay về hướng đông ban đêm; đồng hồ sinh học; hoa lớn nhìn hướng đông, côn trùng ghé gấp 5 lần) | UC Davis | 2016 | [link](https://www.ucdavis.edu/news/sunflowers-move-clock) | 08/11/2026 |
+| 98 | `cay_keu_khi_khat` | Khait, I. và cộng sự. Sounds emitted by plants under stress are airborne and informative | Cell | 2023 | [link](https://doi.org/10.1016/j.cell.2023.03.009) | 08/11/2026 |
+| 99 | `cay_keu_khi_khat` | Stressed Plants ‘Cry’—and Some Animals Can Probably Hear Them (Khait và cộng sự, Cell 2023; cà chua, thuốc lá; ~35 tiếng/giờ khi thiếu nước, ~1 tiếng/giờ khi đủ nước; 20–100 kHz; cơ chế và việc động vật có nghe không còn chưa rõ) | Scientific American | 2023 | [link](https://www.scientificamerican.com/article/stressed-plants-cry-and-some-animals-can-probably-hear-them/) | 08/11/2026 |
+| 100 | `mang_luoi_nam` | Karst, J., Jones, M. D. & Hoeksema, J. D. Positive citation bias and overinterpreted results lead to misinformation on common mycorrhizal networks in forests | Nature Ecology & Evolution | 2023 | [link](https://doi.org/10.1038/s41559-023-01986-1) | 08/11/2026 |
+| 101 | `mang_luoi_nam` | The “wood-wide web” concept, which has taken root in popular media, challenged by researchers (Karst, Jones & Hoeksema, Nature Ecology & Evolution 2023; mạng nấm có thật, nhưng chuyện chia thức ăn cho cây con còn ít bằng chứng ngoài rừng) | ScienceDaily (tin của Đại học Alberta) | 2023 | [link](https://sciencedaily.com/releases/2023/02/230213113740.htm) | 08/11/2026 |
+| 102 | `la_sen_tu_sach` | Self-Cleaning Materials: Inspiration (u nhỏ vài micromet + sáp nano; giữ không khí; giọt nước lăn mang theo bụi; sơn, ngói, vải) | Scientific American | không ghi năm | [link](https://www.scientificamerican.com/article/self-cleaning-materials-inspiration/) | 08/11/2026 |
+| 103 | `la_sen_tu_sach` | Barthlott, W. & Neinhuis, C. Purity of the sacred lotus, or escape from contamination in biological surfaces | Planta | 1997 | [link](https://doi.org/10.1007/s004250050096) | 08/11/2026 |
+| 104 | `tan_cay_ngai_ngung` | Some trees may ‘social distance’ to avoid disease (crown shyness; mô tả từ những năm 1920; giả thuyết gió làm cành cọ nhau; nguyên nhân chưa ngã ngũ) | National Geographic | 2020 | [link](https://www.nationalgeographic.com/science/article/tree-crown-shyness-forest-canopy) | 08/11/2026 |
+| 105 | `hat_cha_la_2000_nam` | Sallon, S. và cộng sự. Germination, genetics, and growth of an ancient date seed (320(5882): 1464) | Science | 2008 | [link](https://doi.org/10.1126/science.1153600) | 08/11/2026 |
+| 106 | `hat_cha_la_2000_nam` | 2,000 year old “Phoenix” seed rises from the ashes (Sallon và cộng sự, Science 2008; hạt ở Masada ~2.000 năm; gieo năm 2005, nảy mầm sau ~8 tuần; “Methuselah”; kỷ lục cũ là hạt sen ~1.300 năm) | National Geographic | 2008 | [link](https://www.nationalgeographic.com/science/article/2000-year-old-phoenix-seed-rises-from-the-ashes) | 08/11/2026 |
+| 107 | `cay_lon_tu_khong_khi` | What are plants made of? (van Helmont, ~400 năm trước, cây liễu 5 năm, đất gần như không nhẹ đi; phần lớn chất khô từ không khí, đất chỉ góp ít khoáng) | Davidson Institute of Science Education (Weizmann Institute) | 2025 | [link](https://davidson.org.il/read-experience/en/reasonabledoubt-en/what-plants-made-of) | 08/11/2026 |
+| 108 | `pando_mot_cay` | Pando (hơn 40.000 cây, 106 mẫu Anh ≈ 43 ha, gần 13 triệu pound, một dòng vô tính từ một hạt, sinh vật lớn nhất từng tìm thấy) | USDA Forest Service, Fishlake National Forest | không ghi năm | [link](https://www.fs.usda.gov/r04/fishlake/recreation/explore-forest/pando) | 08/11/2026 |
+| 109 | `pando_mot_cay` | Pando: A Forest of One (~6.000 tấn, sinh vật nặng nhất được biết; chung một bộ rễ) | EarthDate | không ghi năm | [link](https://www.earthdate.org/pando-a-forest-of-one) | 08/11/2026 |
+| 110 | `chu_cho_canh_cua` | Understanding the stress response | Harvard Health Publishing (Harvard Medical School) | 2011, duyệt lại 2024 | [link](https://www.health.harvard.edu/staying-healthy/understanding-the-stress-response) | 08/11/2026 |
+| 111 | `duong_mon_trong_nao` | Draganski, B. và cộng sự. Neuroplasticity: Changes in grey matter induced by training (427: 311–312) | Nature | 2004 | [link](https://doi.org/10.1038/427311a) | 08/11/2026 |
+| 112 | `duong_mon_trong_nao` | Juggling juggles the brain (về Draganski, B. và cộng sự. Neuroplasticity: Changes in grey matter induced by training, Nature 427: 311–312) | Neuroscience for Kids (Eric Chudler, University of Washington) | 2004 | [link](https://staff.washington.edu/chudler/jugg.html) | 08/11/2026 |
+| 113 | `chim_on_bai_hat` | Dave, A. S. & Margoliash, D. Song replay during sleep and computational rules for sensorimotor vocal learning (290(5492): 812–816) | Science | 2000 | [link](https://doi.org/10.1126/science.290.5492.812) | 08/11/2026 |
+| 114 | `chim_on_bai_hat` | Singing silently during sleep helps birds learn song (về Dave, A. S. & Margoliash, D., Science 2000) | UChicago Medicine | 2000 | [link](https://www.uchicagomedicine.org/forefront/news/singing-silently-during-sleep-helps-birds-learn-song) | 08/11/2026 |
+| 115 | `chim_on_bai_hat` | Sleep On It: How Snoozing Strengthens Memories | NIH News in Health (Viện Y tế Quốc gia Hoa Kỳ) | 2013 (số tháng 4) | [link](https://newsinhealth.nih.gov/node/1481) | 08/11/2026 |
+| 116 | `nao_dang_lon` | The Teen Brain: 7 Things to Know | National Institute of Mental Health (NIMH) | 2023 (bản sửa, NIH Publication No. 23-MH-8078) | [link](https://www.nimh.nih.gov/health/publications/the-teen-brain-7-things-to-know) | 08/11/2026 |
+| 117 | `to_mo_giup_nho` | Gruber, M. J., Gelman, B. D. & Ranganath, C. States of curiosity modulate hippocampus-dependent learning via the dopaminergic circuit (84(2): 486–496) | Neuron | 2014 | [link](https://doi.org/10.1016/j.neuron.2014.08.060) | 08/11/2026 |
+| 118 | `to_mo_giup_nho` | Tin của UC Davis về nghiên cứu | ScienceDaily | 2014 | [link](https://www.sciencedaily.com/releases/2014/10/141002123631.htm) | 08/11/2026 |
+| 119 | `bi_mat_hoi_tho_ra` | Balban và cộng sự. Brief structured respiration practices enhance mood and reduce physiological arousal (108 người lớn tham gia) | Cell Reports Medicine | 2023 | [link](https://pmc.ncbi.nlm.nih.gov/articles/PMC9873947) | 08/11/2026 |
+| 120 | `nghi_ngan_giup_hoc` | Bönstrup, M. và cộng sự. A rapid form of offline consolidation in skill learning (29(8): 1346–1351) | Current Biology | 2019 | [link](https://doi.org/10.1016/j.cub.2019.02.049) | 08/11/2026 |
+| 121 | `nghi_ngan_giup_hoc` | Want to learn a new skill? Take some short breaks (về Bönstrup, M. và cộng sự, Current Biology 2019) | NINDS, National Institutes of Health | 2019 | [link](https://www.ninds.nih.gov/News-Events/News-and-Press-Releases/Press-Releases/Want-learn-new-skill-Take-some-short-breaks) | 08/11/2026 |
+| 122 | `nao_an_nang_luong` | Boyd, R. Do People Only Use 10 Percent of Their Brains? (phỏng vấn nhà thần kinh học Barry Gordon, Johns Hopkins) | Scientific American | 2008 (07/02/2008) | [link](https://www.scientificamerican.com/article/do-people-only-use-10-percent-of-their-brains/) | 08/11/2026 |
+| 123 | `nguoi_dua_tin` | Keltner, D. & Gross, J. J. Functional accounts of emotions (13(5): 467–480) | Cognition and Emotion | 1999 | [link](https://www.personal.kent.edu/%7Edfresco/CBT_Readings/keltner_%26_gross.pdf) | 08/11/2026 |
+| 124 | `ngap_va_cuoi_lay` | Joly-Mascheroni, R. M., Senju, A. & Shepherd, A. J. Dogs catch human yawns (4(5): 446–448) | Biology Letters | 2008 | [link](https://doi.org/10.1098/rsbl.2008.0333) | 08/11/2026 |
+| 125 | `ngap_va_cuoi_lay` | Warren, J. E. và cộng sự. Positive emotions preferentially engage an auditory–motor “mirror” system (26(50): 13067–13075) | Journal of Neuroscience | 2006 | [link](https://doi.org/10.1523/JNEUROSCI.3907-06.2006) | 08/11/2026 |
+| 126 | `ngap_va_cuoi_lay` | Yong, E. Dogs catch yawns from humans (về Joly-Mascheroni, Senju & Shepherd, Biology Letters 2008; 21 trên 29 chú chó) | National Geographic | 2008 | [link](https://www.nationalgeographic.com/science/article/dogs-catch-yawns-from-humans) | 08/11/2026 |
+| 127 | `ngap_va_cuoi_lay` | Study shows laughter is contagious (về Warren và cộng sự, Journal of Neuroscience 2006; nhóm Sophie Scott, UCL) | ScienceDaily | 2006 | [link](https://sciencedaily.com/releases/2006/12/061212213922.htm) | 08/11/2026 |
+| 128 | `goi_ten_cam_xuc` | Lieberman, Eisenberger, Crockett, Tom, Pfeifer & Way. Putting feelings into words: Affect labeling disrupts amygdala activity in response to affective stimuli | Psychological Science | 2007 | [link](https://pubmed.ncbi.nlm.nih.gov/17576282/) | 08/11/2026 |
+| 129 | `goi_ten_cam_xuc` | Tin của UCLA về nghiên cứu (mô tả thí nghiệm, lời tác giả: hiệu ứng có lẽ không lớn) | ScienceDaily | 2007 | [link](https://www.sciencedaily.com/releases/2007/06/070622090727.htm) | 08/11/2026 |
+| 130 | `vui_buon_cung_luc` | Larsen, J. T., To, Y. M. & Fireman, G. Children's understanding and experience of mixed emotions | Psychological Science | 2007 | [link](https://doi.org/10.1111/j.1467-9280.2007.01870.x) | 08/11/2026 |
+| 131 | `vui_buon_cung_luc` | Trang bài báo (trẻ 5–12 tuổi) | Association for Psychological Science | 2007 | [link](https://www.psychologicalscience.org/journals/psychological-science/j.1467-9280.2007.01870.x/) | 08/11/2026 |
+| 132 | `dem_dieu_biet_on` | Froh, J. J., Sefick, W. J. & Emmons, R. A. Counting blessings in early adolescents: An experimental study of gratitude and subjective well-being | Journal of School Psychology | 2008 | [link](https://doi.org/10.1016/j.jsp.2007.03.005) | 08/11/2026 |
+| 133 | `dem_dieu_biet_on` | A lesson in thanks (về Froh, Sefick & Emmons, Counting blessings in early adolescents, Journal of School Psychology 2008; 221 học sinh cấp hai) | Greater Good Magazine (UC Berkeley) | 2007 | [link](https://greatergood.berkeley.edu/article/item/a_lesson_in_thanks/) | 08/11/2026 |
+| 134 | `goi_minh_bang_ten` | Kross, E. và cộng sự. Self-talk as a regulatory mechanism: How you do it matters | Journal of Personality and Social Psychology | 2014 | [link](https://doi.org/10.1037/a0035173) | 08/11/2026 |
+| 135 | `goi_minh_bang_ten` | Talking in the 3rd person lowers anxiety: Study (về Kross, E. và cộng sự, Journal of Personality and Social Psychology 2014) | University of Michigan, Department of Psychology | 2014 | [link](https://prod.lsa.umich.edu/psych/news-events/all-news/archived-news/2014/02/talking-in-the-3rd-person-lowers-anxiety--study.html) | 08/11/2026 |
+| 136 | `goi_minh_bang_ten` | Could this trick help you perform better in stressful situations? (mô tả thí nghiệm bài nói 5 phút, người chấm, ví dụ “You can do it, John”) | World Economic Forum | 2015 | [link](https://weforum.org/stories/2015/06/could-this-trick-help-you-perform-better-in-stressful-situations) | 08/11/2026 |
+| 137 | `dem_hoi_tho` | Zaccaro, A. và cộng sự. How breath-control can change your life: A systematic review on psycho-physiological correlates of slow breathing (15 nghiên cứu) | Frontiers in Human Neuroscience | 2018 | [link](https://www.frontiersin.org/articles/10.3389/fnhum.2018.00353/full) | 08/11/2026 |
+| 138 | `nam_dieu_quanh_minh` | Field Book Project (sổ tay thực địa ghi nơi sống, thời tiết, quan sát và cả cảm xúc; hơn 9.500 cuốn đã lập danh mục) | Smithsonian Institution Archives | không ghi năm | [link](https://siarchives.si.edu/about/field-book-project) | 08/11/2026 |
+| 139 | `mot_phut_ngam_may` | How much does a cloud weigh? (mây tích 1 km³ × 0,5 g/m³ ≈ 500.000 kg) | USGS Water Science School | không ghi năm | [link](https://www.usgs.gov/water-science-school/science/how-much-does-a-cloud-weigh) | 08/11/2026 |
+| 140 | `ban_do_cam_xuc` | Nummenmaa, L., Glerean, E., Hari, R. & Hietanen, J. K. Bodily maps of emotions | PNAS | 2014 | [link](https://doi.org/10.1073/pnas.1321664111) | 08/11/2026 |
+| 141 | `ban_do_cam_xuc` | Tóm tắt trên PubMed | PubMed | 2014 | [link](https://pubmed.ncbi.nlm.nih.gov/24379370/) | 08/11/2026 |
+| 142 | `ban_do_cam_xuc` | Mapping emotions on the body: love makes us warm all over (khoảng 700 người ở Phần Lan, Thụy Điển, Đài Loan) | WGBH | 2014 | [link](https://www.wgbh.org/news/2014-01-06/mapping-emotions-on-the-body-love-makes-us-warm-all-over) | 08/11/2026 |
+| 143 | `mui_goi_ky_niem` | Konnikova, M. Smells like old times (Herz; Willander & Larsson 2006, Đại học Stockholm) | Scientific American Mind | 2012 | [link](https://www.scientificamerican.com/article/smells-like-old-times) | 08/11/2026 |
+| 144 | `mui_goi_ky_niem` | Willander, J. & Larsson, M. Smell your way back to childhood: Autobiographical odor memory (13: 240–244) | Psychonomic Bulletin & Review | 2006 | [link](https://doi.org/10.3758/BF03193837) | 08/11/2026 |
+| 145 | `dem_chim_15_phut` | About the Great Backyard Bird Count (4 ngày giữa tháng Hai hằng năm, ít nhất 15 phút; gần đây hơn 450.000 người gửi ghi chép) | National Audubon Society | 2026 | [link](https://www.audubon.org/community-science/great-backyard-bird-count) | 08/11/2026 |
 
 ## Điểm cần soát kỹ (cho người kiểm tra)
 
@@ -952,23 +978,24 @@ Mỗi năm, trong 4 ngày giữa tháng Hai, rất nhiều người khắp thế
 - `truong_nhieu_cay`: so sánh giữa các **trường**, không phải giữa các bạn; một phần mối liên hệ được giải thích bởi khói xe.
 - `dem_chim_15_phut`: thẻ ghi “đã có lần hơn 300.000 người”; trang Audubon (kiểm 08/11/2026) nay ghi gần đây hơn 450.000 người, nên câu trong thẻ vẫn đúng (là mức thấp hơn).
 - `vooc_cha_va`: màu lông theo Animal Diversity Web (thân xám, cẳng tay và đuôi trắng, “tất” nâu đỏ); thẻ cố ý **không** nói chuyện ăn lá / dạ dày nhiều ngăn (thế giới Rừng đã có ở voọc mông trắng) và **không** ghi số cá thể ở Sơn Trà (các nguồn báo chí ghi khác nhau theo năm). Nguồn thứ hai là báo Việt Nam News, không phải tổ chức khoa học.
-- `sao_la`: “rừng Vũ Quang” theo WWF; thẻ không ghi tỉnh và không ghi số cá thể còn lại (tránh giọng “sắp mất”).
-- `nhan_bien_bac_cuc`: “hơn 70.000 km mỗi năm” theo Phys.org; “có chú hơn 80.000” theo tóm tắt PNAS. Câu “dài nhất từng đo được” là theo tin năm 2010.
-- `gau_nuoc_vu_tru`: “phần lớn vẫn sống” là kết quả với chân không + tia vũ trụ; khi thêm tia cực tím Mặt Trời thì chỉ một số con sống — thẻ không nói chi tiết này.
+- `sao_la`: “rừng Vũ Quang” theo WWF; thẻ không ghi tỉnh và không ghi số cá thể còn lại (tránh giọng “sắp mất”). Sau kiểm chứng: năm 1992 người ta tìm thấy cặp sừng (không phải hộp sọ); ảnh năm 2013 là lần đầu sau 15 năm thấy sao la ở Việt Nam (thẻ không nhắc lần bắt được ở Lào năm 2010).
+- `nhan_bien_bac_cuc`: “hơn 70.000 km mỗi năm” theo Phys.org; “có chú hơn 80.000” theo tóm tắt PNAS. Kỷ lục năm 2010 đã bị vượt: năm 2016 Đại học Newcastle ghi được một chú bay khoảng 96.000 km, nên thẻ nói “dài nhất từng đo được lúc ấy”.
+- `gau_nuoc_vu_tru`: “phần lớn vẫn khỏe” là kết quả với chân không + tia vũ trụ; khi thêm tia cực tím Mặt Trời thì chỉ một số con sống — thẻ không nói chi tiết này.
 - `ca_thoi_loi_chop_mat`: chưa mở được bản gốc PNAS; dùng tin của Penn State trên ScienceDaily. Thẻ không nói cá thòi lòi sống ở Việt Nam (chưa kiểm được nguồn uy tín).
 - `than_lan_bay`: nghiên cứu quay phim loài Draco dussumieri ở Ấn Độ; câu “sống ở rừng nhiệt đới châu Á” là tổng quát cho chi Draco (chưa kiểm nguồn riêng cho Việt Nam nên thẻ không nhắc Việt Nam).
 - `chim_ruoi_bay_lui`: con số nhịp tim/vỗ cánh là “có thể tới”, theo National Geographic.
 - `set_hai_lan`: NWS ghi “5 giây ≈ 1 dặm”; “khoảng 3 giây ≈ 1 km” là người soạn đổi đơn vị (âm thanh đi ~343 m/giây). Thẻ nói nhiệt độ của **không khí** quanh tia sét (NWS nói rõ: tia sét làm nóng không khí).
 - `tam_trai_dat`: “nóng như bề mặt Mặt Trời” National Geographic nói cho **ranh giới** lõi trong–lõi ngoài (~6.000 °C), không phải cho cả lõi trong (~5.200 °C); thẻ viết đúng như vậy.
 - `everest_day_bien`: gần với ý “đá vôi từ sinh vật biển / hóa thạch / mảng trôi” trong thế giới Núi lửa, nhưng điều mới là **đỉnh Everest** từng là đáy biển; nguồn là trang của Đại học Bang Montana.
-- `bui_sahara_amazon`: NASA nói lượng phốt-pho “gần bằng lượng mất vì mưa và lũ”; thẻ viết “vì nước mưa cuốn trôi” để tránh chữ lũ.
+- `bui_sahara_amazon`: NASA nói lượng phosphorus “gần bằng lượng mất vì mưa và lũ”; thẻ viết “vì nước mưa cuốn trôi” để tránh chữ lũ.
 - `nhat_trieu_vinh_bac_bo`: nguồn chính là trang tiếng Anh của Trung tâm Phối hợp Tìm kiếm Cứu nạn Hàng hải Việt Nam; nên đối chiếu thêm một giáo trình hải dương học Việt Nam nếu bố mẹ muốn chắc hơn.
 - `trai_tim_diem_vuong`: “chưa tới 100 triệu năm tuổi” là ước lượng lúc đầu (2015) của nhóm New Horizons; nguồn là Astronomy Now, không phải trang NASA.
 - `bui_sao`: Chandra nói “nhiều sắt trong cơ thể” đến từ siêu tân tinh, không phải tất cả; thẻ giữ chữ “nhiều phần”.
 - `van_ly_truong_thanh`: từ **quỹ đạo gần** đôi khi chụp được bức tường bằng ống kính (ảnh của Leroy Chiao, 2004–2005), nên thẻ chỉ bác bỏ chuyện “thấy bằng mắt thường từ Mặt Trăng” và kể lời Dương Lợi Vĩ.
-- `mang_luoi_nam`: “mạng nấm nối rễ nhiều cây” là điều đã được chứng minh; còn chuyện cây “nói chuyện”, “gửi thức ăn cho cây con” đang được tranh luận. Thẻ dựa vào bài tổng quan của Karst và cộng sự (2023); đây vẫn là chủ đề các nhà khoa học đang tranh luận.
+- `mang_luoi_nam`: mạng nấm nối rễ nhiều cây có thật, nhưng mới được vẽ bản đồ ở rất ít khu rừng (thẻ nói đúng vậy, không nói “đã được chứng minh”); còn chuyện cây “nói chuyện”, “gửi thức ăn cho cây con” đang được tranh luận. Thẻ dựa vào bài tổng quan của Karst và cộng sự (2023); đây vẫn là chủ đề các nhà khoa học đang tranh luận.
 - `cay_keu_khi_khat`: mới là một nghiên cứu (2023) trong phòng thí nghiệm; thẻ nói rõ chưa biết tiếng kêu sinh ra thế nào và có con vật nào nghe thấy không.
 - `pando_mot_cay`: USDA ghi “hơn 40.000 cây” và “gần 13 triệu pound” (~5.900 tấn); EarthDate ghi ~47.000 thân và ~6.000 tấn. Thẻ dùng “hơn 40.000” và “chừng 6.000 tấn”; không ghi tuổi (các ước lượng rất khác nhau).
 - `cay_lon_tu_khong_khi`: không ghi con số cân nặng của cây liễu (nguồn đã kiểm không có).
+- Tên chất hóa học trong mọi thẻ viết theo sách Khoa học tự nhiên 6 (chương trình 2018): hydrogen, carbon, oxygen, khí carbon dioxide, phosphorus (không viết “ô-xy”, “các-bon”, “khí các-bon-níc”, “phốt-pho”).
 - **Thẻ đã bỏ khi soạn:** “bò có bạn thân” (chỉ tìm thấy luận án và tin báo, chưa thấy bài có bình duyệt); rái cá “nắm tay khi ngủ” (không có trong nguồn uy tín; thẻ rái cá nói chuyện bè và chải lông, vì chuyện quấn tảo bẹ đã có trong thế giới Biển); bài nhịp tim khỉ được chải lông năm 1999 (chỉ có 2 con khỉ, nên dùng nghiên cứu 2007 thay thế).
 - **Nửa sau — đã bỏ hoặc thay khi soạn:** cực quang theo màu khí (thế giới Vũ trụ đã có cực quang); thủy triều do Mặt Trăng (thế giới Vũ trụ đã có, thay bằng thẻ nhật triều Vịnh Bắc Bộ); cây xấu hổ cụp lá (thế giới Rừng đã có); cây bắt ruồi “đếm” số lần chạm (gần với chuyện bẫy côn trùng); sao nơtron “một thìa nặng một tỉ tấn” (chỉ tìm được nguồn tạp chí, và thế giới Vũ trụ đã có sao nơtron); mưa kim cương trên Sao Thiên Vương/Hải Vương và “năm thiên hà” 230 triệu năm (để dành, đủ 10 thẻ); bông tuyết sáu cánh; khối lượng đám mây (đã có ở thẻ `mot_phut_ngam_may`); số cá thể sao la và voọc (tránh giọng “sắp mất”, số liệu đổi theo năm).

@@ -452,7 +452,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "ky_thu",
     quads: ["yellow", "green"],
     title: "Sao la, “kỳ lân châu Á”",
-    body: "Năm 1992, các nhà khoa học Việt Nam và WWF tìm thấy ở rừng Vũ Quang một hộp sọ có hai chiếc sừng song song rất lạ. Đó là sao la, loài thú lớn đầu tiên mới với khoa học sau hơn 50 năm. Sao la kín đáo đến mức phải tới năm 2013, một máy ảnh tự động trong rừng Trường Sơn mới chụp được một con đang đi bên suối.",
+    body: "Năm 1992, các nhà khoa học Việt Nam và WWF tìm thấy ở rừng Vũ Quang một cặp sừng dài, song song rất lạ. Đó là sao la, loài thú lớn đầu tiên mới với khoa học sau hơn 50 năm. Sao la kín đáo đến mức khi một máy ảnh tự động trong rừng Trường Sơn chụp được một con đi bên suối năm 2013, đó là lần đầu sau 15 năm người ta lại thấy sao la ở Việt Nam.",
     tryIt: "Vẽ một chú sao la với hai chiếc sừng song song, đứng giữa một khu rừng thật xanh.",
     source: "WWF, 2013 · Saola rediscovered",
   },
@@ -461,7 +461,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "ky_thu",
     quads: [],
     title: "Voọc chà vá chân nâu, “nữ hoàng linh trưởng”",
-    body: "Voọc chà vá chân nâu được gọi là “nữ hoàng linh trưởng” nhờ bộ lông nhiều màu: thân xám, cẳng tay và đuôi trắng, còn bắp chân như đi đôi tất màu nâu đỏ. Ở Việt Nam, có thể gặp chúng trên bán đảo Sơn Trà, ngay cạnh thành phố Đà Nẵng. Chúng hay nhảy từ cành này sang cành khác bằng cú đẩy của hai chân sau, và thường đi theo những “con đường quen” trên tán rừng.",
+    body: "Voọc chà vá chân nâu được gọi là “nữ hoàng linh trưởng” nhờ bộ lông nhiều màu: thân xám, cẳng tay và đuôi trắng, còn cẳng chân như đi đôi tất màu nâu đỏ. Ở Việt Nam, có thể gặp chúng trên bán đảo Sơn Trà, ngay cạnh thành phố Đà Nẵng. Chúng hay nhảy từ cành này sang cành khác bằng cú đẩy của hai chân sau, và thường đi theo những “con đường quen” trên tán rừng.",
     tryIt: "Tô màu một chú voọc chà vá: xám, trắng, đen và nâu đỏ. Màu nào mình thấy đẹp nhất?",
     source: "Animal Diversity Web (Đại học Michigan) · Pygathrix nemaeus; Việt Nam News · Save the Red-shanked Doucs of Sơn Trà",
   },
@@ -470,7 +470,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "ky_thu",
     quads: ["yellow", "green"],
     title: "Gấu nước đi du hành vũ trụ",
-    body: "Gấu nước (tardigrade) là những con vật tí hon, dài chỉ 0,1 đến 1,5 mi-li-mét. Năm 2007, các nhà khoa học Thụy Điển gửi những chú gấu nước đã được làm khô lên quỹ đạo, cách mặt đất khoảng 270 ki-lô-mét, để chúng ở thẳng ngoài không gian. Về lại Trái Đất, phần lớn vẫn sống khỏe và còn sinh con bình thường.",
+    body: "Gấu nước (tardigrade) là những con vật tí hon, dài chỉ 0,1 đến 1,5 mi-li-mét. Năm 2007, các nhà khoa học Thụy Điển gửi những chú gấu nước đã được làm khô lên quỹ đạo, cách mặt đất khoảng 270 ki-lô-mét, để chúng ở thẳng ngoài không gian. Về lại Trái Đất, phần lớn vẫn khỏe, còn đẻ trứng nở ra gấu nước con bình thường.",
     tryIt: "Vẽ một chú gấu nước tám chân mặc bộ đồ phi hành gia.",
     source: "Jönsson và cộng sự, 2008 · Current Biology",
   },
@@ -479,9 +479,9 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "ky_thu",
     quads: ["yellow", "green"],
     title: "Nhạn biển Bắc Cực đi theo mùa hè",
-    body: "Nhạn biển Bắc Cực nặng chưa tới 125 gam, nhưng mỗi năm bay từ vùng Bắc Cực xuống tận Nam Cực rồi quay về. Năm 2010, các nhà khoa học gắn thiết bị nặng 1,4 gam lên 11 chú chim ở Greenland và Iceland, và thấy mỗi năm chúng bay hơn 70.000 ki-lô-mét, có chú hơn 80.000. Đó là chuyến di cư dài nhất từng đo được ở động vật.",
+    body: "Nhạn biển Bắc Cực nặng chưa tới 125 gam, nhưng mỗi năm bay từ vùng Bắc Cực xuống tận Nam Cực rồi quay về. Năm 2010, các nhà khoa học gắn thiết bị nặng 1,4 gam lên 11 chú chim ở Greenland và Iceland, và thấy mỗi năm chúng bay hơn 70.000 ki-lô-mét, có chú hơn 80.000. Năm 2016, một chú nhạn biển ở Anh còn bay khoảng 96.000 ki-lô-mét, chuyến di cư dài nhất từng đo được lúc ấy.",
     tryIt: "Tìm trên quả địa cầu hoặc bản đồ: từ Greenland xuống Nam Cực xa cỡ nào?",
-    source: "Egevang và cộng sự, 2010 · PNAS",
+    source: "Egevang và cộng sự, 2010 · PNAS; Đại học Newcastle, 2016",
   },
   {
     key: "chim_ruoi_bay_lui",
@@ -497,7 +497,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "ky_thu",
     quads: ["yellow", "green"],
     title: "Tắc kè hoa đổi màu bằng tinh thể tí hon",
-    body: "Năm 2015, nhóm của nhà khoa học Michel Milinkovitch ở Đại học Geneva (Thụy Sĩ) tìm ra cách tắc kè hoa báo đổi màu. Dưới da chúng có một lớp tế bào chứa vô số tinh thể nano xếp thành mạng lưới đều đặn. Khi tắc kè hoa hào hứng, mạng lưới giãn ra khoảng 30%, làm da phản chiếu ánh sáng khác đi: nền xanh lá chuyển sang vàng.",
+    body: "Năm 2015, nhóm của nhà khoa học Michel Milinkovitch ở Đại học Geneva (Thụy Sĩ) tìm ra cách loài tắc kè hoa báo (không phải con tắc kè) đổi màu. Dưới da chúng có một lớp tế bào chứa vô số tinh thể nano xếp thành mạng lưới đều đặn. Khi tắc kè hoa hào hứng, mạng lưới giãn ra khoảng 30%, làm da phản chiếu ánh sáng khác đi: nền xanh lá chuyển sang vàng.",
     source: "Teyssier và cộng sự, 2015 · Nature Communications",
   },
   {
@@ -561,7 +561,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "trai_dat",
     quads: ["yellow", "green"],
     title: "Sơn Đoòng, hang động có rừng và mây",
-    body: "Khoảng năm 1990, anh Hồ Khanh đi rừng ở Phong Nha – Kẻ Bàng, trú mưa gần một vách đá và thấy sương mù tuôn ra từ một cửa hang. Năm 2009, anh dẫn các nhà thám hiểm hang động Anh tới hang Sơn Đoòng, nơi có đoạn rộng đến mức đặt vừa một dãy nhà 40 tầng. Chỗ trần hang sụt xuống, nắng lọt vào nuôi cả một khu rừng, và mây mỏng bay gần trần hang.",
+    body: "Khoảng năm 1990, chú Hồ Khanh đi rừng ở Phong Nha – Kẻ Bàng, trú mưa gần một vách đá và thấy sương mù tuôn ra từ một cửa hang. Năm 2009, chú dẫn các nhà thám hiểm hang động Anh tới hang Sơn Đoòng, nơi có đoạn rộng đến mức đặt vừa một dãy nhà 40 tầng. Chỗ trần hang sụt xuống, nắng lọt vào nuôi cả một khu rừng, và mây mỏng bay gần trần hang.",
     tryIt: "Vẽ một hang động có một khu rừng nhỏ bên trong và một đám mây gần trần.",
     source: "National Geographic, 2011 · Vietnam Cave; BBC Wildlife · Hang Sơn Đoòng",
   },
@@ -605,7 +605,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "trai_dat",
     quads: ["yellow", "green"],
     title: "Đỉnh Everest từng là đáy biển",
-    body: "Đá trên đỉnh Everest là một lớp đá vôi xám chứa mảnh vụn của sinh vật biển như bọ ba thùy và huệ biển. Theo Đại học Bang Montana (Hoa Kỳ), lớp đá này hình thành ở đáy biển khoảng 470 triệu năm trước. Khi mảng đất Ấn Độ trôi lên phía bắc và chạm vào châu Á, đáy biển xưa bị đẩy lên thành dãy Himalaya, và cú va chạm ấy vẫn đang tiếp diễn.",
+    body: "Đá trên đỉnh Everest là một lớp đá vôi xám chứa mảnh vỏ hóa thạch của sinh vật biển như bọ ba thùy và huệ biển. Theo Đại học Bang Montana (Hoa Kỳ), lớp đá này hình thành ở đáy biển khoảng 470 triệu năm trước. Khi mảng đất Ấn Độ trôi lên phía bắc và chạm vào châu Á, đáy biển xưa bị đẩy lên thành dãy Himalaya, và cú va chạm ấy vẫn đang tiếp diễn.",
     source: "Montana State University · Everest summit limestone",
   },
   {
@@ -614,14 +614,14 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     quads: [],
     title: "Nơi sâu nhất đại dương",
     body: "Điểm sâu nhất đại dương mà ta biết là vực Challenger, ở rãnh Mariana giữa Thái Bình Dương, sâu khoảng 10.935 mét. Nếu đặt núi Everest (cao 8.849 mét) xuống đó, đỉnh núi vẫn còn nằm dưới mặt nước hơn 2 ki-lô-mét. Năm 1960, Jacques Piccard và Don Walsh là hai người đầu tiên xuống tới đáy vực.",
-    source: "BBC Science Focus · How deep is the ocean?",
+    source: "NOAA Ocean Exploration · How deep is the ocean?; BBC Science Focus · How deep is the ocean?",
   },
   {
     key: "bui_sahara_amazon",
     topic: "trai_dat",
     quads: ["yellow", "green"],
     title: "Bụi sa mạc bón phân cho rừng Amazon",
-    body: "Gió mang bụi từ sa mạc Sahara ở châu Phi bay qua cả Đại Tây Dương. Theo NASA, dựa vào vệ tinh CALIPSO từ năm 2007 đến 2013, trung bình mỗi năm có khoảng 27,7 triệu tấn bụi rơi xuống vùng rừng Amazon ở Nam Mỹ. Trong đó có khoảng 22.000 tấn phốt-pho, một chất cây cần để lớn, gần bằng lượng phốt-pho đất rừng mất đi mỗi năm vì nước mưa cuốn trôi.",
+    body: "Gió mang bụi từ sa mạc Sahara ở châu Phi bay qua cả Đại Tây Dương. Theo NASA, dựa vào vệ tinh CALIPSO từ năm 2007 đến 2013, trung bình mỗi năm có khoảng 27,7 triệu tấn bụi rơi xuống vùng rừng Amazon ở Nam Mỹ. Trong đó có khoảng 22.000 tấn phosphorus, một chất cây cần để lớn, gần bằng lượng phosphorus đất rừng mất đi mỗi năm vì nước mưa cuốn trôi.",
     source: "NASA Scientific Visualization Studio, 2015 · Saharan Dust to Amazon",
   },
   {
@@ -668,7 +668,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "vu_tru",
     quads: ["yellow", "green"],
     title: "Sao Thiên Vương lăn nghiêng",
-    body: "Sao Thiên Vương nghiêng gần 98 độ, nên trông như vừa nằm nghiêng vừa đi quanh Mặt Trời. Một vòng quanh Mặt Trời của nó mất khoảng 84 năm Trái Đất, nên mỗi cực có mùa đông tối kéo dài khoảng 21 năm. Năm 1781, nhà thiên văn William Herschel tìm ra nó: hành tinh đầu tiên được phát hiện nhờ kính thiên văn.",
+    body: "Sao Thiên Vương nghiêng gần 98 độ, nên trông như vừa nằm nghiêng vừa đi quanh Mặt Trời. Một vòng quanh Mặt Trời của nó mất khoảng 84 năm Trái Đất, nên mỗi nửa hành tinh lần lượt có một mùa đông tối kéo dài khoảng 21 năm. Năm 1781, nhà thiên văn William Herschel tìm ra nó: hành tinh đầu tiên được phát hiện nhờ kính thiên văn.",
     source: "NASA Science · Uranus Facts",
   },
   {
@@ -686,7 +686,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     quads: [],
     title: "Trái tim trên Sao Diêm Vương",
     body: "Tháng 7/2015, tàu New Horizons của NASA bay ngang Sao Diêm Vương, một hành tinh lùn rất xa, và chụp được một vùng sáng hình trái tim. Vùng này mang tên Tombaugh, theo nhà thiên văn Clyde Tombaugh, người tìm ra Sao Diêm Vương năm 1930. Một phần trái tim là đồng bằng băng phẳng lì, có lẽ chưa tới 100 triệu năm tuổi, rất “trẻ” với một thế giới đá băng.",
-    source: "Astronomy Now, 2015 · New Horizons discovers frozen plains in Pluto's heart",
+    source: "NASA, 2015 · New Horizons Discovers Frozen Plains in the Heart of Pluto's ‘Heart’",
   },
   {
     key: "enceladus_phun_bang",
@@ -702,7 +702,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     quads: ["blue", "green"],
     title: "Vì sao sao lấp lánh?",
     body: "Ánh sáng từ một ngôi sao rất xa đến mắt mình như một tia sáng mảnh. Trên đường đi, nó xuyên qua những túi không khí nóng lạnh khác nhau luôn chuyển động, nên bị bẻ cong qua lại và trông như lấp lánh. Hành tinh ở gần hơn, trông như một cái đĩa nhỏ chứ không phải một chấm, nên ánh sáng “bù trừ” cho nhau và hành tinh ít lấp lánh hơn.",
-    tryIt: "Tối nay nhìn trời: tìm một chấm sáng lấp lánh và một chấm sáng đứng yên. Chấm nào có thể là hành tinh?",
+    tryIt: "Tối nay cùng người lớn nhìn trời: tìm một chấm sáng lấp lánh và một chấm sáng đứng yên. Chấm nào có thể là hành tinh?",
     source: "University of Wisconsin–Madison · Why do stars twinkle?",
   },
   {
@@ -710,7 +710,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "vu_tru",
     quads: [],
     title: "Mình được làm từ bụi sao",
-    body: "Theo Đài quan sát tia X Chandra (Harvard & Smithsonian), hydro trong nước của cơ thể mình có từ thuở Vũ trụ mới ra đời. Các-bon và ô-xy được tạo ra bên trong các ngôi sao, còn nhiều phần sắt trong cơ thể đến từ những vụ nổ sao rất lâu về trước. Nói cách khác, một phần cơ thể mình từng nằm trong các vì sao.",
+    body: "Theo Đài quan sát tia X Chandra (Harvard & Smithsonian), hydrogen trong nước của cơ thể mình có từ thuở Vũ trụ mới ra đời. Carbon và oxygen được tạo ra bên trong các ngôi sao, còn khá nhiều sắt trong cơ thể mình đến từ những vụ nổ sao rất lâu về trước. Nói cách khác, một phần cơ thể mình từng nằm trong các vì sao.",
     tryIt: "Viết một dòng: nếu mình là một ngôi sao, mình muốn tỏa sáng ở đâu?",
     source: "Chandra X-ray Observatory · Chandra Chemistry",
   },
@@ -758,7 +758,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "cay_coi",
     quads: [],
     title: "Kiểm chứng: cây “nói chuyện” qua mạng nấm?",
-    body: "Dưới đất rừng, sợi nấm có thể nối rễ của nhiều cây với nhau thành mạng lưới, điều này đã được chứng minh. Nhiều sách báo còn kể cây “nói chuyện” và gửi thức ăn cho cây con qua mạng ấy. Năm 2023, ba nhà khoa học đọc lại các nghiên cứu ngoài rừng và thấy bằng chứng cho chuyện “gửi thức ăn” còn yếu. Ghi chép của nhà khoa học nhí: ý tưởng đẹp vẫn cần được kiểm chứng.",
+    body: "Dưới đất rừng, sợi nấm có thể nối rễ của nhiều cây thành mạng lưới, nhưng mạng ấy mới được vẽ bản đồ ở rất ít khu rừng. Nhiều sách báo còn kể cây “nói chuyện” và gửi thức ăn cho cây con qua mạng ấy. Năm 2023, ba nhà khoa học đọc lại các nghiên cứu ngoài rừng và thấy bằng chứng cho chuyện “gửi thức ăn” còn yếu. Ghi chép của nhà khoa học nhí: ý tưởng đẹp vẫn cần được kiểm chứng.",
     source: "Karst, Jones & Hoeksema, 2023 · Nature Ecology & Evolution",
   },
   {
@@ -767,7 +767,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     quads: ["yellow", "green"],
     title: "Lá sen tự làm sạch",
     body: "Nhỏ nước lên lá sen, nước vo tròn thành giọt và lăn đi, mang theo cả bụi bẩn. Bí mật nằm ở bề mặt lá: vô số u nhỏ li ti chỉ vài phần nghìn mi-li-mét, phủ thêm sáp, giữ lại không khí nên giọt nước gần như không chạm vào lá. Người ta gọi đó là “hiệu ứng lá sen” và học theo để làm sơn tường, ngói và vải chống bẩn.",
-    tryIt: "Lần tới thấy lá sen ở chợ hay ở ao sen (có người lớn đi cùng), nhỏ một giọt nước lên và nhìn nó lăn.",
+    tryIt: "Lần tới thấy lá sen ở ao (có người lớn đi cùng) hoặc lá khoai môn ngoài vườn, nhỏ một giọt nước lên và nhìn nó lăn.",
     source: "Scientific American · Self-Cleaning Materials; Barthlott & Neinhuis, 1997 · Planta",
   },
   {
@@ -776,7 +776,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     quads: ["blue", "green"],
     title: "Những tán cây “ngại” chạm nhau",
     body: "Ở một số khu rừng, nhìn từ dưới lên sẽ thấy tán các cây cạnh nhau không chạm vào nhau, chừa lại những đường trời sáng như bản đồ. Hiện tượng này gọi là “tán cây ngại ngùng”, được ghi lại từ những năm 1920. Một giả thuyết là gió làm cành cọ vào nhau nên cây giữ khoảng cách, nhưng theo National Geographic, các nhà khoa học vẫn chưa hiểu hết vì sao.",
-    tryIt: "Đứng dưới một hàng cây và ngước nhìn lên: tán cây có chạm nhau không? Vẽ lại khoảng trời giữa các tán.",
+    tryIt: "Đứng dưới một hàng cây và ngước nhìn lên (đừng nhìn thẳng vào Mặt Trời nhé): tán cây có chạm nhau không? Vẽ lại khoảng trời giữa các tán.",
     source: "National Geographic, 2020 · Tree crown shyness",
   },
   {
@@ -792,7 +792,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "cay_coi",
     quads: [],
     title: "Cây lớn lên từ… không khí",
-    body: "Khoảng 400 năm trước, Jan Baptist van Helmont trồng một cây liễu trong chậu đất và chăm nó suốt 5 năm. Cây lớn hẳn lên, nhưng đất trong chậu gần như không nhẹ đi. Ngày nay ta biết phần lớn chất khô của cây đến từ khí các-bon-níc trong không khí, được lá biến đổi nhờ ánh nắng, còn đất chỉ góp một ít khoáng chất.",
+    body: "Khoảng 400 năm trước, Jan Baptist van Helmont trồng một cây liễu trong chậu đất và chăm nó suốt 5 năm. Cây lớn hẳn lên, nhưng đất trong chậu gần như không nhẹ đi. Ngày nay ta biết phần lớn chất khô của cây đến từ khí carbon dioxide trong không khí, được lá biến đổi nhờ ánh nắng, còn đất chỉ góp một ít khoáng chất.",
     tryIt: "Nhìn một cái cây to và nghĩ: phần lớn thân cây ấy được làm từ không khí.",
     source: "Viện Davidson (Viện Khoa học Weizmann), 2025 · What are plants made of?",
   },
@@ -806,7 +806,6 @@ export const FIELD_NOTES: readonly FieldNote[] = [
   },
 ];
 
-/** Today's card for (local date, the visit's quad, the chosen topic). Same inputs → same card; rotates daily. */
 /** Topics that have at least one card the child may see, in chip order (the UI offers only these). */
 export function activeScienceTopics(): ScienceTopic[] {
   return SCIENCE_TOPIC_KEYS.filter((t) => FIELD_NOTES.some((d) => d.topic === t && !d.held));
