@@ -49,7 +49,7 @@ Sâu trong não có hạch hạnh nhân, hoạt động như một chiếc chuô
 
 ### 2. Chiếc máy báo khói cẩn thận (`bao_dong_nham`)
 
-Nhà khoa học Randolph Nesse gọi đây là “nguyên tắc máy báo khói”. Máy kêu nhầm vì bánh mì hơi khét vẫn tốt hơn máy im lặng lúc cháy thật. Theo ông, phản ứng phòng vệ của cơ thể, kể cả cảm giác lo, cũng được chỉnh để thà báo nhầm còn hơn bỏ sót, nên báo nhầm là chuyện thường gặp và bình thường. Vậy chuông kêu to chưa chắc là có chuyện thật; còn nếu có chuyện thật, kể với một người lớn mình tin luôn là một lựa chọn.
+Nhà khoa học Randolph Nesse nói về “nguyên tắc máy báo khói”. Máy kêu nhầm vì bánh mì hơi khét vẫn tốt hơn máy im lặng lúc cháy thật. Theo ông, phản ứng phòng vệ của cơ thể, kể cả cảm giác lo, cũng được chỉnh để thà báo nhầm còn hơn bỏ sót, nên báo nhầm là chuyện thường gặp và bình thường. Vậy chuông kêu to chưa chắc là có chuyện thật; còn nếu có chuyện thật, kể với một người lớn mình tin luôn là một lựa chọn.
 
 - **Thử nhỏ:** Gọi tên cái chuông đang kêu, ví dụ: “À, đây là lo lắng.” Rồi thở ra chậm một lần.
 - **Hợp với:** Hồ sơ đỏ (giận, lo, căng thẳng) · Hồ sơ lam (buồn, chán, mệt)

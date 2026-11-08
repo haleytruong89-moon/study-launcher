@@ -28,6 +28,7 @@ import { whoSeesWhat } from "@/lib/binhYen/copy";
 import { activityEmoji, wordEmoji } from "@/lib/binhYen/emoji";
 import { studyChip } from "@/lib/binhYen/studyCap";
 import { suggest } from "@/lib/binhYen/suggest";
+import { localDate } from "@/lib/time";
 import { vnTime } from "@/lib/today/view";
 import type { FeelGrowth } from "@/lib/world/rules";
 import { WorldIcon } from "../world-icon";
@@ -35,6 +36,7 @@ import { Character } from "../avatar-face";
 import { QUAD_ICONS } from "../quad-icon";
 import { FeedbackButton } from "../today/feedback";
 import { ActivityBody } from "./activities";
+import { DossierOffer, vnDate } from "./dossier";
 import { FeelFrameBody } from "../today/comic";
 
 /** Fired after a check-in is stored (R7b: the "Nhìn lại" column refreshes). */
@@ -50,6 +52,8 @@ export const CHECKIN_EVENT = "binh-yen:checkin";
 export interface CornerState {
   studyMinutes: number;
   study: { minutes: number; endsAt: string } | null;
+  /** The server time of the last answer (R7c: today's Hồ sơ mật uses the server's local date). */
+  serverNow?: string;
 }
 
 /** Any answer that carries a fresh corner state (visit over / study-time limit). */
@@ -63,7 +67,7 @@ type Step =
   | { k: "ack"; quad: Quad; word: string }
   | { k: "suggest"; quad: Quad; word: string; intensity: number | null }
   | { k: "activity"; quad: Quad; word: string; intensity: number | null; activity: string }
-  | { k: "done"; text: string; heavy: boolean; growth: FeelGrowth | null; comic: ComicFrame | null };
+  | { k: "done"; quad: Quad; text: string; heavy: boolean; growth: FeelGrowth | null; comic: ComicFrame | null };
 
 /** R5: frame 1 of Nguyên's comic page, from the keys of the visit just saved. */
 interface ComicFrame {
@@ -162,6 +166,12 @@ async function post(url: string, body: unknown): Promise<{ ok: boolean; status: 
 
 const ICONS = QUAD_ICONS;
 
+/** The family's local date: from the server's clock when we have it, else Asia/Ho_Chi_Minh from this device. */
+function todayOf(serverNow: string | undefined): string {
+  const t = serverNow ? new Date(serverNow) : null;
+  return t && Number.isFinite(t.getTime()) ? localDate(t) : vnDate();
+}
+
 function Back({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick} className="min-h-11 self-start text-sm font-semibold text-ink/70 underline">
@@ -240,6 +250,7 @@ export function Corner({
       const label = findWord(s.word)?.label ?? "";
       go({
         k: "done",
+        quad: s.quad,
         text: a ? activityText(a, voice).done : enoughLine(label),
         heavy: r.data?.heavy === true,
         growth: asGrowth(r.data?.world),
@@ -447,6 +458,8 @@ export function Corner({
       {step.heavy && <p className="rounded-xl bg-[#FBF0D6] p-3 text-sm font-semibold text-[#5E3D00]">{HEAVY_REPEAT_TEXT}</p>}
       {step.growth && <Growth growth={step.growth} />}
       {step.comic && <ComicReward comic={step.comic} avatar={avatar} pics={pics} color={color} />}
+      {/* R7c: Nguyên only, collapsed until she taps it. Nothing about it leaves this device. */}
+      {voice === "detective" && <DossierOffer today={todayOf(state.serverNow)} quad={step.quad} />}
       <button type="button" onClick={() => go({ k: "home" })} className="btn self-start text-white" style={{ background: color }}>
         Về góc của con
       </button>
