@@ -1,4 +1,4 @@
-import { voiceFor } from "@/lib/binhYen/catalog";
+import { findWord, voiceFor } from "@/lib/binhYen/catalog";
 import { checkinBodySchema, checkinProblem } from "@/lib/binhYen/checkin";
 import { recentCheckins, saveCheckin } from "@/lib/binhYen/checkins";
 import { byFailed, byJson, requireByOpen } from "@/lib/binhYen/http";
@@ -41,8 +41,14 @@ export async function POST(request: Request) {
     // catches up when it is opened). The plant is the same whatever the child felt.
     const now = new Date();
     const planted = await syncWorldQuietly(guard.ctx, now);
+    // R5: Nguyên's "Xong rồi" draws frame 1 of today's comic page. Only the keys the child just
+    // sent (already validated against the catalog) go back: no new data leaves the server.
+    const comic =
+      voiceFor(guard.ctx.grade) === "detective"
+        ? { quad: parsed.data.quad, word: parsed.data.word, label: findWord(parsed.data.word)?.label ?? "", activity: parsed.data.activity ?? null }
+        : null;
     // R6a: tell the "Xong rồi" screen what grew (null for Nguyên, before migration 0013, on error).
-    return byJson({ ...result, world: await feelGrowthToday(guard.ctx, planted, now) });
+    return byJson({ ...result, world: await feelGrowthToday(guard.ctx, planted, now), comic });
   } catch {
     return byFailed("checkins.save");
   }

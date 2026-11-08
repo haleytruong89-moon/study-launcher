@@ -2721,3 +2721,119 @@ test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that r
     await db.from("profiles").update({ grade }).eq("id", childId);
   }
 });
+
+test("R5 truyện của Nguyên: \"Xong rồi\" draws frame 1; Hôm nay shows today's comic page; Tập của tuần has a cover, pages and a shelf; child-only week route", async ({ page, browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const today = localDate(new Date());
+  const monday = weekStart(today);
+  const lastWeek = addDays(monday, -7);
+  const { data: settings } = await db.from("family_settings").select("by_enabled").eq("family_id", familyId).single();
+  const { data: oldCheckins } = await db.from("by_checkins").select("*").eq("child_id", childId);
+  const dates = [...new Set([today, monday, lastWeek])];
+  const { data: oldSessions } = await db.from("day_sessions").select("*").eq("child_id", childId).in("local_date", dates);
+  const at = (d: string) => `${d}T10:00:00+07:00`;
+  await db.from("profiles").update({ grade: 9 }).eq("id", childId);
+  await db.from("family_settings").update({ by_enabled: true }).eq("family_id", familyId);
+  await db.from("by_sessions").update({ ended_at: new Date().toISOString() }).eq("child_id", childId).is("ended_at", null);
+  await db.from("by_checkins").delete().eq("child_id", childId);
+  try {
+    // Today: Phần 1 is done. Monday (when it is not today): a full day with a visit + activity.
+    // Last week: one record, so the shelf has a volume.
+    const up = (row: Record<string, unknown>) => db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, ...row }, { onConflict: "child_id,local_date" });
+    expect((await up({ local_date: today, part1_done_at: at(today) })).error).toBeNull();
+    if (monday !== today) {
+      expect((await up({ local_date: monday, part1_done_at: at(monday), part2_done_at: at(monday), free_started_at: at(monday) })).error).toBeNull();
+      expect((await db.from("by_checkins").insert({ family_id: familyId, child_id: childId, local_date: monday, quad: "green", word_key: "binh_yen", activity_key: "breath", client_run_id: randomUUID() })).error).toBeNull();
+    }
+    expect((await up({ local_date: lastWeek, part1_done_at: at(lastWeek) })).error).toBeNull();
+
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+
+    // Góc bình yên → Hồ sơ lục → bình yên → "Vậy là đủ": frame 1 of today's page is drawn.
+    await k.goto("/binh-yen");
+    await k.getByRole("button", { name: /^Hồ sơ lục:/ }).click();
+    const words = k.getByRole("region", { name: "Chọn từ" });
+    await words.getByRole("group", { name: "Từ cảm xúc" }).getByRole("button", { name: /bình yên/ }).click();
+    await words.getByRole("button", { name: "Tiếp →" }).click();
+    await k.getByRole("region", { name: "Công nhận" }).getByRole("button", { name: "Tận hưởng →" }).click();
+    await k.getByRole("region", { name: "Gợi ý cho con" }).getByRole("button", { name: "Vậy là đủ cho hôm nay" }).click();
+    const frame = k.getByRole("region", { name: "Xong rồi" }).getByRole("group", { name: "Trang truyện hôm nay" });
+    await expect(frame).toContainText("KHUNG 1 · CẢM XÚC");
+    await expect(frame).toContainText("Bình yên…");
+    await expect(frame).toContainText("Khung 1 đã được vẽ");
+    await frame.getByRole("link", { name: "Xem Tập của tuần →" }).click();
+    await expect(k).toHaveURL(/\/today\?tab=tuan$/);
+
+    // Tập của tuần: the cover, then Monday's page.
+    await expect(k.getByRole("heading", { name: /^📕 Tập \d+ · tuần này$/ })).toBeVisible();
+    const cover = k.getByRole("article", { name: /^Bìa tập \d+$/ });
+    await expect(cover).toContainText("Thám tử");
+    await expect(cover.getByRole("list", { name: "Mục lục" })).toContainText("bình yên");
+    const pager = k.getByRole("navigation", { name: "Lật trang" });
+    await expect(pager.getByRole("button", { name: "Bìa", exact: true })).toHaveAttribute("aria-current", "true");
+    await pager.getByRole("button", { name: "Trang sau →" }).click();
+    const mon = k.getByRole("article", { name: /^Trang Thứ Hai · / });
+    await expect(mon).toContainText("Hồ sơ lục");
+    await expect(mon).toContainText("bình yên");
+    await expect(mon).toContainText(monday === today ? "Gọi tên là đủ cho hôm nay" : "Thở cho dịu lại");
+    await expect(mon).toContainText("Bài hôm nay ✓");
+    await expect(pager.getByRole("button", { name: "Thứ Hai", exact: true })).toHaveAttribute("aria-current", "true");
+    await pager.getByRole("button", { name: "← Trang trước" }).click();
+    await expect(cover).toBeVisible();
+
+    // The shelf: last week's volume opens read-only, then back to this week.
+    const shelf = k.getByRole("group", { name: "Kệ truyện" });
+    await shelf.getByRole("button", { name: /^Tập \d+, tuần / }).first().click();
+    await expect(k.getByRole("heading", { name: /^📕 Tập \d+ · tuần \d/ })).toBeVisible();
+    await k.getByRole("button", { name: "← Về tập tuần này" }).click();
+    await expect(k.getByRole("heading", { name: /^📕 Tập \d+ · tuần này$/ })).toBeVisible();
+    // The 4 areas of the week are still there.
+    await expect(k.getByRole("heading", { name: "Tuần này của con" })).toBeVisible();
+
+    // Hôm nay: today's comic page — frame 1 (the visit) and frame 2 (Phần 1) are drawn.
+    await k.goto("/today");
+    await expect(k.getByRole("heading", { name: "Trang truyện hôm nay" })).toBeVisible();
+    const feelPanel = k.getByRole("group", { name: /^KHUNG 1 · CẢM XÚC/ });
+    await expect(feelPanel).toContainText("Bình yên…");
+    const studyPanel = k.getByRole("group", { name: /^KHUNG 2 · HỌC TẬP/ });
+    await expect(studyPanel).not.toContainText("Xong bài trên lớp");
+    await expect(studyPanel).toContainText("✓");
+    const nav = k.getByRole("navigation", { name: "Các mục của con" });
+    await expect(nav.getByRole("link", { name: "Tập của tuần" })).toBeVisible();
+
+    // The week route: a Monday from the first record's week to this week; else 400 / 404.
+    expect(await byCall(k, "GET", `/api/week/days?week=${monday}`)).toBe(200);
+    expect(await byCall(k, "GET", `/api/week/days?week=${lastWeek}`)).toBe(200);
+    expect(await byCall(k, "GET", "/api/week/days?week=2020-01-06")).toBe(404);
+    expect(await byCall(k, "GET", `/api/week/days?week=${addDays(monday, 7)}`)).toBe(404);
+    expect(await byCall(k, "GET", `/api/week/days?week=${addDays(monday, 1)}`)).toBe(400);
+    expect(await byCall(k, "GET", "/api/week/days?week=hello")).toBe(400);
+
+    // An (scientist voice) has her world, never the comic.
+    await db.from("profiles").update({ grade: 6 }).eq("id", childId);
+    await k.goto("/today");
+    await expect(nav.getByRole("link", { name: "Thế giới" })).toBeVisible();
+    await expect(k.getByRole("heading", { name: "Trang truyện hôm nay" })).toHaveCount(0);
+    await kCtx.close();
+
+    // Parents never get the child's week (feelings are the child's own).
+    await login(page, env.parentEmail, env.parentPassword);
+    expect(await byCall(page, "GET", `/api/week/days?week=${monday}`)).toBe(403);
+  } finally {
+    await db.from("by_checkins").delete().eq("child_id", childId);
+    if (oldCheckins?.length) await db.from("by_checkins").insert(oldCheckins);
+    for (const d of dates) {
+      const before = oldSessions?.find((r) => r.local_date === d);
+      if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
+      else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", d);
+    }
+    await db.from("family_settings").update({ by_enabled: settings?.by_enabled ?? false }).eq("family_id", familyId);
+    await db.from("profiles").update({ grade }).eq("id", childId);
+  }
+});
