@@ -40,7 +40,7 @@ export interface FieldNote extends Omit<Dossier, "topic"> {
 export const SCIENCE_TOPIC_KEYS = ["dong_vat", "ky_thu", "thien_nhien", "trai_dat", "vu_tru", "cay_coi", "bo_nao", "cam_xuc", "thi_nghiem"] as const satisfies readonly ScienceTopic[];
 
 export const SCIENCE_TOPICS: Record<ScienceTopic, { label: string; emoji: string }> = {
-  dong_vat: { label: "Động vật cũng có cảm xúc", emoji: "🐾" },
+  dong_vat: { label: "Động vật và cảm xúc", emoji: "🐾" },
   ky_thu: { label: "Động vật kỳ thú", emoji: "🦎" },
   thien_nhien: { label: "Thiên nhiên làm dịu", emoji: "🌿" },
   trai_dat: { label: "Trái Đất kỳ diệu", emoji: "🌋" },
@@ -70,14 +70,14 @@ export function isScienceTopic(v: unknown): v is ScienceTopic {
 
 export const FIELD_NOTES: readonly FieldNote[] = [
   // -------------------------------------------------------------------------
-  // 🐾 Động vật cũng có cảm xúc
+  // 🐾 Động vật và cảm xúc
   // -------------------------------------------------------------------------
   {
     key: "voi_an_ui",
     topic: "dong_vat",
     quads: ["red", "blue"],
     title: "Voi an ủi nhau bằng vòi",
-    body: "Ở một trại voi miền Bắc Thái Lan, hai nhà khoa học Joshua Plotnik và Frans de Waal quan sát 26 con voi châu Á gần một năm. Khi một con voi bồn chồn, những con ở gần thường đến chạm nhẹ vòi vào mặt bạn và kêu những tiếng ríu rít nhỏ. Hai ông cho rằng đó có thể là cách voi trấn an nhau.",
+    body: "Ở một trại voi miền Bắc Thái Lan, hai nhà khoa học Joshua Plotnik và Frans de Waal quan sát 26 con voi châu Á gần một năm. Khi một con voi bồn chồn, những con ở gần thường đến chạm nhẹ vòi vào mặt con voi ấy và kêu những tiếng ríu rít nhỏ. Hai ông cho rằng đó có thể là cách voi trấn an nhau.",
     tryIt: "Nghĩ về một cách mình hay làm ai đó yên lòng: một cái ôm, một câu nói, hay chỉ ngồi cạnh.",
     source: "Plotnik & de Waal, 2014 · PeerJ",
   },
@@ -95,7 +95,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "dong_vat",
     quads: ["blue", "green"],
     title: "Chuột mở cửa cho bạn",
-    body: "Năm 2011, các nhà khoa học ở Đại học Chicago để một chú chuột trong một ống nhỏ có cửa, còn bạn cùng chuồng của nó được đi lại tự do. Sau vài ngày, chú chuột tự do học được cách đẩy cửa cho bạn ra, dù không ai dạy và không được thưởng gì. Có cả hộp sô-cô-la bên cạnh, chúng vẫn hay mở cửa cho bạn, rồi còn chia phần sô-cô-la. Nhóm nghiên cứu xem đó là dấu hiệu của sự đồng cảm.",
+    body: "Năm 2011, các nhà khoa học ở Đại học Chicago để một chú chuột trong một ống nhỏ có cửa, còn bạn cùng chuồng của nó được đi lại tự do. Sau khoảng một tuần, chú chuột tự do học được cách đẩy cửa cho bạn ra, dù không ai dạy và không được thưởng gì. Có cả hộp sô-cô-la bên cạnh, chúng vẫn hay mở cửa cho bạn, rồi còn chia sô-cô-la. Nhóm nghiên cứu xem đó là dấu hiệu của sự đồng cảm.",
     source: "Ben-Ami Bartal, Decety & Mason, 2011 · Science",
   },
   {
@@ -111,7 +111,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "dong_vat",
     quads: ["yellow", "green"],
     title: "Ong nghệ được thưởng bất ngờ",
-    body: "Năm 2016, các nhà khoa học ở London dạy ong nghệ rằng cửa màu xanh dương có nước đường, cửa màu xanh lá thì không. Rồi một nửa số ong được uống một giọt nước đường bất ngờ, trước khi gặp một cửa màu lưng chừng. Những chú ong vừa được thưởng bay vào thử nhanh hơn. Các tác giả gọi đó là trạng thái “giống cảm xúc tích cực”, và cẩn thận không nói ong vui y như người.",
+    body: "Năm 2016, các nhà khoa học ở London dạy ong nghệ rằng cửa màu xanh dương có nước đường, cửa màu xanh lá thì không. Rồi một nửa số ong được uống một giọt nước đường bất ngờ, trước khi gặp một cửa màu xanh ngọc ở giữa. Những chú ong vừa được thưởng bay vào thử nhanh hơn. Các tác giả gọi đó là trạng thái “giống cảm xúc tích cực”, và cẩn thận không nói ong vui y như người.",
     source: "Perry, Baciadonna & Chittka, 2016 · Science",
   },
   {
@@ -119,7 +119,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "dong_vat",
     quads: ["red", "blue"],
     title: "Khỉ chải lông cho bạn",
-    body: "Khỉ hay ngồi chải và nhặt lông cho nhau. Năm 2007, các nhà khoa học theo dõi một đàn khỉ Barbary sống tự do và đo một loại hormone liên quan đến căng thẳng. Họ thấy những con chải lông cho bạn nhiều hơn có lượng hormone này thấp hơn. Đây mới là một mối liên hệ, nhưng có vẻ chăm sóc bạn cũng tốt cho chính mình.",
+    body: "Khỉ hay ngồi chải và nhặt lông cho nhau. Năm 2007, các nhà khoa học theo dõi một đàn khỉ Barbary sống tự do và đo một loại hormone liên quan đến căng thẳng. Họ thấy những con chải lông cho bạn nhiều hơn có lượng hormone này thấp hơn. Đây mới là một mối liên hệ, nhưng có vẻ ở loài khỉ này, chăm sóc bạn cũng tốt cho chính nó.",
     tryIt: "Làm một việc nhỏ cho người trong nhà, rồi để ý xem mình thấy thế nào.",
     source: "Shutt và cộng sự, 2007 · Biology Letters",
   },
@@ -128,7 +128,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "dong_vat",
     quads: ["red", "blue"],
     title: "Quạ ngồi sát bạn sau khi cãi nhau",
-    body: "Năm 2010, hai nhà khoa học ở Áo quan sát một đàn quạ lớn (raven). Sau khi một con vừa cãi nhau với bạn trong đàn, những con khác thường đến ngồi sát, rỉa lông giúp hay chạm nhẹ vào nó. Chúng làm vậy nhiều nhất với bạn thân hoặc người nhà. Các nhà khoa học cho rằng đó có thể là cách quạ an ủi nhau.",
+    body: "Năm 2010, hai nhà khoa học ở Áo quan sát một nhóm quạ raven (loài quạ to). Sau khi một con vừa cãi nhau với bạn trong đàn, những con khác thường đến ngồi sát, rỉa lông giúp hay chạm nhẹ vào nó. Chúng làm vậy nhiều nhất với những con vốn thân thiết với nó. Các nhà khoa học cho rằng đó có thể là cách quạ an ủi nhau.",
     source: "Fraser & Bugnyar, 2010 · PLoS ONE",
   },
   {
@@ -136,7 +136,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "dong_vat",
     quads: ["yellow", "green"],
     title: "Cá heo có “tên” riêng",
-    body: "Mỗi chú cá heo mũi chai có một tiếng huýt sáo riêng, giống như một cái tên. Năm 2013, các nhà khoa học ở Scotland phát lại những tiếng huýt này cho cá heo hoang dã, và mỗi chú chỉ phản ứng khi nghe đúng “tên” mình. Một nghiên cứu khác cùng năm thấy cá heo vẫn nhận ra tiếng huýt của bạn cũ sau hơn 20 năm xa nhau.",
+    body: "Thế giới Biển kể rằng mỗi chú cá heo mũi chai có một tiếng huýt riêng như cái tên. Năm 2013, các nhà khoa học ở Scotland kiểm chứng: họ làm bản sao tiếng huýt bằng máy tính rồi phát cho cá heo hoang dã, và mỗi chú chỉ phản ứng khi nghe đúng “tên” mình. Một nghiên cứu khác ở sáu nơi nuôi cá heo thấy chúng vẫn nhận ra tiếng huýt của bạn cũ sau hơn 20 năm.",
     source: "King & Janik, 2013 · PNAS; Bruck, 2013 · Proceedings of the Royal Society B",
   },
   {
@@ -144,7 +144,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "dong_vat",
     quads: ["yellow", "green"],
     title: "Chuột cũng “cười” khi được cù",
-    body: "Năm 2016, hai nhà khoa học ở Berlin cù nhẹ những chú chuột. Chuột phát ra những tiếng chít rất cao, cao hơn mức tai người nghe được, mà các nhà khoa học gọi vui là “tiếng cười”. Chúng còn nhảy cẫng lên và đuổi theo bàn tay để được cù tiếp. Khi đang lo lắng, chuột ít “cười” hơn, có lẽ hơi giống mình khó bật cười lúc căng thẳng.",
+    body: "Năm 2016, hai nhà khoa học ở Berlin cù nhẹ những chú chuột. Chuột phát ra những tiếng chít siêu âm khoảng 50 kHz, cao hơn mức tai người nghe được, mà các nhà khoa học gọi vui là “tiếng cười”. Chúng còn nhảy cẫng lên và đuổi theo bàn tay để được cù tiếp. Khi đang lo lắng, chuột ít “cười” hơn, có lẽ hơi giống mình khó bật cười lúc căng thẳng.",
     source: "Ishiyama & Brecht, 2016 · Science",
   },
   {
@@ -160,7 +160,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "dong_vat",
     quads: ["yellow", "green"],
     title: "Dê thích khuôn mặt tươi cười",
-    body: "Năm 2018, các nhà khoa học cho 20 chú dê ở một trại cứu hộ dê tại Anh xem hai tấm ảnh của cùng một người lạ: một ảnh tươi cười, một ảnh cau có. Các chú dê thường lại gần và dùng mũi “khám phá” ảnh tươi cười nhiều hơn. Nhóm nghiên cứu cho rằng dê có thể phân biệt được nét mặt vui và giận của người.",
+    body: "Năm 2018, các nhà khoa học cho 20 chú dê ở một trại cứu hộ dê tại Anh xem hai tấm ảnh của cùng một người lạ: một ảnh tươi cười, một ảnh cau có. Các chú dê thường lại gần và dùng mũi “khám phá” ảnh tươi cười nhiều hơn, nhất là khi ảnh tươi cười đặt bên phải. Nhóm nghiên cứu cho rằng dê có thể phân biệt được nét mặt vui và giận của người.",
     tryIt: "Mỉm cười với một con vật hay một người trong nhà, rồi quan sát xem họ đáp lại thế nào.",
     source: "Nawroth và cộng sự, 2018 · Royal Society Open Science",
   },
@@ -169,7 +169,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "dong_vat",
     quads: [],
     title: "Cây gia đình của tiếng cười",
-    body: "Năm 2009, nhà khoa học Marina Davila Ross ghi âm tiếng “cười” khi cù nhẹ các bạn đười ươi, khỉ đột, tinh tinh, bonobo con và cả em bé người. So các tiếng cười với nhau, cô vẽ được một “cây gia đình” khớp với quan hệ họ hàng giữa các loài. Tiếng cười của người giống nhất với tinh tinh và bonobo, gợi ý tiếng cười có thể đã có từ tổ tiên chung của người và vượn.",
+    body: "Năm 2009, nhà khoa học Marina Davila Ross ghi âm tiếng “cười” khi cù nhẹ các bạn vượn nhỏ tuổi (đười ươi, khỉ đột, tinh tinh, bonobo) và cả em bé người. So các tiếng cười, cô vẽ được một “cây gia đình” khớp với quan hệ họ hàng giữa các loài. Trên cây ấy, tiếng cười của người đứng gần tinh tinh và bonobo nhất, gợi ý tiếng cười có thể đã có từ tổ tiên chung của người và vượn.",
     source: "Davila Ross, Owren & Zimmermann, 2009 · Current Biology",
   },
 
@@ -181,7 +181,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "thien_nhien",
     quads: ["blue", "green"],
     title: "40 giây nhìn mái nhà xanh",
-    body: "Năm 2015, các nhà khoa học ở Đại học Melbourne (Úc) cho 150 sinh viên làm một bài bấm phím rất đơn điệu. Giữa chừng, mọi người được nghỉ 40 giây: một nửa nhìn ảnh mái nhà phủ đầy cỏ hoa, nửa kia nhìn mái bê tông trơn. Nhóm nhìn mái xanh sau đó làm ít lỗi hơn và tập trung tốt hơn.",
+    body: "Năm 2015, các nhà khoa học ở Đại học Melbourne (Úc) cho 150 sinh viên làm một bài bấm phím rất đơn điệu. Giữa chừng, mọi người được nghỉ 40 giây: một nửa nhìn ảnh mái nhà phủ đầy cỏ và hoa, nửa kia nhìn mái bê tông trơn. Nhóm nhìn mái xanh sau đó làm ít lỗi hơn và tập trung tốt hơn.",
     tryIt: "Giữa hai bài, nhìn ra cửa sổ tìm một chút màu xanh trong 40 giây.",
     source: "Lee và cộng sự, 2015 · Journal of Environmental Psychology",
   },
@@ -199,8 +199,8 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "thien_nhien",
     quads: ["yellow", "green"],
     title: "Mình nhỏ bé, thế giới thật lớn",
-    body: "Các nhà tâm lý gọi cảm giác đứng trước một điều thật lớn lao, như bầu trời sao hay hàng cây cao vút, là “kinh ngạc” (awe). Năm 2020, một nhóm ở Đại học California nhờ người lớn tuổi đi dạo 15 phút mỗi tuần và tìm điều kinh ngạc quanh mình. Dần dần, trong ảnh tự chụp, họ để mình nhỏ lại giữa cảnh vật, còn nụ cười thì tươi hơn.",
-    tryIt: "Ngước nhìn bầu trời một phút và tìm một thứ thật lớn: đám mây, ngọn cây hay Mặt Trăng.",
+    body: "Các nhà tâm lý gọi cảm giác đứng trước một điều thật lớn lao, như bầu trời sao hay hàng cây cao vút, là “kinh ngạc” (awe). Năm 2020, một nhóm ở Đại học California, San Francisco nhờ người lớn tuổi đi dạo 15 phút mỗi tuần và tìm điều kinh ngạc quanh mình. Dần dần, trong ảnh tự chụp, họ để mình nhỏ lại giữa cảnh vật, còn nụ cười thì tươi hơn.",
+    tryIt: "Ngước nhìn bầu trời một phút (đừng nhìn thẳng vào Mặt Trời) và tìm một thứ thật lớn: đám mây, ngọn cây hay Mặt Trăng.",
     source: "Sturm và cộng sự, 2020 · Emotion",
   },
   {
@@ -217,7 +217,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "thien_nhien",
     quads: ["red", "blue"],
     title: "Cảnh có nước",
-    body: "Năm 2010, các nhà khoa học ở Anh cho người tham gia xem 120 bức ảnh thiên nhiên và phố phường, một nửa có nước như sông, hồ hay biển. Cảnh có nước được thích hơn, làm người xem thấy dễ chịu hơn và được chấm là giúp “hồi sức” tốt hơn. Ngay cả cảnh phố có nước cũng được chấm gần bằng cảnh cây xanh.",
+    body: "Năm 2010, các nhà khoa học ở Anh cho người tham gia xem 120 bức ảnh thiên nhiên và phố phường, một nửa có nước như sông, hồ hay biển. Cảnh có nước được thích hơn, làm người xem thấy dễ chịu hơn và được chấm là giúp tinh thần hồi phục tốt hơn. Ngay cả cảnh phố có nước cũng được chấm gần bằng cảnh cây xanh.",
     tryIt: "Nhắm mắt nghĩ về một nơi có nước mình từng đến: biển, hồ hay một dòng suối.",
     source: "White và cộng sự, 2010 · Journal of Environmental Psychology",
   },
@@ -244,7 +244,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "thien_nhien",
     quads: ["yellow", "green"],
     title: "Sân trường có nhiều cây",
-    body: "Năm 2015, các nhà khoa học theo dõi hơn 2.500 học sinh lớp 2 đến lớp 4 ở 36 trường tiểu học tại Barcelona (Tây Ban Nha) trong một năm. Ở những trường có nhiều cây xanh trong và quanh sân, trí nhớ và sự chú ý của học sinh tiến bộ nhanh hơn. Các tác giả cho rằng một phần lý do có thể là không khí quanh đó ít khói xe hơn.",
+    body: "Năm 2015, các nhà khoa học theo dõi hơn 2.500 học sinh lớp 2 đến lớp 4 ở 36 trường tiểu học tại Barcelona (Tây Ban Nha) trong một năm. Ở những trường có nhiều cây xanh trong và quanh sân, trí nhớ và sự chú ý của học sinh tiến bộ nhanh hơn. Đây là một mối liên hệ. Các tác giả cho rằng một phần lý do có thể là không khí quanh đó ít khói xe hơn.",
     tryIt: "Tìm một cái cây gần nhà hoặc gần trường, và nhìn kỹ hình dạng tán lá của nó.",
     source: "Dadvand và cộng sự, 2015 · PNAS",
   },
@@ -257,7 +257,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "bo_nao",
     quads: ["red"],
     title: "Chú chó canh cửa trong não",
-    body: "Sâu trong não có hạch hạnh nhân, làm việc như một chú chó canh cửa. Khi thấy có vẻ nguy hiểm, chú sủa vang để cơ thể sẵn sàng: tim đập nhanh, thở nhanh hơn, cơ căng lên. Theo Harvard Health, chú phản ứng nhanh đến mức có khi trước cả lúc mình kịp hiểu chuyện gì đang xảy ra. Cơ thể cũng có sẵn một cái phanh giúp mình dịu lại khi mọi chuyện đã qua.",
+    body: "Sâu trong não có hạch hạnh nhân, làm việc như một chú chó canh cửa. Khi thấy có vẻ nguy hiểm, chú sủa vang để cơ thể sẵn sàng: tim đập nhanh, thở nhanh hơn, cơ căng lên; đó là cơ thể đang cố bảo vệ mình. Theo Harvard Health, chú phản ứng nhanh đến mức có khi trước cả lúc mình kịp hiểu chuyện gì. Cơ thể cũng có sẵn một cái phanh giúp mình dịu lại khi mọi chuyện đã qua.",
     tryIt: "Thở ra chậm hơn hít vào, ba lần, như nói với chú chó: “An toàn rồi.”",
     source: "Harvard Health Publishing · Understanding the stress response (2011, duyệt lại 2024)",
   },
@@ -303,7 +303,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     quads: ["red", "blue"],
     title: "Bí mật của hơi thở ra",
     body: "Năm 2023, các nhà khoa học ở Đại học Stanford cho 108 người lớn tập vài kiểu thở, 5 phút mỗi ngày trong một tháng. Kiểu “thở dài có nhịp” (hít vào, hít thêm một hơi ngắn, rồi thở ra thật chậm) giúp tâm trạng tốt lên nhiều hơn so với nhóm ngồi thiền. Nhóm nghiên cứu cho rằng phần thở ra dài có thể là điểm quan trọng.",
-    tryIt: "Hít vào, hít thêm một hơi ngắn, rồi thở ra thật chậm như cá voi. Ba lần là đủ, thấy khác hay chưa đều ổn.",
+    tryIt: "Hít vào, hít thêm một hơi ngắn, rồi thở ra thật chậm, như thổi nhẹ cho một chiếc lông vũ bay đi. Ba lần là đủ, thấy khác hay chưa đều ổn.",
     source: "Balban và cộng sự, 2023 · Cell Reports Medicine",
   },
   {
@@ -320,7 +320,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "bo_nao",
     quads: [],
     title: "Kiểm chứng lời đồn “10% bộ não”",
-    body: "Có lẽ con từng nghe câu “người ta chỉ dùng 10% bộ não”. Nhà khoa học nhí kiểm chứng rồi: đây là chuyện không có thật. Trên tạp chí Scientific American, nhà thần kinh học Barry Gordon ở Đại học Johns Hopkins nói chúng ta dùng gần như mọi phần của não. Não chỉ nặng khoảng 3% cơ thể nhưng dùng tới khoảng 20% năng lượng của cơ thể.",
+    body: "Có lẽ con từng nghe câu “người ta chỉ dùng 10% bộ não”. Nhà khoa học nhí kiểm chứng rồi: đây là chuyện không có thật. Trên tạp chí Scientific American, nhà thần kinh học Barry Gordon ở Đại học Johns Hopkins nói chúng ta dùng gần như mọi phần của não. Não chỉ nặng khoảng 2–3% cơ thể nhưng dùng tới khoảng 20% năng lượng của cơ thể.",
     source: "Scientific American, 2008 · Do People Only Use 10 Percent of Their Brains?",
   },
 
@@ -389,8 +389,8 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "thi_nghiem",
     quads: ["red", "blue"],
     title: "Đếm hơi thở trước và sau",
-    body: "Năm 2018, các nhà khoa học ở Đại học Pisa (Ý) đọc lại 15 nghiên cứu về thở chậm, khoảng dưới 10 hơi mỗi phút. Thở chậm thường đi cùng cảm giác thư giãn, dễ chịu hơn, và nhịp tim thay đổi linh hoạt hơn. Các tác giả nói bằng chứng còn ít, nên đây là một thí nghiệm hay để nhà khoa học nhí tự quan sát.",
-    tryIt: "Đếm số hơi thở trong 1 phút, rồi thở thật chậm 1 phút, rồi đếm lại. Ghi chép: số trước, số sau, mình thấy thế nào?",
+    body: "Năm 2018, các nhà khoa học ở Đại học Pisa (Ý) đọc lại 15 nghiên cứu về thở chậm, chậm hơn khoảng 10 hơi mỗi phút. Thở chậm thường đi cùng cảm giác thư giãn, dễ chịu hơn, và nhịp tim thay đổi linh hoạt hơn. Các tác giả nói bằng chứng còn ít, nên đây là một thí nghiệm hay để nhà khoa học nhí tự quan sát.",
+    tryIt: "Đếm hơi thở trong 1 phút, rồi thở thật chậm và nhẹ, không nín thở, 1 phút, rồi đếm lại. Ghi chép: số trước, số sau, mình thấy thế nào?",
     source: "Zaccaro và cộng sự, 2018 · Frontiers in Human Neuroscience",
   },
   {
@@ -408,7 +408,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     quads: ["yellow", "green"],
     title: "Một phút ngắm mây",
     body: "Theo Cục Khảo sát Địa chất Hoa Kỳ (USGS), một đám mây trắng bông cỡ một ki-lô-mét mỗi chiều chứa những giọt nước nặng tổng cộng khoảng 500 tấn. Mây vẫn nổi được vì không khí ẩm trong mây nhẹ hơn lớp không khí khô bên dưới, giống như dầu nổi trên nước.",
-    tryIt: "Chọn một đám mây và nhìn nó trong 1 phút. Ghi chép: lúc đầu nó giống gì, lúc sau giống gì?",
+    tryIt: "Chọn một đám mây (không nhìn về phía Mặt Trời) và nhìn nó trong 1 phút. Ghi chép: lúc đầu nó giống gì, lúc sau giống gì?",
     source: "USGS Water Science School · How Much Does a Cloud Weigh?",
   },
   {
@@ -416,7 +416,7 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     topic: "thi_nghiem",
     quads: [],
     title: "Bản đồ cảm xúc trên cơ thể",
-    body: "Năm 2014, nhóm của nhà khoa học Lauri Nummenmaa ở Phần Lan nhờ khoảng 700 người ở Phần Lan, Thụy Điển và Đài Loan tô lên hình một cơ thể những chỗ thấy cảm giác mạnh lên khi nghĩ về từng cảm xúc. Vui làm gần như cả cơ thể sáng lên, còn giận hay hiện ở tay. Bản đồ của mọi người khá giống nhau, dù họ sống ở những nơi rất khác nhau.",
+    body: "Năm 2014, nhóm của nhà khoa học Lauri Nummenmaa ở Phần Lan nhờ khoảng 700 người ở Phần Lan, Thụy Điển và Đài Loan tô lên hình một cơ thể những chỗ thấy cảm giác mạnh lên khi nghĩ về từng cảm xúc. Vui làm gần như cả cơ thể sáng lên, còn giận hiện rõ ở đầu, ngực và hai tay. Bản đồ của mọi người khá giống nhau, dù họ sống ở những nơi rất khác nhau.",
     tryIt: "Vẽ một hình người đơn giản, tô chỗ mình đang thấy cảm xúc lúc này. Ghi chép: màu gì, ở đâu?",
     source: "Nummenmaa và cộng sự, 2014 · PNAS",
   },
@@ -426,15 +426,15 @@ export const FIELD_NOTES: readonly FieldNote[] = [
     quads: [],
     title: "Mùi hương gợi kỷ niệm",
     body: "Nhà tâm lý Rachel Herz và các đồng nghiệp thấy kỷ niệm được gợi lên bằng mùi thường mang nhiều cảm xúc hơn kỷ niệm gợi lên bằng hình ảnh hay âm thanh. Năm 2006, hai nhà khoa học ở Đại học Stockholm còn thấy mùi hay gợi lại những kỷ niệm rất xa, từ lúc còn nhỏ. Một lý do có thể là đường đi của mùi trong não nằm rất gần những vùng lo việc nhớ và cảm xúc.",
-    tryIt: "Ngửi một thứ trong nhà, như vỏ cam, lá chanh hay gạo. Ghi chép: mùi này gợi mình nhớ đến điều gì?",
-    source: "Scientific American Mind, 2012 · Smells Like Old Times",
+    tryIt: "Ngửi nhẹ một thứ quen thuộc trong bếp, như vỏ cam, lá chanh hay một nắm gạo. Ghi chép: mùi này gợi mình nhớ đến điều gì?",
+    source: "Scientific American Mind, 2012 · Smells Like Old Times; Willander & Larsson, 2006 · Psychonomic Bulletin & Review",
   },
   {
     key: "dem_chim_15_phut",
     topic: "thi_nghiem",
     quads: [],
     title: "15 phút đếm chim cho khoa học",
-    body: "Mỗi tháng Hai, rất nhiều người khắp thế giới tham gia Great Backyard Bird Count: dành ít nhất 15 phút đếm chim quanh nhà rồi gửi kết quả. Đã có lần hơn 300.000 người cùng gửi ghi chép, và các nhà khoa học dùng chúng để hiểu các loài chim đang sống ra sao. Một trang sổ của nhà khoa học nhí cũng có thể là một mảnh dữ liệu thật.",
+    body: "Mỗi năm, trong 4 ngày giữa tháng Hai, rất nhiều người khắp thế giới tham gia Great Backyard Bird Count: dành ít nhất 15 phút đếm chim quanh nhà rồi gửi kết quả. Đã có lần hơn 300.000 người cùng gửi ghi chép, và các nhà khoa học dùng chúng để hiểu các loài chim đang sống ra sao. Một trang sổ của nhà khoa học nhí cũng có thể là một mảnh dữ liệu thật.",
     tryIt: "Ngồi cạnh cửa sổ 15 phút và đếm chim. Ghi chép: mấy con, màu gì, chúng đang làm gì?",
     source: "National Audubon Society · About the Great Backyard Bird Count",
   },

@@ -19,7 +19,7 @@ const shared = (key: string): SourceRef[] => DOSSIER_SOURCES[key] ?? [];
 
 /** Every card's sources (the first one is the main source). URLs checked on 08/11/2026. */
 export const NOTE_SOURCES: Record<string, SourceRef[]> = {
-  // 🐾 Động vật cũng có cảm xúc
+  // 🐾 Động vật và cảm xúc
   voi_an_ui: [
     { ref: "Plotnik, J. M. & de Waal, F. B. M. Asian elephants (Elephas maximus) reassure others in distress", where: "PeerJ", year: "2014", url: "https://doi.org/10.7717/peerj.278" },
     { ref: "Tin về nghiên cứu (26 con voi ở một trại voi miền Bắc Thái Lan, gần một năm; chạm vòi, tiếng kêu ríu rít)", where: "ScienceDaily", year: "2014", url: "https://www.sciencedaily.com/releases/2014/02/140218101020.htm" },
@@ -34,7 +34,8 @@ export const NOTE_SOURCES: Record<string, SourceRef[]> = {
     { ref: "Yong, E. Empathic rats spring each other from jail (chi tiết chia sô-cô-la)", where: "National Geographic", year: "2011", url: "https://www.nationalgeographic.com/science/article/empathic-rats-spring-each-other-from-jail" },
   ],
   cho_doc_cam_xuc: [
-    { ref: "Albuquerque, N. và cộng sự. Dogs recognize dog and human emotions", where: "Biology Letters", year: "2016", url: "https://pubmed.ncbi.nlm.nih.gov/26763220/" },
+    { ref: "Albuquerque, N. và cộng sự. Dogs recognize dog and human emotions (12(1): 20150883)", where: "Biology Letters", year: "2016", url: "https://doi.org/10.1098/rsbl.2015.0883" },
+    { ref: "Tóm tắt trên PubMed", where: "PubMed", year: "2016", url: "https://pubmed.ncbi.nlm.nih.gov/26763220/" },
     { ref: "Bản thảo bài báo (17 chú chó nhà, ảnh vui/giận + âm thanh vui/giận, đo thời gian nhìn)", where: "CORE (bản thảo của tác giả)", year: "2015", url: "https://core.ac.uk/download/42584594.pdf" },
   ],
   ong_duoc_thuong: [
@@ -48,9 +49,11 @@ export const NOTE_SOURCES: Record<string, SourceRef[]> = {
   ],
   qua_ngoi_sat: [
     { ref: "Fraser, O. N. & Bugnyar, T. Do ravens show consolation? Responses to distressed others", where: "PLoS ONE", year: "2010", url: "https://doi.org/10.1371/journal.pone.0010605" },
-    { ref: "Ravens console each other (rỉa lông, ngồi sát, chạm; nhiều nhất với con thân hoặc họ hàng)", where: "Phys.org", year: "2010", url: "https://phys.org/news/2010-05-ravens-console.html" },
+    { ref: "Ravens console each other (rỉa lông, ngồi sát, chạm; nhiều nhất với những con vốn thân thiết)", where: "Phys.org", year: "2010", url: "https://phys.org/news/2010-05-ravens-console.html" },
   ],
   ca_heo_co_ten: [
+    { ref: "King, S. L. & Janik, V. M. Bottlenose dolphins can use learned vocal labels to address each other", where: "PNAS", year: "2013", url: "https://doi.org/10.1073/pnas.1304459110" },
+    { ref: "Bruck, J. N. Decades-long social memory in bottlenose dolphins (sáu cơ sở nuôi cá heo)", where: "Proceedings of the Royal Society B", year: "2013", url: "https://doi.org/10.1098/rspb.2013.1726" },
     { ref: "Dolphins respond to individual names (King, S. L. & Janik, V. M., PNAS 2013; cá heo hoang dã ở bờ đông Scotland)", where: "University of St Andrews", year: "2013", url: "https://news.st-andrews.ac.uk/archive/dolphins-respond-to-individual-names/" },
     { ref: "Dolphins have longest social memories in non-human species (Bruck, J. N., Proc. R. Soc. B 2013; hơn 20 năm)", where: "The Royal Society", year: "2013", url: "https://royalsociety.org/news/2013/dophins-social-memory" },
   ],
@@ -59,6 +62,7 @@ export const NOTE_SOURCES: Record<string, SourceRef[]> = {
     { ref: "Tin của Đại học Humboldt Berlin (tiếng kêu siêu âm 50 kHz, nhảy vui, đuổi tay; chuột lo lắng ít “cười” hơn)", where: "ScienceDaily", year: "2016", url: "https://www.sciencedaily.com/releases/2016/11/161110152342.htm" },
   ],
   duoi_cho_vay: [
+    { ref: "Quaranta, A., Siniscalchi, M. & Vallortigara, G. Asymmetric tail-wagging responses by dogs to different emotive stimuli (17(6): R199–R201)", where: "Current Biology", year: "2007", url: "https://doi.org/10.1016/j.cub.2007.02.008" },
     { ref: "Whitfield, J. Dogs' tails reveal their emotions (về Quaranta, Siniscalchi & Vallortigara, Current Biology 17: 199–201; 30 chú chó)", where: "Nature News", year: "2007", url: "https://www.nature.com/news/2007/070319/full/news070319-6.html" },
   ],
   de_thich_mat_vui: [
@@ -95,7 +99,10 @@ export const NOTE_SOURCES: Record<string, SourceRef[]> = {
     { ref: "Lee, M., Lee, J., Park, B.-J. & Miyazaki, Y. Interaction with indoor plants may reduce psychological and physiological stress by suppressing autonomic nervous system activity in young adults: a randomized crossover study", where: "Journal of Physiological Anthropology", year: "2015", url: "https://doi.org/10.1186/s40101-015-0060-8" },
     { ref: "Bản đầy đủ (24 nam thanh niên; thay chậu cây và gõ máy, mỗi việc 15 phút)", where: "PubMed Central", year: "2015", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4419447" },
   ],
-  tam_rung: shared("tam_rung"),
+  tam_rung: [
+    { ref: "Park, B. J. và cộng sự. The physiological effects of Shinrin-yoku (taking in the forest atmosphere or forest bathing): evidence from field experiments in 24 forests across Japan (15(1): 18–26)", where: "Environmental Health and Preventive Medicine", year: "2010 (đăng trực tuyến 2009)", url: "https://doi.org/10.1007/s12199-009-0086-9" },
+    ...shared("tam_rung"),
+  ],
   truong_nhieu_cay: [
     { ref: "Dadvand, P. và cộng sự. Green spaces and cognitive development in primary schoolchildren (2.593 học sinh, 36 trường ở Barcelona)", where: "PNAS", year: "2015", url: "https://doi.org/10.1073/pnas.1503402112" },
     { ref: "Tóm tắt trên PubMed", where: "PubMed", year: "2015", url: "https://pubmed.ncbi.nlm.nih.gov/26080420/" },
@@ -103,9 +110,11 @@ export const NOTE_SOURCES: Record<string, SourceRef[]> = {
   // 🧠 Bộ não của con
   chu_cho_canh_cua: shared("chuong_bao_dong"),
   duong_mon_trong_nao: [
+    { ref: "Draganski, B. và cộng sự. Neuroplasticity: Changes in grey matter induced by training (427: 311–312)", where: "Nature", year: "2004", url: "https://doi.org/10.1038/427311a" },
     { ref: "Juggling juggles the brain (về Draganski, B. và cộng sự. Neuroplasticity: Changes in grey matter induced by training, Nature 427: 311–312)", where: "Neuroscience for Kids (Eric Chudler, University of Washington)", year: "2004", url: "https://staff.washington.edu/chudler/jugg.html" },
   ],
   chim_on_bai_hat: [
+    { ref: "Dave, A. S. & Margoliash, D. Song replay during sleep and computational rules for sensorimotor vocal learning (290(5492): 812–816)", where: "Science", year: "2000", url: "https://doi.org/10.1126/science.290.5492.812" },
     { ref: "Singing silently during sleep helps birds learn song (về Dave, A. S. & Margoliash, D., Science 2000)", where: "UChicago Medicine", year: "2000", url: "https://www.uchicagomedicine.org/forefront/news/singing-silently-during-sleep-helps-birds-learn-song" },
     ...shared("giac_ngu_cat_ho_so"),
   ],
@@ -113,23 +122,29 @@ export const NOTE_SOURCES: Record<string, SourceRef[]> = {
   to_mo_giup_nho: shared("to_mo_la_chia_khoa"),
   bi_mat_hoi_tho_ra: shared("tho_ra_cham"),
   nghi_ngan_giup_hoc: [
+    { ref: "Bönstrup, M. và cộng sự. A rapid form of offline consolidation in skill learning (29(8): 1346–1351)", where: "Current Biology", year: "2019", url: "https://doi.org/10.1016/j.cub.2019.02.049" },
     { ref: "Want to learn a new skill? Take some short breaks (về Bönstrup, M. và cộng sự, Current Biology 2019)", where: "NINDS, National Institutes of Health", year: "2019", url: "https://www.ninds.nih.gov/News-Events/News-and-Press-Releases/Press-Releases/Want-learn-new-skill-Take-some-short-breaks" },
   ],
   nao_an_nang_luong: shared("huyen_thoai_10_phan_tram"),
   // 💛 Cảm xúc là gì
   nguoi_dua_tin: shared("cam_xuc_la_tin_nhan"),
   ngap_va_cuoi_lay: [
+    { ref: "Joly-Mascheroni, R. M., Senju, A. & Shepherd, A. J. Dogs catch human yawns (4(5): 446–448)", where: "Biology Letters", year: "2008", url: "https://doi.org/10.1098/rsbl.2008.0333" },
+    { ref: "Warren, J. E. và cộng sự. Positive emotions preferentially engage an auditory–motor “mirror” system (26(50): 13067–13075)", where: "Journal of Neuroscience", year: "2006", url: "https://doi.org/10.1523/JNEUROSCI.3907-06.2006" },
     { ref: "Yong, E. Dogs catch yawns from humans (về Joly-Mascheroni, Senju & Shepherd, Biology Letters 2008; 21 trên 29 chú chó)", where: "National Geographic", year: "2008", url: "https://www.nationalgeographic.com/science/article/dogs-catch-yawns-from-humans" },
     { ref: "Study shows laughter is contagious (về Warren và cộng sự, Journal of Neuroscience 2006; nhóm Sophie Scott, UCL)", where: "ScienceDaily", year: "2006", url: "https://sciencedaily.com/releases/2006/12/061212213922.htm" },
   ],
   goi_ten_cam_xuc: shared("goi_ten_cam_xuc"),
   vui_buon_cung_luc: [
-    { ref: "Larsen, J. T., To, Y. M. & Fireman, G. Children's understanding and experience of mixed emotions (trẻ 5–12 tuổi)", where: "Psychological Science", year: "2007", url: "https://www.psychologicalscience.org/journals/psychological-science/j.1467-9280.2007.01870.x/" },
+    { ref: "Larsen, J. T., To, Y. M. & Fireman, G. Children's understanding and experience of mixed emotions", where: "Psychological Science", year: "2007", url: "https://doi.org/10.1111/j.1467-9280.2007.01870.x" },
+    { ref: "Trang bài báo (trẻ 5–12 tuổi)", where: "Association for Psychological Science", year: "2007", url: "https://www.psychologicalscience.org/journals/psychological-science/j.1467-9280.2007.01870.x/" },
   ],
   dem_dieu_biet_on: [
+    { ref: "Froh, J. J., Sefick, W. J. & Emmons, R. A. Counting blessings in early adolescents: An experimental study of gratitude and subjective well-being", where: "Journal of School Psychology", year: "2008", url: "https://doi.org/10.1016/j.jsp.2007.03.005" },
     { ref: "A lesson in thanks (về Froh, Sefick & Emmons, Counting blessings in early adolescents, Journal of School Psychology 2008; 221 học sinh cấp hai)", where: "Greater Good Magazine (UC Berkeley)", year: "2007", url: "https://greatergood.berkeley.edu/article/item/a_lesson_in_thanks/" },
   ],
   goi_minh_bang_ten: [
+    { ref: "Kross, E. và cộng sự. Self-talk as a regulatory mechanism: How you do it matters", where: "Journal of Personality and Social Psychology", year: "2014", url: "https://doi.org/10.1037/a0035173" },
     { ref: "Talking in the 3rd person lowers anxiety: Study (về Kross, E. và cộng sự, Journal of Personality and Social Psychology 2014)", where: "University of Michigan, Department of Psychology", year: "2014", url: "https://prod.lsa.umich.edu/psych/news-events/all-news/archived-news/2014/02/talking-in-the-3rd-person-lowers-anxiety--study.html" },
     { ref: "Could this trick help you perform better in stressful situations? (mô tả thí nghiệm bài nói 5 phút, người chấm, ví dụ “You can do it, John”)", where: "World Economic Forum", year: "2015", url: "https://weforum.org/stories/2015/06/could-this-trick-help-you-perform-better-in-stressful-situations" },
   ],
@@ -144,14 +159,16 @@ export const NOTE_SOURCES: Record<string, SourceRef[]> = {
     { ref: "How much does a cloud weigh? (mây tích 1 km³ × 0,5 g/m³ ≈ 500.000 kg)", where: "USGS Water Science School", year: "không ghi năm", url: "https://www.usgs.gov/water-science-school/science/how-much-does-a-cloud-weigh" },
   ],
   ban_do_cam_xuc: [
-    { ref: "Nummenmaa, L., Glerean, E., Hari, R. & Hietanen, J. K. Bodily maps of emotions", where: "PNAS", year: "2014", url: "https://pubmed.ncbi.nlm.nih.gov/24379370/" },
+    { ref: "Nummenmaa, L., Glerean, E., Hari, R. & Hietanen, J. K. Bodily maps of emotions", where: "PNAS", year: "2014", url: "https://doi.org/10.1073/pnas.1321664111" },
+    { ref: "Tóm tắt trên PubMed", where: "PubMed", year: "2014", url: "https://pubmed.ncbi.nlm.nih.gov/24379370/" },
     { ref: "Mapping emotions on the body: love makes us warm all over (khoảng 700 người ở Phần Lan, Thụy Điển, Đài Loan)", where: "WGBH", year: "2014", url: "https://www.wgbh.org/news/2014-01-06/mapping-emotions-on-the-body-love-makes-us-warm-all-over" },
   ],
   mui_goi_ky_niem: [
     { ref: "Konnikova, M. Smells like old times (Herz; Willander & Larsson 2006, Đại học Stockholm)", where: "Scientific American Mind", year: "2012", url: "https://www.scientificamerican.com/article/smells-like-old-times" },
+    { ref: "Willander, J. & Larsson, M. Smell your way back to childhood: Autobiographical odor memory (13: 240–244)", where: "Psychonomic Bulletin & Review", year: "2006", url: "https://doi.org/10.3758/BF03193837" },
   ],
   dem_chim_15_phut: [
-    { ref: "About the Great Backyard Bird Count (tháng Hai hằng năm, ít nhất 15 phút, hơn 300.000 người gửi ghi chép)", where: "National Audubon Society", year: "2024", url: "https://www.audubon.org/es/conservation/about-great-backyard-bird-count" },
+    { ref: "About the Great Backyard Bird Count (4 ngày giữa tháng Hai hằng năm, ít nhất 15 phút; gần đây hơn 450.000 người gửi ghi chép)", where: "National Audubon Society", year: "2026", url: "https://www.audubon.org/community-science/great-backyard-bird-count" },
   ],
 
   // ===== Second half: pure nature-science knowledge =====
@@ -314,11 +331,11 @@ function cardBlock(d: FieldNote, n: number): string {
 const CHECK_POINTS: string[] = [
   "`be_rai_ca`: thẻ **không** nói rái cá “nắm tay khi ngủ” (chuyện hay kể trên mạng, nhưng không thấy trong nguồn uy tín đã kiểm), và không lặp lại chuyện rái cá quấn tảo bẹ vì thế giới Biển của An đã có. Con số “có khi hơn 1.000 con” lấy từ trang của Bộ Nội vụ Hoa Kỳ.",
   "`chuot_mo_cua`: chi tiết “chia phần sô-cô-la” có trong bài National Geographic; tin của ScienceDaily chỉ nói chuột hay mở cửa cho bạn trước khi mở hộp sô-cô-la. Thẻ không tả cảnh chuột bạn bồn chồn.",
-  "`ca_heo_co_ten`: chưa mở được bản DOI của hai bài gốc; dùng tin của Đại học St Andrews và Hội Hoàng gia Anh. Nghiên cứu “20 năm” làm với cá heo nuôi ở sáu cơ sở.",
-  "`chuot_cuoi`: “cao hơn mức tai người nghe được” là suy ra từ tiếng kêu siêu âm 50 kHz; nguồn chỉ ghi “siêu âm”. Thẻ không nhắc chi tiết đo não.",
+  "`ca_heo_co_ten`: thế giới Biển của An đã có ý “cá heo có tên” (`lib/world/bien.ts`), nên thẻ nói rõ đó là điều thế giới Biển đã kể và thêm phần mới: cách kiểm chứng (bản sao tiếng huýt bằng máy tính) và trí nhớ hơn 20 năm. Nghiên cứu “20 năm” làm với cá heo nuôi ở sáu cơ sở; thẻ nói đúng vậy. DOI hai bài gốc đã kiểm (08/11/2026).",
+  "`chuot_cuoi`: “cao hơn mức tai người nghe được” là suy ra (tai người nghe tới khoảng 20 kHz; tiếng kêu của chuột khoảng 50 kHz); nguồn chỉ ghi “siêu âm 50 kHz”. Thẻ không nhắc chi tiết đo não.",
   "`khi_chai_long`: chỉ là mối liên hệ (đo hormone trong mẫu phân), thẻ nói rõ điều này.",
-  "`duoi_cho_vay`: chi tiết lấy từ bài Nature News; chưa mở bản gốc trên Current Biology.",
-  "`ngap_va_cuoi_lay`: “các nhà khoa học ở Anh” (nhóm Birkbeck, Đại học London) — nguồn đã kiểm là bài National Geographic, chưa mở bản gốc.",
+  "`duoi_cho_vay`: chi tiết lấy từ bài Nature News; DOI bài gốc trên Current Biology đã kiểm, chưa đọc toàn văn.",
+  "`ngap_va_cuoi_lay`: “các nhà khoa học ở Anh” (nhóm Birkbeck, Đại học London) — nguồn chính là bài National Geographic; DOI hai bài gốc đã kiểm. Lưu ý: các nghiên cứu lặp lại sau này về chó ngáp theo người cho kết quả không đồng nhất; thẻ chỉ kể kết quả của nghiên cứu năm 2008.",
   "`cam_giac_kinh_ngac`: người tham gia là **người lớn tuổi**; thẻ ghi đúng vậy.",
   "`mui_mua`: thẻ không ghi con số độ nhạy của mũi với geosmin (các nguồn ghi khác nhau: 100 phần nghìn tỉ hay 0,4 phần tỉ).",
   "`mot_phut_ngam_may`: 500 tấn là phép tính ước lượng của USGS cho một đám mây tích 1 km³.",
@@ -326,7 +343,7 @@ const CHECK_POINTS: string[] = [
   "`goi_minh_bang_ten`: kết quả bài nói (bớt lo, người chấm chấm cao hơn) lấy từ bài của World Economic Forum mô tả thí nghiệm; trang của Đại học Michigan xác nhận ý chính. Ví dụ “Nam ơi” là minh họa của người soạn (bài gốc dùng “John”).",
   "`dem_dieu_biet_on`: mô tả theo bài của Greater Good (221 học sinh cấp hai, hai tuần).",
   "`truong_nhieu_cay`: so sánh giữa các **trường**, không phải giữa các bạn; một phần mối liên hệ được giải thích bởi khói xe.",
-  "`dem_chim_15_phut`: con số 300.000 là theo trang của Audubon cho một mùa đếm gần đây.",
+  "`dem_chim_15_phut`: thẻ ghi “đã có lần hơn 300.000 người”; trang Audubon (kiểm 08/11/2026) nay ghi gần đây hơn 450.000 người, nên câu trong thẻ vẫn đúng (là mức thấp hơn).",
   // Second half (pure knowledge)
   "`vooc_cha_va`: màu lông theo Animal Diversity Web (thân xám, cẳng tay và đuôi trắng, “tất” nâu đỏ); thẻ cố ý **không** nói chuyện ăn lá / dạ dày nhiều ngăn (thế giới Rừng đã có ở voọc mông trắng) và **không** ghi số cá thể ở Sơn Trà (các nguồn báo chí ghi khác nhau theo năm). Nguồn thứ hai là báo Việt Nam News, không phải tổ chức khoa học.",
   "`sao_la`: “rừng Vũ Quang” theo WWF; thẻ không ghi tỉnh và không ghi số cá thể còn lại (tránh giọng “sắp mất”).",
