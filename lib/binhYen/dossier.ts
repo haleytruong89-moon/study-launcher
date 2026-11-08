@@ -433,8 +433,18 @@ export function dayIndex(date: string): number {
   return Math.round((t - Date.UTC(2026, 0, 1)) / 86_400_000);
 }
 
+/**
+ * What the selection rule needs from a card. Shared by Nguyên's Hồ sơ mật and An's Sổ tay nhà
+ * khoa học (lib/binhYen/fieldNotes.ts), so both decks pick cards the same way.
+ */
+export interface DeckCard {
+  topic: string;
+  quads: readonly Quad[];
+  held?: true;
+}
+
 /** Whether a card suits a check-in quad (an empty `quads` suits every quad; no quad = any card). */
-export function fitsQuad(d: Dossier, quad: Quad | null | undefined): boolean {
+export function fitsQuad(d: Pick<DeckCard, "quads">, quad: Quad | null | undefined): boolean {
   return !quad || d.quads.length === 0 || d.quads.includes(quad);
 }
 
@@ -442,7 +452,7 @@ export function fitsQuad(d: Dossier, quad: Quad | null | undefined): boolean {
  * The selection rule on any list (exported for tests): skip held cards, filter by topic, then
  * by quad fit; if the quad filter leaves fewer than 2 cards, use the whole topic. Pick `dayIndex % n`.
  */
-export function pickDossier(list: readonly Dossier[], date: string, quad: Quad | null | undefined, topic: DossierTopic): Dossier | null {
+export function pickDossier<C extends DeckCard>(list: readonly C[], date: string, quad: Quad | null | undefined, topic: C["topic"]): C | null {
   const inTopic = list.filter((d) => d.topic === topic && !d.held);
   const fit = inTopic.filter((d) => fitsQuad(d, quad));
   const pool = fit.length >= 2 ? fit : inTopic;

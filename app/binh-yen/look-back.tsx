@@ -19,7 +19,7 @@ import { WorldIcon } from "../world-icon";
  * R7b: Góc bình yên's "Nhìn lại" column. Calm on purpose: no counters that grow, no blinking,
  * a slowed-down scene. Child-only data (the routes answer 403 to a parent).
  * - An (scientist): her world of the month and what grew / who came in the last 7 days, with
- *   the facts she opened and the marks she set on this device.
+ *   the facts she opened and the marks she set on this device; `notebook` (R7d) goes under it.
  * - Nguyên (detective): today's comic page only. Deliberately NO feelings timeline here (a week
  *   of red / blue next to the check-in can feed rumination); `notebook` is R7c's slot.
  */
@@ -91,10 +91,10 @@ export function LookBack({
   color: string;
   look: Avatar;
   pics: AvatarPics;
-  /** R7c "Sổ tay thám tử" (detective only). Nothing is rendered when it is not given. */
+  /** R7c "Sổ tay thám tử" / R7d "Sổ tay nhà khoa học", this device only. Nothing is rendered when it is not given. */
   notebook?: React.ReactNode;
 }) {
-  return voice === "scientist" ? <WorldLookBack firstName={firstName} color={color} /> : <ComicLookBack color={color} look={look} pics={pics} notebook={notebook} />;
+  return voice === "scientist" ? <WorldLookBack firstName={firstName} color={color} notebook={notebook} /> : <ComicLookBack color={color} look={look} pics={pics} notebook={notebook} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,7 +121,7 @@ function readSet(name: string): Set<string> {
 const SLOW_SCENE =
   "[&_.w-bubble]:[animation-duration:18s]! [&_.w-cloud]:[animation-duration:80s]! [&_.w-sway]:[animation-duration:10s]! [&_.w-hop]:[animation-duration:9s]! [&_.w-fly]:[animation-duration:14s]! [&_.w-swim]:[animation-duration:22s]! [&_.w-float]:[animation-duration:14s]! [&_.w-twinkle]:[animation-duration:7s]! [&_.w-star]:[animation-duration:7s]!";
 
-function WorldLookBack({ firstName, color }: { firstName: string; color: string }) {
+function WorldLookBack({ firstName, color, notebook }: { firstName: string; color: string; notebook?: React.ReactNode }) {
   const load = useFetch("/api/world/recent", isRecent);
   // Read after mount (never during the first render).
   const [marks, setMarks] = useState<{ quests: Set<string>; teach: Set<string> } | null>(null);
@@ -132,8 +132,21 @@ function WorldLookBack({ firstName, color }: { firstName: string; color: string 
   }, [load.state]);
   const head = useId();
 
-  if (load.state === "loading") return <Skeleton />;
-  if (load.state === "error") return <p className="text-sm text-ink/75">{load.text}</p>;
+  // R7d: An's notebook sits under the 7-day list; it is on this device, so it shows even when the list cannot load.
+  if (load.state === "loading")
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton />
+        {notebook ?? null}
+      </div>
+    );
+  if (load.state === "error")
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-ink/75">{load.text}</p>
+        {notebook ?? null}
+      </div>
+    );
   const { view, days, today } = load.data;
   // The quest mark is per month: shown once, on the newest row of that thing.
   const questShown = new Set<string>();
@@ -198,6 +211,7 @@ function WorldLookBack({ firstName, color }: { firstName: string; color: string 
           Xem cả {view.world.name} →
         </Link>
       )}
+      {notebook ?? null}
     </div>
   );
 }
