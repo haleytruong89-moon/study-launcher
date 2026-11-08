@@ -837,6 +837,8 @@ test("S2e: the child picks an icon and plans today; the plan only reorders 'Vi�
   const rows = page.getByRole("list", { name: "Thứ tự hôm nay" }).getByRole("listitem");
   await expect(rows.nth(0)).toHaveAccessibleName("Vật lí");
   await expect(rows.nth(1)).toHaveAccessibleName("Hóa học");
+  // page.mouse does not scroll: bring both rows into the 720 px viewport first.
+  await rows.nth(0).evaluate((el) => el.scrollIntoView({ block: "center" }));
   const from = await rows.nth(1).locator("[data-grip]").boundingBox();
   const to = await rows.nth(0).locator("[data-grip]").boundingBox();
   expect(from && to).toBeTruthy();
