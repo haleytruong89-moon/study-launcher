@@ -78,7 +78,7 @@ function asComic(v: unknown): ComicFrame | null {
 }
 
 /** Nguyên's reward (artifact vDone): KHUNG 1 · CẢM XÚC is drawn into today's comic page. */
-function ComicReward({ comic, avatar, pics }: { comic: ComicFrame; avatar: Avatar; pics: AvatarPics }) {
+function ComicReward({ comic, avatar, pics, color }: { comic: ComicFrame; avatar: Avatar; pics: AvatarPics; color: string }) {
   return (
     <div className="flex flex-col gap-3 rounded-2xl bg-[#EEF3FA] p-4" role="group" aria-label="Trang truyện hôm nay" aria-live="polite">
       <div className="w-full max-w-[220px] border-4 border-ink bg-[#FFFDF8] p-2">
@@ -88,7 +88,7 @@ function ComicReward({ comic, avatar, pics }: { comic: ComicFrame; avatar: Avata
         </div>
       </div>
       <p className="font-semibold">Khung 1 đã được vẽ vào trang truyện hôm nay.</p>
-      <Link href="/today?tab=tuan" className="btn self-start bg-[#2F5D9E] text-white">
+      <Link href="/today?tab=tuan" className="btn self-start text-white" style={{ background: color }}>
         Xem Tập của tuần →
       </Link>
     </div>
@@ -441,7 +441,7 @@ export function Corner({
       </p>
       {step.heavy && <p className="rounded-xl bg-[#FBF0D6] p-3 text-sm font-semibold text-[#5E3D00]">{HEAVY_REPEAT_TEXT}</p>}
       {step.growth && <Growth growth={step.growth} />}
-      {step.comic && <ComicReward comic={step.comic} avatar={avatar} pics={pics} />}
+      {step.comic && <ComicReward comic={step.comic} avatar={avatar} pics={pics} color={color} />}
       <button type="button" onClick={() => go({ k: "home" })} className="btn self-start text-white" style={{ background: color }}>
         Về góc của con
       </button>
