@@ -210,7 +210,7 @@ export function StudyCorner({
                       aria-hidden
                       data-grip
                       onPointerDown={done ? undefined : (e) => startDrag(e, item.key)}
-                      className={`flex touch-none items-center justify-center self-stretch text-center font-extrabold tracking-[-2px] text-ink/50 select-none ${done ? "invisible" : busy ? "cursor-default" : drag ? "cursor-grabbing" : "cursor-grab"}`}
+                      className={`flex touch-none items-center justify-center self-stretch text-center font-extrabold tracking-[-2px] text-ink/50 select-none [-webkit-touch-callout:none] ${done ? "invisible" : busy ? "cursor-default" : drag ? "cursor-grabbing" : "cursor-grab"}`}
                     >
                       ⋮⋮
                     </span>
