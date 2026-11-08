@@ -11,6 +11,7 @@ import { STUDY_CAP_TEXT } from "@/lib/binhYen/studyCap";
 import { Breadcrumb, ChildNav } from "../child-nav";
 import { Corner } from "./corner";
 import { LookBack } from "./look-back";
+import { Notebook } from "./notebook";
 import { TalkPanel, type TalkInfoView } from "./talk-panel";
 
 /** What the server answers (lib/binhYen/session.ts ByState). */
@@ -279,7 +280,7 @@ export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = 
           {content}
           {talk}
         </div>
-        {side && <LookBackColumn voice={voice} firstName={firstName} color={color} look={child.avatar} pics={child.pics} />}
+        {side && <LookBackColumn voice={voice} firstName={firstName} color={color} look={child.avatar} pics={child.pics} notebook={voice === "detective" ? <Notebook /> : undefined} />}
       </main>
       {/* R2: the child's 5 tabs. This page exists only when the corner is on, so it is listed. */}
       <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} voice={voice} />
