@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
 import { decideBreak, decideConfirmRequest, decideFinish, decideFreeStart, decidePass, decideProof, decideStart, isProofPath, ON_BREAK_TEXT, passOffered, runningTimedTask } from "@/lib/today/rules";
-import { bannerFor, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, leftCount, longDate, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
+import { bannerFor, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, groupLabel, leftCount, longDate, nextPart1, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
 
 // Wednesday 2026-10-14, Vietnam time.
 const TODAY = "2026-10-14";
@@ -407,5 +407,29 @@ describe("leftCount (R6d Vui chơi: còn N việc)", () => {
     expect(s.part1.pick.needed).toBe(1);
     expect(leftCount(s)).toBe(3);
     expect(leftCount(s)).toBe(s.part1.total - s.part1.done + s.part2.total - s.part2.done);
+  });
+});
+
+describe("nextPart1 (R6d Học tập card: never a skill)", () => {
+  it("a running skill + only upcoming homework: suggests the upcoming one, not 'all done'", () => {
+    const d = day({ homework: [{ id: HW, subject: "Toán", dueDate: "2026-10-20", note: null, doneAt: null, archivedAt: null, createdAt: at("06:00") }], templates: day().templates.filter((t) => t.part === "skill") });
+    const s = computeDayState({ ...d, runs: [run(RUN_SK, { source: "template", ref: SKILL, startedAt: at("15:00") })] }, vn("15:05"));
+    expect(s.part2.items.some((i) => i.state === "running")).toBe(true);
+    expect(s.part1.complete).toBe(false);
+    const n = nextPart1(s, null);
+    expect(n?.id).toBe(HW);
+    expect(groupLabel(n!)).toBe("Làm trước");
+  });
+  it("follows the child's own order, skipping skills", () => {
+    const s = computeDayState(day(), vn("15:00"));
+    const extra = s.part1.items.find((i) => i.id === EXTRA)!;
+    const skill = s.part2.items.find((i) => i.id === SKILL)!;
+    expect(nextPart1(s, [skill.key, extra.key])?.id).toBe(EXTRA);
+    expect(nextPart1(s, null)?.id).toBe(HW);
+  });
+  it("Phần 1 complete: nothing to suggest", () => {
+    const s = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00") })] }), vn("16:05"));
+    expect(s.part1.complete).toBe(true);
+    expect(nextPart1(s, null)).toBeNull();
   });
 });
