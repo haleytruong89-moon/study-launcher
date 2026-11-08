@@ -222,7 +222,7 @@ export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = 
         </div>
       </header>
       <main className="mx-auto flex max-w-md flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={["Hôm nay", "Góc bình yên"]} />
+        <Breadcrumb trail={["Hôm nay", "Góc bình yên"]} onBack={() => (window.history.length > 1 ? router.back() : router.push("/today"))} />
         {content}
         {talk}
       </main>

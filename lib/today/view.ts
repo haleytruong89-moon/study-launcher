@@ -139,6 +139,19 @@ export function weekSummary(week: DayState["week"]): string {
   return `${past.filter((d) => isOkResult(d.result)).length}/${past.length} ngày đạt`;
 }
 
+/**
+ * The big timer of Góc học tập's work panel (R6c), on the server clock: a timed task counts
+ * down its minimum; running homework counts up; not started = 00:00 (or the minimum of a
+ * timed task).
+ */
+export function timerMs(item: TaskView, nowMs: number): number {
+  const timed = !item.requiresProof && item.minMinutes > 0;
+  if (item.state === "running" && timed && item.canFinishAt) return Math.max(0, Date.parse(item.canFinishAt) - nowMs);
+  if (item.state === "running" && item.startedAt) return Math.max(0, nowMs - Date.parse(item.startedAt));
+  if (timed) return item.minMinutes * 60_000;
+  return 0;
+}
+
 /** "Quá hạn 15/10" · "Hạn hôm nay" · "Hạn ngày mai" · "Hạn 20/10". */
 export function dueLabel(dueDate: string, today: string): string {
   const dm = `${dueDate.slice(8, 10)}/${dueDate.slice(5, 7)}`;

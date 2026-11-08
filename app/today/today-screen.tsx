@@ -21,7 +21,8 @@ import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { PillarCards } from "./pillars";
-import { FeelInvite, FeelWeek, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
+import { FeelInvite, FeelWeek, WeekAreas, WeekProgress } from "./tabs";
+import { StudyCorner } from "./study-corner";
 import { WorldMini, WorldTab } from "./world";
 import { ComicToday, ComicVolume } from "./comic";
 import type { WeekDaysView } from "@/lib/today/weekDays";
@@ -67,11 +68,20 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   // R2: the 5 tabs. Hôm nay / Góc học tập / Tuần / Góp ý share this screen (and its state).
   const [tab, setTab] = useState<Tab>(initialTab);
   const tabRef = useRef<Tab>(initialTab);
+  // R6c: "🎯 Chế độ tập trung" of Góc học tập (off again whenever the tab changes).
+  const [studyFocus, setStudyFocus] = useState(false);
+  // R6c "← Quay lại": the tabs the child came from (last 10), falling back to Hôm nay.
+  const [tabHistory, setTabHistory] = useState<Tab[]>([]);
   const loadWeekRef = useRef<() => Promise<void>>(async () => {});
-  const selectTab = useCallback((t: Tab) => {
+  const selectTab = useCallback((t: Tab, opts?: { back?: boolean }) => {
     if (t === tabRef.current) return;
+    if (!opts?.back) {
+      const from = tabRef.current;
+      setTabHistory((h) => [...h, from].slice(-10));
+    }
     tabRef.current = t;
     setTab(t);
+    setStudyFocus(false);
     window.history.pushState(null, "", tabHref(t));
     window.scrollTo({ top: 0 });
     void loadWeekRef.current();
@@ -80,6 +90,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
     const onPop = () => {
       tabRef.current = tabFromUrl();
       setTab(tabRef.current);
+      setStudyFocus(false);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -494,7 +505,20 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, voice)]} />
+        <Breadcrumb
+          trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, voice)]}
+          onBack={
+            tab === "hom-nay"
+              ? undefined
+              : () => {
+                  // Skip entries equal to this tab (e.g. after the browser's own Back button).
+                  let h = tabHistory;
+                  while (h.length > 0 && h.at(-1) === tab) h = h.slice(0, -1);
+                  setTabHistory(h.slice(0, -1));
+                  selectTab(h.at(-1) ?? "hom-nay", { back: true });
+                }
+          }
+        />
         {error && !dialog && !proofOpen && (
           <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
             {error}
@@ -617,6 +641,18 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
         {tab === "hoc-tap" && (
           <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-[22px] font-bold">📚 Góc học tập</h2>
+              <button
+                type="button"
+                aria-pressed={studyFocus}
+                onClick={() => setStudyFocus(!studyFocus)}
+                className="btn shrink-0 border-[1.5px] text-sm"
+                style={studyFocus ? { background: color, borderColor: color, color: "#fff" } : { background: "#fff", borderColor: color, color }}
+              >
+                {studyFocus ? "Thoát tập trung" : "🎯 Chế độ tập trung"}
+              </button>
+            </div>
             <section aria-label="Trạng thái hôm nay" aria-live="polite" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white px-4 py-3">
               {statusTop}
               {controls}
@@ -630,6 +666,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               paused={paused}
               onSavePlan={(keys) => act({ url: "/api/day/plan", body: { keys } })}
               suggested={next}
+              focus={studyFocus}
             />
           </>
         )}

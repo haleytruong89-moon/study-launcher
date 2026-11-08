@@ -1,18 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
 import { QUADS, QUAD_COLORS, QUAD_KEYS, type Voice } from "@/lib/binhYen/catalog";
-import type { DayState, TaskView } from "@/lib/dayState";
+import type { DayState } from "@/lib/dayState";
 import type { TodayView } from "@/lib/today/service";
-import { dayLabel, dayMonth, upcomingHint, weekSummary } from "@/lib/today/view";
-import { plannable } from "@/lib/today/week";
+import { dayLabel, dayMonth, weekSummary } from "@/lib/today/view";
 import type { WeekDaysView, WeekFeel } from "@/lib/today/weekDays";
 import { QuadMark } from "../quad-icon";
-import { groupLabel } from "./pillars";
-import { NextTask, TaskRow, WeekStrip, type TaskCtx } from "./today-parts";
+import { WeekStrip } from "./today-parts";
 
 /**
  * R6a (artifact, item I): the invite to Góc bình yên at the top of Hôm nay, with the 4 regions.
@@ -91,156 +88,6 @@ export function FeelWeek({ week, color, big = false, feelLook }: { week: WeekDay
         );
       })}
     </ol>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Góc học tập (§3)
-// ---------------------------------------------------------------------------
-
-
-/** Today's tasks in the child's order (the saved plan first, then the rest in the usual order). */
-export function orderedToday(s: DayState, plan: string[] | null): TaskView[] {
-  const items = plannable(s).filter((i) => i.group !== "upcoming");
-  if (!plan) return items;
-  const pos = new Map(plan.map((k, n) => [k, n]));
-  return [...items].sort((a, b) => (pos.get(a.key) ?? 1e6 + items.indexOf(a)) - (pos.get(b.key) ?? 1e6 + items.indexOf(b)));
-}
-
-export function StudyCorner({
-  s,
-  view,
-  ctx,
-  color,
-  busy,
-  paused,
-  onSavePlan,
-  suggested,
-}: {
-  s: DayState;
-  view: TodayView;
-  /** What Hôm nay suggests next (plan, then the usual order — upcoming picks included). */
-  suggested: TaskView | null;
-  ctx: TaskCtx;
-  color: string;
-  busy: boolean;
-  paused: boolean;
-  onSavePlan: (keys: string[]) => Promise<boolean>;
-}) {
-  const list = orderedToday(s, view.plan);
-  const upcoming = s.part1.items.filter((i) => i.group === "upcoming");
-  const [picked, setPicked] = useState<string | null>(null);
-  const [focus, setFocus] = useState(false);
-  const all = [...list, ...upcoming];
-  const running = all.find((i) => i.state === "running") ?? null;
-  const current = all.find((i) => i.key === picked) ?? running ?? suggested ?? list.find((i) => i.state !== "done") ?? null;
-
-  function move(key: string, by: -1 | 1) {
-    const keys = list.map((i) => i.key);
-    const at = keys.indexOf(key);
-    const to = at + by;
-    if (at < 0 || to < 0 || to >= keys.length) return;
-    [keys[at], keys[to]] = [keys[to] as string, keys[at] as string];
-    // Keep what the plan already had that this list does not show (e.g. upcoming picks).
-    const kept = (view.plan ?? []).filter((k) => !keys.includes(k));
-    void onSavePlan([...keys, ...kept]);
-  }
-
-  return (
-    <div className={`grid gap-5 ${focus ? "" : "lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]"} lg:items-start`}>
-      {!focus && (
-        <section aria-labelledby="ht-list" className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="ht-list" className="text-lg font-bold">
-              Thứ tự hôm nay
-            </h2>
-            <span className="text-[13px] font-semibold text-ink/70">
-              Bài tập {s.part1.done}/{s.part1.total} · Kỹ năng {s.part2.done}/{s.part2.total}
-            </span>
-          </div>
-          <p className="text-[13px] text-ink/70">Con xếp thứ tự bằng nút ↑ ↓. Thứ tự chỉ để con dễ làm, không đổi giờ khóa/mở máy.</p>
-          {list.length === 0 ? (
-            <p className="text-sm text-ink/70">Hôm nay không có việc nào.</p>
-          ) : (
-            <ol className="flex flex-col gap-2">
-              {list.map((item, n) => (
-                <li key={item.key} className="flex items-stretch gap-1.5">
-                  <div className="flex flex-col justify-center gap-1">
-                    <button type="button" aria-label={`Đưa “${item.title}” lên`} disabled={busy || n === 0} onClick={() => move(item.key, -1)} className="size-11 rounded-xl border border-ink/15 bg-white text-lg disabled:opacity-30">
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Đưa “${item.title}” xuống`}
-                      disabled={busy || n === list.length - 1}
-                      onClick={() => move(item.key, 1)}
-                      className="size-11 rounded-xl border border-ink/15 bg-white text-lg disabled:opacity-30"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                  <div className="flex min-w-0 grow flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setPicked(item.key)}
-                      aria-pressed={current?.key === item.key}
-                      className="inline-flex min-h-11 items-center self-start rounded-full px-3 text-xs font-bold"
-                      style={current?.key === item.key ? { background: color, color: "#fff" } : { background: "#EEF0EC", color: "#4A4F4C" }}
-                    >
-                      {groupLabel(item)} · {current?.key === item.key ? "đang xem" : "xem chi tiết"}
-                    </button>
-                    <ul className="contents">
-                      <TaskRow item={item} ctx={ctx} locked={paused} />
-                    </ul>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          )}
-
-          <div className="mt-2 flex flex-col gap-0.5">
-            <h3 className="text-base font-bold">Làm trước ★ — bài sắp tới</h3>
-            {upcoming.length > 0 && (
-              <span className="text-[13px] font-semibold" style={{ color: s.part1.pick.done < s.part1.pick.needed ? color : "#4A4F4C" }}>
-                {upcomingHint(s)}
-              </span>
-            )}
-          </div>
-          {upcoming.length === 0 ? (
-            <p className="text-sm text-ink/70">Chưa có bài nào sắp tới.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {upcoming.map((item) => (
-                <TaskRow key={item.key} item={item} ctx={ctx} locked={paused} />
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-
-      <section aria-label="Khung làm bài" className="flex flex-col gap-3 rounded-[20px] border-2 bg-white p-4 lg:sticky lg:top-4" style={{ borderColor: color }}>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setFocus(!focus)} aria-pressed={focus} className="btn ml-auto border-[1.5px] bg-white text-sm" style={{ borderColor: color, color }}>
-            {focus ? "Hiện danh sách" : "Chỉ hiện bài đang xem"}
-          </button>
-        </div>
-        {current === null ? (
-          <p className="text-sm text-ink/70">Xong hết việc hôm nay rồi!</p>
-        ) : current.state === "done" ? (
-          <div className="flex flex-col gap-1">
-            <div className="text-xs font-bold tracking-[0.08em] uppercase" style={{ color }}>
-              Con đang xem
-            </div>
-            <div className="text-[23px] leading-tight font-bold">{current.title}</div>
-            <p className="font-semibold" style={{ color }}>
-              ✓ Xong rồi
-            </p>
-          </div>
-        ) : (
-          <NextTask item={current} ctx={ctx} label={current.state === "running" ? "Con đang làm" : "Con đang xem"} />
-        )}
-      </section>
-    </div>
   );
 }
 
