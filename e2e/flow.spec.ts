@@ -461,6 +461,18 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(page).toHaveURL(/\/today\?tab=hoc-tap$/);
   await expect(page.getByRole("navigation", { name: "Con đang ở" })).toContainText("Hôm nay › Góc học tập");
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
+  // R6c: "🎯 Chế độ tập trung" shows only the work panel; "← Quay lại" goes back to Hôm nay.
+  await page.getByRole("button", { name: "Chế độ tập trung" }).click();
+  await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Khung làm bài" })).toBeVisible();
+  await page.getByRole("button", { name: "Thoát tập trung" }).click();
+  await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
+  await page.getByRole("button", { name: "← Quay lại" }).click();
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(tabs.getByRole("link", { name: "Hôm nay" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: "← Quay lại" })).toHaveCount(0);
+  await tabs.getByRole("link", { name: "Góc học tập" }).click();
+  await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
 
   // R1 (07/11/2026): skills are open from the start, in parallel with homework.
   // R6c: a row's first button selects it; its buttons are in the work panel ("Khung làm bài").
@@ -818,10 +830,24 @@ test("S2e: the child picks an icon and plans today; the plan only reorders 'Vi�
   await page.getByRole("button", { name: "Đưa “Vật lí” lên" }).click();
   await expect(page.getByRole("button", { name: "Đưa “Hóa học” lên" })).toBeEnabled(); // saved: Vật lí is now first
   await expect(page.getByRole("button", { name: "Đưa “Vật lí” lên" })).toBeDisabled();
-  const { data: plan } = await db.from("day_plans").select("item_keys").eq("child_id", kid?.id ?? "").eq("local_date", today).single();
-  expect(plan?.item_keys.slice(0, 2)).toEqual([keys[1], keys[0]]);
+  const savedOrder = async () => ((await db.from("day_plans").select("item_keys").eq("child_id", kid?.id ?? "").eq("local_date", today).single()).data?.item_keys ?? []).slice(0, 2);
+  await expect.poll(savedOrder).toEqual([keys[1], keys[0]]);
+  // R6c: drag ⋮⋮ (mouse here; the same pointer events serve touch and pen) puts Hóa học back on top.
+  await expect(page.getByRole("button", { name: "Đưa “Hóa học” xuống" })).toBeEnabled(); // not saving any more
+  const rows = page.getByRole("list", { name: "Thứ tự hôm nay" }).getByRole("listitem");
+  await expect(rows.nth(0)).toHaveAccessibleName("Vật lí");
+  await expect(rows.nth(1)).toHaveAccessibleName("Hóa học");
+  const from = await rows.nth(1).locator("[data-grip]").boundingBox();
+  const to = await rows.nth(0).locator("[data-grip]").boundingBox();
+  expect(from && to).toBeTruthy();
+  await page.mouse.move((from?.x ?? 0) + (from?.width ?? 0) / 2, (from?.y ?? 0) + (from?.height ?? 0) / 2);
+  await page.mouse.down();
+  await page.mouse.move((to?.x ?? 0) + (to?.width ?? 0) / 2, (to?.y ?? 0) + (to?.height ?? 0) / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(rows.nth(0)).toHaveAccessibleName("Hóa học");
+  await expect.poll(savedOrder).toEqual([keys[0], keys[1]]);
   await page.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Hôm nay" }).click();
-  await expect(banner.getByText("Vật lí", { exact: true })).toBeVisible();
+  await expect(banner.getByText("Hóa học", { exact: true })).toBeVisible();
 
   // Keys that are not today's tasks are refused; the plan never touches the lock state.
   const bad = await page.evaluate(async () => (await fetch("/api/day/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: ["homework:00000000-0000-4000-8000-000000000000"] }) })).status);

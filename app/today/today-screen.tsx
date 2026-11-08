@@ -69,9 +69,15 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const tabRef = useRef<Tab>(initialTab);
   // R6c: "🎯 Chế độ tập trung" of Góc học tập (off again whenever the tab changes).
   const [studyFocus, setStudyFocus] = useState(false);
+  // R6c "← Quay lại": the tabs the child came from (last 10), falling back to Hôm nay.
+  const [tabHistory, setTabHistory] = useState<Tab[]>([]);
   const loadWeekRef = useRef<() => Promise<void>>(async () => {});
-  const selectTab = useCallback((t: Tab) => {
+  const selectTab = useCallback((t: Tab, opts?: { back?: boolean }) => {
     if (t === tabRef.current) return;
+    if (!opts?.back) {
+      const from = tabRef.current;
+      setTabHistory((h) => [...h, from].slice(-10));
+    }
     tabRef.current = t;
     setTab(t);
     setStudyFocus(false);
@@ -498,7 +504,20 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, hasWorld)]} />
+        <Breadcrumb
+          trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, hasWorld)]}
+          onBack={
+            tab === "hom-nay"
+              ? undefined
+              : () => {
+                  // Skip entries equal to this tab (e.g. after the browser's own Back button).
+                  let h = tabHistory;
+                  while (h.length > 0 && h.at(-1) === tab) h = h.slice(0, -1);
+                  setTabHistory(h.slice(0, -1));
+                  selectTab(h.at(-1) ?? "hom-nay", { back: true });
+                }
+          }
+        />
         {error && !dialog && !proofOpen && (
           <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
             {error}

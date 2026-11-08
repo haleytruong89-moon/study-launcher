@@ -71,11 +71,21 @@ export function ChildNav({
   );
 }
 
-/** "Con đang ở: Hôm nay › Góc học tập › Toán" (R2): where the child is, always the same place. */
-export function Breadcrumb({ trail }: { trail: string[] }) {
+/**
+ * "Con đang ở: Hôm nay › Góc học tập › Toán" (R2): where the child is, always the same place.
+ * R6c (artifact, audit item L): with onBack, a "← Quay lại" button goes back one step.
+ */
+export function Breadcrumb({ trail, onBack }: { trail: string[]; onBack?: () => void }) {
   return (
-    <nav aria-label="Con đang ở" className="text-[13px] text-ink/70">
-      <span className="font-semibold">Con đang ở:</span> {trail.join(" › ")}
-    </nav>
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+      {onBack && (
+        <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center rounded-full border-[1.5px] border-[#D3D8D0] bg-white px-3.5 text-sm font-semibold">
+          ← Quay lại
+        </button>
+      )}
+      <nav aria-label="Con đang ở" className="text-[13px] text-ink/70">
+        <span className="font-semibold">Con đang ở:</span> {trail.join(" › ")}
+      </nav>
+    </div>
   );
 }
