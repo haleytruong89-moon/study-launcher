@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { localDate } from "@/lib/time";
 import type { ChildContext } from "@/lib/today/service";
 import { findWorld } from "./catalog";
-import { monthOf, monthView, plantsToAdd, prevMonth, worldOfMonth, worldStarted, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
+import { feelGrowthOf, monthOf, monthView, plantsToAdd, prevMonth, worldOfMonth, worldStarted, type FeelGrowth, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
 import { PILLARS, type Pillar } from "./types";
 
 /** The world of the month is An's (scientist voice). Nguyên gets her comic in R5. */
@@ -65,12 +65,13 @@ async function finishedAreas(ctx: ChildContext, from: string, to: string): Promi
  * last day of a month is not lost). Idempotent: one row per (child, day, area) by the unique key;
  * two syncs at once simply skip the same rows.
  */
-export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<void> {
-  if (!hasWorld(ctx)) return;
+export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<WorldRow[]> {
+  if (!hasWorld(ctx)) return [];
   const today = localDate(now);
   const month = monthOf(today);
   const months = [prevMonth(month), month].filter(worldStarted);
-  if (months.length === 0) return;
+  if (months.length === 0) return [];
+  const planted: WorldRow[] = [];
   const admin = createAdminClient();
   const known = await knownWorlds(ctx.childId);
   for (const m of months) {
@@ -87,20 +88,25 @@ export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<vo
     if (!worldKey) continue;
     const add = plantsToAdd(await finishedAreas(ctx, firstDay(m), to), (existing ?? []) as WorldRow[], worldKey);
     if (add.length === 0) continue;
-    const { error: insErr } = await admin
+    // Only the rows this call inserted come back (a sync at the same time keeps its own).
+    const { data: ins, error: insErr } = await admin
       .from("world_items")
-      .upsert(add.map((r) => ({ ...r, family_id: ctx.familyId, child_id: ctx.childId })), { onConflict: "child_id,local_date,pillar", ignoreDuplicates: true });
+      .upsert(add.map((r) => ({ ...r, family_id: ctx.familyId, child_id: ctx.childId })), { onConflict: "child_id,local_date,pillar", ignoreDuplicates: true })
+      .select("local_date, pillar, world_key, item_key, variant");
     if (insErr) throw new Error(`world.plant: ${insErr.message}`);
+    planted.push(...((ins ?? []) as WorldRow[]));
     if (!known.planted.has(m)) known.planted.set(m, worldKey);
   }
+  return planted;
 }
 
-/** Best effort (e.g. right after a Góc bình yên visit): a failure only waits for the next sync. */
-export async function syncWorldQuietly(ctx: ChildContext): Promise<void> {
+/** Best effort (e.g. right after a Góc bình yên visit): a failure only waits for the next sync (null). */
+export async function syncWorldQuietly(ctx: ChildContext, now = new Date()): Promise<WorldRow[] | null> {
   try {
-    await syncWorld(ctx);
+    return await syncWorld(ctx, now);
   } catch (e) {
     console.error("world.sync", e instanceof Error ? e.message : e);
+    return null;
   }
 }
 
@@ -174,4 +180,31 @@ export async function worldReady(): Promise<boolean> {
   if (!error) return true;
   if (missingTable(error)) return false;
   throw new Error(`world.ready: ${error.message}`);
+}
+
+/** Best effort: null when there is no world for this child, the tables are not there yet, or anything fails. */
+/** `planted`: what the sync right before planted (null if it failed): the visit's own plant is "new today". */
+export async function feelGrowthToday(ctx: ChildContext, planted: readonly WorldRow[] | null, now = new Date()): Promise<FeelGrowth | null> {
+  if (!hasWorld(ctx)) return null;
+  try {
+    const today = localDate(now);
+    const month = monthOf(today);
+    if (!worldStarted(month)) return null;
+    const known = await knownWorlds(ctx.childId);
+    const { key, choose } = worldOfMonth(month, true, known);
+    if (!key) return choose.length > 0 ? { kind: "choose" } : null;
+    const { data, error } = await createAdminClient()
+      .from("world_items")
+      .select("local_date, pillar, world_key, item_key, variant")
+      .eq("child_id", ctx.childId)
+      .gte("local_date", firstDay(month))
+      .lte("local_date", lastDay(month));
+    if (error) throw new Error(`world.growth: ${error.message}`);
+    const view = monthView(month, key, (data ?? []) as WorldRow[], today);
+    const mine = planted?.some((r) => r.pillar === "feel" && r.local_date === today) ?? true;
+    return view ? feelGrowthOf(view, !mine) : null;
+  } catch (e) {
+    console.error("world.growth", e instanceof Error ? e.message : e);
+    return null;
+  }
 }

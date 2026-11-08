@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { storedAvatar } from "@/lib/avatar";
 import { hasPics } from "@/lib/avatarPics";
 import { readAvatar, type StoredLook } from "@/lib/avatarServer";
-import { voiceFor } from "@/lib/binhYen/catalog";
+import { isQuad, voiceFor } from "@/lib/binhYen/catalog";
 import { byState, type ByState } from "@/lib/binhYen/session";
 import { escalateSoon, talkInfo, type TalkInfo } from "@/lib/binhYen/talk";
 import { requireChild } from "@/lib/today/service";
@@ -23,7 +23,8 @@ export const metadata: Metadata = {
  * whether this browser has a visit going on; the page only shows it. No separate PIN (07/11/2026). Parents are sent away.
  * No third-party script runs here (Content-Security-Policy in next.config.ts).
  */
-export default async function BinhYenPage() {
+export default async function BinhYenPage({ searchParams }: { searchParams: Promise<{ quad?: string }> }) {
+  const { quad } = await searchParams;
   const me = await getCurrentUser();
   if (!me?.profile) redirect(`/login?next=${encodeURIComponent("/binh-yen")}`);
   if (me.profile.role === "parent") redirect("/parent");
@@ -51,6 +52,7 @@ export default async function BinhYenPage() {
       voice={voice}
       initial={state}
       initialTalk={talk}
+      startQuad={isQuad(quad) ? quad : null}
     />
   );
 }

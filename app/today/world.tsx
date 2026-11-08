@@ -341,34 +341,47 @@ export function WorldMini({ onOpen }: { onOpen: () => void }) {
   if (load.state !== "ok" || !load.data.view) return null;
   const v = load.data.view;
   const today = [...v.things.filter((t) => t.today), ...v.animals.filter((a) => a.today)];
+  // R6a (artifact, item F): a small picture of the world, what grew today, and the way in.
+  const shown = [...v.things, ...v.animals].slice(-12);
+  const light = v.world.dark;
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex min-h-16 w-full items-center gap-3 rounded-[20px] bg-white p-4 text-left"
-      style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}
-    >
-      <span aria-hidden className="text-3xl">
-        {v.world.emoji}
-      </span>
-      <span className="flex grow flex-col">
-        <strong className="text-base">
-          {v.world.name} của con · {v.things.length} thứ đã mọc
-        </strong>
-        <span className="flex items-center gap-1 text-sm text-ink/75">
-          {today.length > 0 ? (
-            <>
-              Hôm nay: {today.map((t) => <WorldIcon key={t.key} icon={t.icon} size={22} />)}
-              <span className="sr-only">{today.map((t) => t.name).join(", ")}</span>
-            </>
+    <section aria-labelledby="world-mini" className="flex flex-col gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}>
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 id="world-mini" className="text-base font-bold">
+          {v.world.emoji} {v.world.name} của con
+        </h2>
+        <span className="text-sm font-semibold text-ink/70">
+          {v.things.length} thứ đã mọc{v.animals.length > 0 ? ` · ${v.animals.length} ${v.world.visitorWord}` : ""}
+        </span>
+      </div>
+      <button type="button" onClick={onOpen} aria-label={`Mở ${v.world.name} của con`} className="block overflow-hidden rounded-2xl text-left" style={{ background: `linear-gradient(${v.world.sky} 55%, ${v.world.land} 55%)` }}>
+        <span className="flex min-h-24 flex-wrap items-end gap-1.5 px-3 pt-6 pb-3" aria-hidden>
+          {shown.length > 0 ? (
+            shown.map((t) => (
+              <span key={t.key} className={t.today ? "pop rounded-full ring-2 ring-white" : undefined}>
+                <WorldIcon icon={t.icon} size={30} />
+              </span>
+            ))
           ) : (
-            "Xong một mảng hôm nay là có thứ mới mọc."
+            <span className={`text-sm font-semibold ${light ? "text-white" : "text-ink/80"}`}>Còn trống — đang chờ thứ đầu tiên mọc</span>
           )}
         </span>
-      </span>
-      <span aria-hidden className="text-xl text-ink/50">
-        ›
-      </span>
-    </button>
+      </button>
+      {today.length > 0 ? (
+        <ul aria-label="Hôm nay đã mọc" className="flex flex-wrap gap-1.5">
+          {today.map((t) => (
+            <li key={t.key} className="flex items-center gap-1 rounded-full bg-bg py-1 pr-3 pl-1 text-sm font-semibold">
+              <WorldIcon icon={t.icon} size={22} />
+              {t.name}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-ink/75">Xong một mảng hôm nay (cảm xúc, học tập, kỹ năng, vui chơi) là có thứ mới mọc.</p>
+      )}
+      <button type="button" onClick={onOpen} className="btn self-start border-[1.5px] border-[#2B5D4F] bg-white text-sm text-[#2B5D4F]">
+        Xem cả {v.world.name.toLowerCase()} →
+      </button>
+    </section>
   );
 }

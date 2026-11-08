@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  appLabelOf,
   computeDayState,
   type AppSlotInput,
   type DayInput,
@@ -617,6 +618,16 @@ describe("Part 1 composition", () => {
       NOW,
     );
     expect(s.part1.items[0]?.deepLink).toBe("https://math.example/lesson/7");
+    // R6a: the child sees which app it opens.
+    expect(s.part1.items[0]?.appLabel).toBe("App Toán");
+  });
+
+  it("R6a: the app name falls back to the link's site; none without a link", () => {
+    const s = computeDayState(input({ templates: [tpl("e", "extra", { deepLink: "https://www.khanacademy.org/math/x" }), tpl("s", "skill")] }), NOW);
+    expect(s.part1.items[0]?.appLabel).toBe("khanacademy.org");
+    expect(s.part2.items[0]?.appLabel).toBeNull();
+    expect(appLabelOf("  ", "not a url")).toBeNull();
+    expect(appLabelOf(null, null)).toBeNull();
   });
 
   it("a Part 1 with only placeholders is empty → done", () => {

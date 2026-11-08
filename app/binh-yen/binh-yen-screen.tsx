@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
-import type { Voice } from "@/lib/binhYen/catalog";
+import type { Quad, Voice } from "@/lib/binhYen/catalog";
 import { HOTLINE_TEXT, VISIT_PING_MS } from "@/lib/binhYen/rules";
 import { STUDY_CAP_TEXT } from "@/lib/binhYen/studyCap";
 import { Breadcrumb, ChildNav } from "../child-nav";
@@ -57,7 +57,7 @@ async function call(method: "GET" | "POST", url: string): Promise<{ ok: boolean;
  * never decides itself. Nothing the child does here is logged; the only things sent are the
  * keys of a finished visit, to our own server.
  */
-export function BinhYenScreen({ child, voice, initial, initialTalk }: { child: Child; voice: Voice; initial: ByStateView | null; initialTalk: TalkInfoView | null }) {
+export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = null }: { child: Child; voice: Voice; initial: ByStateView | null; initialTalk: TalkInfoView | null; startQuad?: Quad | null }) {
   const router = useRouter();
   const [state, setState] = useState<ByStateView | null>(initial);
   /** Once the study-time limit is reached, this screen stays on its message (no new visit by itself). */
@@ -200,6 +200,7 @@ export function BinhYenScreen({ child, voice, initial, initialTalk }: { child: C
         onState={accept}
         onTalkInline={setTalkInline}
         talk={talkCard}
+        startQuad={startQuad}
       />
     );
   } else {

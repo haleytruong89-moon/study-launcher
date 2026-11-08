@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { WORLDS, WORLD_ORDER, findThing } from "@/lib/world/catalog";
-import { defaultWorld, isMonth, worldOfMonth, worldOptions, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
+import { defaultWorld, feelGrowthOf, isMonth, worldOfMonth, worldOptions, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
 import { RUNG } from "@/lib/world/rung";
 import { PILLARS, type Pillar } from "@/lib/world/types";
 
@@ -154,5 +154,29 @@ describe("An picks the world of the month (R4b)", () => {
     expect(worldOptions("2027-01", [{ month: "2026-11", worldKey: "rung" }, { month: "2026-12", worldKey: "bien" }])).toEqual(["vu_tru", "nui_lua"]);
     expect(worldOptions("2027-11", [{ month: "2026-11", worldKey: "rung" }])).toEqual(["rung", "bien", "vu_tru", "nui_lua"]);
     expect(worldOptions("2027-10", [{ month: "2026-11", worldKey: "rung" }])).toEqual(["bien", "vu_tru", "nui_lua"]);
+  });
+});
+
+describe("feelGrowthOf (R6a: the reward on Góc bình yên's \"Xong rồi\")", () => {
+  const row = (d: string, pillar: Pillar, item: string, variant = 0): WorldRow => ({ local_date: `2026-11-${d}`, pillar, world_key: "rung", item_key: item, variant });
+  const lan = RUNG.things.feel[0]!;
+  const facts = lan.facts;
+  it("a new flower today: its name, the 1st fact, isNew", () => {
+    const g = feelGrowthOf(monthView("2026-11", "rung", [row("08", "feel", "lan_hai")], "2026-11-08")!);
+    expect(g).toEqual({ kind: "grew", name: "Lan hài", icon: lan.icon, world: "Rừng nhiệt đới", isNew: true, fact: facts[0], animal: null, again: false });
+  });
+  it("the same flower again: grows, opens the next fact", () => {
+    const g = feelGrowthOf(monthView("2026-11", "rung", [row("01", "feel", "lan_hai"), row("08", "feel", "lan_hai", 1)], "2026-11-08")!);
+    expect(g).toMatchObject({ kind: "grew", isNew: false, fact: facts[1] });
+  });
+  it("past the 3rd time: no new fact (all are open)", () => {
+    const rows = ["01", "02", "03", "08"].map((d, i) => row(d, "feel", "lan_hai", i));
+    expect(feelGrowthOf(monthView("2026-11", "rung", rows, "2026-11-08")!)).toMatchObject({ isNew: false, fact: null });
+  });
+  it("a second visit the same day: the same plant, nothing new opens", () => {
+    expect(feelGrowthOf(monthView("2026-11", "rung", [row("08", "feel", "lan_hai")], "2026-11-08")!, true)).toMatchObject({ name: "Lan hài", again: true, fact: null, animal: null });
+  });
+  it("nothing grew in Cảm xúc today (only another area, or another day): no reward", () => {
+    expect(feelGrowthOf(monthView("2026-11", "rung", [row("08", "study", "cay_da"), row("07", "feel", "lan_hai")], "2026-11-08")!)).toBeNull();
   });
 });

@@ -1,13 +1,61 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { QUAD_COLORS } from "@/lib/binhYen/catalog";
+import type { Avatar } from "@/lib/avatar";
+import type { AvatarPics } from "@/lib/avatarPics";
+import { QUADS, QUAD_COLORS, QUAD_KEYS, type Voice } from "@/lib/binhYen/catalog";
 import type { DayState, TaskView } from "@/lib/dayState";
 import type { TodayView } from "@/lib/today/service";
 import { clock, dayLabel, dayMonth, upcomingHint, vnTime, weekSummary } from "@/lib/today/view";
 import { plannable } from "@/lib/today/week";
-import type { WeekDay, WeekDaysView } from "@/lib/today/weekDays";
+import type { WeekDay, WeekDaysView, WeekFeel } from "@/lib/today/weekDays";
+import { QuadMark } from "../quad-icon";
 import { NextTask, TaskRow, WeekStrip, type TaskCtx } from "./today-parts";
+
+/**
+ * R6a (artifact, item I): the invite to Góc bình yên at the top of Hôm nay, with the 4 regions.
+ * A tile opens the corner straight at that region's words (/binh-yen?quad=…). Only an invite:
+ * it never blocks studying. The feeling of today is shown only to the child.
+ */
+export function FeelInvite({ voice, feelLook, today }: { voice: Voice; feelLook: FeelLook; today: WeekFeel | null }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col">
+        <strong id="by-invite" className="text-lg">
+          Hôm nay con thấy thế nào?
+        </strong>
+        <span className="text-sm text-ink/70">
+          {today ? `Hôm nay con đã ghé Góc bình yên${today.label ? `: ${today.label}` : ""}. Muốn ghé lại thì chạm một vùng.` : "Chạm vào vùng giống con nhất — trước khi học, nếu con muốn."}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {QUAD_KEYS.map((q) => {
+          const info = QUADS[voice][q];
+          return (
+            <Link
+              key={q}
+              href={`/binh-yen?quad=${q}`}
+              aria-label={`${info.label}: ${info.sub}`}
+              className="flex min-h-16 items-center gap-2 rounded-2xl px-3 py-2 text-ink no-underline transition-transform hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              style={{ background: QUAD_COLORS[q].soft }}
+            >
+              <QuadMark quad={q} voice={voice} look={feelLook.look} pics={feelLook.pics} size={36} />
+              <span className="text-sm font-bold leading-tight">{info.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** How a feeling is drawn for this child (R6a): An's regions, Nguyên's own faces. */
+export interface FeelLook {
+  voice: Voice;
+  look: Avatar | null;
+  pics: AvatarPics;
+}
 
 /**
  * R2 tabs of /today (docs/MAN_CHINH_MOI.md §2–3). Display only: every decision (lock, break,
@@ -19,25 +67,24 @@ import { NextTask, TaskRow, WeekStrip, type TaskCtx } from "./today-parts";
 // Feelings of the week (Hôm nay + Tuần của con)
 // ---------------------------------------------------------------------------
 
-export function FeelWeek({ week, color, big = false }: { week: WeekDaysView; color: string; big?: boolean }) {
+export function FeelWeek({ week, color, big = false, feelLook }: { week: WeekDaysView; color: string; big?: boolean; feelLook: FeelLook }) {
   return (
     <ol aria-label="Cảm xúc tuần này" className="grid grid-cols-7 gap-1 text-center">
       {week.days.map((d) => {
         const isToday = d.date === week.today;
-        const q = d.feel ? QUAD_COLORS[d.feel.quad] : null;
         const label = d.future ? "Chưa đến" : d.feel ? d.feel.label || "Đã ghé" : "Chưa ghé";
         return (
           <li key={d.date} className="flex min-w-0 flex-col items-center gap-1">
             <span className={`text-xs ${isToday ? "font-bold" : "text-ink/70"}`} style={isToday ? { color } : undefined}>
               {dayLabel(d.date, week.today)}
             </span>
-            <span
-              role="img"
-              aria-label={`${dayMonth(d.date)}: ${label}`}
-              title={label}
-              className={`flex items-center justify-center rounded-full ${big ? "size-11" : "size-[34px]"} ${d.future ? "opacity-40" : ""}`}
-              style={q ? { background: q.c } : { border: "1.5px dashed rgba(28,31,29,0.3)" }}
-            />
+            <span role="img" aria-label={`${dayMonth(d.date)}: ${label}`} title={label} className={`flex items-center justify-center ${d.future ? "opacity-40" : ""}`}>
+              {d.feel ? (
+                <QuadMark quad={d.feel.quad} voice={feelLook.voice} look={feelLook.look} pics={feelLook.pics} size={big ? 44 : 36} />
+              ) : (
+                <span className={`rounded-full ${big ? "size-11" : "size-9"}`} style={{ border: "1.5px dashed rgba(28,31,29,0.3)" }} />
+              )}
+            </span>
             {big && <span className="w-full truncate text-[11px] text-ink/75">{d.feel ? d.feel.label : ""}</span>}
           </li>
         );
@@ -107,9 +154,9 @@ export function PillarCards({
           done={!!today?.feel}
           line={today?.feel ? `Hôm nay con thấy: ${today.feel.label}` : "Con chưa ghé Góc bình yên hôm nay."}
           action={
-            <a href="/binh-yen" className="btn self-start border-[1.5px] bg-white text-sm no-underline" style={{ borderColor: color, color }}>
+            <Link href="/binh-yen" className="btn self-start border-[1.5px] bg-white text-sm no-underline" style={{ borderColor: color, color }}>
               Vào Góc bình yên
-            </a>
+            </Link>
           }
         />
       )}
@@ -293,7 +340,7 @@ const AREAS: { key: "study" | "skill" | "play"; icon: string; label: string }[] 
   { key: "play", icon: "🎮", label: "Vui chơi" },
 ];
 
-export function WeekAreas({ week, color }: { week: WeekDaysView; color: string }) {
+export function WeekAreas({ week, color, feelLook }: { week: WeekDaysView; color: string; feelLook: FeelLook }) {
   return (
     <table className="w-full table-fixed text-center text-sm">
       <caption className="sr-only">Con đã làm gì mỗi ngày trong tuần</caption>
@@ -317,7 +364,13 @@ export function WeekAreas({ week, color }: { week: WeekDaysView; color: string }
             </th>
             {week.days.map((d) => (
               <td key={d.date} aria-label={d.feel ? `Đã ghé: ${d.feel.label}` : "Chưa ghé"}>
-                {d.feel ? <span aria-hidden className="inline-block size-3 rounded-full" style={{ background: QUAD_COLORS[d.feel.quad].c }} /> : <span aria-hidden className="text-ink/25">·</span>}
+                {d.feel ? (
+                  <span className="inline-flex justify-center">
+                    <QuadMark quad={d.feel.quad} voice={feelLook.voice} look={feelLook.look} pics={feelLook.pics} size={26} />
+                  </span>
+                ) : (
+                  <span aria-hidden className="text-ink/25">·</span>
+                )}
               </td>
             ))}
           </tr>

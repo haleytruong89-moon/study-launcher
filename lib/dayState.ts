@@ -255,6 +255,11 @@ export interface TaskView {
   /** "Đang xây" slot: shown but not counted and cannot be started. */
   placeholder: boolean;
   deepLink: string | null;
+  /**
+   * R6a: which app the link opens ("Khan Academy"): the app slot's label, else the link's site
+   * ("khanacademy.org"). null without a link. Display only.
+   */
+  appLabel: string | null;
   /** Homework created after part1_done_at: shown, does not re-lock the day. */
   addedAfterPart1Done: boolean;
   /** Homework only (interpretation 17): 'due' is required, 'upcoming' can be done early. */
@@ -453,6 +458,7 @@ function templateViews(
         proofCount: run?.proofPaths.length ?? 0,
         placeholder,
         deepLink: placeholder ? null : (t.deepLink ?? slot?.url ?? null),
+        appLabel: placeholder ? null : appLabelOf(t.deepLink && slot?.url && hostOf(t.deepLink) !== hostOf(slot.url) ? null : (slot?.label ?? null), t.deepLink ?? slot?.url ?? null),
         addedAfterPart1Done: false,
         group: null,
         early: false,
@@ -504,6 +510,7 @@ function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[]
         proofCount: run?.proofPaths.length ?? 0,
         placeholder: false,
         deepLink: null,
+        appLabel: null,
         addedAfterPart1Done: false,
         group: h.dueDate > cutoff ? "upcoming" : "due",
         early: isEarly(h),
@@ -542,6 +549,22 @@ function weekResult(s: DaySessionInput | undefined, bedtime: string, isToday: bo
     if (isDayOk(s, bedtime)) return "ok";
   }
   return isToday ? "today" : "miss";
+}
+
+/** R6a: the app's name for a link: the slot label, else the site without "www." (null without a link). */
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+export function appLabelOf(slotLabel: string | null, url: string | null): string | null {
+  if (!url) return null;
+  const label = slotLabel?.trim();
+  if (label) return label;
+  return hostOf(url) || null;
 }
 
 /**

@@ -331,7 +331,7 @@ Bộ thử ≥ 50 câu nằm trong spike S3. Cụm từ lưu trong `by_catalog`;
 - `backup.yml`: bỏ **dữ liệu** bảng `by_*` khỏi bản sao lưu (D6), giữ cấu trúc.
 
 **Màn hình:**
-- `/binh-yen`: tắt → "Góc bình yên chưa mở. Bố mẹ sẽ bật cùng con."; bật → con tự đặt PIN (khác PIN đăng nhập, máy chủ kiểm) → trang chờ có "🔒 Ai thấy gì?" (`lib/binhYen/copy.ts`), nút nói chuyện, "Sắp có: chọn cảm xúc". Không script bên thứ ba (Content-Security-Policy chỉ cho phép chính trang).
+- `/binh-yen`: tắt → "Góc bình yên chưa mở. Bố mẹ sẽ bật cùng con."; bật → con tự đặt PIN (khác PIN đăng nhập, máy chủ kiểm) → trang chờ có "🔒 Ai thấy gì?" (`lib/binhYen/copy.ts`), nút nói chuyện, "Sắp có: chọn cảm xúc". Không script bên thứ ba (Content-Security-Policy chỉ cho phép chính trang và Supabase của nhà mình). *(R6a, 08/11)* Từ Hôm nay vào Góc bình yên không tải lại trang cho nhanh, nên khi đó trang dùng chính sách của trang Hôm nay (cũng không có script bên thứ ba); vào thẳng địa chỉ / tải lại thì dùng chính sách riêng như trên.
 - Hôm nay: nút **💬 Muốn nói chuyện** ở đầu trang (+ lối vào **🌿 Góc bình yên** khi bật).
 - Bố mẹ: dải đỏ trên mọi trang khi có tín hiệu chưa xem → `/parent/talk` → **Đã thấy**. Thêm › Các con: **Xóa PIN Góc bình yên** (có giải thích). Thêm › Luật trong nhà: bật/tắt + 2 giới hạn phút.
 - Nhắc lại sau 10' **chỉ cho `needs_care`** (S-BY2): `/api/cron/by-escalate` (GitHub mỗi 5', có thể trễ) **và** mỗi lần máy con hỏi máy chủ. "Con muốn nói chuyện" **không** nhắc lại (chốt 05/11/2026).
