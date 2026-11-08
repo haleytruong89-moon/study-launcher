@@ -475,9 +475,11 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       {dialog === "icon" && (
         <IconPicker current={view.icon} color={color} busy={!!busy} error={error} onPick={(icon) => act({ url: "/api/profile/icon", body: { icon } })} onClose={() => setDialog(null)} />
       )}
-      {focusItem && <FocusView key={focusItem.key} item={focusItem} ctx={ctx} voice={voice} worldKey={worldKey} onClose={closeFocus} />}
+      {/* Sibling keys must differ: the focus view, the start card and the photo sheet can be for
+          the same task, and a shared key left the focus view behind when both closed at once. */}
+      {focusItem && <FocusView key={`focus:${focusItem.key}`} item={focusItem} ctx={ctx} voice={voice} worldKey={worldKey} onClose={closeFocus} />}
       {startedItem && started && (
-        <StartSheet key={startedItem.key} item={startedItem} color={color} opener={started.opener} onFocus={() => openFocus(startedItem)} onClose={() => setStarted(null)} />
+        <StartSheet key={`start:${startedItem.key}`} item={startedItem} color={color} opener={started.opener} onFocus={() => openFocus(startedItem)} onClose={() => setStarted(null)} />
       )}
       {proofOpen && proofItem && (
         <ProofSheet
