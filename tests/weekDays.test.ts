@@ -32,11 +32,11 @@ describe("buildWeekDays (R2 Tuần của con)", () => {
 
   it("feeling = the LAST finished visit of the day; unknown quad is ignored", () => {
     const v = buildWeekDays(MON, TODAY, [], [
-      { local_date: MON, quad: "blue", word_key: "met", created_at: "2026-11-02T10:00:00Z" },
-      { local_date: MON, quad: "green", word_key: "binh_yen", created_at: "2026-11-02T12:00:00Z" },
-      { local_date: "2026-11-03", quad: "purple", word_key: "x", created_at: "2026-11-03T12:00:00Z" },
+      { local_date: MON, quad: "blue", word_key: "met", created_at: "2026-11-02T10:00:00Z", activity_key: null },
+      { local_date: MON, quad: "green", word_key: "binh_yen", created_at: "2026-11-02T12:00:00Z", activity_key: null },
+      { local_date: "2026-11-03", quad: "purple", word_key: "x", created_at: "2026-11-03T12:00:00Z", activity_key: null },
     ]);
-    expect(v.days[0]?.feel).toEqual({ quad: "green", word: "binh_yen", label: "bình yên" });
+    expect(v.days[0]?.feel).toEqual({ quad: "green", word: "binh_yen", label: "bình yên", activity: null });
     expect(v.days[1]?.feel).toBeNull();
     expect(v.byEnabled).toBe(true);
   });
@@ -45,5 +45,22 @@ describe("buildWeekDays (R2 Tuần của con)", () => {
     const v = buildWeekDays(MON, TODAY, [], null);
     expect(v.byEnabled).toBe(false);
     expect(v.days.every((d) => d.feel === null)).toBe(true);
+  });
+});
+
+describe("buildWeekDays activity (R6d)", () => {
+  it("keeps the activity of the last visit of the day", () => {
+    const v = buildWeekDays("2026-11-02", "2026-11-04", [], [
+      { local_date: "2026-11-03", quad: "green", word_key: "binh_yen", created_at: "2026-11-03T01:00:00Z", activity_key: "breath" },
+      { local_date: "2026-11-03", quad: "yellow", word_key: "vui", created_at: "2026-11-03T05:00:00Z", activity_key: null },
+    ]);
+    expect(v.days[1]?.feel).toMatchObject({ quad: "yellow", word: "vui", label: "vui", activity: null });
+  });
+
+  it("activity present", () => {
+    const v = buildWeekDays("2026-11-02", "2026-11-04", [], [
+      { local_date: "2026-11-02", quad: "red", word_key: "lo_lang", created_at: "2026-11-02T01:00:00Z", activity_key: "breath" },
+    ]);
+    expect(v.days[0]?.feel?.activity).toBe("breath");
   });
 });

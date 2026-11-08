@@ -374,6 +374,7 @@ export const NUI_LUA: World = {
     },
     {
       key: "giun_ong",
+      move: "still",
       name: "Giun ống khổng lồ",
       icon: { svg: { shape: "tubes", color: "#F2F0E8", accent: "#D2352B" } },
       needs: [{ tag: "undersea", n: 1 }],
@@ -388,6 +389,7 @@ export const NUI_LUA: World = {
     },
     {
       key: "vi_khuan_ua_nhiet",
+      move: "still",
       name: "Vi khuẩn ưa nhiệt",
       icon: { emoji: "🦠" },
       needs: [{ tag: "geyser", n: 1 }],
@@ -416,6 +418,7 @@ export const NUI_LUA: World = {
     },
     {
       key: "may_do_dia_chan",
+      move: "still",
       name: "Máy đo địa chấn",
       icon: { emoji: "📈" },
       needs: [{ tag: "quake", n: 1 }],
@@ -436,7 +439,7 @@ export const NUI_LUA: World = {
         { tag: "quake", n: 1 },
         { tag: "rock", n: 2 },
       ],
-      because: "sau động đất cần tìm người",
+      because: "nơi này có động đất, cần tìm người",
       facts: [
         "Chó cứu hộ được huấn luyện để tìm người bị kẹt dưới đống đổ nát sau động đất.",
         "Mũi chó nhạy hơn mũi người rất nhiều lần, ngửi được mùi người qua khe gạch đá.",

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TaskView } from "@/lib/dayState";
@@ -9,6 +10,7 @@ import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
 import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, shade, statusPill } from "@/lib/today/view";
+import { Character } from "../avatar-face";
 import { SignOutButton } from "../sign-out-button";
 import { TalkPanel } from "../binh-yen/talk-panel";
 import { FeedbackForm } from "./feedback";
@@ -18,8 +20,11 @@ import { isChildTab, tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
 import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
-import { FeelInvite, FeelWeek, PillarCards, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
+import { PillarCards } from "./pillars";
+import { FeelInvite, FeelWeek, WeekAreas, WeekProgress } from "./tabs";
+import { StudyCorner } from "./study-corner";
 import { WorldMini, WorldTab } from "./world";
+import { ComicToday, ComicVolume } from "./comic";
 import type { WeekDaysView } from "@/lib/today/weekDays";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
@@ -63,11 +68,20 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   // R2: the 5 tabs. Hôm nay / Góc học tập / Tuần / Góp ý share this screen (and its state).
   const [tab, setTab] = useState<Tab>(initialTab);
   const tabRef = useRef<Tab>(initialTab);
+  // R6c: "🎯 Chế độ tập trung" of Góc học tập (off again whenever the tab changes).
+  const [studyFocus, setStudyFocus] = useState(false);
+  // R6c "← Quay lại": the tabs the child came from (last 10), falling back to Hôm nay.
+  const [tabHistory, setTabHistory] = useState<Tab[]>([]);
   const loadWeekRef = useRef<() => Promise<void>>(async () => {});
-  const selectTab = useCallback((t: Tab) => {
+  const selectTab = useCallback((t: Tab, opts?: { back?: boolean }) => {
     if (t === tabRef.current) return;
+    if (!opts?.back) {
+      const from = tabRef.current;
+      setTabHistory((h) => [...h, from].slice(-10));
+    }
     tabRef.current = t;
     setTab(t);
+    setStudyFocus(false);
     window.history.pushState(null, "", tabHref(t));
     window.scrollTo({ top: 0 });
     void loadWeekRef.current();
@@ -76,6 +90,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
     const onPop = () => {
       tabRef.current = tabFromUrl();
       setTab(tabRef.current);
+      setStudyFocus(false);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -99,6 +114,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const [busy, setBusy] = useState<string | null>(null);
   // Focus mode opens for a running task unless the child minimised THAT task.
   const [minimized, setMinimized] = useState<string | null>(null);
+  // A running task the child asked to open (e.g. a skill while homework also runs).
+  const [focusKey, setFocusKey] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"plan" | "icon" | null>(null);
   // "Nộp ảnh bài" sheet: the homework key it is open for, and upload progress.
   const [proofKey, setProofKey] = useState<string | null>(null);
@@ -323,7 +340,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const showNudge = !view.plan && !s.part1.complete && planItems.length >= 2 && planLater !== s.localDate;
   const planDone = view.plan ? planProgress(s, view.plan) : null;
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
-  const focusItem = !paused && next?.state === "running" && minimized !== next.key ? next : null;
+  const asked = focusKey ? ([...s.part1.items, ...s.part2.items].find((i) => i.key === focusKey && i.state === "running") ?? null) : null;
+  const focusItem = paused ? null : (asked ?? (next?.state === "running" && minimized !== next.key ? next : null));
   const proofItem = proofKey ? (s.part1.items.find((i) => i.key === proofKey) ?? null) : null;
   // Finished (e.g. from the phone) or gone: the sheet closes by itself.
   const proofOpen = proofItem !== null && proofItem.state === "running";
@@ -341,7 +359,10 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       setProofKey(item.key);
     },
     onDoneNow: (item) => void doneNow(item),
-    onFocus: () => setMinimized(null),
+    onFocus: (item) => {
+      setMinimized(null);
+      setFocusKey(item && item.key !== next?.key ? item.key : null);
+    },
     reviewed: new Set(view.reviewed ?? []),
     asked: new Set(view.asked ?? []),
   };
@@ -401,7 +422,10 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       {dialog === "icon" && (
         <IconPicker current={view.icon} color={color} busy={!!busy} error={error} onPick={(icon) => act({ url: "/api/profile/icon", body: { icon } })} onClose={() => setDialog(null)} />
       )}
-      {focusItem && <FocusView item={focusItem} ctx={ctx} dark={shade(color)} onClose={() => setMinimized(focusItem.key)} />}
+      {focusItem && <FocusView item={focusItem} ctx={ctx} dark={shade(color)} onClose={() => {
+            setFocusKey(null);
+            setMinimized(focusItem.key);
+          }} />}
       {proofOpen && proofItem && (
         <ProofSheet
           key={proofItem.key}
@@ -424,6 +448,12 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       <header className="text-white" style={{ background: color }}>
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 pt-5 pb-4">
           <div className="flex items-center gap-3">
+            {child.look && (
+              // R6b (artifact, item J): the child's own character greets them; a tap opens the creator.
+              <Link href="/nhan-vat" aria-label="Nhân vật của con" className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+                <Character look={child.look} pics={child.pics} expr="smile" className="size-full" />
+              </Link>
+            )}
             <button
               type="button"
               aria-label="Đổi biểu tượng"
@@ -475,7 +505,20 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, hasWorld)]} />
+        <Breadcrumb
+          trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, voice)]}
+          onBack={
+            tab === "hom-nay"
+              ? undefined
+              : () => {
+                  // Skip entries equal to this tab (e.g. after the browser's own Back button).
+                  let h = tabHistory;
+                  while (h.length > 0 && h.at(-1) === tab) h = h.slice(0, -1);
+                  setTabHistory(h.slice(0, -1));
+                  selectTab(h.at(-1) ?? "hom-nay", { back: true });
+                }
+          }
+        />
         {error && !dialog && !proofOpen && (
           <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
             {error}
@@ -496,6 +539,20 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
             )}
 
             {hasWorld && <WorldMini key={`${s.part1.doneAt}|${s.part2.doneAt}|${s.free.startedAt}`} onOpen={() => selectTab("tuan")} />}
+            {/* R5: Nguyên's comic page of today (the feeling frame only when Góc bình yên is on). */}
+            {voice === "detective" && week && (
+              <ComicToday
+                key={s.localDate}
+                week={week}
+                s={s}
+                look={child.look}
+                pics={child.pics}
+                freeMinutes={view.rules.freeMinutes}
+                byEnabled={byEnabled && week.byEnabled}
+                color={color}
+                onOpen={() => selectTab("tuan")}
+              />
+            )}
 
             {byEnabled && (
               <section aria-labelledby="by-invite" className="flex flex-col gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}>
@@ -529,11 +586,14 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
             <PillarCards
               s={s}
+              view={view}
               today={week?.days.find((d) => d.date === s.localDate) ?? null}
               byEnabled={byEnabled}
               color={color}
               nowMs={nowMs}
               freeMinutes={view.rules.freeMinutes}
+              voice={voice}
+              ctx={ctx}
               onStudy={() => selectTab("hoc-tap")}
             />
 
@@ -581,6 +641,18 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
         {tab === "hoc-tap" && (
           <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-[22px] font-bold">📚 Góc học tập</h2>
+              <button
+                type="button"
+                aria-pressed={studyFocus}
+                onClick={() => setStudyFocus(!studyFocus)}
+                className="btn shrink-0 border-[1.5px] text-sm"
+                style={studyFocus ? { background: color, borderColor: color, color: "#fff" } : { background: "#fff", borderColor: color, color }}
+              >
+                {studyFocus ? "Thoát tập trung" : "🎯 Chế độ tập trung"}
+              </button>
+            </div>
             <section aria-label="Trạng thái hôm nay" aria-live="polite" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white px-4 py-3">
               {statusTop}
               {controls}
@@ -594,6 +666,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               paused={paused}
               onSavePlan={(keys) => act({ url: "/api/day/plan", body: { keys } })}
               suggested={next}
+              focus={studyFocus}
             />
           </>
         )}
@@ -601,6 +674,17 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
         {tab === "tuan" && (
           <>
             {hasWorld && <WorldTab color={color} />}
+            {voice === "detective" && (
+              <section aria-labelledby="comic-volume" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
+                {week ? (
+                  <ComicVolume key={week.weekStart} week={week} s={s} look={child.look} pics={child.pics} name={child.name} icon={view.icon} freeMinutes={view.rules.freeMinutes} color={color} />
+                ) : (
+                  <p id="comic-volume" className="text-sm text-ink/70">
+                    Đang tải tập truyện…
+                  </p>
+                )}
+              </section>
+            )}
             <section aria-labelledby="wk-own" className="flex flex-col gap-4 rounded-2xl border border-ink/10 bg-white p-4">
               <h2 id="wk-own" className="text-lg font-bold">
                 Tuần này của con
@@ -613,7 +697,6 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               ) : (
                 <p className="text-sm text-ink/70">Đang tải…</p>
               )}
-              {!hasWorld && <p className="text-[13px] text-ink/70">Sắp có: Tập truyện của tuần — mỗi ngày một trang.</p>}
             </section>
             <WeekProgress s={s} view={view} color={color} />
           </>
@@ -629,7 +712,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
           </section>
         )}
       </main>
-      <ChildNav active={tab} byEnabled={byEnabled} color={color} world={hasWorld} onSelect={selectTab} />
+      <ChildNav active={tab} byEnabled={byEnabled} color={color} voice={voice} onSelect={selectTab} />
     </div>
   );
 }

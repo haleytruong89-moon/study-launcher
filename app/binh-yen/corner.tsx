@@ -17,6 +17,7 @@ import {
   findWord,
   homeCopy,
   isPleasant,
+  isQuad,
   mentorLine,
   wordsFor,
   type Quad,
@@ -34,6 +35,7 @@ import { Character } from "../avatar-face";
 import { QUAD_ICONS } from "../quad-icon";
 import { FeedbackButton } from "../today/feedback";
 import { ActivityBody } from "./activities";
+import { FeelFrameBody } from "../today/comic";
 
 /**
  * Góc bình yên — one visit (BINH_YEN.md §4, S-BY1): chọn ô → chọn từ → công nhận (+ mức 1–5 khi
@@ -58,7 +60,40 @@ type Step =
   | { k: "ack"; quad: Quad; word: string }
   | { k: "suggest"; quad: Quad; word: string; intensity: number | null }
   | { k: "activity"; quad: Quad; word: string; intensity: number | null; activity: string }
-  | { k: "done"; text: string; heavy: boolean; growth: FeelGrowth | null };
+  | { k: "done"; text: string; heavy: boolean; growth: FeelGrowth | null; comic: ComicFrame | null };
+
+/** R5: frame 1 of Nguyên's comic page, from the keys of the visit just saved. */
+interface ComicFrame {
+  quad: Quad;
+  label: string;
+  activity: string | null;
+}
+
+/** The comic frame from the check-in answer (R5); anything unexpected shows no frame, never breaks "Xong rồi". */
+function asComic(v: unknown): ComicFrame | null {
+  if (!v || typeof v !== "object") return null;
+  const c = v as Record<string, unknown>;
+  if (!isQuad(c.quad) || typeof c.label !== "string") return null;
+  return { quad: c.quad, label: c.label, activity: typeof c.activity === "string" ? c.activity : null };
+}
+
+/** Nguyên's reward (artifact vDone): KHUNG 1 · CẢM XÚC is drawn into today's comic page. */
+function ComicReward({ comic, avatar, pics, color }: { comic: ComicFrame; avatar: Avatar; pics: AvatarPics; color: string }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl bg-[#EEF3FA] p-4" role="group" aria-label="Trang truyện hôm nay" aria-live="polite">
+      <div className="w-full max-w-[220px] border-4 border-ink bg-[#FFFDF8] p-2">
+        <div className="pop relative flex min-h-[170px] flex-col gap-1.5 border-[3px] border-ink bg-white p-2">
+          <span className="self-start bg-ink px-1.5 py-0.5 text-[11px] font-bold text-white">KHUNG 1 · CẢM XÚC</span>
+          <FeelFrameBody feel={comic} look={avatar} pics={pics} />
+        </div>
+      </div>
+      <p className="font-semibold">Khung 1 đã được vẽ vào trang truyện hôm nay.</p>
+      <Link href="/today?tab=tuan" className="btn self-start text-white" style={{ background: color }}>
+        Xem Tập của tuần →
+      </Link>
+    </div>
+  );
+}
 
 /** The reward from the check-in answer (R6a); anything unexpected shows no reward, never breaks "Xong rồi". */
 function asGrowth(v: unknown): FeelGrowth | null {
@@ -200,7 +235,13 @@ export function Corner({
       runId.current = null;
       const a = activity ? findActivity(activity) : undefined;
       const label = findWord(s.word)?.label ?? "";
-      go({ k: "done", text: a ? activityText(a, voice).done : enoughLine(label), heavy: r.data?.heavy === true, growth: asGrowth(r.data?.world) });
+      go({
+        k: "done",
+        text: a ? activityText(a, voice).done : enoughLine(label),
+        heavy: r.data?.heavy === true,
+        growth: asGrowth(r.data?.world),
+        comic: voice === "detective" ? asComic(r.data?.comic) : null,
+      });
       return;
     }
     // Visit over (the screen opens a new one) or study-time limit: nothing was stored — say so.
@@ -400,6 +441,7 @@ export function Corner({
       </p>
       {step.heavy && <p className="rounded-xl bg-[#FBF0D6] p-3 text-sm font-semibold text-[#5E3D00]">{HEAVY_REPEAT_TEXT}</p>}
       {step.growth && <Growth growth={step.growth} />}
+      {step.comic && <ComicReward comic={step.comic} avatar={avatar} pics={pics} color={color} />}
       <button type="button" onClick={() => go({ k: "home" })} className="btn self-start text-white" style={{ background: color }}>
         Về góc của con
       </button>

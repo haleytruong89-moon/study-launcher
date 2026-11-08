@@ -297,7 +297,7 @@
 - **Nhiệm vụ ngoài đời:** Đặt một cốc nhựa đầy nước trên bàn rồi gõ nhẹ mặt bàn: mặt nước rung thế nào?
 - **Tối nay dạy cả nhà:** Máy đo địa chấn “nghe” được cả những rung động mà ta không cảm thấy.
 
-### 🐕 Chó cứu hộ (`cho_cuu_ho`) — đến vì sau động đất cần tìm người
+### 🐕 Chó cứu hộ (`cho_cuu_ho`) — đến vì nơi này có động đất, cần tìm người
 
 Điều kiện: 1 thứ có nhãn `quake` + 2 thứ có nhãn `rock`
 

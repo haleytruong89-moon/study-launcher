@@ -16,6 +16,8 @@ export interface WeekFeel {
   /** Catalog key of the word, and its label ("vui", "mệt"…). */
   word: string;
   label: string;
+  /** Catalog key of the activity done on that visit, or null (named the feeling only). R6d. */
+  activity: string | null;
 }
 
 export interface WeekDay {
@@ -29,12 +31,19 @@ export interface WeekDay {
   play: boolean;
 }
 
-export interface WeekDaysView {
+export interface WeekDaysBase {
   /** Góc bình yên is on for the family (else the Cảm xúc row is hidden). */
   byEnabled: boolean;
   weekStart: string;
   today: string;
   days: WeekDay[];
+}
+
+export interface WeekDaysView extends WeekDaysBase {
+  /** R5: Nguyên's comic volume number of this week (Tập 1 = the week of the first record). */
+  volume: number;
+  /** R5: past weeks with at least one record, newest first, at most 12 (Kệ truyện). */
+  shelf: { weekStart: string; volume: number }[];
 }
 
 export interface WeekSessionRow {
@@ -49,6 +58,7 @@ export interface WeekCheckinRow {
   quad: string;
   word_key: string;
   created_at: string;
+  activity_key: string | null;
 }
 
 export function buildWeekDays(
@@ -56,7 +66,7 @@ export function buildWeekDays(
   today: string,
   sessions: WeekSessionRow[],
   checkins: WeekCheckinRow[] | null,
-): WeekDaysView {
+): WeekDaysBase {
   const byDate = new Map(sessions.map((s) => [s.local_date, s]));
   const lastFeel = new Map<string, WeekCheckinRow>();
   for (const c of checkins ?? []) {
@@ -72,7 +82,7 @@ export function buildWeekDays(
     let feel: WeekFeel | null = null;
     if (c && isQuad(c.quad)) {
       const w = findWord(c.word_key);
-      feel = { quad: c.quad, word: c.word_key, label: w?.label ?? "" };
+      feel = { quad: c.quad, word: c.word_key, label: w?.label ?? "", activity: c.activity_key ?? null };
     }
     days.push({
       date,

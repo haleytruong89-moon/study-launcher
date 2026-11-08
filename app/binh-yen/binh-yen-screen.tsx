@@ -222,12 +222,12 @@ export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = 
         </div>
       </header>
       <main className="mx-auto flex max-w-md flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={["Hôm nay", "Góc bình yên"]} />
+        <Breadcrumb trail={["Hôm nay", "Góc bình yên"]} onBack={() => (window.history.length > 1 ? router.back() : router.push("/today"))} />
         {content}
         {talk}
       </main>
       {/* R2: the child's 5 tabs. This page exists only when the corner is on, so it is listed. */}
-      <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} world={voice === "scientist"} />
+      <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} voice={voice} />
     </div>
   );
 }

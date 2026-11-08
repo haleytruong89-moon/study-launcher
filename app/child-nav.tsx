@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Voice } from "@/lib/binhYen/catalog";
 import { tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
 
 /**
@@ -19,22 +20,28 @@ const ICONS: Record<ChildTab, string> = {
   "gop-y": "💡",
 };
 
+const TUAN_ICON: Record<Voice, string> = { scientist: "🌳", detective: "📕" };
+
 export function ChildNav({
   active,
   byEnabled,
   color,
   world = false,
+  voice,
   onSelect,
 }: {
   /** null: a page that is not one of the tabs (e.g. /nhan-vat). */
   active: ChildTab | null;
   byEnabled: boolean;
   color: string;
-  /** R4: An's 4th tab is "Thế giới" (her world of the month). */
+  /** R4: An's 4th tab is "Thế giới" (her world of the month). Prefer `voice`. */
   world?: boolean;
+  /** R5: the 4th tab by voice — scientist "Thế giới" 🌳, detective "Tập của tuần" 📕. */
+  voice?: Voice;
   /** Inside /today: switch the tab without reloading (the link still works without script). */
   onSelect?: (tab: Exclude<ChildTab, "binh-yen">) => void;
 }) {
+  const fourth: Voice | null = voice ?? (world ? "scientist" : null);
   const tabs: ChildTab[] = byEnabled ? ["hom-nay", "hoc-tap", "binh-yen", "tuan", "gop-y"] : ["hom-nay", "hoc-tap", "tuan", "gop-y"];
   return (
     <nav
@@ -59,9 +66,9 @@ export function ChildNav({
                 style={on ? { color, background: `${color}14` } : { color: "#4A4F4C" }}
               >
                 <span aria-hidden className="text-xl leading-none lg:text-lg">
-                  {world && t === "tuan" ? "🌳" : ICONS[t]}
+                  {t === "tuan" && fourth ? TUAN_ICON[fourth] : ICONS[t]}
                 </span>
-                <span className="text-center leading-tight">{tabLabel(t, world)}</span>
+                <span className="text-center leading-tight">{tabLabel(t, fourth ?? false)}</span>
               </Link>
             </li>
           );
@@ -71,11 +78,21 @@ export function ChildNav({
   );
 }
 
-/** "Con đang ở: Hôm nay › Góc học tập › Toán" (R2): where the child is, always the same place. */
-export function Breadcrumb({ trail }: { trail: string[] }) {
+/**
+ * "Con đang ở: Hôm nay › Góc học tập › Toán" (R2): where the child is, always the same place.
+ * R6c (artifact, audit item L): with onBack, a "← Quay lại" button goes back one step.
+ */
+export function Breadcrumb({ trail, onBack }: { trail: string[]; onBack?: () => void }) {
   return (
-    <nav aria-label="Con đang ở" className="text-[13px] text-ink/70">
-      <span className="font-semibold">Con đang ở:</span> {trail.join(" › ")}
-    </nav>
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+      {onBack && (
+        <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center rounded-full border-[1.5px] border-[#D3D8D0] bg-white px-3.5 text-sm font-semibold">
+          ← Quay lại
+        </button>
+      )}
+      <nav aria-label="Con đang ở" className="text-[13px] text-ink/70">
+        <span className="font-semibold">Con đang ở:</span> {trail.join(" › ")}
+      </nav>
+    </div>
   );
 }

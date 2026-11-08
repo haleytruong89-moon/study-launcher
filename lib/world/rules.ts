@@ -1,5 +1,5 @@
 import { WORLDS, WORLD_ORDER, WORLD_START_MONTH, findThing, findWorld } from "./catalog";
-import type { Animal, Icon, Pillar, World } from "./types";
+import type { Animal, Icon, Move, Pillar, World } from "./types";
 import { PILLARS } from "./types";
 
 /**
@@ -124,6 +124,8 @@ export interface ThingView {
   count: number;
   /** "05/11" */
   firstDate: string;
+  /** R6b: its place in the scene (its index in the pack's area list: stable whatever grows first). */
+  slot: number;
   facts: string[];
   /** Facts still to open by growing it again. */
   closed: number;
@@ -138,10 +140,22 @@ export interface AnimalView {
   icon: Icon;
   because: string;
   arrived: string;
+  /** R6b: its place and how it moves in the scene. */
+  slot: number;
+  move: Move;
   facts: string[];
   mission: string;
   teach: string;
   today: boolean;
+}
+
+/** R6b "Đang chờ dọn đến": a visitor not here yet, why it would come, how many things are still missing. */
+export interface ComingView {
+  key: string;
+  name: string;
+  icon: Icon;
+  because: string;
+  missing: number;
 }
 
 export interface MonthView {
@@ -151,10 +165,17 @@ export interface MonthView {
   animals: AnimalView[];
   /** Things of this world not grown yet (never named: a gentle "còn … đang chờ"). */
   waiting: number;
+  /** R6b: the visitors closest to coming (at most 4), fewest missing first. Names only, no facts. */
+  coming: ComingView[];
   plants: number;
 }
 
 const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+
+/** How a visitor moves when its pack does not say: swims in the sea, floats in space, hops on land. */
+export function moveOf(world: World, a: Animal): Move {
+  return a.move ?? (world.key === "bien" ? "swim" : world.key === "vu_tru" ? "float" : "hop");
+}
 
 function animalReady(a: Animal, tagCount: Map<string, number>): boolean {
   return a.needs.every((n) => (tagCount.get(n.tag) ?? 0) >= n.n);
@@ -179,7 +200,7 @@ export function monthView(month: string, worldKey: string, rows: readonly WorldR
       v.count += 1;
       if (r.local_date === today) v.today = true;
     } else {
-      things.set(thing.key, { key: thing.key, name: thing.name, icon: thing.icon, pillar, count: 1, firstDate: dm(r.local_date), facts: [], closed: 0, mission: thing.mission, teach: thing.teach, today: r.local_date === today });
+      things.set(thing.key, { key: thing.key, name: thing.name, icon: thing.icon, pillar, count: 1, firstDate: dm(r.local_date), slot: world.things[pillar].findIndex((t) => t.key === thing.key), facts: [], closed: 0, mission: thing.mission, teach: thing.teach, today: r.local_date === today });
     }
     for (const tag of thing.tags) {
       const set = tagged.get(tag) ?? new Set<string>();
@@ -189,7 +210,7 @@ export function monthView(month: string, worldKey: string, rows: readonly WorldR
     const tagCount = new Map([...tagged].map(([t, s]) => [t, s.size]));
     for (const a of world.animals) {
       if (animals.some((x) => x.key === a.key) || !animalReady(a, tagCount)) continue;
-      animals.push({ key: a.key, name: a.name, icon: a.icon, because: a.because, arrived: dm(r.local_date), facts: [...a.facts], mission: a.mission, teach: a.teach, today: r.local_date === today });
+      animals.push({ key: a.key, name: a.name, icon: a.icon, because: a.because, arrived: dm(r.local_date), slot: world.animals.indexOf(a), move: moveOf(world, a), facts: [...a.facts], mission: a.mission, teach: a.teach, today: r.local_date === today });
     }
   }
   for (const v of things.values()) {
@@ -199,12 +220,20 @@ export function monthView(month: string, worldKey: string, rows: readonly WorldR
     v.closed = all.length - open;
   }
   const total = PILLARS.reduce((n, p) => n + world.things[p].length, 0);
+  const tagCount = new Map([...tagged].map(([t, s]) => [t, s.size]));
+  const coming = world.animals
+    .filter((a) => !animals.some((x) => x.key === a.key))
+    .map((a, i) => ({ i, v: { key: a.key, name: a.name, icon: a.icon, because: a.because, missing: a.needs.reduce((n, need) => n + Math.max(0, need.n - (tagCount.get(need.tag) ?? 0)), 0) } }))
+    .sort((x, y) => x.v.missing - y.v.missing || x.i - y.i)
+    .slice(0, 4)
+    .map((x) => x.v);
   return {
     month,
     world: { key: world.key, name: world.name, emoji: world.emoji, sky: world.sky, land: world.land, intro: world.intro, visitorWord: world.visitorWord, dark: world.dark === true, pillarNames: world.pillarNames },
     things: [...things.values()],
     animals,
     waiting: total - things.size,
+    coming,
     plants: mine.length,
   };
 }

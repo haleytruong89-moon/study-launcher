@@ -344,6 +344,7 @@ export const RUNG: World = {
   animals: [
     {
       key: "ong_mat",
+      move: "fly",
       name: "Ong mật",
       icon: { emoji: "🐝" },
       needs: [{ tag: "flower", n: 2 }],
@@ -358,6 +359,7 @@ export const RUNG: World = {
     },
     {
       key: "buom",
+      move: "fly",
       name: "Bướm",
       icon: { emoji: "🦋" },
       needs: [{ tag: "flower", n: 3 }],
@@ -389,6 +391,7 @@ export const RUNG: World = {
     },
     {
       key: "go_kien",
+      move: "fly",
       name: "Chim gõ kiến",
       icon: { emoji: "🐦" },
       needs: [{ tag: "bigtree", n: 3 }],
@@ -448,6 +451,7 @@ export const RUNG: World = {
     },
     {
       key: "dom_dom",
+      move: "fly",
       name: "Đom đóm",
       icon: { svg: { shape: "glow", color: "#F2D04B", accent: "#3A3A2A" } },
       needs: [{ tag: "moist", n: 3 }],

@@ -23,7 +23,8 @@ export interface TaskCtx {
   onProofOpen: (item: TaskView) => void;
   /** Homework already done in the notebook: start it (no focus screen) and open "Nộp ảnh bài". */
   onDoneNow: (item: TaskView) => void;
-  onFocus: () => void;
+  /** Opens the focus view; with an item, that running item (not only the suggested one). */
+  onFocus: (item?: TaskView) => void;
   /** Run ids a parent has looked at ("Bố mẹ đã xem ✓"). */
   reviewed: ReadonlySet<string>;
   /** Run ids waiting for "Nhờ bố mẹ xem trực tiếp". */
@@ -48,7 +49,8 @@ const TONE = {
   later: { dot: "#9AA19C", text: "#4A4F4C", chipBg: "#EEF0EC" },
 } as const;
 
-function isWaiting(item: TaskView, ctx: TaskCtx): boolean {
+/** A timed task that waits for another running timed task (one at a time). */
+export function isWaiting(item: TaskView, ctx: TaskCtx): boolean {
   return item.state === "todo" && ctx.runningTimed !== null && ctx.runningTimed.key !== item.key && item.source === "template" && item.minMinutes > 0;
 }
 
@@ -96,7 +98,7 @@ export function ProofButton({ item, ctx, big = false }: { item: TaskView; ctx: T
   );
 }
 
-function FileLinks({ files, dark = false }: { files: AttachmentView[]; dark?: boolean }) {
+export function FileLinks({ files, dark = false }: { files: AttachmentView[]; dark?: boolean }) {
   if (files.length === 0) return null;
   return (
     <span className="flex flex-wrap gap-1.5">
@@ -115,6 +117,27 @@ function FileLinks({ files, dark = false }: { files: AttachmentView[]; dark?: bo
         );
       })}
     </span>
+  );
+}
+
+/**
+ * R6c (artifact workPanel): the homework files folded under "📎 Xem đề bài" — open when the
+ * child wants them, so the buttons stay in view.
+ */
+export function FilesFold({ files }: { files: AttachmentView[] }) {
+  if (files.length === 0) return null;
+  return (
+    <details className="group">
+      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-xl bg-[#ECEEE8] px-3 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
+        📎 Xem đề bài ({files.length})
+        <span aria-hidden className="text-xs transition-transform group-open:rotate-180 motion-reduce:transition-none">
+          ▾
+        </span>
+      </summary>
+      <div className="mt-2">
+        <FileLinks files={files} />
+      </div>
+    </details>
   );
 }
 
@@ -190,7 +213,7 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
           running && item.requiresProof && <ProofButton item={item} ctx={ctx} />
         )}
         {running && (
-          <button type="button" onClick={ctx.onFocus} className="min-h-11 rounded-full px-4 text-sm font-bold text-white" style={{ background: ctx.color }}>
+          <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-11 rounded-full px-4 text-sm font-bold text-white" style={{ background: ctx.color }}>
             Đang làm · mở
           </button>
         )}
@@ -210,7 +233,6 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
   const files = ctx.files(item);
   const tone = item.dueDate ? TONE[dueTone(item.dueDate, ctx.today)] : null;
   const kind = item.source === "homework" ? (item.group === "upcoming" ? "Bài trên lớp · làm trước" : "Bài trên lớp") : item.part === 1 ? "Bài bổ sung" : "Kỹ năng";
-  const waiting = isWaiting(item, ctx);
   return (
     <div className="flex flex-col gap-3">
       <div className="text-xs font-bold tracking-[0.08em] uppercase" style={{ color: ctx.color }}>
@@ -234,49 +256,64 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
           {item.requiresProof ? "Cần ảnh bài làm" : item.minMinutes > 0 ? `Ít nhất ${item.minMinutes} phút` : "Không giới hạn thời gian"}
         </span>
       </div>
-      <FileLinks files={files} />
+      <FilesFold files={files} />
       {item.deepLink && (
         <a href={item.deepLink} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-bg px-3 text-sm font-semibold text-ink no-underline">
           Mở {item.appLabel ?? "app"} ↗
         </a>
       )}
-      {item.state === "todo" ? (
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            disabled={(!!ctx.busy || ctx.paused) || waiting || item.placeholder}
-            onClick={() => void ctx.onAct({ url: "/api/tasks/start", body: { source: item.source, id: item.id } })}
-            className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50"
-            style={{ background: ctx.color }}
-          >
-            Bắt đầu
-          </button>
-          {item.requiresProof && (
-            <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onDoneNow(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">
-              Làm xong trong vở rồi · nộp ảnh
-            </button>
-          )}
-        </div>
-      ) : item.requiresProof ? (
-        <div className="flex flex-col gap-2">
-          {isAsked(item, ctx) && <p className="rounded-xl bg-[#FBE9D3] px-3 py-2 text-sm font-semibold text-[#6B3A0A]">Đã nhờ bố mẹ xem. Bố mẹ bấm xác nhận là bài này xong.</p>}
-          {canFinishWithPhotos(item) ? (
-            <FinishButton item={item} ctx={ctx} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }} />
-          ) : (
-            <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onProofOpen(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }}>
-              Nộp ảnh bài
-            </button>
-          )}
-          <button type="button" onClick={ctx.onFocus} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold">
-            Mở màn tập trung
-          </button>
-        </div>
-      ) : (
-        <button type="button" onClick={ctx.onFocus} className="min-h-14 rounded-2xl text-[17px] font-bold text-white" style={{ background: ctx.color }}>
-          Đang làm · mở màn tập trung
-        </button>
-      )}
+      <TaskActions item={item} ctx={ctx} />
     </div>
+  );
+}
+
+/**
+ * The main buttons of a task (Bắt đầu / Làm xong trong vở rồi / Nộp ảnh bài / Xong · đã gửi /
+ * mở màn tập trung). Shared by "Việc tiếp theo" on Hôm nay and the work panel of Góc học tập.
+ */
+export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
+  const waiting = isWaiting(item, ctx);
+  if (item.state === "todo") {
+    return (
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          disabled={(!!ctx.busy || ctx.paused) || waiting || item.placeholder}
+          onClick={() => void ctx.onAct({ url: "/api/tasks/start", body: { source: item.source, id: item.id } })}
+          className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50"
+          style={{ background: ctx.color }}
+        >
+          Bắt đầu
+        </button>
+        {item.requiresProof && (
+          <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onDoneNow(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">
+            Làm xong trong vở rồi · nộp ảnh
+          </button>
+        )}
+      </div>
+    );
+  }
+  if (item.requiresProof) {
+    return (
+      <div className="flex flex-col gap-2">
+        {isAsked(item, ctx) && <p className="rounded-xl bg-[#FBE9D3] px-3 py-2 text-sm font-semibold text-[#6B3A0A]">Đã nhờ bố mẹ xem. Bố mẹ bấm xác nhận là bài này xong.</p>}
+        {canFinishWithPhotos(item) ? (
+          <FinishButton item={item} ctx={ctx} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }} />
+        ) : (
+          <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onProofOpen(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }}>
+            Nộp ảnh bài
+          </button>
+        )}
+        <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold">
+          Mở màn tập trung
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white" style={{ background: ctx.color }}>
+      Đang làm · mở màn tập trung
+    </button>
   );
 }
 

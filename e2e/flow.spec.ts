@@ -440,14 +440,48 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(page.getByRole("list", { name: "Bốn mảng hôm nay" })).toContainText("Học tập");
   await expect(page.getByRole("listitem", { name: "Đọc sách e2e" })).toHaveCount(0);
   await expect(tabs.getByRole("link", { name: "Hôm nay" })).toHaveAttribute("aria-current", "page");
+  // R6d: each card says what is next; free time can be planned (remembered in this browser only).
+  const cards = page.getByRole("list", { name: "Bốn mảng hôm nay" });
+  await expect(cards.getByRole("listitem")).toHaveCount(3); // Góc bình yên is still off
+  const study = cards.getByRole("listitem", { name: "2 · Học tập" });
+  await expect(study.getByRole("progressbar", { name: "Bài tập hôm nay" })).toHaveAttribute("aria-valuenow", "0");
+  await expect(study).toContainText("Việc tiếp theo · Bài trên lớp");
+  await expect(study).toContainText("Ngữ văn");
+  await expect(cards.getByRole("listitem", { name: "3 · Kỹ năng" })).toContainText("Đọc sách e2e");
+  const play = cards.getByRole("listitem", { name: "4 · Vui chơi" });
+  await expect(play).toContainText("Còn 3 việc nữa là có");
+  const chip = play.getByRole("group", { name: "Giờ tự do con định làm gì" }).getByRole("button").first();
+  const chipName = (await chip.textContent()) ?? "";
+  await expect(chip).toHaveAttribute("aria-pressed", "false");
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await page.reload();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
   await tabs.getByRole("link", { name: "Góc học tập" }).click();
   await expect(page).toHaveURL(/\/today\?tab=hoc-tap$/);
   await expect(page.getByRole("navigation", { name: "Con đang ở" })).toContainText("Hôm nay › Góc học tập");
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
+  // R6c: "🎯 Chế độ tập trung" shows only the work panel; "← Quay lại" goes back to Hôm nay.
+  await page.getByRole("button", { name: "Chế độ tập trung" }).click();
+  await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Khung làm bài" })).toBeVisible();
+  await page.getByRole("button", { name: "Thoát tập trung" }).click();
+  await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
+  await page.getByRole("button", { name: "← Quay lại" }).click();
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(tabs.getByRole("link", { name: "Hôm nay" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: "← Quay lại" })).toHaveCount(0);
+  await tabs.getByRole("link", { name: "Góc học tập" }).click();
+  await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
 
   // R1 (07/11/2026): skills are open from the start, in parallel with homework.
+  // R6c: a row's first button selects it; its buttons are in the work panel ("Khung làm bài").
+  const work = page.getByRole("region", { name: "Khung làm bài" });
   const skill = page.getByRole("listitem", { name: "Đọc sách e2e" });
-  await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
+  await skill.getByRole("button").first().click();
+  await expect(skill.getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
+  await expect(work.getByRole("heading", { name: "Đọc sách e2e" })).toBeVisible();
+  await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
 
   // The server refuses a break before any part is done, and an early finish, whatever the browser does.
   const today1 = await page.evaluate(async () => (await (await fetch("/api/today")).json()) as { state: { part1: { items: { id: string; title: string }[] }; part2: { items: { id: string; title: string }[] } } });
@@ -459,11 +493,15 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const oldSkip = await page.evaluate(async () => (await fetch("/api/day/break", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) })).status);
   expect(oldSkip).toBe(400);
 
-  // Homework: start (focus mode opens), then "Nộp ảnh bài": 2 photos, one is removed, then send.
+  // Homework: start from "Việc tiếp theo" on Hôm nay (R6d; same server route, focus mode opens),
+  // then "Nộp ảnh bài": 2 photos, one is removed, then send.
   const homework = page.getByRole("listitem", { name: "Ngữ văn" });
   const focus = page.getByRole("dialog", { name: "Đang tập trung" });
-  await homework.getByRole("button", { name: "Bắt đầu" }).click();
+  const homeworkId = today1.state.part1.items.find((i) => i.title === "Ngữ văn")?.id ?? "";
+  await tabs.getByRole("link", { name: "Hôm nay" }).click();
+  await study.getByRole("button", { name: "Bắt đầu" }).click();
   await expect(focus).toBeVisible();
+  await expect.poll(async () => (await db.from("task_runs").select("id").eq("homework_item_id", homeworkId).is("done_at", null)).data?.length ?? 0).toBe(1);
   await focus.getByRole("button", { name: "Nộp ảnh bài" }).click();
   const sheet = page.getByRole("dialog", { name: "Nộp ảnh bài Ngữ văn" });
   await expect(sheet.getByRole("img", { name: "Mã QR mở bài này trên điện thoại" })).toBeVisible(); // laptop: phone QR
@@ -474,20 +512,27 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   ]);
   await sheet.getByRole("button", { name: "Bỏ ảnh 3" }).click();
   await sheet.getByRole("button", { name: "Nộp 2 ảnh và xong" }).click();
-  await expect(homework.getByText("✓ Xong")).toBeVisible();
   await expect(sheet).toHaveCount(0);
   await expect(focus).toHaveCount(0);
+  await expect(study.getByRole("progressbar", { name: "Bài tập hôm nay" })).toHaveAttribute("aria-valuenow", "1");
+  await tabs.getByRole("link", { name: "Góc học tập" }).click();
+  await expect(homework.getByText("✓ Xong")).toBeVisible();
   const { data: twoPhotos } = await admin().from("task_runs").select("proof_paths").eq("source", "homework").not("done_at", "is", null).single();
   expect(twoPhotos?.proof_paths).toHaveLength(2);
 
   // Supplementary task: 20 minutes minimum on the SERVER clock.
   const extra = page.getByRole("listitem", { name: "Luyện đề e2e" });
-  await extra.getByRole("button", { name: "Bắt đầu" }).click();
+  await extra.getByRole("button").first().click();
+  await expect(work.getByRole("timer")).toHaveText("20:00"); // the minimum, before starting
+  await work.getByRole("button", { name: "Bắt đầu" }).click();
   await expect(focus.getByRole("button", { name: /^Xong/ })).toBeDisabled();
-  // "Thu nhỏ" hides focus mode; the row reopens it.
+  // "Thu nhỏ" hides focus mode; the work panel (big timer counting down) reopens it.
   await focus.getByRole("button", { name: "Thu nhỏ" }).click();
   await expect(focus).toHaveCount(0);
-  await extra.getByRole("button", { name: "Đang làm · mở" }).click();
+  await expect(extra).toContainText("đang làm");
+  await expect(work).toContainText("Đang làm · Bài bổ sung");
+  await expect(work.getByRole("timer")).toHaveText(/^(19|20):\d\d$/);
+  await work.getByRole("button", { name: "Đang làm · mở màn tập trung" }).click();
   await expect(focus).toBeVisible();
   const { data: run } = await db.from("task_runs").select("id").eq("template_id", extraId).single();
   const tooEarly = await page.evaluate(async (runId) => {
@@ -510,13 +555,14 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await banner.getByRole("button", { name: /Nghỉ \d+ phút/ }).click();
   await expect(banner).toContainText("Đang nghỉ");
   await expect(page.getByText(/Giờ nghỉ · còn \d\d:\d\d/)).toBeVisible();
-  await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
+  await skill.getByRole("button").first().click();
+  await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
   const duringBreak = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
   expect(duringBreak).toBe(409);
   await banner.getByRole("button", { name: "Học tiếp" }).click();
   await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
   await expect(banner.getByRole("button", { name: /Nghỉ \d+ phút/ })).toHaveCount(0); // once a day
-  await skill.getByRole("button", { name: "Bắt đầu" }).click();
+  await work.getByRole("button", { name: "Bắt đầu" }).click();
   await focus.getByRole("button", { name: "Xong", exact: true }).click();
 
   // Free time (40 minutes: the parent changed it in the S1 settings test).
@@ -525,10 +571,13 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   // Back on Hôm nay: the four areas are ticked, no pass offered; the browser's Back button works too.
   await page.goBack();
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("list", { name: "Bốn mảng hôm nay" }).getByLabel("Đã xong")).toHaveCount(3);
+  await expect(study).toContainText("Xong hết bài hôm nay ✓");
+  await expect(cards.getByRole("listitem", { name: "3 · Kỹ năng" })).toContainText("✓ Xong");
+  await expect(play).toContainText("Giờ tự do đang chạy");
+  await expect(play).toContainText(`Con định: ${chipName}`);
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
   // Tuần của con: today's three areas are ticked.
-  await tabs.getByRole("link", { name: "Tuần của con" }).click();
+  await tabs.getByRole("link", { name: "Tập của tuần" }).click();
   await expect(page.getByRole("heading", { name: "Tuần này của con" })).toBeVisible();
   await expect(page.getByRole("table")).toContainText("Học tập");
 
@@ -735,7 +784,7 @@ test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, an
   await expect(page).toHaveURL(/\/today$/);
   await tabs.getByRole("link", { name: "Góc học tập" }).click();
   await expect(page.getByRole("listitem", { name: "Tiếng Anh" }).getByText("✓ Xong · ★ sớm")).toBeVisible();
-  await tabs.getByRole("link", { name: "Tuần của con" }).click();
+  await tabs.getByRole("link", { name: "Tập của tuần" }).click();
   await expect(page.getByText("Tuần này làm sớm 1 bài")).toBeVisible();
 });
 
@@ -781,10 +830,26 @@ test("S2e: the child picks an icon and plans today; the plan only reorders 'Vi�
   await page.getByRole("button", { name: "Đưa “Vật lí” lên" }).click();
   await expect(page.getByRole("button", { name: "Đưa “Hóa học” lên" })).toBeEnabled(); // saved: Vật lí is now first
   await expect(page.getByRole("button", { name: "Đưa “Vật lí” lên" })).toBeDisabled();
-  const { data: plan } = await db.from("day_plans").select("item_keys").eq("child_id", kid?.id ?? "").eq("local_date", today).single();
-  expect(plan?.item_keys.slice(0, 2)).toEqual([keys[1], keys[0]]);
+  const savedOrder = async () => ((await db.from("day_plans").select("item_keys").eq("child_id", kid?.id ?? "").eq("local_date", today).single()).data?.item_keys ?? []).slice(0, 2);
+  await expect.poll(savedOrder).toEqual([keys[1], keys[0]]);
+  // R6c: drag ⋮⋮ (mouse here; the same pointer events serve touch and pen) puts Hóa học back on top.
+  await expect(page.getByRole("button", { name: "Đưa “Hóa học” xuống" })).toBeEnabled(); // not saving any more
+  const rows = page.getByRole("list", { name: "Thứ tự hôm nay" }).getByRole("listitem");
+  await expect(rows.nth(0)).toHaveAccessibleName("Vật lí");
+  await expect(rows.nth(1)).toHaveAccessibleName("Hóa học");
+  // page.mouse does not scroll: bring both rows into the 720 px viewport first.
+  await rows.nth(0).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  const from = await rows.nth(1).locator("[data-grip]").boundingBox();
+  const to = await rows.nth(0).locator("[data-grip]").boundingBox();
+  expect(from && to).toBeTruthy();
+  await page.mouse.move((from?.x ?? 0) + (from?.width ?? 0) / 2, (from?.y ?? 0) + (from?.height ?? 0) / 2);
+  await page.mouse.down();
+  await page.mouse.move((to?.x ?? 0) + (to?.width ?? 0) / 2, (to?.y ?? 0) + (to?.height ?? 0) / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(rows.nth(0)).toHaveAccessibleName("Hóa học");
+  await expect.poll(savedOrder).toEqual([keys[0], keys[1]]);
   await page.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Hôm nay" }).click();
-  await expect(banner.getByText("Vật lí", { exact: true })).toBeVisible();
+  await expect(banner.getByText("Hóa học", { exact: true })).toBeVisible();
 
   // Keys that are not today's tasks are refused; the plan never touches the lock state.
   const bad = await page.evaluate(async () => (await fetch("/api/day/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: ["homework:00000000-0000-4000-8000-000000000000"] }) })).status);
@@ -1062,7 +1127,8 @@ test("Confirm: the child asks a parent to look; the parent confirms on the phone
   await login(child, childEmail, childPassword);
   await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc học tập" }).click();
   const row = child.getByRole("listitem", { name: "Mỹ thuật" });
-  await row.getByRole("button", { name: "Xong rồi · nộp ảnh" }).click();
+  await row.getByRole("button").first().click(); // R6c: select the row; its buttons are in the work panel
+  await child.getByRole("region", { name: "Khung làm bài" }).getByRole("button", { name: "Làm xong trong vở rồi · nộp ảnh" }).click();
   const sheet = child.getByRole("dialog", { name: "Nộp ảnh bài Mỹ thuật" });
   await sheet.getByRole("button", { name: "Không chụp được? Nhờ bố mẹ xem trực tiếp" }).click();
   await expect(sheet).toHaveCount(0);
@@ -1690,7 +1756,7 @@ test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and 
   expect(s.trust.mode).toBe("trust");
   await child.reload();
   await expect(child.getByText("Tin tưởng · mở mọi trang")).toBeVisible();
-  await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Tuần của con" }).click();
+  await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Tập của tuần" }).click();
   await expect(child.getByText("Đang ở chế độ Tin tưởng")).toBeVisible();
 
   // Child: no write path — not the route, not the database.
@@ -2511,15 +2577,25 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
 
     const grown = k.getByRole("list", { name: "Những thứ đã mọc" });
     await grown.getByRole("button", { name: /^Chò ngàn năm, đã mọc \d+ lần/ }).click();
-    const card = k.getByRole("dialog", { name: "Chò ngàn năm" });
+    const card = k.getByRole("region", { name: "Chò ngàn năm" });
     await expect(card).toContainText("Cúc Phương");
     await expect(card.getByRole("region", { name: "Nhiệm vụ ngoài đời" })).toBeVisible();
     await expect(card.getByRole("region", { name: "Tối nay dạy cả nhà" })).toBeVisible();
+    // R6b: the card opens under the scene; "Con đã làm" / "Tối nay dạy cả nhà" are remembered on this device only.
+    await card.getByRole("button", { name: "Con đã làm" }).click();
+    await expect(card.getByRole("button", { name: "Đã làm ✓" })).toHaveAttribute("aria-pressed", "true");
+    await card.getByRole("button", { name: "Tối nay dạy cả nhà điều này" }).click();
+    await expect(card.getByRole("button", { name: "Tối nay con sẽ kể ✓" })).toBeVisible();
+    await expect(k.getByRole("list", { name: "Hôm nay", exact: true }).getByRole("listitem")).toHaveCount(4);
+    await expect(k.getByRole("region", { name: "Đang chờ dọn đến" })).toContainText("đến khi");
     await card.getByRole("button", { name: "Đóng" }).click();
+    await expect(k.getByRole("region", { name: "Chò ngàn năm" })).toHaveCount(0);
 
     // Opening again never plants twice.
     await k.reload();
     await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+    await grown.getByRole("button", { name: /^Chò ngàn năm, đã mọc \d+ lần/ }).click();
+    await expect(k.getByRole("region", { name: "Chò ngàn năm" }).getByRole("button", { name: "Đã làm ✓" })).toBeVisible();
     expect((await rows()).length).toBe(expected.size);
     // Deleting the visit does not take the flower away (BINH_YEN D2).
     await db.from("by_checkins").delete().eq("client_run_id", runId);
@@ -2534,7 +2610,7 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     await db.from("profiles").update({ grade: 9 }).eq("id", childId);
     expect(await byCall(k, "GET", "/api/world")).toBe(404);
     await k.goto("/today");
-    await expect(nav.getByRole("link", { name: "Tuần của con" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Tập của tuần" })).toBeVisible();
     await kCtx.close();
 
     expect((await request.get("/api/world")).status()).toBe(401);
@@ -2602,8 +2678,8 @@ test("R4b An chọn thế giới: a new month waits for An's pick (nothing plant
     expect(rows.find((r) => r.local_date === first && r.pillar === "study")?.item_key).toBe("co_bien");
     expect((await db.from("world_months").select("world_key").eq("child_id", childId)).data).toEqual([{ world_key: "bien" }]);
     await k.getByRole("list", { name: "Những thứ đã mọc" }).getByRole("button", { name: /^Cỏ biển, đã mọc/ }).click();
-    await expect(k.getByRole("dialog", { name: "Cỏ biển" })).toContainText("cây có hoa");
-    await k.getByRole("dialog", { name: "Cỏ biển" }).getByRole("button", { name: "Đóng" }).click();
+    await expect(k.getByRole("region", { name: "Cỏ biển" })).toContainText("cây có hoa");
+    await k.getByRole("region", { name: "Cỏ biển" }).getByRole("button", { name: "Đóng" }).click();
 
     // Picked once: the month stays in Biển.
     expect(await byCall(k, "POST", "/api/world/choose", { world: "vu_tru" })).toBe(409);
@@ -2646,6 +2722,8 @@ test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that r
     // The 4 regions of An's corner are on Hôm nay; a tile goes straight to that region's words.
     const invite = k.getByRole("region", { name: "Hôm nay con thấy thế nào?" });
     for (const name of ["Núi lửa", "Mặt trời", "Biển sâu", "Khu rừng"]) await expect(invite.getByRole("link", { name: new RegExp(`^${name}:`) })).toBeVisible();
+    // R6b: the child's own character greets them at the top.
+    await expect(k.getByRole("link", { name: "Nhân vật của con", exact: true })).toBeVisible();
     await invite.getByRole("link", { name: /^Khu rừng:/ }).click();
     const words = k.getByRole("region", { name: "Chọn từ" });
     await expect(words).toBeVisible();
@@ -2669,12 +2747,132 @@ test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that r
     // Hôm nay: the visit is remembered (only for the child) and the compact world card shows today's plant.
     await k.goto("/today");
     await expect(k.getByRole("region", { name: "Hôm nay con thấy thế nào?" })).toContainText("Hôm nay con đã ghé Góc bình yên");
+    // R6d: the Cảm xúc card (child only) says the visit too, with the way back in.
+    const feelCard = k.getByRole("list", { name: "Bốn mảng hôm nay" }).getByRole("listitem", { name: "1 · Cảm xúc" });
+    await expect(feelCard).toContainText("Hôm nay con đã ghé:");
+    await expect(feelCard.getByRole("link", { name: "Vào Góc bình yên lần nữa" })).toBeVisible();
     await expect(k.getByRole("region", { name: /Rừng nhiệt đới của con/ }).getByRole("list", { name: "Hôm nay đã mọc" }).getByRole("listitem")).not.toHaveCount(0);
     await kCtx.close();
   } finally {
     await db.from("world_items").delete().eq("child_id", childId);
     await db.from("world_months").delete().eq("child_id", childId);
     await db.from("by_checkins").delete().eq("child_id", childId);
+    await db.from("family_settings").update({ by_enabled: settings?.by_enabled ?? false }).eq("family_id", familyId);
+    await db.from("profiles").update({ grade }).eq("id", childId);
+  }
+});
+
+test("R5 truyện của Nguyên: \"Xong rồi\" draws frame 1; Hôm nay shows today's comic page; Tập của tuần has a cover, pages and a shelf; child-only week route", async ({ page, browser }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id, grade").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const grade = kid?.grade as number | null;
+  const today = localDate(new Date());
+  const monday = weekStart(today);
+  const lastWeek = addDays(monday, -7);
+  const { data: settings } = await db.from("family_settings").select("by_enabled").eq("family_id", familyId).single();
+  const { data: oldCheckins } = await db.from("by_checkins").select("*").eq("child_id", childId);
+  const dates = [...new Set([today, monday, lastWeek])];
+  const { data: oldSessions } = await db.from("day_sessions").select("*").eq("child_id", childId).in("local_date", dates);
+  const at = (d: string) => `${d}T10:00:00+07:00`;
+  await db.from("profiles").update({ grade: 9 }).eq("id", childId);
+  await db.from("family_settings").update({ by_enabled: true }).eq("family_id", familyId);
+  await db.from("by_sessions").update({ ended_at: new Date().toISOString() }).eq("child_id", childId).is("ended_at", null);
+  await db.from("by_checkins").delete().eq("child_id", childId);
+  try {
+    // Today: Phần 1 is done. Monday (when it is not today): a full day with a visit + activity.
+    // Last week: one record, so the shelf has a volume.
+    const up = (row: Record<string, unknown>) => db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, ...row }, { onConflict: "child_id,local_date" });
+    expect((await up({ local_date: today, part1_done_at: at(today) })).error).toBeNull();
+    if (monday !== today) {
+      expect((await up({ local_date: monday, part1_done_at: at(monday), part2_done_at: at(monday), free_started_at: at(monday) })).error).toBeNull();
+      expect((await db.from("by_checkins").insert({ family_id: familyId, child_id: childId, local_date: monday, quad: "green", word_key: "binh_yen", activity_key: "breath", client_run_id: randomUUID() })).error).toBeNull();
+    }
+    expect((await up({ local_date: lastWeek, part1_done_at: at(lastWeek) })).error).toBeNull();
+
+    const kCtx = await browser.newContext();
+    const k = await kCtx.newPage();
+    await login(k, childEmail, childPassword);
+
+    // Góc bình yên → Hồ sơ lục → bình yên → "Vậy là đủ": frame 1 of today's page is drawn.
+    await k.goto("/binh-yen");
+    await k.getByRole("button", { name: /^Hồ sơ lục:/ }).click();
+    const words = k.getByRole("region", { name: "Chọn từ" });
+    await words.getByRole("group", { name: "Từ cảm xúc" }).getByRole("button", { name: /bình yên/ }).click();
+    await words.getByRole("button", { name: "Tiếp →" }).click();
+    await k.getByRole("region", { name: "Công nhận" }).getByRole("button", { name: "Tận hưởng →" }).click();
+    await k.getByRole("region", { name: "Gợi ý cho con" }).getByRole("button", { name: "Vậy là đủ cho hôm nay" }).click();
+    const frame = k.getByRole("region", { name: "Xong rồi" }).getByRole("group", { name: "Trang truyện hôm nay" });
+    await expect(frame).toContainText("KHUNG 1 · CẢM XÚC");
+    await expect(frame).toContainText("Bình yên…");
+    await expect(frame).toContainText("Khung 1 đã được vẽ");
+    await frame.getByRole("link", { name: "Xem Tập của tuần →" }).click();
+    await expect(k).toHaveURL(/\/today\?tab=tuan$/);
+
+    // Tập của tuần: the cover, then Monday's page.
+    await expect(k.getByRole("heading", { name: /^📕 Tập \d+ · tuần này$/ })).toBeVisible();
+    const cover = k.getByRole("article", { name: /^Bìa tập \d+$/ });
+    await expect(cover).toContainText("Thám tử");
+    await expect(cover.getByRole("list", { name: "Mục lục" })).toContainText("bình yên");
+    const pager = k.getByRole("navigation", { name: "Lật trang" });
+    await expect(pager.getByRole("button", { name: "Bìa", exact: true })).toHaveAttribute("aria-current", "true");
+    await pager.getByRole("button", { name: "Trang sau →" }).click();
+    const mon = k.getByRole("article", { name: /^Trang Thứ Hai · / });
+    await expect(mon).toContainText("Hồ sơ lục");
+    await expect(mon).toContainText("bình yên");
+    await expect(mon).toContainText(monday === today ? "Gọi tên là đủ cho hôm nay" : "Thở cho dịu lại");
+    await expect(mon).toContainText("Bài hôm nay ✓");
+    await expect(pager.getByRole("button", { name: "Thứ Hai", exact: true })).toHaveAttribute("aria-current", "true");
+    await pager.getByRole("button", { name: "← Trang trước" }).click();
+    await expect(cover).toBeVisible();
+
+    // The shelf: last week's volume opens read-only, then back to this week.
+    const shelf = k.getByRole("group", { name: "Kệ truyện" });
+    await shelf.getByRole("button", { name: /^Tập \d+, tuần / }).first().click();
+    await expect(k.getByRole("heading", { name: /^📕 Tập \d+ · tuần \d/ })).toBeVisible();
+    await k.getByRole("button", { name: "← Về tập tuần này" }).click();
+    await expect(k.getByRole("heading", { name: /^📕 Tập \d+ · tuần này$/ })).toBeVisible();
+    // The 4 areas of the week are still there.
+    await expect(k.getByRole("heading", { name: "Tuần này của con" })).toBeVisible();
+
+    // Hôm nay: today's comic page — frame 1 (the visit) and frame 2 (Phần 1) are drawn.
+    await k.goto("/today");
+    await expect(k.getByRole("heading", { name: "Trang truyện hôm nay" })).toBeVisible();
+    const feelPanel = k.getByRole("group", { name: /^KHUNG 1 · CẢM XÚC/ });
+    await expect(feelPanel).toContainText("Bình yên…");
+    const studyPanel = k.getByRole("group", { name: /^KHUNG 2 · HỌC TẬP/ });
+    await expect(studyPanel).not.toContainText("Xong bài trên lớp");
+    await expect(studyPanel).toContainText("✓");
+    const nav = k.getByRole("navigation", { name: "Các mục của con" });
+    await expect(nav.getByRole("link", { name: "Tập của tuần" })).toBeVisible();
+
+    // The week route: a Monday from the first record's week to this week; else 400 / 404.
+    expect(await byCall(k, "GET", `/api/week/days?week=${monday}`)).toBe(200);
+    expect(await byCall(k, "GET", `/api/week/days?week=${lastWeek}`)).toBe(200);
+    expect(await byCall(k, "GET", "/api/week/days?week=2020-01-06")).toBe(404);
+    expect(await byCall(k, "GET", `/api/week/days?week=${addDays(monday, 7)}`)).toBe(404);
+    expect(await byCall(k, "GET", `/api/week/days?week=${addDays(monday, 1)}`)).toBe(400);
+    expect(await byCall(k, "GET", "/api/week/days?week=hello")).toBe(400);
+
+    // An (scientist voice) has her world, never the comic.
+    await db.from("profiles").update({ grade: 6 }).eq("id", childId);
+    await k.goto("/today");
+    await expect(nav.getByRole("link", { name: "Thế giới" })).toBeVisible();
+    await expect(k.getByRole("heading", { name: "Trang truyện hôm nay" })).toHaveCount(0);
+    await kCtx.close();
+
+    // Parents never get the child's week (feelings are the child's own).
+    await login(page, env.parentEmail, env.parentPassword);
+    expect(await byCall(page, "GET", `/api/week/days?week=${monday}`)).toBe(403);
+  } finally {
+    await db.from("by_checkins").delete().eq("child_id", childId);
+    if (oldCheckins?.length) await db.from("by_checkins").insert(oldCheckins);
+    for (const d of dates) {
+      const before = oldSessions?.find((r) => r.local_date === d);
+      if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
+      else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", d);
+    }
     await db.from("family_settings").update({ by_enabled: settings?.by_enabled ?? false }).eq("family_id", familyId);
     await db.from("profiles").update({ grade }).eq("id", childId);
   }

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { WORLDS, WORLD_ORDER, findThing } from "@/lib/world/catalog";
-import { defaultWorld, feelGrowthOf, isMonth, worldOfMonth, worldOptions, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
+import { defaultWorld, feelGrowthOf, isMonth, moveOf, worldOfMonth, worldOptions, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
 import { RUNG } from "@/lib/world/rung";
 import { PILLARS, type Pillar } from "@/lib/world/types";
 
@@ -178,5 +178,54 @@ describe("feelGrowthOf (R6a: the reward on Góc bình yên's \"Xong rồi\")", (
   });
   it("nothing grew in Cảm xúc today (only another area, or another day): no reward", () => {
     expect(feelGrowthOf(monthView("2026-11", "rung", [row("08", "study", "cay_da"), row("07", "feel", "lan_hai")], "2026-11-08")!)).toBeNull();
+  });
+});
+
+describe("R6b living scene data", () => {
+  const row = (d: string, pillar: Pillar, item: string, variant = 0): WorldRow => ({ local_date: `2026-11-${d}`, pillar, world_key: "rung", item_key: item, variant });
+  it("each thing keeps its place in its area (pack order), whatever grew first", () => {
+    const v = monthView("2026-11", "rung", [row("01", "feel", "hoa_sim"), row("02", "feel", "lan_hai")], "2026-11-09")!;
+    expect(v.things.map((t) => [t.key, t.slot])).toEqual([
+      ["hoa_sim", RUNG.things.feel.findIndex((t) => t.key === "hoa_sim")],
+      ["lan_hai", 0],
+    ]);
+  });
+  it("waiting visitors: closest first, at most 4, names + why only (no facts)", () => {
+    const v = monthView("2026-11", "rung", [row("01", "feel", "lan_hai")], "2026-11-09")!;
+    expect(v.coming.length).toBe(4);
+    expect(v.coming.map((c) => c.missing)).toEqual([...v.coming.map((c) => c.missing)].sort((a, b) => a - b));
+    for (const c of v.coming) {
+      expect(Object.keys(c).sort()).toEqual(["because", "icon", "key", "missing", "name"]);
+      expect(v.animals.some((a) => a.key === c.key)).toBe(false);
+    }
+    // Ong mật needs 2 flowers: one is there, one is missing.
+    expect(v.coming.find((c) => c.key === "ong_mat")?.missing).toBe(1);
+  });
+  it("visitors move by the pack or by the world", () => {
+    const bee = RUNG.animals.find((a) => a.key === "ong_mat")!;
+    const frog = RUNG.animals.find((a) => a.key === "ech")!;
+    expect(moveOf(RUNG, bee)).toBe("fly");
+    expect(moveOf(RUNG, frog)).toBe("hop");
+    expect(moveOf(WORLDS.bien!, WORLDS.bien!.animals[0]!)).toBe("swim");
+    expect(moveOf(WORLDS.vu_tru!, WORLDS.vu_tru!.animals[0]!)).toBe("float");
+  });
+});
+
+describe("R6b scene placement (360 px screen: scene 288×216)", () => {
+  // Worst case: every thing grown to its biggest (48 px), visitors 44 px.
+  it("a visitor never covers more than 30% of a thing", async () => {
+    const { thingPlace, animalPlace, ROWS } = await import("@/app/today/world-scene");
+    for (const key of ["rung", "bien", "vu_tru", "nui_lua"] as const) {
+      const w = WORLDS[key]!;
+      const things = PILLARS.flatMap((p) => w.things[p].map((_, slot) => thingPlace({ pillar: p, slot }, ROWS[key])));
+      for (const [slot, a] of w.animals.entries()) {
+        const at = animalPlace({ slot, move: moveOf(w, a) }, key);
+        for (const t of things) {
+          const ox = Math.max(0, 46 - Math.abs(((at.left - t.left) / 100) * 288));
+          const oy = Math.max(0, 46 - Math.abs(((at.top - t.top) / 100) * 216));
+          expect((Math.min(ox, 44) * Math.min(oy, 44)) / (48 * 48), `${key}/${a.key}`).toBeLessThanOrEqual(0.3);
+        }
+      }
+    }
   });
 });
