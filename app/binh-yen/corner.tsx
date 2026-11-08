@@ -458,8 +458,10 @@ export function Corner({
       {step.heavy && <p className="rounded-xl bg-[#FBF0D6] p-3 text-sm font-semibold text-[#5E3D00]">{HEAVY_REPEAT_TEXT}</p>}
       {step.growth && <Growth growth={step.growth} />}
       {step.comic && <ComicReward comic={step.comic} avatar={avatar} pics={pics} color={color} />}
-      {/* R7c: Nguyên only, collapsed until she taps it. Nothing about it leaves this device. */}
+      {/* R7c / R7d: Hồ sơ mật for Nguyên, Sổ tay nhà khoa học for An (under her world reward).
+          Collapsed until tapped. Nothing about it leaves this device. */}
       {voice === "detective" && <DossierOffer today={todayOf(state.serverNow)} quad={step.quad} />}
+      {voice === "scientist" && <DossierOffer deck="scientist" today={todayOf(state.serverNow)} quad={step.quad} />}
       <button type="button" onClick={() => go({ k: "home" })} className="btn self-start text-white" style={{ background: color }}>
         Về góc của con
       </button>

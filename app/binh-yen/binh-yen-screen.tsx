@@ -280,7 +280,7 @@ export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = 
           {content}
           {talk}
         </div>
-        {side && <LookBackColumn voice={voice} firstName={firstName} color={color} look={child.avatar} pics={child.pics} notebook={voice === "detective" ? <Notebook /> : undefined} />}
+        {side && <LookBackColumn voice={voice} firstName={firstName} color={color} look={child.avatar} pics={child.pics} notebook={voice === "detective" ? <Notebook /> : <Notebook deck="scientist" />} />}
       </main>
       {/* R2: the child's 5 tabs. This page exists only when the corner is on, so it is listed. */}
       <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} voice={voice} />
