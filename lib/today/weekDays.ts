@@ -31,12 +31,19 @@ export interface WeekDay {
   play: boolean;
 }
 
-export interface WeekDaysView {
+export interface WeekDaysBase {
   /** Góc bình yên is on for the family (else the Cảm xúc row is hidden). */
   byEnabled: boolean;
   weekStart: string;
   today: string;
   days: WeekDay[];
+}
+
+export interface WeekDaysView extends WeekDaysBase {
+  /** R5: Nguyên's comic volume number of this week (Tập 1 = the week of the first record). */
+  volume: number;
+  /** R5: past weeks with at least one record, newest first, at most 12 (Kệ truyện). */
+  shelf: { weekStart: string; volume: number }[];
 }
 
 export interface WeekSessionRow {
@@ -59,7 +66,7 @@ export function buildWeekDays(
   today: string,
   sessions: WeekSessionRow[],
   checkins: WeekCheckinRow[] | null,
-): WeekDaysView {
+): WeekDaysBase {
   const byDate = new Map(sessions.map((s) => [s.local_date, s]));
   const lastFeel = new Map<string, WeekCheckinRow>();
   for (const c of checkins ?? []) {
