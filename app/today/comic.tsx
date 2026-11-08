@@ -32,7 +32,7 @@ function usePlayPlans(): Record<string, string> {
 }
 
 /** Radial speed lines behind the face (red and yellow). Decorative. */
-function SpeedLines({ color }: { color: string }) {
+export function SpeedLines({ color }: { color: string }) {
   const lines = Array.from({ length: 24 }, (_, i) => {
     const a = (i / 24) * Math.PI * 2;
     return <line key={i} x1={50 + Math.cos(a) * 70} y1={50 + Math.sin(a) * 70} x2={50 + Math.cos(a) * 30} y2={50 + Math.sin(a) * 30} />;
@@ -47,7 +47,7 @@ function SpeedLines({ color }: { color: string }) {
 }
 
 /** The character in a round ink frame. */
-function Face({ look, pics, expr, className }: { look: Avatar; pics: AvatarPics; expr: Expression; className: string }) {
+export function Face({ look, pics, expr, className }: { look: Avatar; pics: AvatarPics; expr: Expression; className: string }) {
   return (
     <div aria-hidden className={`relative z-[1] shrink-0 overflow-hidden rounded-full border-[3px] border-ink bg-[#FFFDF8] ${className}`}>
       <Character look={look} pics={pics} expr={expr} className="block size-full" />

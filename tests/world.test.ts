@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { WORLDS, WORLD_ORDER, findThing } from "@/lib/world/catalog";
-import { defaultWorld, feelGrowthOf, isMonth, moveOf, worldOfMonth, worldOptions, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
+import { MAX_FACTS, defaultWorld, feelGrowthOf, isMonth, moveOf, recentDayLabel, recentGrowth, worldOfMonth, worldOptions, monthView, monthsBetween, pick, plantsToAdd, prevMonth, type WorldRow } from "@/lib/world/rules";
+import { BIEN } from "@/lib/world/bien";
 import { RUNG } from "@/lib/world/rung";
 import { PILLARS, type Pillar } from "@/lib/world/types";
 
@@ -227,5 +228,95 @@ describe("R6b scene placement (360 px screen: scene 288×216)", () => {
         }
       }
     }
+  });
+});
+
+describe("recentGrowth (R7b: Nhìn lại 7 ngày)", () => {
+  const r = (date: string, pillar: Pillar, world: string, item: string, variant = 0): WorldRow => ({ local_date: date, pillar, world_key: world, item_key: item, variant });
+  const lan = findThing(RUNG, "lan_hai")!.thing;
+  const ban = findThing(RUNG, "hoa_ban")!.thing;
+  const da = findThing(RUNG, "cay_da")!.thing;
+  const quy = findThing(BIEN, "hai_quy")!.thing;
+  const co = findThing(BIEN, "co_bien")!.thing;
+  // November in the forest, December in the sea; today = 03/12, so the window is 27/11 … 03/12.
+  const rows: WorldRow[] = [
+    r("2026-11-20", "feel", "rung", "lan_hai"),
+    r("2026-11-25", "feel", "rung", "lan_hai", 1),
+    r("2026-11-26", "study", "rung", "tre"),
+    r("2026-11-28", "study", "rung", "cay_da"),
+    r("2026-11-28", "feel", "rung", "lan_hai", 2),
+    r("2026-11-29", "feel", "rung", "lan_hai", 3),
+    r("2026-11-30", "feel", "rung", "hoa_ban"),
+    r("2026-12-01", "feel", "bien", "hai_quy"),
+    r("2026-12-03", "study", "bien", "co_bien"),
+    r("2026-12-04", "study", "bien", "rong_nho"),
+  ];
+  const days = recentGrowth(rows, "2026-12-03");
+
+  it("covers the last 7 days across a month boundary, newest first; days with nothing are left out", () => {
+    expect(days.map((d) => d.date)).toEqual(["2026-12-03", "2026-12-01", "2026-11-30", "2026-11-29", "2026-11-28"]);
+  });
+
+  it("ignores rows before the window and after today", () => {
+    const keys = days.flatMap((d) => d.items.map((i) => i.key));
+    expect(keys).not.toContain("tre");
+    expect(keys).not.toContain("rong_nho");
+  });
+
+  it("opens the fact of the row's rank in its month (rows before the window count); MAX_FACTS caps it", () => {
+    expect(MAX_FACTS).toBe(3);
+    const d28 = days.find((d) => d.date === "2026-11-28")!;
+    // Feel before study inside a day, visitors last (tắc kè: 1 flower + 2 big trees, one of them grown before the window).
+    expect(d28.items.map((i) => i.key)).toEqual(["lan_hai", "cay_da", "tac_ke"]);
+    expect(d28.items[0]).toMatchObject({ kind: "thing", name: lan.name, pillar: "feel", isNew: false, fact: lan.facts[2], month: "2026-11", world: "Rừng nhiệt đới" });
+    expect(d28.items[1]).toMatchObject({ kind: "thing", pillar: "study", isNew: true, fact: da.facts[0], icon: da.icon });
+    // The 4th growth of lan hài: every fact is already open.
+    expect(days.find((d) => d.date === "2026-11-29")!.items).toEqual([expect.objectContaining({ key: "lan_hai", isNew: false, fact: null })]);
+  });
+
+  it("lists the visitors that arrived that day after the things, in each month's own world", () => {
+    const d30 = days.find((d) => d.date === "2026-11-30")!;
+    expect(d30.items.map((i) => [i.kind, i.key])).toEqual([
+      ["thing", "hoa_ban"],
+      ["animal", "ong_mat"],
+    ]);
+    expect(d30.items[0]).toMatchObject({ isNew: true, fact: ban.facts[0] });
+    expect(d30.items[1]).toMatchObject({ name: "Ong mật", pillar: null, fact: null, world: "Rừng nhiệt đới" });
+    const d1 = days.find((d) => d.date === "2026-12-01")!;
+    expect(d1.items.map((i) => i.key)).toEqual(["hai_quy", "ca_he"]);
+    expect(d1.items[0]).toMatchObject({ month: "2026-12", world: BIEN.name, isNew: true, fact: quy.facts[0] });
+    expect(days[0]!.items.map((i) => i.key)).toEqual(["co_bien", "rua_bien"]);
+    expect(days[0]!.items[0]).toMatchObject({ fact: co.facts[0] });
+  });
+
+  it("an empty window, unknown keys or unknown worlds give nothing", () => {
+    expect(recentGrowth([], "2026-12-03")).toEqual([]);
+    expect(recentGrowth(rows, "2026-11-10")).toEqual([]);
+    expect(recentGrowth([r("2026-12-02", "feel", "bien", "gone_key"), r("2026-12-02", "study", "no_world", "x")], "2026-12-03")).toEqual([]);
+  });
+
+  it("a shorter window", () => {
+    expect(recentGrowth(rows, "2026-12-03", 3).map((d) => d.date)).toEqual(["2026-12-03", "2026-12-01"]);
+  });
+
+  it("a window across the new year (December → January) keeps each month's own ranks", () => {
+    const year: WorldRow[] = [
+      r("2026-12-29", "feel", "rung", "lan_hai"),
+      r("2026-12-31", "feel", "rung", "lan_hai", 1),
+      r("2027-01-01", "feel", "bien", "hai_quy"),
+      r("2027-01-02", "feel", "bien", "hai_quy", 1),
+    ];
+    const d = recentGrowth(year, "2027-01-02");
+    expect(d.map((x) => x.date)).toEqual(["2027-01-02", "2027-01-01", "2026-12-31", "2026-12-29"]);
+    expect(d[0]!.items[0]).toMatchObject({ key: "hai_quy", isNew: false, fact: quy.facts[1], month: "2027-01" });
+    expect(d[2]!.items[0]).toMatchObject({ key: "lan_hai", isNew: false, fact: lan.facts[1], month: "2026-12" });
+  });
+
+  it("labels days calmly: Hôm nay, Hôm qua, then the weekday and date", () => {
+    expect(recentDayLabel("2026-12-03", "2026-12-03")).toBe("Hôm nay");
+    expect(recentDayLabel("2026-12-02", "2026-12-03")).toBe("Hôm qua");
+    expect(recentDayLabel("2026-11-30", "2026-12-03")).toBe("Thứ Hai 30/11");
+    expect(recentDayLabel("2026-11-05", "2026-11-08")).toBe("Thứ Năm 05/11");
+    expect(recentDayLabel("2026-11-08", "2026-11-10")).toBe("Chủ nhật 08/11");
   });
 });
