@@ -81,7 +81,17 @@ describe("Sổ tay nhà khoa học content rules", () => {
     for (const t of FILLED) expect(count(t), t).toBe(SCIENCE_TOPIC_TARGET[t]);
   });
 
-  for (const t of EMPTY) it.todo(`${t}: add ${SCIENCE_TOPIC_TARGET[t]} cards (second half of the deck)`);
+  for (const t of ["ky_thu", "trai_dat", "vu_tru", "cay_coi"] as const)
+    it(`${t}: the pure-knowledge second half has its ${SCIENCE_TOPIC_TARGET[t]} cards`, () => {
+      expect(count(t), t).toBe(SCIENCE_TOPIC_TARGET[t]);
+    });
+
+  it("the deck is complete: every topic has its target count, 80 cards in all", () => {
+    expect(EMPTY).toEqual([]);
+    for (const t of SCIENCE_TOPIC_KEYS) expect(count(t), t).toBe(SCIENCE_TOPIC_TARGET[t]);
+    expect(FIELD_NOTES.length).toBe(80);
+    expect(activeScienceTopics()).toEqual([...SCIENCE_TOPIC_KEYS]);
+  });
 
   it("has unique, stable-looking keys", () => {
     const keys = FIELD_NOTES.map((d) => d.key);

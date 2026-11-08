@@ -153,6 +153,142 @@ export const NOTE_SOURCES: Record<string, SourceRef[]> = {
   dem_chim_15_phut: [
     { ref: "About the Great Backyard Bird Count (tháng Hai hằng năm, ít nhất 15 phút, hơn 300.000 người gửi ghi chép)", where: "National Audubon Society", year: "2024", url: "https://www.audubon.org/es/conservation/about-great-backyard-bird-count" },
   ],
+
+  // ===== Second half: pure nature-science knowledge =====
+  // 🦎 Động vật kỳ thú
+  sao_la: [
+    { ref: "Saola rediscovered! ‘Asian Unicorn’ sighted in Vietnam for first time in 15 years (1992, rừng Vũ Quang, Bộ Lâm nghiệp + WWF; thú lớn đầu tiên mới với khoa học sau hơn 50 năm; hai sừng song song; ảnh bẫy ảnh 7/9/2013 ở Trường Sơn)", where: "WWF-Canada", year: "2013", url: "https://wwf.ca/media-releases/saola-rediscovered-asian-unicorn-sighted-in-vietnam-for-first-time-in-15-years/" },
+  ],
+  vooc_cha_va: [
+    { ref: "Pygathrix nemaeus (thân xám, đuôi trắng, cẳng tay trắng, “tất” nâu đỏ ở chân; nhảy bằng cú đẩy chân sau; đi theo đường quen trên tán)", where: "Animal Diversity Web, University of Michigan", year: "không ghi năm", url: "https://animaldiversity.org/accounts/Pygathrix_nemaeus" },
+    { ref: "Save the Red-shanked Doucs of Sơn Trà (“queen of primates”, sống trên bán đảo Sơn Trà)", where: "Việt Nam News", year: "không ghi năm", url: "https://vietnamnews.vn/environment/519788/save-the-red-shanked-doucs-of-son-tra.html" },
+  ],
+  gau_nuoc_vu_tru: [
+    { ref: "Jönsson, K. I. và cộng sự. Tardigrades survive exposure to space in low Earth orbit (FOTON-M3, 9/2007, khoảng 270 km; gấu nước khô; phần lớn sống, sinh sản bình thường; dài 0,1–1,5 mm)", where: "Current Biology (tin trên ScienceDaily)", year: "2008", url: "https://www.sciencedaily.com/releases/2008/09/080908135906.htm" },
+  ],
+  nhan_bien_bac_cuc: [
+    { ref: "Egevang, C. và cộng sự. Tracking of Arctic terns Sterna paradisaea reveals longest animal migration (11 con, thiết bị 1,4 g, chim < 125 g, có con > 80.000 km/năm)", where: "PNAS", year: "2010", url: "https://doi.org/10.1073/pnas.0909493107" },
+    { ref: "Tóm tắt bài báo (bản lưu của NERC)", where: "NERC Open Research Archive", year: "2010", url: "https://nora.nerc.ac.uk/id/eprint/14091/" },
+    { ref: "Arctic terns confirmed to have the longest animal migration in the world (hơn 70.000 km mỗi năm, Greenland)", where: "Phys.org", year: "2010", url: "https://phys.org/news/2010-01-arctic-terns-longest-animal-migration.html" },
+  ],
+  chim_ruoi_bay_lui: [
+    { ref: "Hummingbird secrets (loài chim duy nhất có “số lùi”; có loài vỗ cánh ~100 lần/giây; tim > 1.000 nhịp/phút; chim ruồi ong ở Cuba nặng hơn một hạt hạnh nhân một chút)", where: "National Geographic", year: "không ghi năm", url: "https://www.nationalgeographic.com/magazine/article/hummingbird-secrets-speed-worlds-smallest-bird" },
+  ],
+  tac_ke_hoa_doi_mau: [
+    { ref: "Researchers reveal how the chameleon changes colour (Teyssier, J. và cộng sự, Nature Communications 2015; Đại học Geneva, Milinkovitch; tinh thể nano guanine trong tế bào da; giãn ~30%; xanh lá → vàng)", where: "CORDIS (Ủy ban châu Âu)", year: "2015", url: "https://cordis.europa.eu/article/id/116503-trending-science-researchers-reveal-how-the-chameleon-changes-colour" },
+  ],
+  bo_hung_ngan_ha: [
+    { ref: "Dung beetles use the Milky Way to navigate at night (Dacke và cộng sự, Current Biology 2013; Đại học Lund; nhà mô phỏng bầu trời; tấm che trên đầu thì đi lòng vòng; có lẽ là lần đầu thấy ở động vật)", where: "EarthSky", year: "2013", url: "https://earthsky.org/earth/dung-beetles-use-the-milky-way-to-navigate-at-night/" },
+  ],
+  kien_trong_nam: [
+    { ref: "Leafcutter ants (không ăn lá mà ăn nấm; trồng nấm gần 60 triệu năm; con người ~10.000 năm; tổ hàng triệu kiến thợ)", where: "Smithsonian Tropical Research Institute", year: "không ghi năm", url: "https://stri.si.edu/node/24899" },
+  ],
+  ca_thoi_loi_chop_mat: [
+    { ref: "Mudskippers could be key to understanding evolution of blinking (PNAS 2023; kéo mắt xuống hốc mắt; giữ ướt, sạch, bảo vệ; không cần cơ mới; phần lớn thời gian ở trên cạn)", where: "ScienceDaily (tin của Penn State)", year: "2023", url: "https://sciencedaily.com/releases/2023/04/230424223105.htm" },
+  ],
+  doi_khong_mu: [
+    { ref: "Are bats blind? (“No, bats are not blind”; mắt nhỏ nhưng rất nhạy, không thấy màu sắc rõ nét như người)", where: "U.S. Geological Survey (USGS)", year: "không ghi năm", url: "https://www.usgs.gov/faqs/are-bats-blind" },
+  ],
+  ca_voi_hat: [
+    { ref: "Humpback whales spread songs across Pacific (Garland, E. C. và cộng sự, Current Biology 2011; 11 năm, 6 quần thể; bài hát lan từ đông Úc tới Polynesia thuộc Pháp trong ~2 năm; chỉ con đực hát)", where: "University of Queensland", year: "2011", url: "https://news.uq.edu.au/2011-04-15-humpback-whales-spread-songs-across-pacific" },
+  ],
+  than_lan_bay: [
+    { ref: "Dehling, J. M. How lizards fly: A novel type of wing in animals (5–7 xương sườn dài đỡ màng da; chân trước áp vào mép cánh; lượn xa nhất ~26 m; Draco dussumieri ở Ấn Độ)", where: "PLoS ONE (bản trên PMC)", year: "2017", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC5728497" },
+  ],
+  // 🌋 Trái Đất kỳ diệu
+  son_doong: [
+    { ref: "Vietnam Cave (đoàn Anh vào hang mùa xuân 2009; đặt vừa dãy nhà 40 tầng; trần sụt cho nắng vào, cây mọc; mây mỏng gần trần)", where: "National Geographic", year: "2011", url: "https://www.nationalgeographic.com/magazine/article/vietnam-cave" },
+    { ref: "Hang Sơn Đoòng cave (Hồ Khanh, 1990, trú mưa và thấy sương tuôn ra từ cửa hang; 2009 khảo sát; rừng dưới hố sụt)", where: "BBC Wildlife (Discover Wildlife)", year: "không ghi năm", url: "https://www.discoverwildlife.com/environment/hang-son-doong-cave" },
+  ],
+  giot_nuoc_9_ngay: [
+    { ref: "The Water Cycle (nước ở khí quyển ~9 ngày; đại dương vài nghìn năm; sông 12–20 ngày; băng > 1.000 năm)", where: "NOAA JetStream", year: "không ghi năm", url: "https://www.noaa.gov/jetstream/max-what-cycle" },
+  ],
+  set_hai_lan: [
+    { ref: "Lightning Myths (sét hay đánh lại cùng chỗ; Empire State trung bình 23 lần/năm)", where: "NOAA National Weather Service", year: "không ghi năm", url: "https://www.weather.gov/safety/lightning-myths" },
+    { ref: "Lightning Temperature (làm không khí nóng ~50.000 °F, gấp 5 lần bề mặt Mặt Trời)", where: "NOAA National Weather Service", year: "không ghi năm", url: "https://weather.gov/safety/lightning-temperature" },
+    { ref: "Thunder (đếm giây từ chớp đến sấm, 5 giây ≈ 1 dặm; thẻ đổi thành ~3 giây ≈ 1 km)", where: "NOAA National Weather Service", year: "không ghi năm", url: "https://www.weather.gov/safety/lightning-science-thunder" },
+  ],
+  cau_vong_tron: [
+    { ref: "What Causes a Rainbow? (ánh sáng khúc xạ, phản xạ trong giọt nước; Mặt Trời sau lưng; cầu vồng là vòng tròn, từ máy bay có thể thấy cả vòng)", where: "NOAA SciJinks", year: "không ghi năm", url: "https://scijinks.gov/rainbow" },
+  ],
+  tam_trai_dat: [
+    { ref: "Core (lõi trong chủ yếu là sắt, bán kính ~1.220 km, ~5.200 °C, rắn vì áp suất ~3,6 triệu atm; ranh giới lõi trong–ngoài ~6.000 °C, “as hot as the surface of the sun”)", where: "National Geographic Education", year: "không ghi năm", url: "https://education.nationalgeographic.org/resource/core/" },
+  ],
+  everest_day_bien: [
+    { ref: "Summit limestone (đá vôi Qomolangma; mảnh bọ ba thùy, tay cuộn, huệ biển; ~470 triệu năm; Ấn Độ va vào châu Á, vẫn đang tiếp diễn)", where: "Montana State University", year: "không ghi năm", url: "https://montana.edu/everest/facts/summit-limestone.html" },
+  ],
+  vuc_mariana: [
+    { ref: "How deep is the ocean? (vực Challenger 10.935 m; Everest 8.849 m; Piccard và Walsh 1960)", where: "BBC Science Focus", year: "không ghi năm", url: "https://www.sciencefocus.com/planet-earth/how-deep-is-the-ocean" },
+  ],
+  bui_sahara_amazon: [
+    { ref: "Satellite Tracks Saharan Dust To Amazon In 3-D (CALIPSO 2007–2013; trung bình 27,7 triệu tấn/năm rơi xuống Amazon; ~22.000 tấn phốt-pho, gần bằng lượng mất vì mưa và lũ)", where: "NASA Scientific Visualization Studio", year: "2015", url: "https://svs.gsfc.nasa.gov/11775" },
+  ],
+  bang_chuyen_dai_duong: [
+    { ref: "The Global Conveyor Belt (nước lạnh, mặn chìm ở vùng cực; vài cm/giây; ~1.000 năm cho một mét khối nước đi hết vòng)", where: "NOAA Ocean Service", year: "không ghi năm", url: "https://oceanservice.noaa.gov/education/tutorial_currents/05conveyor2.html" },
+  ],
+  nhat_trieu_vinh_bac_bo: [
+    { ref: "Geographical characteristics of Vietnam's coastal regions (nhật triều Vịnh Bắc Bộ “one of the most typical globally”, một lần nước lớn và một lần nước ròng mỗi ngày, rất đều đặn)", where: "Trung tâm Phối hợp Tìm kiếm Cứu nạn Hàng hải Việt Nam (VMRCC)", year: "không ghi năm", url: "https://www.vmrcc.gov.vn/en/hydrometeorological-information/geographical-characteristics-of-vietnam-s-coastal-regions-498.html" },
+    { ref: "Tidal cycles (định nghĩa nhật triều, bán nhật triều; nhiều bờ biển có hai lần nước lớn mỗi ngày)", where: "NOAA Ocean Service", year: "không ghi năm", url: "https://oceanservice.noaa.gov/education/tutorial_tides/tides07_cycles.html" },
+  ],
+  // 🌌 Vũ trụ bao la
+  nam_anh_sang: [
+    { ref: "What Is a Light-Year? (~300.000 km/giây; ~9 nghìn tỉ km; sao gần nhất sau Mặt Trời ~4,3 năm ánh sáng; tâm Ngân Hà ~26.000 năm ánh sáng)", where: "NASA Space Place", year: "không ghi năm", url: "https://spaceplace.nasa.gov/light-year" },
+  ],
+  mat_trang_xa_dan: [
+    { ref: "The Apollo Experiment That Keeps on Giving (gương phản xạ Apollo 11; laser từ Mỹ, Pháp, Ý, Đức; chính xác vài mm; Mặt Trăng xa thêm 3,8 cm/năm)", where: "NASA Jet Propulsion Laboratory", year: "2019", url: "https://www.jpl.nasa.gov/news/the-apollo-experiment-that-keeps-on-giving/" },
+  ],
+  thien_vuong_nam_nghieng: [
+    { ref: "Uranus: Facts (nghiêng ~97,77°; năm ~84 năm Trái Đất; mùa đông tối 21 năm; Herschel 1781, hành tinh đầu tiên tìm bằng kính thiên văn)", where: "NASA Science", year: "không ghi năm", url: "https://science.nasa.gov/Uranus/facts" },
+  ],
+  hoang_hon_xanh_sao_hoa: [
+    { ref: "PIA19400: Sunset in Mars' Gale Crater (Curiosity, 15/4/2015, sol 956; bụi mịn cho ánh sáng xanh đi qua dễ hơn, xanh tụ gần phía Mặt Trời)", where: "NASA Jet Propulsion Laboratory", year: "2015", url: "https://www.jpl.nasa.gov/images/pia19400-sunset-in-mars-gale-crater/" },
+  ],
+  trai_tim_diem_vuong: [
+    { ref: "New Horizons discovers frozen plains in Pluto's heart (Tombaugh Regio theo tên Clyde Tombaugh, người tìm ra Pluto năm 1930; đồng bằng băng “no more than 100 million years old”)", where: "Astronomy Now", year: "2015", url: "https://astronomynow.com/2015/07/17/new-horizons-discovers-frozen-plains-in-plutos-heart/" },
+  ],
+  enceladus_phun_bang: [
+    { ref: "Enceladus (Cassini) (~500 km; phản chiếu tốt nhất Hệ Mặt Trời; hơi nước và hạt băng phun từ bốn “vằn hổ” ở cực nam; đại dương nước mặn; vành đai E)", where: "NASA Science", year: "không ghi năm", url: "https://science.nasa.gov/mission/cassini/science/enceladus" },
+  ],
+  sao_lap_lanh: [
+    { ref: "Curiosities: Why do stars appear to twinkle in the night sky? (James Lattis; túi khí nóng lạnh bẻ cong ánh sáng; hành tinh là đĩa nên ít lấp lánh)", where: "University of Wisconsin–Madison News", year: "không ghi năm", url: "https://news.wisc.edu/curiosities-why-do-stars-appear-to-twinkle-in-the-night-sky" },
+  ],
+  bui_sao: [
+    { ref: "Chandra Chemistry (hydro từ Vụ Nổ Lớn; các-bon, ô-xy tạo trong sao; nhiều sắt trong cơ thể từ các vụ nổ siêu tân tinh)", where: "Chandra X-ray Center (Harvard & Smithsonian / NASA)", year: "không ghi năm", url: "https://chandra.cfa.harvard.edu/chemistry/" },
+  ],
+  hanh_tinh_ngoai: [
+    { ref: "The NASA Exoplanet Archive hits 6,000 planets (17/9/2025; hành tinh đầu tiên quanh sao giống Mặt Trời năm 1995; > 8.000 ứng viên; hành tinh quay quanh hai sao; hành tinh cỡ Sao Mộc gần sao hơn Sao Thủy gần Mặt Trời)", where: "Caltech/IPAC (NASA Exoplanet Archive)", year: "2025", url: "https://www.ipac.caltech.edu/news/the-nasa-exoplanet-archive-hits-6-000-planets" },
+  ],
+  van_ly_truong_thanh: [
+    { ref: "Can you see the Great Wall of China from space? (không thấy bằng mắt thường từ Mặt Trăng)", where: "Britannica", year: "không ghi năm", url: "https://www.britannica.com/question/Can-you-see-the-Great-Wall-of-China-from-space" },
+    { ref: "China's Wall Less Great in View from Space (Dương Lợi Vĩ không thấy từ quỹ đạo; màu vật liệu giống đất xung quanh; dễ thấy nhất là thành phố sáng đèn ban đêm)", where: "NASA (bản lưu)", year: "2005", url: "https://webarchive.library.unt.edu/eot2008/20080917153200/http://www.nasa.gov/vision/space/workinginspace/great_wall.html" },
+  ],
+  // 🌱 Cây cối thông minh
+  huong_duong_dong_ho: [
+    { ref: "Sunflowers Move by the Clock (Atamian và cộng sự, Science 2016; cây non theo Mặt Trời và quay về hướng đông ban đêm; đồng hồ sinh học; hoa lớn nhìn hướng đông, côn trùng ghé gấp 5 lần)", where: "UC Davis", year: "2016", url: "https://www.ucdavis.edu/news/sunflowers-move-clock" },
+  ],
+  cay_keu_khi_khat: [
+    { ref: "Stressed Plants ‘Cry’—and Some Animals Can Probably Hear Them (Khait và cộng sự, Cell 2023; cà chua, thuốc lá; ~35 tiếng/giờ khi thiếu nước, ~1 tiếng/giờ khi đủ nước; 20–100 kHz; cơ chế và việc động vật có nghe không còn chưa rõ)", where: "Scientific American", year: "2023", url: "https://www.scientificamerican.com/article/stressed-plants-cry-and-some-animals-can-probably-hear-them/" },
+  ],
+  mang_luoi_nam: [
+    { ref: "The “wood-wide web” concept, which has taken root in popular media, challenged by researchers (Karst, Jones & Hoeksema, Nature Ecology & Evolution 2023; mạng nấm có thật, nhưng chuyện chia thức ăn cho cây con còn ít bằng chứng ngoài rừng)", where: "ScienceDaily (tin của Đại học Alberta)", year: "2023", url: "https://sciencedaily.com/releases/2023/02/230213113740.htm" },
+  ],
+  la_sen_tu_sach: [
+    { ref: "Self-Cleaning Materials: Inspiration (u nhỏ vài micromet + sáp nano; giữ không khí; giọt nước lăn mang theo bụi; sơn, ngói, vải)", where: "Scientific American", year: "không ghi năm", url: "https://www.scientificamerican.com/article/self-cleaning-materials-inspiration/" },
+    { ref: "Barthlott, W. & Neinhuis, C. Purity of the sacred lotus, or escape from contamination in biological surfaces", where: "Planta", year: "1997", url: "https://doi.org/10.1007/s004250050096" },
+  ],
+  tan_cay_ngai_ngung: [
+    { ref: "Some trees may ‘social distance’ to avoid disease (crown shyness; mô tả từ những năm 1920; giả thuyết gió làm cành cọ nhau; nguyên nhân chưa ngã ngũ)", where: "National Geographic", year: "2020", url: "https://www.nationalgeographic.com/science/article/tree-crown-shyness-forest-canopy" },
+  ],
+  hat_cha_la_2000_nam: [
+    { ref: "2,000 year old “Phoenix” seed rises from the ashes (Sallon và cộng sự, Science 2008; hạt ở Masada ~2.000 năm; gieo năm 2005, nảy mầm sau ~8 tuần; “Methuselah”; kỷ lục cũ là hạt sen ~1.300 năm)", where: "National Geographic", year: "2008", url: "https://www.nationalgeographic.com/science/article/2000-year-old-phoenix-seed-rises-from-the-ashes" },
+  ],
+  cay_lon_tu_khong_khi: [
+    { ref: "What are plants made of? (van Helmont, ~400 năm trước, cây liễu 5 năm, đất gần như không nhẹ đi; phần lớn chất khô từ không khí, đất chỉ góp ít khoáng)", where: "Davidson Institute of Science Education (Weizmann Institute)", year: "2025", url: "https://davidson.org.il/read-experience/en/reasonabledoubt-en/what-plants-made-of" },
+  ],
+  pando_mot_cay: [
+    { ref: "Pando (hơn 40.000 cây, 106 mẫu Anh ≈ 43 ha, gần 13 triệu pound, một dòng vô tính từ một hạt, sinh vật lớn nhất từng tìm thấy)", where: "USDA Forest Service, Fishlake National Forest", year: "không ghi năm", url: "https://www.fs.usda.gov/r04/fishlake/recreation/explore-forest/pando" },
+    { ref: "Pando: A Forest of One (~6.000 tấn, sinh vật nặng nhất được biết; chung một bộ rễ)", where: "EarthDate", year: "không ghi năm", url: "https://www.earthdate.org/pando-a-forest-of-one" },
+  ],
 };
 
 const QUAD_LABEL: Record<Quad, string> = {
@@ -191,6 +327,26 @@ const CHECK_POINTS: string[] = [
   "`dem_dieu_biet_on`: mô tả theo bài của Greater Good (221 học sinh cấp hai, hai tuần).",
   "`truong_nhieu_cay`: so sánh giữa các **trường**, không phải giữa các bạn; một phần mối liên hệ được giải thích bởi khói xe.",
   "`dem_chim_15_phut`: con số 300.000 là theo trang của Audubon cho một mùa đếm gần đây.",
+  // Second half (pure knowledge)
+  "`vooc_cha_va`: màu lông theo Animal Diversity Web (thân xám, cẳng tay và đuôi trắng, “tất” nâu đỏ); thẻ cố ý **không** nói chuyện ăn lá / dạ dày nhiều ngăn (thế giới Rừng đã có ở voọc mông trắng) và **không** ghi số cá thể ở Sơn Trà (các nguồn báo chí ghi khác nhau theo năm). Nguồn thứ hai là báo Việt Nam News, không phải tổ chức khoa học.",
+  "`sao_la`: “rừng Vũ Quang” theo WWF; thẻ không ghi tỉnh và không ghi số cá thể còn lại (tránh giọng “sắp mất”).",
+  "`nhan_bien_bac_cuc`: “hơn 70.000 km mỗi năm” theo Phys.org; “có chú hơn 80.000” theo tóm tắt PNAS. Câu “dài nhất từng đo được” là theo tin năm 2010.",
+  "`gau_nuoc_vu_tru`: “phần lớn vẫn sống” là kết quả với chân không + tia vũ trụ; khi thêm tia cực tím Mặt Trời thì chỉ một số con sống — thẻ không nói chi tiết này.",
+  "`ca_thoi_loi_chop_mat`: chưa mở được bản gốc PNAS; dùng tin của Penn State trên ScienceDaily. Thẻ không nói cá thòi lòi sống ở Việt Nam (chưa kiểm được nguồn uy tín).",
+  "`than_lan_bay`: nghiên cứu quay phim loài Draco dussumieri ở Ấn Độ; câu “sống ở rừng nhiệt đới châu Á” là tổng quát cho chi Draco (chưa kiểm nguồn riêng cho Việt Nam nên thẻ không nhắc Việt Nam).",
+  "`chim_ruoi_bay_lui`: con số nhịp tim/vỗ cánh là “có thể tới”, theo National Geographic.",
+  "`set_hai_lan`: NWS ghi “5 giây ≈ 1 dặm”; “khoảng 3 giây ≈ 1 km” là người soạn đổi đơn vị (âm thanh đi ~343 m/giây). Thẻ nói nhiệt độ của **không khí** quanh tia sét (NWS nói rõ: tia sét làm nóng không khí).",
+  "`tam_trai_dat`: “nóng như bề mặt Mặt Trời” National Geographic nói cho **ranh giới** lõi trong–lõi ngoài (~6.000 °C), không phải cho cả lõi trong (~5.200 °C); thẻ viết đúng như vậy.",
+  "`everest_day_bien`: gần với ý “đá vôi từ sinh vật biển / hóa thạch / mảng trôi” trong thế giới Núi lửa, nhưng điều mới là **đỉnh Everest** từng là đáy biển; nguồn là trang của Đại học Bang Montana.",
+  "`bui_sahara_amazon`: NASA nói lượng phốt-pho “gần bằng lượng mất vì mưa và lũ”; thẻ viết “vì nước mưa cuốn trôi” để tránh chữ lũ.",
+  "`nhat_trieu_vinh_bac_bo`: nguồn chính là trang tiếng Anh của Trung tâm Phối hợp Tìm kiếm Cứu nạn Hàng hải Việt Nam; nên đối chiếu thêm một giáo trình hải dương học Việt Nam nếu bố mẹ muốn chắc hơn.",
+  "`trai_tim_diem_vuong`: “chưa tới 100 triệu năm tuổi” là ước lượng lúc đầu (2015) của nhóm New Horizons; nguồn là Astronomy Now, không phải trang NASA.",
+  "`bui_sao`: Chandra nói “nhiều sắt trong cơ thể” đến từ siêu tân tinh, không phải tất cả; thẻ giữ chữ “nhiều phần”.",
+  "`van_ly_truong_thanh`: từ **quỹ đạo gần** đôi khi chụp được bức tường bằng ống kính (ảnh của Leroy Chiao, 2004–2005), nên thẻ chỉ bác bỏ chuyện “thấy bằng mắt thường từ Mặt Trăng” và kể lời Dương Lợi Vĩ.",
+  "`mang_luoi_nam`: “mạng nấm nối rễ nhiều cây” là điều đã được chứng minh; còn chuyện cây “nói chuyện”, “gửi thức ăn cho cây con” đang được tranh luận. Thẻ dựa vào bài tổng quan của Karst và cộng sự (2023); đây vẫn là chủ đề các nhà khoa học đang tranh luận.",
+  "`cay_keu_khi_khat`: mới là một nghiên cứu (2023) trong phòng thí nghiệm; thẻ nói rõ chưa biết tiếng kêu sinh ra thế nào và có con vật nào nghe thấy không.",
+  "`pando_mot_cay`: USDA ghi “hơn 40.000 cây” và “gần 13 triệu pound” (~5.900 tấn); EarthDate ghi ~47.000 thân và ~6.000 tấn. Thẻ dùng “hơn 40.000” và “chừng 6.000 tấn”; không ghi tuổi (các ước lượng rất khác nhau).",
+  "`cay_lon_tu_khong_khi`: không ghi con số cân nặng của cây liễu (nguồn đã kiểm không có).",
 ];
 
 function render(): string {
@@ -202,10 +358,13 @@ function render(): string {
   out += `> Sinh từ \`lib/binhYen/fieldNotes.ts\` (chữ hiện trong app) và \`scripts/field-notes-doc.ts\` (link nguồn) bằng lệnh ở đầu file script. Test \`tests/fieldNotes.test.ts\` kiểm hai file khớp nhau. Sửa chữ ở file \`.ts\` rồi sinh lại; mã (\`key\`) không bao giờ đổi.\n`;
   out += `> Nội dung soạn và mọi link được kiểm ngày ${CHECKED}. Bộ thẻ còn chờ một người kiểm tra độc lập đọc lại.\n`;
   out += `> **${shown.length} thẻ** con có thể thấy. **${held.length} thẻ** đang chờ bố mẹ đồng ý.\n`;
-  out += `> Bộ hoàn chỉnh sẽ có **${total} thẻ** ở ${SCIENCE_TOPIC_KEYS.length} chủ đề. Đây là **nửa đầu** (thẻ gắn với cảm xúc). ${empty.length > 0 ? `Nửa sau (kiến thức thiên nhiên thuần: ${empty.map((t) => `${SCIENCE_TOPICS[t].emoji} ${SCIENCE_TOPICS[t].label}`).join(" · ")}) sẽ được thêm sau; chủ đề chưa có thẻ thì app chưa hiện.` : ""}\n\n`;
+  out +=
+    empty.length > 0
+      ? `> Bộ hoàn chỉnh sẽ có **${total} thẻ** ở ${SCIENCE_TOPIC_KEYS.length} chủ đề. Đây là **nửa đầu** (thẻ gắn với cảm xúc). Nửa sau (kiến thức thiên nhiên thuần: ${empty.map((t) => `${SCIENCE_TOPICS[t].emoji} ${SCIENCE_TOPICS[t].label}`).join(" · ")}) sẽ được thêm sau; chủ đề chưa có thẻ thì app chưa hiện.\n\n`
+      : `> Bộ đủ **${total} thẻ** ở ${SCIENCE_TOPIC_KEYS.length} chủ đề: **nửa đầu** gắn với cảm xúc (🐾 🌿 🧠 💛 🔬) và **nửa sau** là kiến thức thiên nhiên thuần (🦎 🌋 🌌 🌱). Thẻ nửa sau không lặp lại điều An đã gặp trong các thế giới Rừng, Biển, Vũ trụ, Núi lửa.\n\n`;
 
   out += `## Sổ tay nhà khoa học là gì\n\n`;
-  out += `Mỗi ngày, sau khi ghé Góc bình yên, An có thể tự mở một thẻ trong “Sổ tay nhà khoa học”: một điều thú vị, có nguồn, về động vật, thiên nhiên, bộ não hay cảm xúc, nối những thứ con yêu (động vật, rừng, biển, bầu trời) với cảm xúc. Giọng văn là giọng **nhà khoa học nhí** (quan sát, ghi chép, thí nghiệm) như phần còn lại của Góc bình yên của An.\n\n`;
+  out += `Mỗi ngày, sau khi ghé Góc bình yên, An có thể tự mở một thẻ trong “Sổ tay nhà khoa học”: một điều thú vị, có nguồn, về động vật, thiên nhiên, Trái Đất, vũ trụ, cây cối, bộ não hay cảm xúc. Nửa đầu nối những thứ con yêu (động vật, rừng, biển, bầu trời) với cảm xúc; nửa sau là kiến thức khoa học thuần để con thấy thế giới thật kỳ diệu. Giọng văn là giọng **nhà khoa học nhí** (quan sát, ghi chép, thí nghiệm) như phần còn lại của Góc bình yên của An.\n\n`;
   out += `Đây là **kiến thức nhẹ nhàng, khơi tò mò**. Đây **không phải** trị liệu, không phải lời khuyên về sức khỏe, và không nói gì về riêng con. Nếu bố mẹ thấy con cần hỗ trợ nhiều hơn, người phù hợp là chuyên gia tâm lý.\n\n`;
 
   out += `## Luật an toàn nội dung (cho tuổi 11–12, đã áp dụng cho cả ${FIELD_NOTES.length} thẻ)\n\n`;
@@ -257,6 +416,7 @@ function render(): string {
   out += `\n## Điểm cần soát kỹ (cho người kiểm tra)\n\n`;
   for (const p of CHECK_POINTS) out += `- ${p}\n`;
   out += `- **Thẻ đã bỏ khi soạn:** “bò có bạn thân” (chỉ tìm thấy luận án và tin báo, chưa thấy bài có bình duyệt); rái cá “nắm tay khi ngủ” (không có trong nguồn uy tín; thẻ rái cá nói chuyện bè và chải lông, vì chuyện quấn tảo bẹ đã có trong thế giới Biển); bài nhịp tim khỉ được chải lông năm 1999 (chỉ có 2 con khỉ, nên dùng nghiên cứu 2007 thay thế).\n`;
+  out += `- **Nửa sau — đã bỏ hoặc thay khi soạn:** cực quang theo màu khí (thế giới Vũ trụ đã có cực quang); thủy triều do Mặt Trăng (thế giới Vũ trụ đã có, thay bằng thẻ nhật triều Vịnh Bắc Bộ); cây xấu hổ cụp lá (thế giới Rừng đã có); cây bắt ruồi “đếm” số lần chạm (gần với chuyện bẫy côn trùng); sao nơtron “một thìa nặng một tỉ tấn” (chỉ tìm được nguồn tạp chí, và thế giới Vũ trụ đã có sao nơtron); mưa kim cương trên Sao Thiên Vương/Hải Vương và “năm thiên hà” 230 triệu năm (để dành, đủ 10 thẻ); bông tuyết sáu cánh; khối lượng đám mây (đã có ở thẻ \`mot_phut_ngam_may\`); số cá thể sao la và voọc (tránh giọng “sắp mất”, số liệu đổi theo năm).\n`;
   return out;
 }
 
