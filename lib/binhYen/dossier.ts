@@ -31,6 +31,13 @@ export interface Dossier {
   tryIt?: string;
   /** Short citation shown small under the card ("Nguồn: …"). */
   source: string;
+  /**
+   * Held back: kept in the pack (and in the parents' reading copy) but never shown to the
+   * child until the parent / her counsellor agrees. Selection skips held cards.
+   */
+  held?: true;
+  /** Why the card is held (shown to parents in docs/binh-yen/HO_SO_MAT.md only). */
+  heldReason?: string;
 }
 
 /** Chip order in the UI. */
@@ -57,17 +64,17 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "nao",
     quads: ["red"],
     title: "Chiếc chuông trong đầu",
-    body: "Sâu trong não có hạch hạnh nhân, hoạt động như một chiếc chuông báo động. Khi thấy có vẻ nguy hiểm, nó báo ngay để cơ thể chuẩn bị: tim đập nhanh, thở gấp, cơ căng lên. Theo Harvard Health, chuông này nhanh đến mức có khi reo trước cả lúc mắt kịp nhìn rõ chuyện gì. Cơ thể cũng có sẵn một hệ thống giống như cái phanh, giúp mình dịu lại khi mọi thứ đã qua.",
-    tryIt: "Thở ra chậm hơn hít vào, ba lần. Đó là một cách nhẹ nhàng để nhấn phanh.",
+    body: "Sâu trong não có hạch hạnh nhân, hoạt động như một chiếc chuông báo động. Khi thấy có vẻ nguy hiểm, nó báo ngay để cơ thể chuẩn bị: tim đập nhanh, thở gấp, cơ căng lên; đó là cơ thể đang làm đúng việc của nó. Theo Harvard Health, chuông này nhanh đến mức có khi reo trước cả lúc mắt kịp nhìn rõ chuyện gì. Cơ thể cũng có sẵn một hệ thống giống như cái phanh, giúp mình dịu lại khi mọi thứ đã qua.",
+    tryIt: "Thở ra chậm hơn hít vào, ba lần. Đó là một cách nhẹ nhàng có thể giúp nhấn phanh.",
     source: "Harvard Health Publishing · Understanding the stress response (2011, duyệt lại 2024)",
   },
   {
     key: "bao_dong_nham",
     topic: "nao",
     quads: ["red", "blue"],
-    title: "Báo động nhầm không có nghĩa là hỏng",
-    body: "Nhà khoa học Randolph Nesse gọi đây là “nguyên tắc máy báo khói”. Một chiếc máy báo khói kêu nhầm vì bánh mì hơi khét vẫn tốt hơn chiếc im lặng khi có cháy thật. Theo ông, các phản ứng phòng vệ của cơ thể, trong đó có cảm giác lo, cũng được chỉnh để thà báo nhầm nhiều lần còn hơn bỏ sót. Vì vậy, chuông kêu to chưa chắc là có chuyện thật.",
-    tryIt: "Gọi tên cái chuông đang kêu: “À, đây là lo lắng.” Rồi thở ra chậm một lần.",
+    title: "Chiếc máy báo khói cẩn thận",
+    body: "Nhà khoa học Randolph Nesse gọi đây là “nguyên tắc máy báo khói”. Máy kêu nhầm vì bánh mì hơi khét vẫn tốt hơn máy im lặng lúc cháy thật. Theo ông, phản ứng phòng vệ của cơ thể, kể cả cảm giác lo, cũng được chỉnh để thà báo nhầm còn hơn bỏ sót, nên báo nhầm là chuyện thường gặp và bình thường. Vậy chuông kêu to chưa chắc là có chuyện thật; còn nếu có chuyện thật, kể với một người lớn mình tin luôn là một lựa chọn.",
+    tryIt: "Gọi tên cái chuông đang kêu, ví dụ: “À, đây là lo lắng.” Rồi thở ra chậm một lần.",
     source: "Nesse, 2001 · Annals of the New York Academy of Sciences",
   },
   {
@@ -75,7 +82,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "nao",
     quads: ["red", "blue"],
     title: "Gọi đúng tên, chuông nhỏ lại",
-    body: "Năm 2007, nhóm của nhà tâm lý Matthew Lieberman ở Đại học California, Los Angeles cho người tham gia xem ảnh những khuôn mặt đang giận hay sợ, rồi chọn một từ gọi tên cảm xúc ấy. Khi gọi tên, hạch hạnh nhân hoạt động ít hơn, còn một vùng não phía trước dùng ngôn ngữ thì hoạt động nhiều hơn. Chính tác giả nói hiệu ứng có lẽ không lớn, nhưng đây là một manh mối đáng giữ.",
+    body: "Năm 2007, nhóm của nhà tâm lý Matthew Lieberman ở Đại học California, Los Angeles cho người tham gia xem ảnh những khuôn mặt đang giận hay sợ, rồi chọn một từ gọi tên cảm xúc ấy. Khi gọi tên, hạch hạnh nhân hoạt động ít hơn, còn một vùng não ngay sau trán, liên quan đến việc nghĩ về cảm xúc bằng lời, thì hoạt động nhiều hơn. Chính tác giả nói hiệu ứng có lẽ không lớn, nhưng đây là một manh mối đáng giữ.",
     tryIt: "Chọn một từ gần đúng nhất với lúc này, ví dụ “bực”, “mệt” hay “hồi hộp”, và nói thầm nó ra.",
     source: "Lieberman và cộng sự, 2007 · Psychological Science",
   },
@@ -83,9 +90,9 @@ export const DOSSIERS: readonly Dossier[] = [
     key: "tho_ra_cham",
     topic: "nao",
     quads: ["red"],
-    title: "Bí mật nằm ở hơi thở ra",
-    body: "Năm 2023, một thí nghiệm ở Đại học Stanford cho người tham gia tập vài kiểu thở khác nhau, 5 phút mỗi ngày trong một tháng. Kiểu “thở dài có nhịp” (hít vào, hít thêm một hơi ngắn, rồi thở ra thật chậm) giúp tâm trạng tích cực tăng nhiều hơn so với nhóm ngồi thiền. Nhóm nghiên cứu cho rằng phần thở ra dài có thể là điểm quan trọng.",
-    tryIt: "Hít vào bằng mũi, hít thêm một hơi ngắn, rồi thở ra thật chậm bằng miệng. Ba lần là đủ.",
+    title: "Manh mối nằm ở hơi thở ra",
+    body: "Trong một thí nghiệm năm 2023 ở Đại học Stanford, các nhà khoa học cho 108 người lớn tập vài kiểu thở khác nhau, 5 phút mỗi ngày trong một tháng. Kiểu “thở dài có nhịp” (hít vào, hít thêm một hơi ngắn, rồi thở ra thật chậm) giúp tâm trạng tích cực tăng nhiều hơn so với nhóm ngồi thiền. Nhóm nghiên cứu cho rằng phần thở ra dài có thể là điểm quan trọng.",
+    tryIt: "Hít vào bằng mũi, hít thêm một hơi ngắn, rồi thở ra thật chậm bằng miệng. Ba lần là đủ. Thấy khác hay chưa thấy gì cũng đều ổn.",
     source: "Balban và cộng sự, 2023 · Cell Reports Medicine",
   },
   {
@@ -93,15 +100,15 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "nao",
     quads: [],
     title: "Công trình đang xây",
-    body: "Theo Viện Sức khỏe Tâm thần Quốc gia Hoa Kỳ (NIMH), não người tiếp tục phát triển đến khoảng giữa hoặc cuối tuổi hai mươi. Vùng vỏ não trước trán, nơi lo việc lập kế hoạch và cân nhắc, nằm trong số những vùng hoàn thiện sau cùng. Não tuổi teen lại có một điểm mạnh: rất linh hoạt, dễ thích nghi với điều mới. Có hôm thấy khó sắp xếp mọi thứ cũng dễ hiểu thôi, vì công trình vẫn đang xây.",
-    source: "NIMH · The Teen Brain: 7 Things to Know",
+    body: "Theo NIMH, một viện nghiên cứu lớn của Hoa Kỳ, não người tiếp tục phát triển đến khoảng giữa hoặc cuối tuổi hai mươi. Vùng vỏ não trước trán, nơi lo việc lập kế hoạch và cân nhắc, nằm trong số những vùng hoàn thiện sau cùng. Não tuổi teen lại có một điểm mạnh: rất linh hoạt, dễ thích nghi với điều mới. Có hôm thấy khó sắp xếp mọi thứ cũng dễ hiểu thôi, vì công trình vẫn đang xây.",
+    source: "NIMH, 2023 · The Teen Brain: 7 Things to Know",
   },
   {
     key: "giac_ngu_cat_ho_so",
     topic: "nao",
     quads: ["blue", "green"],
     title: "Ai sắp xếp hồ sơ lúc nửa đêm?",
-    body: "Các nhà nghiên cứu giấc ngủ cho rằng trong lúc mình ngủ, não xem lại những gì vừa trải qua trong ngày. Trong đêm, một số ký ức được củng cố, nhất là trong giai đoạn ngủ sâu. Theo bài viết của Viện Y tế Quốc gia Hoa Kỳ (NIH), ngủ sau khi học giúp lưu và gắn chặt thông tin mới vào não. Vậy là ngủ đủ cũng là một phần của việc học.",
+    body: "Các nhà nghiên cứu giấc ngủ cho rằng trong lúc mình ngủ, não xem lại những gì vừa trải qua trong ngày. Trong đêm, một số ký ức được củng cố, nhất là trong giai đoạn ngủ sâu. Theo bài viết của Viện Y tế Quốc gia Hoa Kỳ (NIH), ngủ sau khi học giúp lưu và gắn chặt thông tin mới vào não. Vậy là trong lúc mình ngủ, não vẫn âm thầm làm phần việc của nó.",
     tryIt: "Trước khi ngủ, viết một dòng: hôm nay mình biết thêm điều gì?",
     source: "NIH News in Health, 2013 · Sleep On It",
   },
@@ -111,7 +118,7 @@ export const DOSSIERS: readonly Dossier[] = [
     quads: ["yellow", "green"],
     title: "Vụ án “10% bộ não”",
     body: "Có lẽ con đã từng nghe câu “người ta chỉ dùng 10% bộ não”. Thám tử kiểm tra rồi: đây là chuyện không có thật. Trên tạp chí Scientific American, nhà thần kinh học Barry Gordon ở Đại học Johns Hopkins nói chúng ta dùng gần như mọi phần của não. Không có vùng nào đang ngủ quên chờ được đánh thức cả.",
-    source: "Scientific American · Do People Only Use 10 Percent of Their Brains?",
+    source: "Scientific American, 2008 · Do People Only Use 10 Percent of Their Brains?",
   },
   {
     key: "tai_xe_taxi_london",
@@ -130,7 +137,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "cam_xuc",
     quads: ["red", "blue"],
     title: "Cảm xúc là tin nhắn, không phải mệnh lệnh",
-    body: "Hai nhà tâm lý Dacher Keltner và James Gross viết rằng cảm xúc có chức năng: chúng giúp mình phản ứng với những gì đang thay đổi quanh mình. Bực có thể đang báo “có gì đó chưa công bằng”, buồn có thể đang báo “mình vừa mất một điều quan trọng”. Đọc tin nhắn xong, mình vẫn là người quyết định làm gì tiếp theo.",
+    body: "Hai nhà tâm lý Dacher Keltner và James Gross viết rằng cảm xúc có chức năng: chúng giúp mình phản ứng với những gì đang thay đổi quanh mình. Bực có thể đang báo “có gì đó chưa công bằng”, buồn có thể đang báo “mình vừa mất một điều quan trọng”. Có tin nhắn đúng, cũng có tin nhắn gửi nhầm. Đọc xong, mình vẫn là người quyết định làm gì tiếp theo.",
     tryIt: "Hỏi cảm xúc đang có: “Bạn muốn báo cho mình điều gì?” Viết câu trả lời thành một dòng.",
     source: "Keltner & Gross, 1999 · Cognition and Emotion",
   },
@@ -138,10 +145,12 @@ export const DOSSIERS: readonly Dossier[] = [
     key: "lo_la_tap_duot",
     topic: "cam_xuc",
     quads: ["red"],
-    title: "Vì sao cái đầu hay “tập dượt”?",
-    body: "Hiệp hội Tâm lý học Hoa Kỳ (APA) viết rằng một chút lo lắng là bình thường, ví dụ trước khi nói trước đám đông, và đôi khi còn có ích vì nó thúc mình chuẩn bị. Có thể hình dung cái đầu đang chạy thử các tình huống để mình sẵn sàng hơn. Khi đã chuẩn bị đủ mà buổi tập vẫn chưa dừng, mình có thể cảm ơn nó và cho nó nghỉ.",
-    tryIt: "Viết ra một việc nhỏ có thể chuẩn bị ngay. Phần còn lại để mai tính.",
-    source: "APA · Students Experiencing Anxiety (2021)",
+    held: true,
+    heldReason: "Nói lo lắng là “tập dượt” có ích có thể làm mạnh thêm ý nghĩ “lo giúp mình chuẩn bị”. Chỉ bật khi bố mẹ hoặc chuyên gia của con đồng ý.",
+    title: "Khi cái đầu muốn “tập dượt” mãi",
+    body: "Hiệp hội Tâm lý học Hoa Kỳ (APA) viết rằng một chút lo lắng là bình thường, ví dụ trước khi nói trước đám đông, và có khi còn có ích vì nó thúc mình bắt tay vào chuẩn bị. Phần có ích là việc chuẩn bị, không phải số vòng nghĩ đi nghĩ lại (hồ sơ “Sóng lên rồi sóng lại xuống” thấy việc này làm cảm xúc ở lâu hơn). Khi đã chuẩn bị xong mà cái đầu vẫn muốn chạy thử thêm vòng nữa, mình có thể cảm ơn nó và cho nó nghỉ.",
+    tryIt: "Viết ra một việc nhỏ có thể chuẩn bị ngay. Những điều còn lại, ghi một dòng để mai xem.",
+    source: "APA (Hiệp hội Tâm lý học Hoa Kỳ), 2021",
   },
   {
     key: "song_len_song_xuong",
@@ -157,7 +166,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "cam_xuc",
     quads: ["blue", "yellow"],
     title: "Vừa vui vừa buồn, có được không?",
-    body: "Có. Năm 2001, các nhà tâm lý hỏi mọi người ngay sau khi xem bộ phim cảm động “Life Is Beautiful”, lúc sinh viên dọn khỏi ký túc xá và lúc tốt nghiệp. Ngày thường, phần lớn người ta thấy hoặc vui hoặc buồn; nhưng vào những dịp như vậy, nhiều người thấy cả hai cùng lúc. Có vẻ cảm xúc lẫn lộn hay đến khi một điều quý giá sắp khép lại.",
+    body: "Có. Năm 2001, các nhà tâm lý hỏi mọi người ngay sau khi xem một bộ phim vừa hài vừa cảm động, lúc sinh viên dọn khỏi ký túc xá và lúc tốt nghiệp. Ngày thường, phần lớn người ta thấy hoặc vui hoặc buồn; nhưng vào những dịp như vậy, nhiều người thấy cả hai cùng lúc. Có vẻ cảm xúc lẫn lộn hay đến khi một điều quý giá sắp khép lại.",
     source: "Larsen, McGraw & Cacioppo, 2001 · Journal of Personality and Social Psychology",
   },
   {
@@ -183,7 +192,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "cam_xuc",
     quads: ["yellow", "green"],
     title: "Tò mò là chiếc chìa khóa",
-    body: "Năm 2014, các nhà khoa học ở Đại học California, Davis cho người tham gia đọc câu đố rồi chờ xem đáp án. Khi rất tò mò, họ nhớ đáp án tốt hơn. Bất ngờ hơn, họ còn nhớ tốt hơn cả những khuôn mặt không liên quan được cho xem trong lúc đang tò mò, và vẫn nhớ sau một ngày.",
+    body: "Các nhà khoa học ở Đại học California, Davis từng cho người tham gia đọc câu đố rồi chờ xem đáp án (2014). Khi rất tò mò, họ nhớ đáp án tốt hơn. Bất ngờ hơn, họ còn nhớ tốt hơn cả những khuôn mặt không liên quan được cho xem trong lúc đang tò mò, và vẫn nhớ sau một ngày.",
     source: "Gruber, Gelman & Ranganath, 2014 · Neuron",
   },
   {
@@ -191,7 +200,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "cam_xuc",
     quads: ["yellow", "green"],
     title: "Cuốn sổ những điều tốt",
-    body: "Năm 2003, hai nhà tâm lý Robert Emmons và Michael McCullough nhờ một nhóm người ghi lại tối đa năm điều mình biết ơn, mỗi tuần hoặc mỗi ngày. So với các nhóm khác, nhóm này thấy dễ chịu hơn ở nhiều phép đo, dù không phải tất cả, và rõ nhất là ở cảm xúc tích cực. Điều được ghi không cần lớn: một câu đùa của bạn cũng tính.",
+    body: "Trong một nghiên cứu năm 2003, hai nhà tâm lý Robert Emmons và Michael McCullough nhờ một nhóm người ghi lại tối đa năm điều mình biết ơn, mỗi tuần hoặc mỗi ngày. So với các nhóm khác, nhóm này thấy dễ chịu hơn ở nhiều phép đo, dù không phải tất cả, và rõ nhất là ở cảm xúc tích cực. Điều được ghi không cần lớn: một câu đùa của bạn cũng tính.",
     tryIt: "Viết một dòng: hôm nay có một điều nhỏ mình thấy biết ơn.",
     source: "Emmons & McCullough, 2003 · Journal of Personality and Social Psychology",
   },
@@ -205,7 +214,7 @@ export const DOSSIERS: readonly Dossier[] = [
     quads: [],
     title: "Cuốn sổ riêng của một hoàng đế",
     body: "Marcus Aurelius là hoàng đế La Mã sống gần 2.000 năm trước. Theo Britannica, ông viết những ghi chép rời rạc bằng tiếng Hy Lạp cổ, có lẽ vào đầu những năm 170, giữa các chiến dịch dọc sông Danube. Ngày nay ta gọi chúng là “Suy tưởng”. Không ai biết chắc ông có định cho người khác đọc hay không, nên nhiều người xem đó như cuốn sổ ông viết cho chính mình.",
-    tryIt: "Viết một dòng cho chính mình, như Marcus: hôm nay mình đã cố gắng ở đâu?",
+    tryIt: "Viết một dòng cho chính mình, như Marcus: hôm nay có điều gì mình muốn nhớ?",
     source: "Encyclopaedia Britannica · Meditations (Marcus Aurelius)",
   },
   {
@@ -213,7 +222,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "lich_su",
     quads: ["red", "blue"],
     title: "Hai chiếc hộp của Epictetus",
-    body: "Epictetus là một triết gia Khắc kỷ sinh khoảng năm 55, từng bị bắt làm nô lệ từ nhỏ và sau này được tự do. Ông không tự viết sách; học trò Arrian ghi lại lời ông giảng. Ông chia mọi thứ làm hai loại: điều thật sự thuộc về mình, như suy nghĩ, ý định và việc mình làm; và điều không hoàn toàn do mình, như người khác nghĩ gì hay kết quả ra sao.",
+    body: "Epictetus là một triết gia Khắc kỷ sinh khoảng năm 55. Thuở nhỏ ông là nô lệ, sau này được trả tự do. Ông không tự viết sách; học trò Arrian ghi lại lời ông giảng. Ông chia mọi thứ làm hai loại: điều thật sự thuộc về mình, như suy nghĩ, ý định và việc mình làm; và điều không hoàn toàn do mình, như người khác nghĩ gì hay kết quả ra sao.",
     tryIt: "Viết một dòng chia hai phía: “thuộc về mình” và “không do mình”.",
     source: "Britannica · Epictetus; Stanford Encyclopedia of Philosophy · Epictetus",
   },
@@ -231,7 +240,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "lich_su",
     quads: ["red", "green"],
     title: "Căn phòng trà chỉ đủ năm người",
-    body: "Giữa thế kỷ 16, các bậc thầy trà Nhật Bản như Sen no Rikyū (1522–1591) đưa trà đạo theo vẻ đẹp giản dị gọi là “wabi”. Phòng trà thường chỉ đủ cho bốn, năm người, mô phỏng túp lều của người ẩn cư. Manh mối thêm: bốn chữ “hòa, kính, thanh, tịch” hay được gán cho Rikyū, nhưng các nhà nghiên cứu chưa tìm thấy bằng chứng ông nói vậy.",
+    body: "Giữa thế kỷ 16, các bậc thầy trà Nhật Bản như Sen no Rikyū đưa trà đạo theo vẻ đẹp giản dị gọi là “wabi”. Phòng trà thường chỉ đủ cho bốn, năm người, mô phỏng túp lều của người ẩn cư. Manh mối thêm: bốn chữ “hòa, kính, thanh, tịch” hay được gán cho Rikyū, nhưng các nhà nghiên cứu chưa tìm thấy bằng chứng ông nói vậy.",
     source: "The Met, 2011 · The Japanese Tea Ceremony; Japan Past & Present · Abstract Concepts in Chanoyu",
   },
   {
@@ -248,23 +257,23 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "lich_su",
     quads: ["red"],
     title: "“Dục tốc bất đạt” đến từ đâu?",
-    body: "Người Việt hay nói “dục tốc bất đạt”: muốn nhanh thì lại không tới. Câu này bắt nguồn từ sách Luận ngữ, ghi lời Khổng Tử khoảng 2.500 năm trước. Khi học trò Tử Hạ hỏi cách cai quản một vùng đất, ông khuyên đừng mong việc xong thật nhanh và đừng chăm chăm vào cái lợi nhỏ. Thám tử cũng vậy: từng manh mối một.",
+    body: "Người Việt hay nói “dục tốc bất đạt”: muốn nhanh thì lại không tới. Câu này bắt nguồn từ sách Luận ngữ, ghi lời Khổng Tử khoảng 2.500 năm trước. Khi học trò Tử Hạ làm quan ở đất Cử Phụ và hỏi cách cai quản, ông khuyên đừng mong việc xong thật nhanh và đừng chăm chăm vào cái lợi nhỏ. Thám tử cũng vậy: từng manh mối một.",
     source: "Luận ngữ 13.17 · bản dịch James Legge (UCLA Center for Chinese Studies)",
   },
   {
     key: "mai_sat_nen_kim",
     topic: "lich_su",
-    quads: ["blue"],
+    quads: ["blue", "yellow"],
     title: "Từng chút một, sắt cũng thành kim",
-    body: "Tục ngữ Việt Nam có câu “Có công mài sắt, có ngày nên kim”. Ngày xưa chưa có máy móc, muốn có một cây kim nhỏ, người ta phải mài giũa thanh sắt thô qua nhiều ngày. Câu tục ngữ không đòi xong ngay; nó nói về những lần mài nhỏ, đều đặn, cộng dồn lại theo thời gian.",
-    source: "VOH (Đài Tiếng nói Nhân dân TP.HCM), 2022 · giải thích tục ngữ",
+    body: "Tục ngữ Việt Nam có câu “Có công mài sắt, có ngày nên kim”. Hình ảnh trong câu rất lạ: một thanh sắt thô được mài mòn dần, cho đến khi chỉ còn bằng cây kim. Câu tục ngữ không đòi xong ngay; nó nói về những lần mài nhỏ, đều đặn, cộng dồn lại theo thời gian.",
+    source: "Tục ngữ dân gian · Lê Thị Hồng Minh, Vài nét về tục ngữ mới (ĐH KHXH&NV, ĐHQG TP.HCM)",
   },
   {
     key: "truong_cua_nguoi_di_bo",
     topic: "lich_su",
     quads: ["blue", "yellow"],
     title: "Trường học của những người đi dạo",
-    body: "Năm 335 trước Công nguyên, Aristotle lập trường Lyceum ở Athens. Theo Britannica, trường được gọi là “Peripatetic” (người đi dạo) vì ông có thói quen vừa đi quanh khu vườn vừa giảng bài. Trường còn có một hành lang có mái che tên là “peripatos”. Đi bộ và suy nghĩ đã đi cùng nhau từ rất lâu.",
+    body: "Năm 335 trước Công nguyên, Aristotle lập trường Lyceum ở Athens. Theo Britannica, trường được gọi là “Peripatetic” (người đi dạo) vì ông có thói quen vừa đi quanh lùm cây vừa giảng bài. Trường còn có một hành lang có mái che tên là “peripatos”. Đi bộ và suy nghĩ đã đi cùng nhau từ rất lâu.",
     tryIt: "Nghĩ về một bài khó trong lúc đi bộ vài phút quanh nhà.",
     source: "Britannica · Lyceum",
   },
@@ -277,8 +286,8 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "con_nguoi",
     quads: ["red", "blue"],
     title: "Vụ án chiếc áo phông",
-    body: "Năm 2000, ở Đại học Cornell, sinh viên được nhờ mặc một chiếc áo in hình ca sĩ mà họ thấy ngượng, rồi bước vào một phòng đông người. Họ đoán gần một nửa số người trong phòng sẽ nhớ chiếc áo, nhưng thực tế chưa đến một phần tư nhớ. Các nhà tâm lý gọi đây là “hiệu ứng ánh đèn sân khấu”: mình thường nghĩ người khác để ý mình nhiều hơn thực tế.",
-    tryIt: "Lần tới thấy ngượng, thở ra chậm một lần và nhớ: ánh đèn trong đầu sáng hơn ngoài đời.",
+    body: "Năm 2000, ở Đại học Cornell, sinh viên được nhờ mặc một chiếc áo in hình ca sĩ mà họ thấy ngượng, rồi bước vào một phòng có vài bạn sinh viên khác đang ngồi. Họ đoán gần một nửa số người trong phòng sẽ nhận ra chiếc áo, nhưng thực tế chưa đến một phần tư nhận ra. Các nhà tâm lý gọi đây là “hiệu ứng ánh đèn sân khấu”: mình thường nghĩ người khác để ý mình nhiều hơn thực tế.",
+    tryIt: "Lần tới thấy ngượng, thử nhớ lại: ánh đèn trong đầu thường sáng hơn ngoài đời.",
     source: "Gilovich, Medvec & Savitsky, 2000 · Journal of Personality and Social Psychology",
   },
   {
@@ -286,16 +295,16 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "con_nguoi",
     quads: ["red"],
     title: "Người khác không nhìn xuyên qua mình",
-    body: "Nhiều người tin rằng cảm xúc bên trong “lộ ra ngoài” nhiều hơn thực tế, ví dụ nghĩ ai cũng thấy mình đang run. Các nhà tâm lý gọi đây là “ảo giác trong suốt”. Trong một nghiên cứu năm 2003, người nói trước đám đông tự thấy mình lo hơn nhiều so với những gì người nghe nhận ra. Những người được kể trước về ảo giác này có vẻ bớt căng hơn và nói tốt hơn.",
-    tryIt: "Trước khi nói, thở ra chậm một lần và nhớ: người nghe thấy mình bình tĩnh hơn mình tưởng.",
+    body: "Nhiều người tin rằng cảm xúc bên trong “lộ ra ngoài” nhiều hơn thực tế, ví dụ nghĩ ai cũng nhận ra mình đang hồi hộp. Các nhà tâm lý gọi đây là “ảo tưởng trong suốt”. Trong một nghiên cứu năm 2003, người nói trước vài người nghe tự thấy mình lộ vẻ lo nhiều hơn những gì người nghe nhận ra. Những người được kể trước về điều này thấy bớt căng hơn, và người nghe cũng chấm bài nói của họ tốt hơn.",
+    tryIt: "Trước khi nói, gọi tên cảm giác đang có và nhớ: người nghe thường thấy mình bình tĩnh hơn mình tưởng.",
     source: "Gilovich, Savitsky & Medvec, 1998 · JPSP; Savitsky & Gilovich, 2003 · Journal of Experimental Social Psychology",
   },
   {
     key: "khoang_cach_yeu_thich",
     topic: "con_nguoi",
     quads: ["red", "blue"],
-    title: "Người ta quý mình hơn mình nghĩ",
-    body: "Sau khi trò chuyện với một người mới gặp, mình thường đoán người kia quý mình ít hơn mức họ thật sự quý. Năm 2018, các nhà tâm lý ở Đại học Yale và vài trường khác gọi đây là “khoảng cách yêu thích” (liking gap). Họ thấy cả hai người trong cuộc trò chuyện đều đoán như vậy, dù nói chuyện lâu hay nhanh. Lần tới nghĩ “chắc bạn ấy thấy mình chán”, có thể đó chỉ là ảo giác.",
+    title: "Người mới quen thường quý mình hơn mình nghĩ",
+    body: "Sau khi trò chuyện với một người mới gặp, mình thường đoán người kia quý mình ít hơn mức họ thật sự quý. Năm 2018, các nhà tâm lý ở Đại học Yale và vài trường khác gọi đây là “khoảng cách yêu thích” (liking gap). Họ thấy cả hai người trong cuộc trò chuyện đều đoán như vậy, dù nói chuyện lâu hay nhanh. Lần tới nghĩ “chắc bạn ấy thấy mình chán”, có thể đó chỉ là một cú lừa nhỏ của trí óc.",
     source: "Boothby, Cooney, Sandstrom & Clark, 2018 · Psychological Science",
   },
   {
@@ -328,7 +337,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "con_nguoi",
     quads: ["yellow", "green"],
     title: "Lá thư cảm ơn nặng ký hơn mình nghĩ",
-    body: "Năm 2018, hai nhà khoa học Amit Kumar và Nicholas Epley nhờ người tham gia viết một lá thư cảm ơn ngắn cho ai đó. Người viết đoán người nhận sẽ thấy hơi ngượng, nhưng thực tế người nhận ngạc nhiên và vui hơn nhiều so với dự đoán. Viết một lá thư như vậy chỉ mất vài phút.",
+    body: "Hai nhà khoa học Amit Kumar và Nicholas Epley từng nhờ người tham gia viết một lá thư cảm ơn ngắn cho ai đó. Người viết đoán người nhận sẽ thấy hơi ngượng, nhưng trong nghiên cứu năm 2018 ấy, người nhận ngạc nhiên và vui hơn nhiều so với dự đoán. Viết một lá thư như vậy chỉ mất vài phút.",
     tryIt: "Viết một dòng cảm ơn ai đó. Gửi hay giữ lại đều được.",
     source: "Kumar & Epley, 2018 · Psychological Science",
   },
@@ -337,7 +346,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "con_nguoi",
     quads: ["red", "blue"],
     title: "Từ bên ngoài, nó trông giống can đảm",
-    body: "Thừa nhận mình sai, nhờ giúp đỡ hay xin lỗi trước thường khiến mình thấy yếu đuối. Năm 2018, các nhà tâm lý ở Đại học Mannheim (Đức) thấy người ta tự đánh giá những lúc mình làm vậy tệ hơn so với cách người khác nhìn vào. Họ gọi đây là “hiệu ứng mớ hỗn độn đẹp”, và cho rằng từ bên ngoài, những việc ấy trông giống can đảm hơn.",
+    body: "Thừa nhận mình sai, nhờ giúp đỡ hay hát ngẫu hứng trước người khác có thể khiến mình thấy yếu đuối. Năm 2018, các nhà tâm lý ở Đại học Mannheim (Đức) thấy người ta tự đánh giá những lúc mình làm vậy tệ hơn so với cách người khác nhìn vào. Họ gọi đây là “hiệu ứng mớ hỗn độn đẹp”, và cho rằng từ bên ngoài, những việc ấy trông giống can đảm hơn.",
     source: "Bruk, Scholl & Bless, 2018 · Journal of Personality and Social Psychology",
   },
 
@@ -358,8 +367,8 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "xa_hoi",
     quads: ["red", "blue"],
     title: "Người Nhật gọi đó là “tắm rừng”",
-    body: "Năm 1982, Bộ Nông Lâm Ngư nghiệp Nhật Bản đặt ra từ “shinrin-yoku”, nghĩa là “tắm rừng”: đắm mình trong bầu không khí của rừng. Một nghiên cứu ở 24 khu rừng khắp Nhật Bản cho người tham gia đi dạo và ngắm cảnh ở rừng hoặc ở phố. Ở rừng, nhịp tim, huyết áp và cortisol (một hormone liên quan đến căng thẳng) thấp hơn, còn hệ thần kinh “nghỉ ngơi” hoạt động nhiều hơn.",
-    tryIt: "Thở ra chậm, và hình dung mình đang đi giữa một khu rừng mát.",
+    body: "Năm 1982, Bộ Nông Lâm Ngư nghiệp Nhật Bản đặt ra từ “shinrin-yoku”, nghĩa là “tắm rừng”: đắm mình trong bầu không khí của rừng. Một nghiên cứu ở 24 khu rừng khắp Nhật Bản cho 280 nam sinh viên đi dạo và ngắm cảnh ở rừng hoặc ở phố. Ở rừng, nhịp tim, huyết áp và cortisol (một hormone liên quan đến căng thẳng) thấp hơn, còn hệ thần kinh “nghỉ ngơi” hoạt động nhiều hơn.",
+    tryIt: "Nhìn ra cửa sổ tìm một chút màu xanh, rồi để ý nó trong vài hơi thở.",
     source: "Park và cộng sự, 2010 · Environmental Health and Preventive Medicine",
   },
   {
@@ -367,7 +376,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "xa_hoi",
     quads: ["blue", "green"],
     title: "Sạc lại sự tập trung",
-    body: "Năm 2008, các nhà tâm lý ở Đại học Michigan cho người tham gia đi dạo trong một vườn cây hoặc trên phố, rồi làm bài kiểm tra sự chú ý. Sau khi đi trong thiên nhiên, hay thậm chí chỉ xem ảnh thiên nhiên, kết quả tốt hơn. Các tác giả cho rằng thiên nhiên thu hút sự chú ý một cách nhẹ nhàng, để phần tập trung có chủ đích được nghỉ và hồi lại.",
+    body: "Các nhà tâm lý ở Đại học Michigan (2008) cho người tham gia đi dạo trong một vườn cây hoặc trên phố, rồi làm bài kiểm tra sự chú ý. Sau khi đi trong thiên nhiên, hay thậm chí chỉ xem ảnh thiên nhiên, kết quả tốt hơn. Các tác giả cho rằng thiên nhiên thu hút sự chú ý một cách nhẹ nhàng, để phần tập trung có chủ đích được nghỉ và hồi lại.",
     tryIt: "Giữa hai bài, đứng dậy vươn vai và nhìn về phía có cây xanh một lúc.",
     source: "Berman, Jonides & Kaplan, 2008 · Psychological Science",
   },
@@ -376,7 +385,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "xa_hoi",
     quads: ["blue"],
     title: "Ai cũng cần một nơi thuộc về",
-    body: "Năm 1995, hai nhà tâm lý Roy Baumeister và Mark Leary tổng hợp rất nhiều nghiên cứu và cho rằng nhu cầu thuộc về là một động lực cơ bản của con người. Theo họ, điều mình cần là những lần gặp gỡ thường xuyên, không nặng nề, trong một mối quan hệ gắn bó lâu dài. Một tin nhắn hỏi thăm hay một buổi đi dạo cùng nhau đều là những sợi dây nhỏ như thế.",
+    body: "Năm 1995, hai nhà tâm lý Roy Baumeister và Mark Leary tổng hợp rất nhiều nghiên cứu và cho rằng nhu cầu thuộc về là một động lực cơ bản của con người. Theo họ, chỉ cần vài người thôi: điều mình cần là những lần gặp gỡ thường xuyên, phần lớn dễ chịu, trong một mối quan hệ có sự quan tâm lâu dài. Một tin nhắn hỏi thăm hay một buổi đi dạo cùng nhau đều là những sợi dây nhỏ như thế.",
     source: "Baumeister & Leary, 1995 · Psychological Bulletin",
   },
   {
@@ -392,7 +401,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "xa_hoi",
     quads: [],
     title: "Hai lần nghỉ ngắn",
-    body: "Năm 2011, các nhà tâm lý ở Đại học Illinois cho người tham gia làm một bài lặp đi lặp lại trên máy tính suốt 50 phút. Phần lớn người làm liền một mạch thì càng về sau làm càng kém. Nhóm được chen vào hai lần chuyển việc rất ngắn thì giữ được phong độ đến cuối. Nghỉ ngắn không phải là lười; có thể nó giúp não giữ mục tiêu luôn mới.",
+    body: "Ở Đại học Illinois, các nhà tâm lý cho người tham gia làm một bài lặp đi lặp lại trên máy tính suốt 50 phút. Trong thí nghiệm năm 2011 ấy, phần lớn người làm liền một mạch thì càng về sau làm càng kém. Nhóm được chen vào hai lần chuyển việc rất ngắn thì giữ được phong độ đến cuối. Nghỉ ngắn không phải là lười; có thể nó giúp não giữ mục tiêu luôn mới.",
     tryIt: "Xong một bài, đứng dậy vươn vai một chút rồi mới làm bài tiếp.",
     source: "Ariga & Lleras, 2011 · Cognition",
   },
@@ -401,7 +410,7 @@ export const DOSSIERS: readonly Dossier[] = [
     topic: "xa_hoi",
     quads: ["blue", "yellow"],
     title: "Ý tưởng thích đi bộ",
-    body: "Năm 2014, hai nhà nghiên cứu ở Đại học Stanford cho người tham gia nghĩ cách dùng mới cho đồ vật quen thuộc, lúc ngồi và lúc đi bộ. Khi đi bộ, kể cả trên máy chạy trong phòng, phần lớn người nghĩ ra nhiều ý sáng tạo hơn, và hiệu quả còn kéo dài một chút khi ngồi xuống lại. Với bài chỉ có một đáp án đúng thì đi bộ không giúp được gì.",
+    body: "Năm 2014, hai nhà nghiên cứu ở Đại học Stanford cho người tham gia nghĩ cách dùng mới cho đồ vật quen thuộc, lúc ngồi và lúc đi bộ. Khi đi bộ, kể cả trên máy chạy trong phòng, phần lớn người nghĩ ra nhiều ý sáng tạo hơn, và hiệu quả còn kéo dài một chút khi ngồi xuống lại. Với bài chỉ có một đáp án đúng thì đi bộ không giúp, thậm chí kém hơn một chút.",
     tryIt: "Lần tới bí ý tưởng, đi bộ vài phút quanh phòng rồi nghĩ tiếp.",
     source: "Oppezzo & Schwartz, 2014 · Journal of Experimental Psychology: Learning, Memory, and Cognition",
   },
@@ -430,11 +439,11 @@ export function fitsQuad(d: Dossier, quad: Quad | null | undefined): boolean {
 }
 
 /**
- * The selection rule on any list (exported for tests): filter by topic, then by quad fit;
- * if the quad filter leaves fewer than 2 cards, use the whole topic. Pick `dayIndex % n`.
+ * The selection rule on any list (exported for tests): skip held cards, filter by topic, then
+ * by quad fit; if the quad filter leaves fewer than 2 cards, use the whole topic. Pick `dayIndex % n`.
  */
 export function pickDossier(list: readonly Dossier[], date: string, quad: Quad | null | undefined, topic: DossierTopic): Dossier | null {
-  const inTopic = list.filter((d) => d.topic === topic);
+  const inTopic = list.filter((d) => d.topic === topic && !d.held);
   const fit = inTopic.filter((d) => fitsQuad(d, quad));
   const pool = fit.length >= 2 ? fit : inTopic;
   const n = pool.length;
@@ -447,7 +456,13 @@ export function dossierFor(date: string, quad: Quad | null | undefined, topic: D
   return pickDossier(DOSSIERS, date, quad, topic) as Dossier;
 }
 
-/** A card by key (for the notebook). */
+/** A card by key (held cards included; the notebook filters them out). */
 export function findDossier(key: string): Dossier | undefined {
   return DOSSIERS.find((d) => d.key === key);
+}
+
+/** A card the child may see, by key (not held). */
+export function findShownDossier(key: string): Dossier | undefined {
+  const d = findDossier(key);
+  return d && !d.held ? d : undefined;
 }

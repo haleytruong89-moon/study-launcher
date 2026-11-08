@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { QUAD_KEYS, type Quad } from "@/lib/binhYen/catalog";
-import { DOSSIERS, TOPICS, TOPIC_KEYS, dayIndex, dossierFor, findDossier, fitsQuad, isDossierTopic, pickDossier, type Dossier } from "@/lib/binhYen/dossier";
+import { DOSSIERS, TOPICS, TOPIC_KEYS, dayIndex, dossierFor, findDossier, findShownDossier, fitsQuad, isDossierTopic, pickDossier, type Dossier } from "@/lib/binhYen/dossier";
 import { CARD_SOURCES, DOC_FILE } from "@/scripts/dossier-doc";
 
 const KEY = /^[a-z][a-z0-9_]{1,47}$/;
@@ -22,6 +22,8 @@ const FORBIDDEN = [
   /cân nặng/i,
   /ăn kiêng/i,
   /giảm cân/i,
+  /ảo giác/i,
+  /(^|[^\p{L}])hỏng($|[^\p{L}])/iu, // a whole word (“mô phỏng” is fine)
   /con nên/i,
   /con phải/i,
   /nên phải/i,
@@ -30,6 +32,7 @@ const FORBIDDEN = [
 ];
 
 const allText = (d: Dossier) => [d.title, d.body, d.tryIt ?? "", d.source];
+const SHOWN = DOSSIERS.filter((d) => !d.held);
 
 describe("Hồ sơ mật content rules", () => {
   it("has 40 cards, 8 per topic, unique stable keys", () => {
@@ -70,12 +73,29 @@ describe("Hồ sơ mật content rules", () => {
     });
   }
 
+  it("the forbidden list catches “ảo giác” and the word “hỏng”, not “mô phỏng”", () => {
+    const hit = (t: string) => FORBIDDEN.some((re) => re.test(t));
+    expect(hit("Báo động nhầm không có nghĩa là hỏng")).toBe(true);
+    expect(hit("Hỏng rồi.")).toBe(true);
+    expect(hit("“ảo giác trong suốt”")).toBe(true);
+    expect(hit("mô phỏng túp lều")).toBe(false);
+  });
+
   it("contains no forbidden words anywhere in the cards", () => {
     for (const d of DOSSIERS) for (const s of allText(d)) for (const re of FORBIDDEN) expect(re.test(s), `${d.key}: ${re} in “${s}”`).toBe(false);
   });
 
-  it("each topic offers at least 2 cards for every quad (so the fallback is a safety net only)", () => {
-    for (const t of TOPIC_KEYS) for (const q of QUAD_KEYS) expect(DOSSIERS.filter((d) => d.topic === t && fitsQuad(d, q)).length, `${t}/${q}`).toBeGreaterThanOrEqual(2);
+  it("each topic offers at least 2 non-held cards for every quad (so the fallback is a safety net only)", () => {
+    for (const t of TOPIC_KEYS) for (const q of QUAD_KEYS) expect(SHOWN.filter((d) => d.topic === t && fitsQuad(d, q)).length, `${t}/${q}`).toBeGreaterThanOrEqual(2);
+  });
+
+  it("holds back lo_la_tap_duot (with a reason) until the parent / counsellor agrees", () => {
+    const held = DOSSIERS.filter((d) => d.held);
+    expect(held.map((d) => d.key)).toEqual(["lo_la_tap_duot"]);
+    for (const d of held) expect(d.heldReason?.trim()).toBeTruthy();
+    for (const d of SHOWN) expect(d.heldReason, d.key).toBeUndefined();
+    expect(findShownDossier("lo_la_tap_duot")).toBeUndefined();
+    expect(findShownDossier("tho_ra_cham")?.key).toBe("tho_ra_cham");
   });
 
   it("findDossier finds by key", () => {
@@ -106,6 +126,21 @@ describe("dossierFor (selection rule)", () => {
     for (const t of TOPIC_KEYS) for (const q of QUAD_KEYS) expect(dossierFor("2026-11-08", q, t).key).toBe(dossierFor("2026-11-08", q, t).key);
   });
 
+  it("never selects a held card, on any day, quad or topic", () => {
+    for (let k = 0; k < 60; k++) {
+      const date = new Date(Date.UTC(2026, 10, 1 + k)).toISOString().slice(0, 10);
+      for (const t of TOPIC_KEYS) for (const q of [...QUAD_KEYS, null]) expect(dossierFor(date, q, t).held, `${date} ${t} ${q}`).toBeUndefined();
+    }
+  });
+
+  it("pickDossier skips held cards even when they are the only fit", () => {
+    const mk = (key: string, quads: Quad[], held?: true): Dossier => ({ key, topic: "nao", quads, title: key, body: "Một. Hai.", source: "x", ...(held ? { held } : {}) });
+    const list = [mk("h", ["red"], true), mk("h2", ["red"], true), mk("a", ["yellow"]), mk("b", ["green"])];
+    const keys = new Set(Array.from({ length: 6 }, (_, k) => pickDossier(list, `2026-01-0${k + 1}`, "red", "nao")?.key));
+    expect(keys).toEqual(new Set(["a", "b"]));
+    expect(pickDossier([mk("h", [], true)], "2026-01-01", null, "nao")).toBeNull();
+  });
+
   it("always returns a card of the chosen topic that fits the quad", () => {
     for (let k = 0; k < 30; k++) {
       const date = new Date(Date.UTC(2026, 10, 1 + k)).toISOString().slice(0, 10);
@@ -121,7 +156,7 @@ describe("dossierFor (selection rule)", () => {
   it("changes from one day to the next and cycles through every fitting card", () => {
     for (const t of TOPIC_KEYS)
       for (const q of QUAD_KEYS) {
-        const fit = DOSSIERS.filter((d) => d.topic === t && fitsQuad(d, q));
+        const fit = SHOWN.filter((d) => d.topic === t && fitsQuad(d, q));
         const seen = new Set<string>();
         let prev = "";
         for (let k = 0; k < fit.length; k++) {
@@ -143,6 +178,8 @@ describe("dossierFor (selection rule)", () => {
   it("no quad → any card of the topic", () => {
     const keys = new Set(Array.from({ length: 8 }, (_, k) => dossierFor(new Date(Date.UTC(2026, 0, 1 + k)).toISOString().slice(0, 10), null, "lich_su").key));
     expect(keys.size).toBe(8);
+    const emo = new Set(Array.from({ length: 7 }, (_, k) => dossierFor(new Date(Date.UTC(2026, 0, 1 + k)).toISOString().slice(0, 10), null, "cam_xuc").key));
+    expect(emo.size).toBe(7);
   });
 
   it("falls back to the whole topic when fewer than 2 cards fit the quad", () => {
@@ -181,5 +218,15 @@ describe("the reading copy for parents (docs/binh-yen/HO_SO_MAT.md)", () => {
 
   it("recommends showing the pack to Nguyên's counsellor", () => {
     expect(md).toMatch(/chuyên gia tư vấn/);
+  });
+
+  it("lists held cards in their own section, with the reason, after every shown card", () => {
+    const at = md.indexOf("## Chờ bố mẹ / chuyên gia đồng ý (chưa hiện cho con)");
+    expect(at).toBeGreaterThan(0);
+    for (const d of DOSSIERS.filter((x) => x.held)) {
+      expect(md.indexOf(`(\`${d.key}\`)`)).toBeGreaterThan(at);
+      expect(md).toContain(d.heldReason as string);
+    }
+    for (const d of SHOWN) expect(md.indexOf(`(\`${d.key}\`)`), d.key).toBeLessThan(at);
   });
 });
