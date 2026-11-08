@@ -58,6 +58,22 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // A modal: Tab and Shift+Tab stay inside it.
+  const trapTab = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab" || !root.current) return;
+    const list = [...root.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+    const first = list[0];
+    const last = list.at(-1);
+    if (!first || !last) return;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   const stored = useSyncExternalStore(noop, () => readSnooze(item.key), () => null);
   const [snoozedNow, setSnoozedNow] = useState<number | null>(null);
   const snoozeUntil = snoozedNow ?? stored;
@@ -107,7 +123,7 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
 
   return (
     <BodyPortal>
-      <div ref={root} role="dialog" aria-modal="true" aria-label={`Màn tập trung: ${item.title}`} className={`fixed inset-0 z-50 ${ink}`}>
+      <div ref={root} role="dialog" aria-modal="true" aria-label={`Màn tập trung: ${item.title}`} onKeyDown={trapTab} className={`fixed inset-0 z-50 ${ink}`}>
         {comic ? (
           <div aria-hidden className="absolute inset-0" style={{ background: "#F7F2E7" }}>
             <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(29,36,34,0.12) 1px, transparent 1.4px)", backgroundSize: "7px 7px" }} />
@@ -246,18 +262,21 @@ function TimeText({ label, hours }: { label: string; hours: boolean }) {
   const parts = label.split(/(\d+)/).filter((p) => p.trim() !== "");
   if (!/\d/.test(label)) return <span className="max-w-[200px] text-[26px] leading-tight font-bold">{label}</span>;
   return (
-    <span className="flex max-w-[200px] flex-wrap items-baseline justify-center gap-x-1.5 leading-none font-bold tabular-nums">
-      {parts.map((p, i) =>
-        /\d/.test(p) ? (
-          <span key={i} className={hours ? "text-4xl" : "text-5xl sm:text-6xl"}>
-            {p}
-          </span>
-        ) : (
-          <span key={i} className={hours ? "text-lg" : "text-2xl"}>
-            {p.trim()}
-          </span>
-        ),
-      )}
-    </span>
+    <>
+      <span className="sr-only">{label}</span>
+      <span aria-hidden className="flex max-w-[200px] flex-wrap items-baseline justify-center gap-x-1.5 leading-none font-bold tabular-nums">
+        {parts.map((p, i) =>
+          /\d/.test(p) ? (
+            <span key={i} className={hours ? "text-4xl" : "text-5xl sm:text-6xl"}>
+              {p}
+            </span>
+          ) : (
+            <span key={i} className={hours ? "text-lg" : "text-2xl"}>
+              {p.trim()}
+            </span>
+          ),
+        )}
+      </span>
+    </>
   );
 }
