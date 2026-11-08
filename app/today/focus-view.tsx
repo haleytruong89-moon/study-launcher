@@ -65,7 +65,12 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
     const first = list[0];
     const last = list.at(-1);
     if (!first || !last) return;
-    if (e.shiftKey && document.activeElement === first) {
+    // Focus on the dialog itself or on nothing (e.g. after a click on the background, or the
+    // focused button went away): Tab still lands inside.
+    if (!list.includes(document.activeElement as HTMLElement)) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+    } else if (e.shiftKey && document.activeElement === first) {
       e.preventDefault();
       last.focus();
     } else if (!e.shiftKey && document.activeElement === last) {
@@ -109,6 +114,8 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
     } catch {
       /* not remembered: fine */
     }
+    // The question (and its buttons) goes away: keep keyboard focus inside the dialog.
+    window.setTimeout(() => back.current?.focus(), 0);
   };
   const doneAlready = () => {
     if (item.requiresProof && !canFinishWithPhotos(item)) ctx.onProofOpen(item);
@@ -123,7 +130,7 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
 
   return (
     <BodyPortal>
-      <div ref={root} role="dialog" aria-modal="true" aria-label={`Màn tập trung: ${item.title}`} onKeyDown={trapTab} className={`fixed inset-0 z-50 ${ink}`}>
+      <div ref={root} role="dialog" aria-modal="true" aria-label={`Màn tập trung: ${item.title}`} tabIndex={-1} onKeyDown={trapTab} className={`fixed inset-0 z-50 outline-none ${ink}`}>
         {comic ? (
           <div aria-hidden className="absolute inset-0" style={{ background: "#F7F2E7" }}>
             <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(29,36,34,0.12) 1px, transparent 1.4px)", backgroundSize: "7px 7px" }} />
@@ -160,7 +167,7 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
               >
                 <p className="text-lg font-bold">Con vẫn đang làm “{item.title}” chứ?</p>
                 <p className={`text-sm ${soft}`}>
-                  Đã {label}. Có khi con xong rồi mà quên bấm. Không sao cả.
+                  Con đã làm {label} rồi. Có khi con xong rồi mà quên bấm. Không sao cả.
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
                   <button type="button" onClick={stillWorking} className={`min-h-12 grow basis-36 rounded-2xl px-4 text-base font-bold ${secondary}`}>
@@ -198,7 +205,7 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
                     <TimeText label={label} hours={hours} />
                   </div>
                 </div>
-                <p className={`text-center text-base text-balance ${comic ? "text-ink/85" : "text-white/95"}`} aria-live="polite">
+                <p className={`text-center text-base text-balance ${comic ? "text-ink/85" : "text-white/95"}`} aria-live="off">
                   {under}
                 </p>
                 <p

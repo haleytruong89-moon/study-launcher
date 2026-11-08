@@ -272,13 +272,18 @@ function Chooser({ month, options, color, onChosen, onStale }: { month: string; 
 }
 
 /** Tab "Thế giới" (An): this month's world, the album of past months. */
-export function WorldTab({ color }: { color: string }) {
+export function WorldTab({ color, onWorld }: { color: string; onWorld?: (key: string | null) => void }) {
   const [month, setMonth] = useState<string | null>(null);
   const [fetched, refetch] = useWorld(month);
   // After a pick the route answers with the new world: show it without another round trip
   // (until the next fetch: another month, "Thử lại", a 409).
   const [picked, setPicked] = useState<WorldResponse | null>(null);
   const load: Load = picked && month === null ? { state: "ok", data: picked } : fetched;
+  // R7a: the focus screen draws this month's world (only the current month, no extra request).
+  const currentKey = month === null && load.state === "ok" ? (load.data.view?.world.key ?? null) : undefined;
+  useEffect(() => {
+    if (currentKey !== undefined) onWorld?.(currentKey);
+  }, [currentKey, onWorld]);
   const retry = () => {
     setPicked(null);
     refetch();

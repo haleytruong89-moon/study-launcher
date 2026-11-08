@@ -483,7 +483,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       )}
       {proofOpen && proofItem && (
         <ProofSheet
-          key={proofItem.key}
+          key={`proof:${proofItem.key}`}
           item={proofItem}
           color={color}
           max={Math.max(0, MAX_PROOFS - proofItem.proofCount)}
@@ -725,7 +725,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
         {tab === "tuan" && (
           <>
-            {hasWorld && <WorldTab color={color} />}
+            {hasWorld && <WorldTab color={color} onWorld={setWorldKey} />}
             {voice === "detective" && (
               <section aria-labelledby="comic-volume" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
                 {week ? (

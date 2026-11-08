@@ -312,7 +312,9 @@ export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
       </div>
     );
   }
-  const ready = item.state === "running" && (!item.canFinishAt || Date.parse(item.canFinishAt) <= ctx.nowMs);
+  // A placeholder / not-started item has nothing to focus on (no dead button).
+  if (item.state !== "running") return null;
+  const ready = !item.canFinishAt || Date.parse(item.canFinishAt) <= ctx.nowMs;
   const focus = (
     <button
       type="button"

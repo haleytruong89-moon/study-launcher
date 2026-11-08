@@ -124,6 +124,9 @@ test("R7a: Bắt đầu shows a small card, never the focus screen; the header c
 });
 
 test("R7a long run: a task started 3 hours ago asks kindly “Con vẫn đang làm … chứ?”; Vẫn đang làm waits an hour; Xong rồi finishes it (An's voice)", async ({ page }) => {
+  // A run "3 hours ago" must still be today in Vietnam (it would cross 00:00 between 00:00 and 03:00 VN).
+  const vnHour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+  test.skip(vnHour < 3, "a 3-hour-old run would start yesterday in Vietnam");
   const db = admin();
   const task = await addTask("R7a Luyện lâu");
   await db.from("profiles").update({ grade: 6 }).eq("id", task.childId);

@@ -187,7 +187,8 @@ export function taskMeta(item: TaskView, nowMs: number, today = ""): string {
     // R7a: minutes only, never a ticking seconds clock.
     const elapsed = minutesLabel(nowMs - new Date(item.startedAt).getTime());
     if (item.requiresProof) return `Đang làm · ${elapsed} — làm xong thì chụp ảnh bài`;
-    if (item.canFinishAt && nowMs < new Date(item.canFinishAt).getTime()) return `Đang làm · ${elapsed} / ${item.minMinutes} phút`;
+    if (item.canFinishAt && nowMs < new Date(item.canFinishAt).getTime())
+      return nowMs - new Date(item.startedAt).getTime() < 60_000 ? `Đang làm · vừa bắt đầu · ít nhất ${item.minMinutes} phút` : `Đang làm · ${elapsed} / ${item.minMinutes} phút`;
     return `Đủ ${item.minMinutes} phút — bấm Xong khi làm xong`;
   }
   if (item.source === "homework") {

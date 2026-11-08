@@ -73,7 +73,7 @@ export const FOCUS_LINES: Record<Voice, readonly string[]> = {
     "Chậm mà chắc. Hồ sơ nào cũng giải từng trang.",
     "Đọc kỹ đề là đã đi được nửa vụ án.",
     "Một hơi thở dài trước khi lật trang tiếp theo.",
-    "Không ai đang bấm giờ con. Chỉ có con và bài này.",
+    "Không cần vội. Chỉ có con và bài này.",
     "Ghi lại điều đã biết, rồi tìm điều còn thiếu.",
     "Lạc hướng một chút cũng không sao. Quay về manh mối gần nhất.",
     "Tập trung từng đoạn ngắn, rồi cho mắt nghỉ.",
