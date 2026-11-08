@@ -194,6 +194,8 @@ export interface RecentResponse {
   view: MonthView | null;
   /** The last 7 days, newest first (days with nothing are left out). */
   days: RecentDay[];
+  /** No world this month yet and An can pick one now (else "sắp mở"). */
+  choose: boolean;
 }
 
 /**
@@ -220,11 +222,13 @@ export async function readRecent(ctx: ChildContext, now = new Date()): Promise<R
   }
   const rows = (data ?? []) as WorldRow[];
   let view: MonthView | null = null;
+  let choose = false;
   if (worldStarted(month)) {
-    const { key } = worldOfMonth(month, true, await knownWorlds(ctx.childId));
-    view = key ? monthView(month, key, rows, today) : null;
+    const of = worldOfMonth(month, true, await knownWorlds(ctx.childId));
+    view = of.key ? monthView(month, of.key, rows, today) : null;
+    choose = !of.key && of.choose.length > 0;
   }
-  return { today, view, days: recentGrowth(rows, today) };
+  return { today, view, days: recentGrowth(rows, today), choose };
 }
 
 /** Best effort: null when there is no world for this child, the tables are not there yet, or anything fails. */

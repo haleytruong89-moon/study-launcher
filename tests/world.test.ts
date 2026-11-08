@@ -299,6 +299,19 @@ describe("recentGrowth (R7b: Nhìn lại 7 ngày)", () => {
     expect(recentGrowth(rows, "2026-12-03", 3).map((d) => d.date)).toEqual(["2026-12-03", "2026-12-01"]);
   });
 
+  it("a window across the new year (December → January) keeps each month's own ranks", () => {
+    const year: WorldRow[] = [
+      r("2026-12-29", "feel", "rung", "lan_hai"),
+      r("2026-12-31", "feel", "rung", "lan_hai", 1),
+      r("2027-01-01", "feel", "bien", "hai_quy"),
+      r("2027-01-02", "feel", "bien", "hai_quy", 1),
+    ];
+    const d = recentGrowth(year, "2027-01-02");
+    expect(d.map((x) => x.date)).toEqual(["2027-01-02", "2027-01-01", "2026-12-31", "2026-12-29"]);
+    expect(d[0]!.items[0]).toMatchObject({ key: "hai_quy", isNew: false, fact: quy.facts[1], month: "2027-01" });
+    expect(d[2]!.items[0]).toMatchObject({ key: "lan_hai", isNew: false, fact: lan.facts[1], month: "2026-12" });
+  });
+
   it("labels days calmly: Hôm nay, Hôm qua, then the weekday and date", () => {
     expect(recentDayLabel("2026-12-03", "2026-12-03")).toBe("Hôm nay");
     expect(recentDayLabel("2026-12-02", "2026-12-03")).toBe("Hôm qua");

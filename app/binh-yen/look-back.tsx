@@ -12,6 +12,7 @@ import { recentDayLabel, type MonthView, type RecentDay, type RecentItem } from 
 import type { Pillar } from "@/lib/world/types";
 import { Face, SpeedLines } from "../today/comic";
 import { LivingScene } from "../today/world-scene";
+import { CHECKIN_EVENT } from "./corner";
 import { WorldIcon } from "../world-icon";
 
 /**
@@ -28,6 +29,8 @@ export interface RecentView {
   today: string;
   view: MonthView | null;
   days: RecentDay[];
+  /** No world this month yet and An can pick one now (otherwise the next one is "sắp mở"). */
+  choose?: boolean;
 }
 
 type Load<T> = { state: "loading" } | { state: "error"; text: string } | { state: "ok"; data: T };
@@ -36,6 +39,14 @@ const CALM_ERROR = "Chưa tải được phần nhìn lại. Lúc khác con xem 
 
 function useFetch<T>(url: string, ok: (v: unknown) => v is T): Load<T> {
   const [load, setLoad] = useState<Load<T>>({ state: "loading" });
+  // A check-in just stored (corner.tsx): fetch again so today's new plant / comic panel shows
+  // without a reload. The old content stays on screen meanwhile (no skeleton flash).
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const bump = () => setVersion((v) => v + 1);
+    window.addEventListener(CHECKIN_EVENT, bump);
+    return () => window.removeEventListener(CHECKIN_EVENT, bump);
+  }, []);
   useEffect(() => {
     let live = true;
     fetch(url, { cache: "no-store" })
@@ -43,13 +54,13 @@ function useFetch<T>(url: string, ok: (v: unknown) => v is T): Load<T> {
         const data = (await res.json().catch(() => null)) as unknown;
         if (!live) return;
         if (res.ok && ok(data)) setLoad({ state: "ok", data });
-        else setLoad({ state: "error", text: res.status === 503 && data && typeof data === "object" && "error" in data ? String((data as { error: unknown }).error) : CALM_ERROR });
+        else if (version === 0) setLoad({ state: "error", text: res.status === 503 && data && typeof data === "object" && "error" in data ? String((data as { error: unknown }).error) : CALM_ERROR });
       })
-      .catch(() => live && setLoad({ state: "error", text: CALM_ERROR }));
+      .catch(() => live && version === 0 && setLoad({ state: "error", text: CALM_ERROR }));
     return () => {
       live = false;
     };
-  }, [url, ok]);
+  }, [url, ok, version]);
   return load;
 }
 
@@ -108,7 +119,7 @@ function readSet(name: string): Set<string> {
  * `animation: none`, and a duration alone never restarts it.
  */
 const SLOW_SCENE =
-  "[&_.w-sway]:[animation-duration:10s]! [&_.w-hop]:[animation-duration:9s]! [&_.w-fly]:[animation-duration:14s]! [&_.w-swim]:[animation-duration:22s]! [&_.w-float]:[animation-duration:14s]! [&_.w-twinkle]:[animation-duration:7s]! [&_.w-star]:[animation-duration:7s]!";
+  "[&_.w-bubble]:[animation-duration:18s]! [&_.w-cloud]:[animation-duration:80s]! [&_.w-sway]:[animation-duration:10s]! [&_.w-hop]:[animation-duration:9s]! [&_.w-fly]:[animation-duration:14s]! [&_.w-swim]:[animation-duration:22s]! [&_.w-float]:[animation-duration:14s]! [&_.w-twinkle]:[animation-duration:7s]! [&_.w-star]:[animation-duration:7s]!";
 
 function WorldLookBack({ firstName, color }: { firstName: string; color: string }) {
   const load = useFetch("/api/world/recent", isRecent);
@@ -126,6 +137,7 @@ function WorldLookBack({ firstName, color }: { firstName: string; color: string 
   const { view, days, today } = load.data;
   // The quest mark is per month: shown once, on the newest row of that thing.
   const questShown = new Set<string>();
+  const taughtShown = new Set<string>();
 
   return (
     <div className="flex flex-col gap-4">
@@ -140,7 +152,18 @@ function WorldLookBack({ firstName, color }: { firstName: string; color: string 
             <LivingScene view={view} compact />
           </div>
         ) : (
-          <p className="text-sm text-ink/75">Thế giới tháng này đang chờ con chọn ở Hôm nay.</p>
+          <p className="text-sm text-ink/75">
+            {load.data.choose ? (
+              <>
+                Thế giới tháng này đang chờ con chọn.{" "}
+                <Link href="/today?tab=tuan" className="font-semibold underline" style={{ color }}>
+                  Chọn ở Thế giới →
+                </Link>
+              </>
+            ) : (
+              "Thế giới tháng này sắp mở."
+            )}
+          </p>
         )}
       </section>
 
@@ -158,7 +181,10 @@ function WorldLookBack({ firstName, color }: { firstName: string; color: string 
                     const questKey = `${item.month}:${item.key}`;
                     const quest = !!marks?.quests.has(questKey) && !questShown.has(questKey);
                     if (quest) questShown.add(questKey);
-                    return <RecentRow key={`${item.kind}:${item.key}`} item={item} quest={quest} taught={!!marks?.teach.has(`${d.date}:${item.key}`)} />;
+                    // "Tối nay dạy cả nhà" is stored by the day she taught it: shown once, on the newest row of that thing.
+                    const taught = !!marks && !taughtShown.has(item.key) && [...marks.teach].some((k) => k.endsWith(`:${item.key}`) && k.slice(0, 10) >= days[days.length - 1]!.date);
+                    if (taught) taughtShown.add(item.key);
+                    return <RecentRow key={`${item.kind}:${item.key}`} item={item} quest={quest} taught={taught} />;
                   })}
                 </ul>
               </li>
@@ -202,7 +228,7 @@ function RecentRow({ item, quest, taught }: { item: RecentItem; quest: boolean; 
             <span aria-hidden className="mr-1 inline-block transition-transform group-open/fact:rotate-90 motion-reduce:transition-none">
               ›
             </span>
-            Điều con biết thêm
+            Điều con biết thêm<span className="sr-only"> về {item.name}</span>
           </summary>
           <p className="pb-1 text-ink/85">{item.fact}</p>
         </details>
