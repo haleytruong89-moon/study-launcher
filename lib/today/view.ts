@@ -4,6 +4,7 @@
  */
 import type { DayState, TaskView, WeekResult } from "@/lib/dayState";
 import { addDays, isoWeekday } from "@/lib/time";
+import { minutesLabel } from "@/lib/today/focus";
 
 export interface Banner {
   title: string;
@@ -183,9 +184,10 @@ export function taskMeta(item: TaskView, nowMs: number, today = ""): string {
     return `Xong${took ? ` · ${took} phút` : ""}${item.requiresProof ? " · đã gửi ảnh cho bố mẹ" : ""}${item.early ? " · ★ sớm" : ""}`;
   }
   if (item.state === "running" && item.startedAt) {
-    const elapsed = clock(nowMs - new Date(item.startedAt).getTime());
+    // R7a: minutes only, never a ticking seconds clock.
+    const elapsed = minutesLabel(nowMs - new Date(item.startedAt).getTime());
     if (item.requiresProof) return `Đang làm · ${elapsed} — làm xong thì chụp ảnh bài`;
-    if (item.canFinishAt && nowMs < new Date(item.canFinishAt).getTime()) return `Đang làm · ${elapsed} / ${clock(item.minMinutes * 60_000)}`;
+    if (item.canFinishAt && nowMs < new Date(item.canFinishAt).getTime()) return `Đang làm · ${elapsed} / ${item.minMinutes} phút`;
     return `Đủ ${item.minMinutes} phút — bấm Xong khi làm xong`;
   }
   if (item.source === "homework") {
