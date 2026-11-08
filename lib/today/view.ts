@@ -200,21 +200,39 @@ export function taskProgress(item: TaskView, nowMs: number): number {
  * suggest. Display only: the server still decides what may start.
  */
 export function nextTask(state: DayState): TaskView | null {
-  const all = [...state.part1.items, ...state.part2.items];
-  const running = all.find((i) => i.state === "running");
+  const running = [...state.part1.items, ...state.part2.items].find((i) => i.state === "running");
   if (running) return running;
+  return nextPart1(state, null) ?? state.part2.items.find((i) => i.state === "todo") ?? null;
+}
+
+/**
+ * R6d (review): the Phần 1 task to suggest on the Học tập card — never a skill. A running
+ * Phần 1 task; else, while Phần 1 is not complete, the first one in the child's own order
+ * (plan keys), then due homework, then a supplementary task, then an upcoming one while the
+ * "choose N" quota is open. Null when Phần 1 is complete (or nothing in it can be started).
+ */
+export function nextPart1(state: DayState, plan: readonly string[] | null): TaskView | null {
+  const items = state.part1.items;
+  const running = items.find((i) => i.state === "running");
+  if (running) return running;
+  if (state.part1.complete) return null;
   const todo = (i: TaskView) => i.state === "todo";
-  if (!state.part1.complete) {
-    const due = state.part1.items.find((i) => i.group === "due" && todo(i));
-    if (due) return due;
-    const extra = state.part1.items.find((i) => i.source === "template" && todo(i));
-    if (extra) return extra;
-    if (state.part1.pick.done < state.part1.pick.needed) {
-      const pick = state.part1.items.find((i) => i.group === "upcoming" && todo(i));
-      if (pick) return pick;
-    }
+  const pickOpen = state.part1.pick.done < state.part1.pick.needed;
+  for (const k of plan ?? []) {
+    const i = items.find((x) => x.key === k);
+    if (i && todo(i) && (i.group !== "upcoming" || pickOpen)) return i;
   }
-  return state.part2.items.find(todo) ?? null;
+  return (
+    items.find((i) => i.group === "due" && todo(i)) ??
+    items.find((i) => i.source === "template" && todo(i)) ??
+    (pickOpen ? items.find((i) => i.group === "upcoming" && todo(i)) : undefined) ??
+    null
+  );
+}
+
+/** The group name shown on a task (same words on Hôm nay and in Góc học tập). */
+export function groupLabel(i: TaskView): string {
+  return i.source === "homework" ? (i.group === "upcoming" ? "Làm trước" : "Bài trên lớp") : i.part === 1 ? "Bài bổ sung" : "Kỹ năng";
 }
 
 /**
