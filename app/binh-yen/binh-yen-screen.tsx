@@ -227,7 +227,7 @@ export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = 
         {talk}
       </main>
       {/* R2: the child's 5 tabs. This page exists only when the corner is on, so it is listed. */}
-      <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} world={voice === "scientist"} />
+      <ChildNav active="binh-yen" byEnabled={state?.enabled !== false} color={color} voice={voice} />
     </div>
   );
 }

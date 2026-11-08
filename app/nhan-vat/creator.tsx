@@ -204,7 +204,7 @@ export function Creator({
         <p className="text-xs text-ink/65">Nhân vật tự tạo chỉ lưu các lựa chọn (kiểu tóc, màu…), không có ảnh. Cả nhà thấy nhân vật này.</p>
         <PicrewPictures pics={pics} onChange={setPics} color={color} />
       </main>
-      <ChildNav active={null} byEnabled={byEnabled} color={color} world={voice === "scientist"} />
+      <ChildNav active={null} byEnabled={byEnabled} color={color} voice={voice} />
     </div>
   );
 }

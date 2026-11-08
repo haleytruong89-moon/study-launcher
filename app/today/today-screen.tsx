@@ -23,6 +23,7 @@ import { voiceFor } from "@/lib/binhYen/catalog";
 import { PillarCards } from "./pillars";
 import { FeelInvite, FeelWeek, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
 import { WorldMini, WorldTab } from "./world";
+import { ComicToday, ComicVolume } from "./comic";
 import type { WeekDaysView } from "@/lib/today/weekDays";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
@@ -493,7 +494,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
-        <Breadcrumb trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, hasWorld)]} />
+        <Breadcrumb trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, voice)]} />
         {error && !dialog && !proofOpen && (
           <p role="alert" className="rounded-xl border border-red-200 bg-white p-3 text-sm font-medium text-red-700">
             {error}
@@ -514,6 +515,20 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
             )}
 
             {hasWorld && <WorldMini key={`${s.part1.doneAt}|${s.part2.doneAt}|${s.free.startedAt}`} onOpen={() => selectTab("tuan")} />}
+            {/* R5: Nguyên's comic page of today (the feeling frame only when Góc bình yên is on). */}
+            {voice === "detective" && week && (
+              <ComicToday
+                key={s.localDate}
+                week={week}
+                s={s}
+                look={child.look}
+                pics={child.pics}
+                freeMinutes={view.rules.freeMinutes}
+                byEnabled={byEnabled && week.byEnabled}
+                color={color}
+                onOpen={() => selectTab("tuan")}
+              />
+            )}
 
             {byEnabled && (
               <section aria-labelledby="by-invite" className="flex flex-col gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}>
@@ -622,6 +637,17 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
         {tab === "tuan" && (
           <>
             {hasWorld && <WorldTab color={color} />}
+            {voice === "detective" && (
+              <section aria-labelledby="comic-volume" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
+                {week ? (
+                  <ComicVolume key={week.weekStart} week={week} s={s} look={child.look} pics={child.pics} name={child.name} icon={view.icon} freeMinutes={view.rules.freeMinutes} color={color} />
+                ) : (
+                  <p id="comic-volume" className="text-sm text-ink/70">
+                    Đang tải tập truyện…
+                  </p>
+                )}
+              </section>
+            )}
             <section aria-labelledby="wk-own" className="flex flex-col gap-4 rounded-2xl border border-ink/10 bg-white p-4">
               <h2 id="wk-own" className="text-lg font-bold">
                 Tuần này của con
@@ -634,7 +660,6 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               ) : (
                 <p className="text-sm text-ink/70">Đang tải…</p>
               )}
-              {!hasWorld && <p className="text-[13px] text-ink/70">Sắp có: Tập truyện của tuần — mỗi ngày một trang.</p>}
             </section>
             <WeekProgress s={s} view={view} color={color} />
           </>
@@ -650,7 +675,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
           </section>
         )}
       </main>
-      <ChildNav active={tab} byEnabled={byEnabled} color={color} world={hasWorld} onSelect={selectTab} />
+      <ChildNav active={tab} byEnabled={byEnabled} color={color} voice={voice} onSelect={selectTab} />
     </div>
   );
 }

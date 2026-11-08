@@ -11,15 +11,28 @@ function storage(): Storage | undefined {
   return (globalThis as { window?: { localStorage?: Storage } }).window?.localStorage;
 }
 
-function readAll(): Record<string, string> {
+/** The stored JSON as it is (a stable snapshot for useSyncExternalStore), or null. R5. */
+export function readPlayPlansRaw(): string | null {
   try {
-    const raw = storage()?.getItem(PLAY_PLAN_KEY);
+    return storage()?.getItem(PLAY_PLAN_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Date → plan from the stored JSON; anything broken = no plans. R5 (the comic reads every day of a week). */
+export function parsePlayPlans(raw: string | null): Record<string, string> {
+  try {
     const v = raw ? (JSON.parse(raw) as unknown) : {};
     if (!v || typeof v !== "object" || Array.isArray(v)) return {};
     return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter((e): e is [string, string] => typeof e[1] === "string"));
   } catch {
     return {};
   }
+}
+
+function readAll(): Record<string, string> {
+  return parsePlayPlans(readPlayPlansRaw());
 }
 
 export function readPlayPlan(date: string): string | null {

@@ -75,3 +75,13 @@ describe("play plan (this browser only, R6d)", () => {
     expect(() => writePlayPlan("2026-11-08", "x")).not.toThrow();
   });
 });
+
+describe("parsePlayPlans (R5 comic)", () => {
+  it("keeps string plans only; broken JSON or arrays = none", async () => {
+    const { parsePlayPlans } = await import("@/lib/today/playPlan");
+    expect(parsePlayPlans('{"2026-11-02":"Nghe nhạc","2026-11-03":5}')).toEqual({ "2026-11-02": "Nghe nhạc" });
+    expect(parsePlayPlans("{broken")).toEqual({});
+    expect(parsePlayPlans("[1]")).toEqual({});
+    expect(parsePlayPlans(null)).toEqual({});
+  });
+});

@@ -22,7 +22,13 @@ export function isChildTab(v: unknown): v is TodayTab {
   return v === "hom-nay" || v === "hoc-tap" || v === "tuan" || v === "gop-y";
 }
 
-/** R4: An's 4th tab is her world of the month (same tab key, so links keep working). */
-export function tabLabel(tab: ChildTab, world = false): string {
-  return world && tab === "tuan" ? "Thế giới" : TAB_LABELS[tab];
+/**
+ * The 4th tab by voice (same tab key, so links keep working): An (scientist, or `true`) has her
+ * world of the month "Thế giới" (R4); Nguyên (detective) has her comic "Tập của tuần" (R5).
+ */
+export function tabLabel(tab: ChildTab, world: boolean | "scientist" | "detective" = false): string {
+  if (tab !== "tuan") return TAB_LABELS[tab];
+  if (world === true || world === "scientist") return "Thế giới";
+  if (world === "detective") return "Tập của tuần";
+  return TAB_LABELS[tab];
 }

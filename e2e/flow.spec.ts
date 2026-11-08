@@ -554,7 +554,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(play).toContainText(`Con định: ${chipName}`);
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
   // Tuần của con: today's three areas are ticked.
-  await tabs.getByRole("link", { name: "Tuần của con" }).click();
+  await tabs.getByRole("link", { name: "Tập của tuần" }).click();
   await expect(page.getByRole("heading", { name: "Tuần này của con" })).toBeVisible();
   await expect(page.getByRole("table")).toContainText("Học tập");
 
@@ -761,7 +761,7 @@ test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, an
   await expect(page).toHaveURL(/\/today$/);
   await tabs.getByRole("link", { name: "Góc học tập" }).click();
   await expect(page.getByRole("listitem", { name: "Tiếng Anh" }).getByText("✓ Xong · ★ sớm")).toBeVisible();
-  await tabs.getByRole("link", { name: "Tuần của con" }).click();
+  await tabs.getByRole("link", { name: "Tập của tuần" }).click();
   await expect(page.getByText("Tuần này làm sớm 1 bài")).toBeVisible();
 });
 
@@ -1716,7 +1716,7 @@ test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and 
   expect(s.trust.mode).toBe("trust");
   await child.reload();
   await expect(child.getByText("Tin tưởng · mở mọi trang")).toBeVisible();
-  await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Tuần của con" }).click();
+  await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Tập của tuần" }).click();
   await expect(child.getByText("Đang ở chế độ Tin tưởng")).toBeVisible();
 
   // Child: no write path — not the route, not the database.
@@ -2570,7 +2570,7 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     await db.from("profiles").update({ grade: 9 }).eq("id", childId);
     expect(await byCall(k, "GET", "/api/world")).toBe(404);
     await k.goto("/today");
-    await expect(nav.getByRole("link", { name: "Tuần của con" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Tập của tuần" })).toBeVisible();
     await kCtx.close();
 
     expect((await request.get("/api/world")).status()).toBe(401);

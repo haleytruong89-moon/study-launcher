@@ -101,3 +101,14 @@ describe("comic page", () => {
     expect(panelLabel(comicPage(day("2026-11-02"), 0, { ...ctx, byEnabled: false }).panels[0]!)).toBe("Thứ Hai · 02/11");
   });
 });
+
+describe("tab label by voice (R5)", () => {
+  it("scientist → Thế giới, detective → Tập của tuần, else Tuần của con", async () => {
+    const { tabLabel } = await import("@/lib/childTabs");
+    expect(tabLabel("tuan", "scientist")).toBe("Thế giới");
+    expect(tabLabel("tuan", true)).toBe("Thế giới");
+    expect(tabLabel("tuan", "detective")).toBe("Tập của tuần");
+    expect(tabLabel("tuan")).toBe("Tuần của con");
+    expect(tabLabel("hoc-tap", "detective")).toBe("Góc học tập");
+  });
+});
