@@ -341,7 +341,7 @@ describe("screen wording", () => {
 
     const s = computeDayState(day({ runs: [run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00:00") })] }), vn("15:04:12"));
     const extra = s.part1.items.find((i) => i.id === EXTRA)!;
-    expect(taskMeta(extra, vn("15:04:12").getTime())).toBe("Đang làm · 04:12 / 20:00");
+    expect(taskMeta(extra, vn("15:04:12").getTime())).toBe("Đang làm · 4 phút / 20 phút"); // R7a: minutes only
     expect(taskMeta(extra, vn("15:20:00").getTime())).toBe("Đủ 20 phút — bấm Xong khi làm xong");
     expect(weekSummary(s.week)).toBe("0/6 ngày đạt");
   });

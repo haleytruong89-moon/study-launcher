@@ -272,13 +272,18 @@ function Chooser({ month, options, color, onChosen, onStale }: { month: string; 
 }
 
 /** Tab "Thế giới" (An): this month's world, the album of past months. */
-export function WorldTab({ color }: { color: string }) {
+export function WorldTab({ color, onWorld }: { color: string; onWorld?: (key: string | null) => void }) {
   const [month, setMonth] = useState<string | null>(null);
   const [fetched, refetch] = useWorld(month);
   // After a pick the route answers with the new world: show it without another round trip
   // (until the next fetch: another month, "Thử lại", a 409).
   const [picked, setPicked] = useState<WorldResponse | null>(null);
   const load: Load = picked && month === null ? { state: "ok", data: picked } : fetched;
+  // R7a: the focus screen draws this month's world (only the current month, no extra request).
+  const currentKey = month === null && load.state === "ok" ? (load.data.view?.world.key ?? null) : undefined;
+  useEffect(() => {
+    if (currentKey !== undefined) onWorld?.(currentKey);
+  }, [currentKey, onWorld]);
   const retry = () => {
     setPicked(null);
     refetch();
@@ -403,8 +408,13 @@ export function WorldTab({ color }: { color: string }) {
 }
 
 /** Hôm nay (An): the world in one line + what grew today; opens the Thế giới tab. */
-export function WorldMini({ onOpen }: { onOpen: () => void }) {
+export function WorldMini({ onOpen, onWorld }: { onOpen: () => void; onWorld?: (key: string | null) => void }) {
   const [load] = useWorld(null);
+  // R7a: the focus screen draws this world behind the timer (no extra request).
+  const worldKey = load.state === "ok" ? (load.data.view?.world.key ?? null) : undefined;
+  useEffect(() => {
+    if (worldKey !== undefined) onWorld?.(worldKey);
+  }, [worldKey, onWorld]);
   if (load.state === "ok" && load.data.choose.length > 0)
     return (
       <button

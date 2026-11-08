@@ -74,8 +74,8 @@ function TaskLine({ item, ctx, eyebrow, sub }: { item: TaskView; ctx: TaskCtx; e
           Nộp ảnh bài
         </button>
       ) : item.state === "running" ? (
-        <button type="button" aria-label={`Tiếp tục: ${item.title}`} disabled={ctx.paused} onClick={() => ctx.onFocus(item)} className={btn} style={{ borderColor: ctx.color, color: ctx.color }}>
-          Tiếp tục
+        <button type="button" aria-label={`Tập trung: ${item.title}`} disabled={ctx.paused} onClick={() => ctx.onFocus(item)} className={btn} style={{ borderColor: ctx.color, color: ctx.color }}>
+          🎯 Tập trung
         </button>
       ) : null}
     </div>

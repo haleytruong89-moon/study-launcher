@@ -3,7 +3,7 @@
 import type { DayState, TaskView } from "@/lib/dayState";
 import { KIND_LABEL, type AttachmentView } from "@/lib/files";
 import { addDays } from "@/lib/time";
-import { clock, dayLabel, dayMonth, dueLabel, dueTone, earlyUntil, isOkResult, taskMeta, taskProgress } from "@/lib/today/view";
+import { dayLabel, dayMonth, dueLabel, dueTone, earlyUntil, isOkResult, taskMeta } from "@/lib/today/view";
 
 export type Act = { url: string; body?: unknown; confirm?: string };
 
@@ -31,11 +31,11 @@ export interface TaskCtx {
   asked: ReadonlySet<string>;
 }
 
-const isAsked = (item: TaskView, ctx: TaskCtx) => item.state === "running" && !!item.runId && ctx.asked.has(item.runId);
+export const isAsked = (item: TaskView, ctx: TaskCtx) => item.state === "running" && !!item.runId && ctx.asked.has(item.runId);
 /** Photos already sent but not finished yet (e.g. the connection dropped): offer "Xong". */
-const canFinishWithPhotos = (item: TaskView) => item.state === "running" && item.requiresProof && item.proofCount > 0;
+export const canFinishWithPhotos = (item: TaskView) => item.state === "running" && item.requiresProof && item.proofCount > 0;
 
-function FinishButton({ item, ctx, className, style }: { item: TaskView; ctx: TaskCtx; className: string; style?: React.CSSProperties }) {
+export function FinishButton({ item, ctx, className, style }: { item: TaskView; ctx: TaskCtx; className: string; style?: React.CSSProperties }) {
   return (
     <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => void ctx.onAct({ url: "/api/tasks/finish", body: { runId: item.runId } })} className={className} style={style}>
       Xong · đã gửi {item.proofCount} ảnh
@@ -213,8 +213,8 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
           running && item.requiresProof && <ProofButton item={item} ctx={ctx} />
         )}
         {running && (
-          <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-11 rounded-full px-4 text-sm font-bold text-white" style={{ background: ctx.color }}>
-            Đang làm · mở
+          <button type="button" aria-label={`Tập trung: ${item.title}`} disabled={ctx.paused} onClick={() => ctx.onFocus(item)} className="min-h-11 rounded-full px-4 text-sm font-bold text-white disabled:opacity-50" style={{ background: ctx.color }}>
+            🎯 Tập trung
           </button>
         )}
         {done && (
@@ -269,7 +269,9 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
 
 /**
  * The main buttons of a task (Bắt đầu / Làm xong trong vở rồi / Nộp ảnh bài / Xong · đã gửi /
- * mở màn tập trung). Shared by "Việc tiếp theo" on Hôm nay and the work panel of Góc học tập.
+ * Xong / 🎯 Tập trung). Shared by "Việc tiếp theo" on Hôm nay and the work panel of Góc học tập.
+ * R7a: the focus screen is optional, so a timed task that is ready can be finished right here
+ * (same /api/tasks/finish route; the server still checks the minimum).
  */
 export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
   const waiting = isWaiting(item, ctx);
@@ -304,108 +306,40 @@ export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
             Nộp ảnh bài
           </button>
         )}
-        <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold">
-          Mở màn tập trung
+        <button type="button" disabled={ctx.paused} onClick={() => ctx.onFocus(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">
+          🎯 Tập trung
         </button>
       </div>
     );
   }
-  return (
-    <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white" style={{ background: ctx.color }}>
-      Đang làm · mở màn tập trung
+  // A placeholder / not-started item has nothing to focus on (no dead button).
+  if (item.state !== "running") return null;
+  const ready = !item.canFinishAt || Date.parse(item.canFinishAt) <= ctx.nowMs;
+  const focus = (
+    <button
+      type="button"
+      disabled={ctx.paused}
+      onClick={() => ctx.onFocus(item)}
+      className={`rounded-2xl font-bold disabled:opacity-50 ${ready ? "min-h-12 border-[1.5px] border-ink/25 bg-white text-base" : "min-h-14 text-[17px] text-white"}`}
+      style={ready ? undefined : { background: ctx.color }}
+    >
+      🎯 Tập trung
     </button>
   );
-}
-
-/** Full-screen focus mode while a task runs: big timer, open app, finish / proof. */
-export function FocusView({ item, ctx, dark, onClose }: { item: TaskView; ctx: TaskCtx; dark: string; onClose: () => void }) {
-  const started = item.startedAt ? new Date(item.startedAt).getTime() : ctx.nowMs;
-  const elapsed = ctx.nowMs - started;
-  const timed = !item.requiresProof && item.minMinutes > 0;
-  const pct = timed ? taskProgress(item, ctx.nowMs) : 100;
-  const remaining = item.canFinishAt ? new Date(item.canFinishAt).getTime() - ctx.nowMs : 0;
-  const ready = !item.requiresProof && remaining <= 0;
-  const R = 120;
-  const C = 2 * Math.PI * R;
-  const kind =
-    item.source === "homework"
-      ? "Bài trên lớp · chụp ảnh khi xong"
-      : [item.part === 1 ? "Bài bổ sung" : "Kỹ năng", whereLine(item), item.minMinutes > 0 ? `ít nhất ${item.minMinutes} phút` : ""].filter(Boolean).join(" · ");
-
+  if (!ready) return focus;
   return (
-    <section role="dialog" aria-modal="true" aria-label="Đang tập trung" className="fixed inset-0 z-50 overflow-y-auto text-white" style={{ background: dark }}>
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 px-5 pt-5 pb-7">
-        <div className="flex items-center justify-between">
-          <span className="inline-flex items-center gap-2 text-sm font-semibold text-white/80">
-            <span className="size-2 rounded-full bg-white/80" aria-hidden />
-            Đang tập trung
-          </span>
-          <button type="button" onClick={onClose} className="min-h-11 rounded-full border-[1.5px] border-white/40 px-4 text-sm font-semibold">
-            Thu nhỏ
-          </button>
-        </div>
-        <div className="mt-2 flex flex-col gap-1 text-center">
-          <h2 className="text-[26px] font-bold">{item.title}</h2>
-          <p className="text-[15px] text-white/80">{kind}</p>
-          {item.note && <p className="text-[15px] text-white/90">{item.note}</p>}
-        </div>
-        <div className="relative size-[270px] self-center">
-          <svg width="270" height="270" viewBox="0 0 270 270" role="img" aria-label={`Đã làm ${clock(elapsed)}`}>
-            <circle cx="135" cy="135" r={R} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="14" />
-            <circle
-              cx="135"
-              cy="135"
-              r={R}
-              fill="none"
-              stroke="#FFFFFF"
-              strokeWidth="14"
-              strokeLinecap="round"
-              strokeDasharray={`${(C * pct) / 100} ${C}`}
-              transform="rotate(-90 135 135)"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-            <span className="text-6xl font-bold tracking-tight tabular-nums">{clock(elapsed)}</span>
-            <span className="text-[15px] text-white/80">đã làm</span>
-          </div>
-        </div>
-        {timed && (
-          <p className="text-center text-base text-white/90" aria-live="polite">
-            {ready ? (
-              <>Đủ {item.minMinutes} phút — làm xong thì bấm Xong</>
-            ) : (
-              <>
-                Còn <strong className="text-white tabular-nums">{clock(remaining)}</strong> nữa là bấm Xong được
-              </>
-            )}
-          </p>
-        )}
-        <FileLinks files={ctx.files(item)} dark />
-        {item.deepLink && (
-          <a href={item.deepLink} target="_blank" rel="noreferrer" className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white/10 text-[15px] font-semibold text-white no-underline">
-            Mở {item.appLabel ?? "app"} ↗
-          </a>
-        )}
-        {item.requiresProof && isAsked(item, ctx) && (
-          <p className="rounded-2xl bg-white/10 px-4 py-3 text-center text-[15px]">Đã nhờ bố mẹ xem. Bố mẹ bấm xác nhận là bài này xong.</p>
-        )}
-        {item.requiresProof && canFinishWithPhotos(item) ? (
-          <FinishButton item={item} ctx={ctx} className="min-h-14 rounded-2xl text-[17px] font-bold disabled:opacity-60" style={{ background: "#FFFFFF", color: dark }} />
-        ) : item.requiresProof ? (
-          <ProofButton item={item} ctx={ctx} big />
-        ) : (
-          <button
-            type="button"
-            disabled={!ready || (!!ctx.busy || ctx.paused)}
-            onClick={() => void ctx.onAct({ url: "/api/tasks/finish", body: { runId: item.runId } })}
-            className="min-h-14 rounded-2xl text-[17px] font-bold disabled:bg-white/15 disabled:text-white/70"
-            style={ready ? { background: "#FFFFFF", color: dark } : undefined}
-          >
-            {ready ? "Xong" : `Xong · mở sau ${clock(remaining)}`}
-          </button>
-        )}
-      </div>
-    </section>
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        disabled={!!ctx.busy || ctx.paused}
+        onClick={() => void ctx.onAct({ url: "/api/tasks/finish", body: { runId: item.runId } })}
+        className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50"
+        style={{ background: ctx.color }}
+      >
+        Xong
+      </button>
+      {focus}
+    </div>
   );
 }
 

@@ -13,6 +13,8 @@ import { WorldIcon } from "../world-icon";
 
 export type SceneKey = "rung" | "bien" | "vu_tru" | "nui_lua";
 const sceneOf = (key: string): SceneKey | null => (key === "rung" || key === "bien" || key === "vu_tru" || key === "nui_lua" ? key : null);
+/** R7a: the drawn scene for a world key; unknown or not loaded yet = the forest. */
+export const sceneKeyOf = (key: string | null | undefined): SceneKey => sceneOf(key ?? "") ?? "rung";
 
 /** Height of each area's layer (% from the top), per world. */
 const ROWS: Record<SceneKey, Record<Pillar, number>> = {
@@ -149,7 +151,7 @@ function Spot({ spot, live, label, pressed, glow, motion, delay, onClick, childr
 }
 
 /** Clouds (rừng), bubbles (biển), twinkling stars (vũ trụ), smoke (núi lửa). Decorative. */
-function Ambient({ scene }: { scene: SceneKey }) {
+export function Ambient({ scene }: { scene: SceneKey }) {
   if (scene === "rung")
     return (
       <span aria-hidden>
@@ -191,7 +193,7 @@ function Ambient({ scene }: { scene: SceneKey }) {
 }
 
 /** The drawn background (viewBox 400×300, cropped to fill). */
-function Backdrop({ scene }: { scene: SceneKey }) {
+export function Backdrop({ scene }: { scene: SceneKey }) {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden className="absolute inset-0 size-full">
       {scene === "rung" && <Forest />}

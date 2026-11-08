@@ -461,11 +461,11 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(page).toHaveURL(/\/today\?tab=hoc-tap$/);
   await expect(page.getByRole("navigation", { name: "Con đang ở" })).toContainText("Hôm nay › Góc học tập");
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
-  // R6c: "🎯 Chế độ tập trung" shows only the work panel; "← Quay lại" goes back to Hôm nay.
-  await page.getByRole("button", { name: "Chế độ tập trung" }).click();
+  // R6c: "Chỉ hiện bài này" (R7a name) shows only the work panel; "← Quay lại" goes back to Hôm nay.
+  await page.getByRole("button", { name: "Chỉ hiện bài này" }).click();
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Khung làm bài" })).toBeVisible();
-  await page.getByRole("button", { name: "Thoát tập trung" }).click();
+  await page.getByRole("button", { name: "Hiện cả danh sách" }).click();
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
   await page.getByRole("button", { name: "← Quay lại" }).click();
   await expect(page).toHaveURL(/\/today$/);
@@ -493,15 +493,22 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const oldSkip = await page.evaluate(async () => (await fetch("/api/day/break", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) })).status);
   expect(oldSkip).toBe(400);
 
-  // Homework: start from "Việc tiếp theo" on Hôm nay (R6d; same server route, focus mode opens),
-  // then "Nộp ảnh bài": 2 photos, one is removed, then send.
+  // Homework: start from "Việc tiếp theo" on Hôm nay (R6d; same server route). R7a: a small
+  // "Mục tiêu nhỏ" card appears, never the focus screen by itself; the child opens it from the
+  // card, then "Nộp ảnh bài": 2 photos, one is removed, then send.
   const homework = page.getByRole("listitem", { name: "Ngữ văn" });
-  const focus = page.getByRole("dialog", { name: "Đang tập trung" });
+  const focus = page.getByRole("dialog", { name: /^Màn tập trung/ });
   const homeworkId = today1.state.part1.items.find((i) => i.title === "Ngữ văn")?.id ?? "";
   await tabs.getByRole("link", { name: "Hôm nay" }).click();
   await study.getByRole("button", { name: "Bắt đầu" }).click();
-  await expect(focus).toBeVisible();
+  const hwStart = page.getByRole("dialog", { name: "Mục tiêu nhỏ: Ngữ văn" });
+  await expect(hwStart).toBeVisible();
+  await expect(hwStart).toContainText("Làm xong trong vở thì chụp ảnh nộp.");
+  await expect(focus).toHaveCount(0);
   await expect.poll(async () => (await db.from("task_runs").select("id").eq("homework_item_id", homeworkId).is("done_at", null)).data?.length ?? 0).toBe(1);
+  await hwStart.getByRole("button", { name: "Ngồi cùng màn tập trung" }).click();
+  await expect(hwStart).toHaveCount(0);
+  await expect(focus).toBeVisible();
   await focus.getByRole("button", { name: "Nộp ảnh bài" }).click();
   const sheet = page.getByRole("dialog", { name: "Nộp ảnh bài Ngữ văn" });
   await expect(sheet.getByRole("img", { name: "Mã QR mở bài này trên điện thoại" })).toBeVisible(); // laptop: phone QR
@@ -523,16 +530,23 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   // Supplementary task: 20 minutes minimum on the SERVER clock.
   const extra = page.getByRole("listitem", { name: "Luyện đề e2e" });
   await extra.getByRole("button").first().click();
-  await expect(work.getByRole("timer")).toHaveText("20:00"); // the minimum, before starting
+  await expect(work.getByRole("timer")).toHaveText("20 phút"); // the minimum, before starting (R7a: minutes only)
   await work.getByRole("button", { name: "Bắt đầu" }).click();
-  await expect(focus.getByRole("button", { name: /^Xong/ })).toBeDisabled();
-  // "Thu nhỏ" hides focus mode; the work panel (big timer counting down) reopens it.
-  await focus.getByRole("button", { name: "Thu nhỏ" }).click();
+  const exStart = page.getByRole("dialog", { name: "Mục tiêu nhỏ: Luyện đề e2e" });
+  await expect(exStart).toContainText("Toán · ít nhất 20 phút");
   await expect(focus).toHaveCount(0);
+  await exStart.getByRole("button", { name: "Để sau" }).click();
+  await expect(exStart).toHaveCount(0);
   await expect(extra).toContainText("đang làm");
   await expect(work).toContainText("Đang làm · Bài bổ sung");
-  await expect(work.getByRole("timer")).toHaveText(/^(19|20):\d\d$/);
-  await work.getByRole("button", { name: "Đang làm · mở màn tập trung" }).click();
+  await expect(work.getByRole("timer")).toHaveText(/^còn (19|20) phút$/);
+  // "🎯 Tập trung" opens the focus screen; "← Về Hôm nay" closes it; the header chip reopens it.
+  await work.getByRole("button", { name: "Tập trung" }).click();
+  await expect(focus).toBeVisible();
+  await expect(focus.getByRole("button", { name: /^Xong/ })).toBeDisabled();
+  await focus.getByRole("button", { name: "← Về Hôm nay" }).click();
+  await expect(focus).toHaveCount(0);
+  await page.getByRole("button", { name: /^Đang làm Luyện đề e2e/ }).click();
   await expect(focus).toBeVisible();
   const { data: run } = await db.from("task_runs").select("id").eq("template_id", extraId).single();
   const tooEarly = await page.evaluate(async (runId) => {
@@ -544,10 +558,12 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const { data: stillOpen } = await db.from("task_runs").select("done_at").eq("id", run?.id ?? "").single();
   expect(stillOpen?.done_at).toBeNull(); // refused = nothing recorded
 
-  // Pretend 21 minutes have passed (server data), then the button works.
+  // Pretend 21 minutes have passed (server data), then the button works. The focus screen the
+  // child opened stays open after a reload (this tab only).
   await db.from("task_runs").update({ started_at: new Date(Date.now() - 21 * 60_000).toISOString() }).eq("id", run?.id ?? "");
   await page.reload();
   await focus.getByRole("button", { name: "Xong", exact: true }).click();
+  await expect(focus).toHaveCount(0);
   await expect(page.getByRole("listitem", { name: "Luyện đề e2e" }).getByText("✓ Xong")).toBeVisible();
 
   // Part 1 done -> the break may start (optional). During it the task buttons pause; "Học tiếp" resumes.
@@ -563,7 +579,8 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
   await expect(banner.getByRole("button", { name: /Nghỉ \d+ phút/ })).toHaveCount(0); // once a day
   await work.getByRole("button", { name: "Bắt đầu" }).click();
-  await focus.getByRole("button", { name: "Xong", exact: true }).click();
+  await page.getByRole("dialog", { name: "Mục tiêu nhỏ: Đọc sách e2e" }).getByRole("button", { name: "Để sau" }).click();
+  await work.getByRole("button", { name: "Xong", exact: true }).click(); // R7a: no minimum, so Xong is right in the panel
 
   // Free time (40 minutes: the parent changed it in the S1 settings test).
   await expect(banner).toContainText("Xong cả hai phần");
@@ -777,7 +794,8 @@ test("S2c today: the child sees 'Sắp tới', opens the PDF on our own site, an
   await page.goto(`/today?nop=${english?.id ?? ""}`);
   const sheet = page.getByRole("dialog", { name: "Nộp ảnh bài Tiếng Anh" });
   await expect(sheet).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "Đang tập trung" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: /^Màn tập trung/ })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: /^Mục tiêu nhỏ/ })).toHaveCount(0);
   await sheet.locator('input[type="file"]').setInputFiles({ name: "vo.png", mimeType: "image/png", buffer: makePng(1200, 1600) });
   await sheet.getByRole("button", { name: "Nộp 1 ảnh và xong" }).click();
   await expect(sheet).toHaveCount(0);
@@ -1133,7 +1151,8 @@ test("Confirm: the child asks a parent to look; the parent confirms on the phone
   await sheet.getByRole("button", { name: "Không chụp được? Nhờ bố mẹ xem trực tiếp" }).click();
   await expect(sheet).toHaveCount(0);
   await expect(row.getByText("Đang chờ bố mẹ xem…")).toBeVisible();
-  await expect(child.getByRole("dialog", { name: "Đang tập trung" })).toHaveCount(0);
+  await expect(child.getByRole("dialog", { name: /^Màn tập trung/ })).toHaveCount(0);
+  await expect(child.getByRole("dialog", { name: /^Mục tiêu nhỏ/ })).toHaveCount(0);
 
   // The child cannot confirm it.
   const { data: run } = await admin().from("task_runs").select("id").not("confirm_requested_at", "is", null).single();

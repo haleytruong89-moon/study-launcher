@@ -9,12 +9,15 @@ import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
-import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, shade, statusPill } from "@/lib/today/view";
+import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, statusPill } from "@/lib/today/view";
 import { Character } from "../avatar-face";
 import { SignOutButton } from "../sign-out-button";
 import { TalkPanel } from "../binh-yen/talk-panel";
 import { FeedbackForm } from "./feedback";
-import { FocusView, NextTask, ProgressRing, type Act, type TaskCtx } from "./today-parts";
+import { NextTask, ProgressRing, type Act, type TaskCtx } from "./today-parts";
+import { FocusView } from "./focus-view";
+import { RunningChip } from "./running-chip";
+import { StartSheet } from "./start-sheet";
 import { Breadcrumb, ChildNav } from "../child-nav";
 import { isChildTab, tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
 import type { Avatar } from "@/lib/avatar";
@@ -48,6 +51,26 @@ function subscribeStorage(onChange: () => void) {
   return () => window.removeEventListener("storage", onChange);
 }
 
+// R7a: the focus screen the child opened stays open after a reload (this tab only), and never
+// opens by itself. Value = the task key.
+const FOCUS_OPEN = "focus-open";
+const noStore = () => () => {};
+function readFocusOpen(): string | null {
+  try {
+    return window.sessionStorage.getItem(FOCUS_OPEN);
+  } catch {
+    return null;
+  }
+}
+function writeFocusOpen(key: string | null) {
+  try {
+    if (key) window.sessionStorage.setItem(FOCUS_OPEN, key);
+    else window.sessionStorage.removeItem(FOCUS_OPEN);
+  } catch {
+    /* not remembered: fine */
+  }
+}
+
 function readPlanLater(): string | null {
   try {
     return window.localStorage.getItem("plan-later");
@@ -68,7 +91,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   // R2: the 5 tabs. Hôm nay / Góc học tập / Tuần / Góp ý share this screen (and its state).
   const [tab, setTab] = useState<Tab>(initialTab);
   const tabRef = useRef<Tab>(initialTab);
-  // R6c: "🎯 Chế độ tập trung" of Góc học tập (off again whenever the tab changes).
+  // R6c: "Chỉ hiện bài này" of Góc học tập (off again whenever the tab changes).
   const [studyFocus, setStudyFocus] = useState(false);
   // R6c "← Quay lại": the tabs the child came from (last 10), falling back to Hôm nay.
   const [tabHistory, setTabHistory] = useState<Tab[]>([]);
@@ -112,10 +135,16 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   }, []);
   const [error, setError] = useState<string | null>(initial ? null : "Chưa tải được việc hôm nay. Đang thử lại…");
   const [busy, setBusy] = useState<string | null>(null);
-  // Focus mode opens for a running task unless the child minimised THAT task.
-  const [minimized, setMinimized] = useState<string | null>(null);
-  // A running task the child asked to open (e.g. a skill while homework also runs).
-  const [focusKey, setFocusKey] = useState<string | null>(null);
+  // R7a: the focus screen opens ONLY when the child taps for it. The key of that task, from
+  // this tab's sessionStorage after mount (a reload keeps it open), or what was just tapped.
+  const storedFocus = useSyncExternalStore(noStore, readFocusOpen, () => null);
+  // A tap remembers the run too, so a later run of the same task never opens by itself.
+  const [focusChoice, setFocusChoice] = useState<{ key: string | null; runId: string | null } | null>(null);
+  const focusKey = focusChoice ? focusChoice.key : storedFocus;
+  // R7a: "Bắt đầu rồi ✓" card after a start (memory only: never again after a reload).
+  const [started, setStarted] = useState<{ key: string; runId: string | null; opener: Element | null } | null>(null);
+  // An's world key (for the focus background), from the world card's own fetch when it ran.
+  const [worldKey, setWorldKey] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"plan" | "icon" | null>(null);
   // "Nộp ảnh bài" sheet: the homework key it is open for, and upload progress.
   const [proofKey, setProofKey] = useState<string | null>(null);
@@ -206,9 +235,13 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
     return () => window.clearInterval(id);
   }, [view, refresh]);
 
-  /** POSTs a child action; true when the server accepted it (the new view is shown). */
-  async function act({ url, body, confirm }: Act): Promise<boolean> {
+  /**
+   * POSTs a child action; true when the server accepted it (the new view is shown). A start
+   * shows the small "Bắt đầu rồi ✓" card (R7a), unless `sheet` is false.
+   */
+  async function act({ url, body, confirm }: Act, opts?: { sheet?: boolean }): Promise<boolean> {
     if (confirm && !window.confirm(confirm)) return false;
+    const opener = document.activeElement;
     setBusy(url);
     setError(null);
     try {
@@ -224,6 +257,11 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       }
       accept(data);
       void loadWeek(true);
+      if (url === "/api/tasks/start" && opts?.sheet !== false) {
+        const b = (body ?? {}) as { source?: string; id?: string };
+        const item = [...data.state.part1.items, ...data.state.part2.items].find((i) => i.source === b.source && i.id === b.id && i.state === "running");
+        if (item) setStarted({ key: item.key, runId: item.runId, opener });
+      }
       return true;
     } catch {
       setError("Mất kết nối mạng, thử lại sau.");
@@ -275,8 +313,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   /** "Xong rồi · nộp ảnh": homework done in the notebook, start it quietly and open the sheet. */
   async function doneNow(item: TaskView) {
     setError(null);
-    setMinimized(item.key);
-    if (item.state === "todo" && !(await act({ url: "/api/tasks/start", body: { source: item.source, id: item.id } }))) return;
+    if (item.state === "todo" && !(await act({ url: "/api/tasks/start", body: { source: item.source, id: item.id } }, { sheet: false }))) return;
     setProofKey(item.key);
   }
 
@@ -292,6 +329,13 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
     if (item && item.state !== "done") window.setTimeout(() => void doneNow(item), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on the first view
   }, [view]);
+
+  // R7a: forget the open focus screen once its task stops running (finished, or a new day).
+  useEffect(() => {
+    if (!view || !storedFocus) return;
+    const still = [...view.state.part1.items, ...view.state.part2.items].some((i) => i.key === storedFocus && i.state === "running");
+    if (!still) writeFocusOpen(null);
+  }, [view, storedFocus]);
 
   // Check often while something is in progress, so a photo sent from the phone or a parent's
   // confirmation shows here within seconds (the clock never keeps running after "done").
@@ -340,8 +384,20 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const showNudge = !view.plan && !s.part1.complete && planItems.length >= 2 && planLater !== s.localDate;
   const planDone = view.plan ? planProgress(s, view.plan) : null;
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
-  const asked = focusKey ? ([...s.part1.items, ...s.part2.items].find((i) => i.key === focusKey && i.state === "running") ?? null) : null;
-  const focusItem = paused ? null : (asked ?? (next?.state === "running" && minimized !== next.key ? next : null));
+  const running = [...s.part1.items, ...s.part2.items].filter((i) => i.state === "running");
+  // Shown only when the child asked for it, while that task runs, and not during the break.
+  const focusItem = paused || !focusKey ? null : (running.find((i) => i.key === focusKey && (!focusChoice || i.runId === focusChoice.runId)) ?? null);
+  const startedItem = started && !focusItem ? (running.find((i) => i.key === started.key && i.runId === started.runId) ?? null) : null;
+  const openFocus = (item: TaskView | null | undefined) => {
+    if (!item || item.state !== "running") return;
+    setStarted(null);
+    setFocusChoice({ key: item.key, runId: item.runId });
+    writeFocusOpen(item.key);
+  };
+  const closeFocus = () => {
+    setFocusChoice({ key: null, runId: null });
+    writeFocusOpen(null);
+  };
   const proofItem = proofKey ? (s.part1.items.find((i) => i.key === proofKey) ?? null) : null;
   // Finished (e.g. from the phone) or gone: the sheet closes by itself.
   const proofOpen = proofItem !== null && proofItem.state === "running";
@@ -359,10 +415,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       setProofKey(item.key);
     },
     onDoneNow: (item) => void doneNow(item),
-    onFocus: (item) => {
-      setMinimized(null);
-      setFocusKey(item && item.key !== next?.key ? item.key : null);
-    },
+    onFocus: (item) => openFocus(item ?? next),
     reviewed: new Set(view.reviewed ?? []),
     asked: new Set(view.asked ?? []),
   };
@@ -422,13 +475,15 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       {dialog === "icon" && (
         <IconPicker current={view.icon} color={color} busy={!!busy} error={error} onPick={(icon) => act({ url: "/api/profile/icon", body: { icon } })} onClose={() => setDialog(null)} />
       )}
-      {focusItem && <FocusView item={focusItem} ctx={ctx} dark={shade(color)} onClose={() => {
-            setFocusKey(null);
-            setMinimized(focusItem.key);
-          }} />}
+      {/* Sibling keys must differ: the focus view, the start card and the photo sheet can be for
+          the same task, and a shared key left the focus view behind when both closed at once. */}
+      {focusItem && <FocusView key={`focus:${focusItem.key}`} item={focusItem} ctx={ctx} voice={voice} worldKey={worldKey} onClose={closeFocus} />}
+      {startedItem && started && (
+        <StartSheet key={`start:${startedItem.key}`} item={startedItem} color={color} opener={started.opener} onFocus={() => openFocus(startedItem)} onClose={() => setStarted(null)} />
+      )}
       {proofOpen && proofItem && (
         <ProofSheet
-          key={proofItem.key}
+          key={`proof:${proofItem.key}`}
           item={proofItem}
           color={color}
           max={Math.max(0, MAX_PROOFS - proofItem.proofCount)}
@@ -436,11 +491,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
           error={error}
           onSend={(files) => proofAndFinish(proofItem, files)}
           asked={!!proofItem.runId && (view.asked ?? []).includes(proofItem.runId)}
-          onAsk={async () => {
-            const ok = await act({ url: "/api/tasks/confirm-request", body: { runId: proofItem.runId } });
-            if (ok) setMinimized(proofItem.key);
-            return ok;
-          }}
+          onAsk={() => act({ url: "/api/tasks/confirm-request", body: { runId: proofItem.runId } })}
           onClose={() => setProofKey(null)}
         />
       )}
@@ -474,6 +525,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
             </div>
             <ProgressRing done={progress.done} total={progress.total} />
           </div>
+          <RunningChip running={running} nowMs={nowMs} paused={paused} onOpen={openFocus} />
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/20 px-3 text-[13px] font-semibold">
               <span aria-hidden className={`size-2 rounded-full ${pill.open ? "bg-[#FBD38D]" : "bg-white"}`} />
@@ -538,7 +590,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               />
             )}
 
-            {hasWorld && <WorldMini key={`${s.part1.doneAt}|${s.part2.doneAt}|${s.free.startedAt}`} onOpen={() => selectTab("tuan")} />}
+            {hasWorld && <WorldMini key={`${s.part1.doneAt}|${s.part2.doneAt}|${s.free.startedAt}`} onOpen={() => selectTab("tuan")} onWorld={setWorldKey} />}
             {/* R5: Nguyên's comic page of today (the feeling frame only when Góc bình yên is on). */}
             {voice === "detective" && week && (
               <ComicToday
@@ -643,14 +695,14 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-[22px] font-bold">📚 Góc học tập</h2>
+              {/* R7a: renamed so it is not confused with the focus screen; same behaviour. */}
               <button
                 type="button"
-                aria-pressed={studyFocus}
                 onClick={() => setStudyFocus(!studyFocus)}
                 className="btn shrink-0 border-[1.5px] text-sm"
                 style={studyFocus ? { background: color, borderColor: color, color: "#fff" } : { background: "#fff", borderColor: color, color }}
               >
-                {studyFocus ? "Thoát tập trung" : "🎯 Chế độ tập trung"}
+                {studyFocus ? "Hiện cả danh sách" : "Chỉ hiện bài này"}
               </button>
             </div>
             <section aria-label="Trạng thái hôm nay" aria-live="polite" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white px-4 py-3">
@@ -673,7 +725,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
         {tab === "tuan" && (
           <>
-            {hasWorld && <WorldTab color={color} />}
+            {hasWorld && <WorldTab color={color} onWorld={setWorldKey} />}
             {voice === "detective" && (
               <section aria-labelledby="comic-volume" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
                 {week ? (

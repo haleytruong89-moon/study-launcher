@@ -150,3 +150,17 @@ body {
 .comic-bubble-sm { background: #fff; border: 2px solid var(--color-ink); border-radius: 50% / 45%; padding: 4px 10px; font-weight: 700; font-size: 14px; line-height: 1.25; }
 .comic-sfx { position: absolute; z-index: 2; font-weight: 900; color: #fff; -webkit-text-stroke: 2px var(--color-ink); paint-order: stroke fill; transform: rotate(-10deg); letter-spacing: 0.04em; line-height: 1; white-space: nowrap; }
 .comic-spine { writing-mode: vertical-rl; background: linear-gradient(90deg, #23324a, #4c70a8); }
+
+/* R7a: the calm start card (app/today/start-sheet.tsx: one 4 s breath, played once) and the
+   optional focus screen (app/today/focus-view.tsx: a slowly breathing ring, An's world drifting
+   slower behind the text). All of it stops for people who ask for less motion. */
+@keyframes sl-breath { 0% { transform: scale(0.72); } 50% { transform: scale(1); } 100% { transform: scale(0.72); } }
+@keyframes sl-ring-breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+.sl-breath { animation: sl-breath 4s ease-in-out 1 both; }
+.sl-ring-breathe { animation: sl-ring-breathe 7s ease-in-out infinite; }
+.sl-slow .w-cloud { animation-duration: 120s !important; }
+.sl-slow .w-bubble { animation-duration: 18s !important; }
+.sl-slow .w-star { animation-duration: 7s !important; }
+@media (prefers-reduced-motion: reduce) {
+  .sl-breath, .sl-ring-breathe { animation: none; }
+}

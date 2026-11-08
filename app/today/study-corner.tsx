@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { DayState, TaskView } from "@/lib/dayState";
 import { dropOrder } from "@/lib/today/reorder";
 import type { TodayView } from "@/lib/today/service";
-import { clock, dayMonth, dueLabel, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
+import { studyTimerLabel } from "@/lib/today/focus";
+import { dayMonth, dueLabel, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
 import { plannable } from "@/lib/today/week";
 import { FilesFold, TaskActions, TaskRow, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
@@ -68,7 +69,7 @@ export function StudyCorner({
   busy: boolean;
   paused: boolean;
   onSavePlan: (keys: string[]) => Promise<boolean>;
-  /** "🎯 Chế độ tập trung" (toggled in the page header): only the work panel, centred. */
+  /** "Chỉ hiện bài này" (toggled in the page header): only the work panel, centred. */
   focus: boolean;
 }) {
   // The order the child just made, shown at once while the server saves it. It belongs to the
@@ -335,21 +336,25 @@ function WorkPanel({ item, ctx }: { item: TaskView | null; ctx: TaskCtx }) {
   );
 }
 
-/** Big timer of the work panel; ctx.nowMs carries the server offset (never the laptop alone). */
+/**
+ * Big timer of the work panel; ctx.nowMs carries the server offset (never the laptop alone).
+ * R7a: minutes only ("còn 12 phút", "đã làm 25 phút"), never a ticking seconds clock.
+ */
 function StudyTimer({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
   const timed = !item.requiresProof && item.minMinutes > 0;
   const ms = timerMs(item, ctx.nowMs);
   const ready = timed && item.state === "running" && ms === 0;
+  const label = studyTimerLabel(item, ctx.nowMs);
   return (
     <div className="flex flex-col gap-1.5">
-      <div role="timer" aria-live="off" className="text-[56px] leading-none font-extrabold tabular-nums" style={{ color: ctx.color }}>
-        {clock(ms)}
+      <div role="timer" aria-live="off" className={`leading-tight font-extrabold text-balance ${label.length > 14 ? "text-[28px] sm:text-[34px]" : "text-[44px]"}`} style={{ color: ctx.color }}>
+        {label}
       </div>
       <p className="text-[13px] text-ink/70">
         {item.requiresProof
           ? "Bài trên lớp không có thời gian tối thiểu. Làm xong trong vở thì chụp ảnh nộp."
           : ready
-            ? `Đủ ${item.minMinutes} phút rồi — mở màn tập trung để bấm Xong.`
+            ? `Đủ ${item.minMinutes} phút rồi ✓ — làm xong thì bấm Xong.`
             : timed
               ? `Ít nhất ${item.minMinutes} phút. Nút Xong mở khi đủ giờ (giờ máy chủ).`
               : "Không giới hạn thời gian. Làm xong thì bấm Xong."}
