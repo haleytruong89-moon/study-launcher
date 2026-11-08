@@ -24,12 +24,12 @@ export async function weekDays(ctx: ChildContext, now = new Date(), wanted?: str
   const admin = createAdminClient();
   const by = await bySettings(ctx.familyId);
 
-  // The first record: the oldest day_sessions row or (when Góc bình yên is on) the oldest visit.
+  // The first record: the oldest day_sessions row or the oldest visit. Góc bình yên on or off,
+  // the volume number (Tập N) counts from the child's first record, so numbers do not shift if
+  // by is toggled. Only the oldest date is read here — no feeling data (R5 review L1).
   const [firstSession, firstCheckin] = await Promise.all([
     admin.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date", { ascending: true }).limit(1),
-    by.enabled
-      ? admin.from("by_checkins").select("local_date").eq("child_id", ctx.childId).order("local_date", { ascending: true }).limit(1)
-      : Promise.resolve({ data: [] as { local_date: string }[], error: null }),
+    admin.from("by_checkins").select("local_date").eq("child_id", ctx.childId).order("local_date", { ascending: true }).limit(1),
   ]);
   if (firstSession.error || firstCheckin.error) throw new Error("week.days first");
   const firsts = [...(firstSession.data ?? []), ...(firstCheckin.data ?? [])].map((r) => (r as { local_date: string }).local_date).sort();
