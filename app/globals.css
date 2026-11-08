@@ -112,3 +112,31 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pop { animation: none; }
 }
+
+/* R6b: An's living world (app/today/world-scene.tsx). Turned off for people who ask for less motion. */
+@keyframes w-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes w-fly { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(14px, -12px); } 50% { transform: translate(-12px, -6px); } 75% { transform: translate(8px, 6px); } }
+@keyframes w-hop { 0%, 70%, 100% { transform: translateY(0); } 80% { transform: translateY(-12px); } 90% { transform: translateY(0); } }
+@keyframes w-swim { 0%, 100% { transform: translateX(-10px) scaleX(1); } 49% { transform: translateX(10px) scaleX(1); } 50% { transform: translateX(10px) scaleX(-1); } 99% { transform: translateX(-10px) scaleX(-1); } }
+@keyframes w-float { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(4deg); } }
+@keyframes w-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+@keyframes w-drift { from { left: -25%; } to { left: 110%; } }
+@keyframes w-rise { from { transform: translateY(0); opacity: 0.7; } to { transform: translateY(-260px); opacity: 0; } }
+.w-sway { animation: w-sway 4s ease-in-out infinite; transform-origin: 50% 100%; }
+.w-fly { animation: w-fly 5s ease-in-out infinite; }
+.w-hop { animation: w-hop 3s ease-in-out infinite; }
+.w-swim { animation: w-swim 9s linear infinite; }
+.w-float { animation: w-float 6s ease-in-out infinite; }
+.w-twinkle { animation: w-twinkle 3s ease-in-out infinite; }
+.w-glow { filter: drop-shadow(0 0 7px #fff6a8) drop-shadow(0 0 3px #fff); }
+.w-cloud { position: absolute; left: -25%; width: 90px; height: 26px; border-radius: 99px; background: #fff; opacity: 0.85; animation: w-drift linear infinite; }
+.w-cloud::before { content: ""; position: absolute; left: 18px; top: -14px; width: 40px; height: 34px; border-radius: 50%; background: inherit; }
+.w-cloud-sm { width: 60px; height: 18px; }
+.w-smoke { background: #b9a89c; opacity: 0.6; }
+.w-bubble { position: absolute; bottom: 12%; width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.7); animation: w-rise linear infinite; }
+.w-star { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #fff; animation: w-twinkle 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .w-sway, .w-fly, .w-hop, .w-swim, .w-float, .w-twinkle, .w-cloud, .w-bubble, .w-star { animation: none; }
+  .w-cloud { left: 12%; }
+  .w-bubble { display: none; }
+}

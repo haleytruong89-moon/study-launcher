@@ -2511,15 +2511,25 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
 
     const grown = k.getByRole("list", { name: "Những thứ đã mọc" });
     await grown.getByRole("button", { name: /^Chò ngàn năm, đã mọc \d+ lần/ }).click();
-    const card = k.getByRole("dialog", { name: "Chò ngàn năm" });
+    const card = k.getByRole("region", { name: "Chò ngàn năm" });
     await expect(card).toContainText("Cúc Phương");
     await expect(card.getByRole("region", { name: "Nhiệm vụ ngoài đời" })).toBeVisible();
     await expect(card.getByRole("region", { name: "Tối nay dạy cả nhà" })).toBeVisible();
+    // R6b: the card opens under the scene; "Con đã làm" / "Tối nay dạy cả nhà" are remembered on this device only.
+    await card.getByRole("button", { name: "Con đã làm" }).click();
+    await expect(card.getByRole("button", { name: "Đã làm ✓" })).toHaveAttribute("aria-pressed", "true");
+    await card.getByRole("button", { name: "Tối nay dạy cả nhà điều này" }).click();
+    await expect(card.getByRole("button", { name: "Tối nay con sẽ kể ✓" })).toBeVisible();
+    await expect(k.getByRole("list", { name: "Hôm nay", exact: true }).getByRole("listitem")).toHaveCount(4);
+    await expect(k.getByRole("region", { name: "Đang chờ dọn đến" })).toContainText("đến khi");
     await card.getByRole("button", { name: "Đóng" }).click();
+    await expect(k.getByRole("region", { name: "Chò ngàn năm" })).toHaveCount(0);
 
     // Opening again never plants twice.
     await k.reload();
     await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
+    await grown.getByRole("button", { name: /^Chò ngàn năm, đã mọc \d+ lần/ }).click();
+    await expect(k.getByRole("region", { name: "Chò ngàn năm" }).getByRole("button", { name: "Đã làm ✓" })).toBeVisible();
     expect((await rows()).length).toBe(expected.size);
     // Deleting the visit does not take the flower away (BINH_YEN D2).
     await db.from("by_checkins").delete().eq("client_run_id", runId);
@@ -2602,8 +2612,8 @@ test("R4b An chọn thế giới: a new month waits for An's pick (nothing plant
     expect(rows.find((r) => r.local_date === first && r.pillar === "study")?.item_key).toBe("co_bien");
     expect((await db.from("world_months").select("world_key").eq("child_id", childId)).data).toEqual([{ world_key: "bien" }]);
     await k.getByRole("list", { name: "Những thứ đã mọc" }).getByRole("button", { name: /^Cỏ biển, đã mọc/ }).click();
-    await expect(k.getByRole("dialog", { name: "Cỏ biển" })).toContainText("cây có hoa");
-    await k.getByRole("dialog", { name: "Cỏ biển" }).getByRole("button", { name: "Đóng" }).click();
+    await expect(k.getByRole("region", { name: "Cỏ biển" })).toContainText("cây có hoa");
+    await k.getByRole("region", { name: "Cỏ biển" }).getByRole("button", { name: "Đóng" }).click();
 
     // Picked once: the month stays in Biển.
     expect(await byCall(k, "POST", "/api/world/choose", { world: "vu_tru" })).toBe(409);
@@ -2646,6 +2656,8 @@ test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that r
     // The 4 regions of An's corner are on Hôm nay; a tile goes straight to that region's words.
     const invite = k.getByRole("region", { name: "Hôm nay con thấy thế nào?" });
     for (const name of ["Núi lửa", "Mặt trời", "Biển sâu", "Khu rừng"]) await expect(invite.getByRole("link", { name: new RegExp(`^${name}:`) })).toBeVisible();
+    // R6b: the child's own character greets them at the top.
+    await expect(k.getByRole("link", { name: "Nhân vật của con", exact: true })).toBeVisible();
     await invite.getByRole("link", { name: /^Khu rừng:/ }).click();
     const words = k.getByRole("region", { name: "Chọn từ" });
     await expect(words).toBeVisible();

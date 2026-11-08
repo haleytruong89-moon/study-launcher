@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AnimalView, MonthView, ThingView, WorldChoice, WorldResponse } from "@/lib/world/rules";
-import type { Pillar } from "@/lib/world/types";
+import { PILLARS, type Pillar } from "@/lib/world/types";
 import { WorldIcon } from "../world-icon";
-import { Modal } from "./today-extras";
+import { LivingScene, type Picked } from "./world-scene";
 
 /**
  * R4: An's world of the month (docs/MAN_CHINH_MOI.md §4). Shows what grew — never what was
@@ -37,104 +37,166 @@ function useWorld(month: string | null): [Load, () => void] {
   return [load, () => setTick((t) => t + 1)];
 }
 
-/** Size grows with how many times it grew (1 → 3+), never shrinks. */
-const sizeOf = (count: number) => 34 + Math.min(count - 1, 3) * 8;
-
 type Card = { kind: "thing"; v: ThingView; area: string } | { kind: "animal"; v: AnimalView };
 
-function Scene({ view, onOpen }: { view: MonthView; onOpen: (c: Card) => void }) {
-  // Vũ trụ has a night sky: light text and labels there.
-  const dark = view.world.dark;
-  const tag = dark ? "bg-white/90" : "bg-white";
-  return (
-    <div className="overflow-hidden rounded-2xl" style={{ background: view.world.land }}>
-      <div className="flex min-h-14 flex-wrap items-center gap-2 px-3 py-2" style={{ background: view.world.sky }}>
-        {view.animals.length === 0 ? (
-          <span className={`text-sm ${dark ? "text-white/85" : "text-ink/70"}`}>
-            Chưa có {view.world.visitorWord} nào ghé. Sẽ có {view.world.visitorWord} tự đến khi {view.world.name.toLowerCase()} có thứ cần.
-          </span>
-        ) : (
-          view.animals.map((a) => (
-            <button
-              key={a.key}
-              type="button"
-              onClick={() => onOpen({ kind: "animal", v: a })}
-              aria-label={`${a.name}, đến ngày ${a.arrived}${a.today ? ", mới đến hôm nay" : ""}`}
-              className="relative flex min-h-11 min-w-11 items-center justify-center rounded-xl hover:bg-white/50"
-            >
-              <WorldIcon icon={a.icon} size={36} />
-              {a.today && <span aria-hidden className="absolute -top-1 -right-1 rounded-full bg-white px-1 text-[10px] font-bold text-ink">mới</span>}
-            </button>
-          ))
-        )}
-      </div>
-      <ul aria-label="Những thứ đã mọc" className="flex min-h-28 flex-wrap items-end gap-1 px-3 pt-4 pb-3">
-        {view.things.length === 0 && (
-          <li className={`text-sm ${dark ? "text-white/85" : "text-ink/75"}`}>Còn trống. Xong mảng đầu tiên hôm nay là có thứ mới!</li>
-        )}
-        {view.things.map((t) => (
-          <li key={t.key}>
-            <button
-              type="button"
-              onClick={() => onOpen({ kind: "thing", v: t, area: view.world.pillarNames[t.pillar] })}
-              aria-label={`${t.name}, đã mọc ${t.count} lần${t.today ? ", có mọc hôm nay" : ""}`}
-              className="relative flex min-h-11 min-w-11 flex-col items-center justify-end rounded-xl px-1 hover:bg-white/40"
-            >
-              <WorldIcon icon={t.icon} size={sizeOf(t.count)} />
-              {t.count > 1 && <span className={`text-[11px] font-bold ${dark ? "text-white" : "text-ink/80"}`}>×{t.count}</span>}
-              {t.today && <span aria-hidden className={`absolute -top-1 -right-1 rounded-full ${tag} px-1 text-[10px] font-bold text-ink`}>mới</span>}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+/** The picked thing or visitor of the month view (null once it is not there, e.g. another month). */
+function cardOf(view: MonthView, p: Picked | null): Card | null {
+  if (!p) return null;
+  if (p.kind === "thing") {
+    const v = view.things.find((t) => t.key === p.key);
+    return v ? { kind: "thing", v, area: view.world.pillarNames[v.pillar] } : null;
+  }
+  const v = view.animals.find((a) => a.key === p.key);
+  return v ? { kind: "animal", v } : null;
 }
 
-function CardView({ card, onClose }: { card: Card; onClose: () => void }) {
+// "Con đã làm" and "Tối nay dạy cả nhà" are remembered on this device only (parent 08/11:
+// nothing stored on the server). Storage may be missing or full: then it is just not remembered.
+function readSet(name: string): Set<string> {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(name) ?? "[]") as unknown;
+    return new Set(Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+function writeSet(name: string, set: Set<string>) {
+  try {
+    window.localStorage.setItem(name, JSON.stringify([...set].slice(-200)));
+  } catch {
+    /* not remembered: fine */
+  }
+}
+const vnToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
+
+/** The card of what An tapped, right under the scene (artifact: no pop-up). */
+function Detail({ card, month, onClose }: { card: Card; month: string; onClose: () => void }) {
+  // Opening a card moves focus to its name (keyboard and screen readers land on it).
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => title.current?.focus(), []);
   const v = card.v;
+  const questKey = `${month}:${v.key}`;
+  const [done, setDone] = useState(() => readSet("world-quests").has(questKey));
+  const teachKey = `${vnToday()}:${v.key}`;
+  const [teach, setTeach] = useState(() => readSet("world-teach").has(teachKey));
+  const toggle = (name: string, key: string, on: boolean, set: (b: boolean) => void) => {
+    const all = readSet(name);
+    if (on) all.add(key);
+    else all.delete(key);
+    writeSet(name, all);
+    set(on);
+  };
   return (
-    <Modal title={v.name} onClose={onClose}>
-      <div className="flex items-center gap-4">
-        <div className="flex size-20 shrink-0 items-center justify-center rounded-2xl bg-bg">
-          <WorldIcon icon={v.icon} size={60} />
+    <section aria-label={v.name} className="flex flex-col gap-3 rounded-2xl bg-bg p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white">
+          <WorldIcon icon={v.icon} size={52} />
         </div>
-        <p className="text-sm text-ink/75">
-          {card.kind === "thing" ? (
-            <>
-              {card.area} · mọc khi con xong mảng <b>{PILLAR_AREA[card.v.pillar]}</b>
-              <br />
-              Mọc lần đầu {card.v.firstDate} · đã mọc {card.v.count} lần
-            </>
-          ) : (
-            <>
-              Đến vì {card.v.because} · ngày {card.v.arrived}
-            </>
-          )}
-        </p>
+        <div className="flex min-w-0 grow flex-col">
+          <span className="text-xs font-semibold tracking-wide text-ink/65 uppercase">
+            {card.kind === "thing" ? card.area : `Đến vì ${card.v.because}`}
+            {v.today ? " · mới hôm nay" : ""}
+          </span>
+          <h3 ref={title} tabIndex={-1} className="text-lg font-bold outline-none">
+            {v.name}
+          </h3>
+          <span className="text-sm text-ink/70">
+            {card.kind === "thing" ? (
+              <>
+                Mọc khi con xong mảng <b>{PILLAR_AREA[card.v.pillar]}</b> · lần đầu {card.v.firstDate} · đã mọc {card.v.count} lần
+              </>
+            ) : (
+              <>Đến ngày {card.v.arrived}</>
+            )}
+          </span>
+        </div>
+        <button type="button" onClick={onClose} className="min-h-11 shrink-0 px-2 text-sm font-semibold underline">
+          Đóng
+        </button>
       </div>
       <section aria-label="Điều thú vị" className="flex flex-col gap-2">
-        <h3 className="font-bold">Điều thú vị</h3>
+        <h4 className="font-bold">Điều thú vị</h4>
         <ol className="flex list-decimal flex-col gap-2 pl-5">
           {v.facts.map((f) => (
             <li key={f}>{f}</li>
           ))}
         </ol>
         {card.kind === "thing" && card.v.closed > 0 && (
-          <p className="rounded-xl bg-bg p-3 text-sm text-ink/75">
+          <p className="rounded-xl bg-white p-3 text-sm text-ink/75">
             Còn {card.v.closed} điều nữa: {card.v.name.toLowerCase()} mọc thêm lần nữa thì mở.
           </p>
         )}
       </section>
-      <section aria-label="Nhiệm vụ ngoài đời" className="rounded-xl bg-[#EAF3DE] p-3">
-        <h3 className="text-sm font-bold">🔎 Nhiệm vụ ngoài đời (nếu con muốn)</h3>
+      <section aria-label="Nhiệm vụ ngoài đời" className="flex flex-col items-start gap-2 rounded-xl border-[1.5px] border-dashed border-[#B85A1C] bg-white p-3">
+        <h4 className="text-sm font-bold">🔎 Nhiệm vụ ngoài đời (nếu con muốn)</h4>
         <p className="text-sm">{v.mission}</p>
+        <button
+          type="button"
+          aria-pressed={done}
+          onClick={() => toggle("world-quests", questKey, !done, setDone)}
+          className="btn border-[1.5px] text-sm"
+          style={done ? { background: "#E3F0E7", borderColor: "#2F6E45", color: "#2F6E45" } : { background: "#fff", borderColor: "rgb(28 31 29 / 0.25)" }}
+        >
+          {done ? "Đã làm ✓" : "Con đã làm"}
+        </button>
       </section>
-      <section aria-label="Tối nay dạy cả nhà" className="rounded-xl bg-[#FAEEDA] p-3">
-        <h3 className="text-sm font-bold">🍽️ Tối nay dạy cả nhà</h3>
+      <section aria-label="Tối nay dạy cả nhà" className="flex flex-col items-start gap-2 rounded-xl bg-[#FAEEDA] p-3">
+        <h4 className="text-sm font-bold">🍽️ Tối nay dạy cả nhà</h4>
         <p className="text-sm">{v.teach}</p>
+        <button
+          type="button"
+          aria-pressed={teach}
+          onClick={() => toggle("world-teach", teachKey, !teach, setTeach)}
+          className="btn border-[1.5px] border-[#8A5A12] bg-white text-sm text-[#5E3D00]"
+        >
+          {teach ? "Tối nay con sẽ kể ✓" : "Tối nay dạy cả nhà điều này"}
+        </button>
       </section>
-    </Modal>
+    </section>
+  );
+}
+
+/** What grew today, one chip per area (empty ones stay calm: no "missed"). */
+function TodayChips({ view }: { view: MonthView }) {
+  return (
+    <ul aria-label="Hôm nay" className="flex flex-wrap gap-1.5">
+      {PILLARS.map((p) => {
+        const t = view.things.find((x) => x.pillar === p && x.today);
+        return (
+          <li
+            key={p}
+            className={`flex min-h-8 items-center gap-1 rounded-full px-3 text-[13px] ${t ? "bg-[#E3F0E7] font-bold text-[#2F6E45]" : "bg-bg text-ink/65"}`}
+            aria-label={t ? `${PILLAR_AREA[p]}: ${t.name} mọc hôm nay` : `${PILLAR_AREA[p]}: chưa`}
+          >
+            {t ? <WorldIcon icon={t.icon} size={18} /> : <span aria-hidden>○</span>}
+            {PILLAR_AREA[p]}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Visitors that could come next, and what the world still needs for them. */
+function Coming({ view }: { view: MonthView }) {
+  if (view.coming.length === 0) return null;
+  return (
+    <section aria-label="Đang chờ dọn đến" className="flex flex-col gap-1.5">
+      <h3 className="text-sm font-bold">Đang chờ dọn đến</h3>
+      <ul className="flex flex-col gap-1">
+        {view.coming.map((c) => (
+          <li key={c.key} className="flex items-center gap-2 text-sm text-ink/80">
+            <span className="opacity-60">
+              <WorldIcon icon={c.icon} size={24} />
+            </span>
+            <span>
+              <b>{c.name}</b> sẽ đến khi {c.because}
+              {c.missing > 0 ? ` (còn thiếu ${c.missing} thứ)` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -223,9 +285,10 @@ export function WorldTab({ color }: { color: string }) {
   };
   const openMonth = (m: string | null) => {
     setPicked(null);
+    setPicked2(null);
     setMonth(m);
   };
-  const [card, setCard] = useState<Card | null>(null);
+  const [picked2, setPicked2] = useState<Picked | null>(null);
 
   if (load.state === "loading") return <p className="rounded-2xl bg-white p-4 text-sm text-ink/70">Đang mở thế giới của con…</p>;
   if (load.state === "error")
@@ -247,6 +310,7 @@ export function WorldTab({ color }: { color: string }) {
       </section>
     );
   const { view, current, album, choose } = load.data;
+  const card = view ? cardOf(view, picked2) : null;
   if (current && choose.length > 0) return <Chooser month={load.data.month} options={choose} color={color} onChosen={setPicked} onStale={retry} />;
   if (!view)
     return (
@@ -259,9 +323,14 @@ export function WorldTab({ color }: { color: string }) {
     <>
       <section aria-labelledby="world-h" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="world-h" className="text-lg font-bold">
-            <span aria-hidden>{view.world.emoji} </span>
-            {view.world.name} · {monthLabel(view.month)}
+          <h2 id="world-h" className="flex items-center gap-2 text-lg font-bold">
+            <span>
+              <span aria-hidden>{view.world.emoji} </span>
+              {view.world.name} · {monthLabel(view.month)}
+            </span>
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#F4C430] text-base font-extrabold text-[#5A3E24]" role="img" aria-label={`${view.things.length} thứ đã mọc`}>
+              {view.things.length}
+            </span>
           </h2>
           {!current && (
             <button type="button" onClick={() => openMonth(null)} className="min-h-11 text-sm font-semibold underline" style={{ color }}>
@@ -270,7 +339,26 @@ export function WorldTab({ color }: { color: string }) {
           )}
         </div>
         {current && <p className="text-sm text-ink/75">{view.world.intro}</p>}
-        <Scene view={view} onOpen={setCard} />
+        {current && <TodayChips view={view} />}
+        <LivingScene view={view} picked={picked2} onPick={(p) => setPicked2(p)} />
+        <div>
+          {card ? (
+            <Detail
+              key={`${view.month}:${card.v.key}`}
+              card={card}
+              month={view.month}
+              onClose={() => {
+                // Back to the thing in the scene (the card leaves the page).
+                const spot = picked2 ? `${picked2.kind}:${picked2.key}` : null;
+                setPicked2(null);
+                if (spot) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-spot="${spot}"]`)?.focus());
+              }}
+            />
+          ) : (
+            <p className="text-sm text-ink/70">Chạm vào một thứ hoặc một {view.world.visitorWord} trong cảnh để xem thẻ.</p>
+          )}
+        </div>
+        {current && <Coming view={view} />}
         <p className="text-sm text-ink/75">
           {view.things.length} thứ đã mọc · {view.animals.length} {view.world.visitorWord} ghé thăm
           {current && view.waiting > 0 ? ` · còn ${view.waiting} thứ đang chờ trong ${view.world.name.toLowerCase()}` : ""}
@@ -310,7 +398,6 @@ export function WorldTab({ color }: { color: string }) {
           </div>
         </section>
       )}
-      {card && <CardView card={card} onClose={() => setCard(null)} />}
     </>
   );
 }
@@ -342,8 +429,6 @@ export function WorldMini({ onOpen }: { onOpen: () => void }) {
   const v = load.data.view;
   const today = [...v.things.filter((t) => t.today), ...v.animals.filter((a) => a.today)];
   // R6a (artifact, item F): a small picture of the world, what grew today, and the way in.
-  const shown = [...v.things, ...v.animals].slice(-12);
-  const light = v.world.dark;
   return (
     <section aria-labelledby="world-mini" className="flex flex-col gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: "0 6px 18px rgba(28,31,29,0.08)" }}>
       <div className="flex items-baseline justify-between gap-2">
@@ -354,19 +439,10 @@ export function WorldMini({ onOpen }: { onOpen: () => void }) {
           {v.things.length} thứ đã mọc{v.animals.length > 0 ? ` · ${v.animals.length} ${v.world.visitorWord}` : ""}
         </span>
       </div>
-      <button type="button" onClick={onOpen} aria-label={`Mở ${v.world.name} của con`} className="block overflow-hidden rounded-2xl text-left" style={{ background: `linear-gradient(${v.world.sky} 55%, ${v.world.land} 55%)` }}>
-        <span className="flex min-h-24 flex-wrap items-end gap-1.5 px-3 pt-6 pb-3" aria-hidden>
-          {shown.length > 0 ? (
-            shown.map((t) => (
-              <span key={t.key} className={t.today ? "pop rounded-full ring-2 ring-white" : undefined}>
-                <WorldIcon icon={t.icon} size={30} />
-              </span>
-            ))
-          ) : (
-            <span className={`text-sm font-semibold ${light ? "text-white" : "text-ink/80"}`}>Còn trống — đang chờ thứ đầu tiên mọc</span>
-          )}
-        </span>
-      </button>
+      {/* A picture only (the button below is the way in for keyboards and screen readers). */}
+      <div aria-hidden onClick={onOpen} className="cursor-pointer">
+        <LivingScene view={v} compact />
+      </div>
       {today.length > 0 ? (
         <ul aria-label="Hôm nay đã mọc" className="flex flex-wrap gap-1.5">
           {today.map((t) => (
