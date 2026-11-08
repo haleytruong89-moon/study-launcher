@@ -463,8 +463,13 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
 
   // R1 (07/11/2026): skills are open from the start, in parallel with homework.
+  // R6c: a row's first button selects it; its buttons are in the work panel ("Khung làm bài").
+  const work = page.getByRole("region", { name: "Khung làm bài" });
   const skill = page.getByRole("listitem", { name: "Đọc sách e2e" });
-  await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
+  await skill.getByRole("button").first().click();
+  await expect(skill.getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
+  await expect(work.getByRole("heading", { name: "Đọc sách e2e" })).toBeVisible();
+  await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
 
   // The server refuses a break before any part is done, and an early finish, whatever the browser does.
   const today1 = await page.evaluate(async () => (await (await fetch("/api/today")).json()) as { state: { part1: { items: { id: string; title: string }[] }; part2: { items: { id: string; title: string }[] } } });
@@ -505,12 +510,17 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
 
   // Supplementary task: 20 minutes minimum on the SERVER clock.
   const extra = page.getByRole("listitem", { name: "Luyện đề e2e" });
-  await extra.getByRole("button", { name: "Bắt đầu" }).click();
+  await extra.getByRole("button").first().click();
+  await expect(work.getByRole("timer")).toHaveText("20:00"); // the minimum, before starting
+  await work.getByRole("button", { name: "Bắt đầu" }).click();
   await expect(focus.getByRole("button", { name: /^Xong/ })).toBeDisabled();
-  // "Thu nhỏ" hides focus mode; the row reopens it.
+  // "Thu nhỏ" hides focus mode; the work panel (big timer counting down) reopens it.
   await focus.getByRole("button", { name: "Thu nhỏ" }).click();
   await expect(focus).toHaveCount(0);
-  await extra.getByRole("button", { name: "Đang làm · mở" }).click();
+  await expect(extra).toContainText("đang làm");
+  await expect(work).toContainText("Đang làm · Bài bổ sung");
+  await expect(work.getByRole("timer")).toHaveText(/^(19|20):\d\d$/);
+  await work.getByRole("button", { name: "Đang làm · mở màn tập trung" }).click();
   await expect(focus).toBeVisible();
   const { data: run } = await db.from("task_runs").select("id").eq("template_id", extraId).single();
   const tooEarly = await page.evaluate(async (runId) => {
@@ -533,13 +543,14 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await banner.getByRole("button", { name: /Nghỉ \d+ phút/ }).click();
   await expect(banner).toContainText("Đang nghỉ");
   await expect(page.getByText(/Giờ nghỉ · còn \d\d:\d\d/)).toBeVisible();
-  await expect(skill.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
+  await skill.getByRole("button").first().click();
+  await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
   const duringBreak = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
   expect(duringBreak).toBe(409);
   await banner.getByRole("button", { name: "Học tiếp" }).click();
   await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
   await expect(banner.getByRole("button", { name: /Nghỉ \d+ phút/ })).toHaveCount(0); // once a day
-  await skill.getByRole("button", { name: "Bắt đầu" }).click();
+  await work.getByRole("button", { name: "Bắt đầu" }).click();
   await focus.getByRole("button", { name: "Xong", exact: true }).click();
 
   // Free time (40 minutes: the parent changed it in the S1 settings test).
@@ -1088,7 +1099,8 @@ test("Confirm: the child asks a parent to look; the parent confirms on the phone
   await login(child, childEmail, childPassword);
   await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc học tập" }).click();
   const row = child.getByRole("listitem", { name: "Mỹ thuật" });
-  await row.getByRole("button", { name: "Xong rồi · nộp ảnh" }).click();
+  await row.getByRole("button").first().click(); // R6c: select the row; its buttons are in the work panel
+  await child.getByRole("region", { name: "Khung làm bài" }).getByRole("button", { name: "Làm xong trong vở rồi · nộp ảnh" }).click();
   const sheet = child.getByRole("dialog", { name: "Nộp ảnh bài Mỹ thuật" });
   await sheet.getByRole("button", { name: "Không chụp được? Nhờ bố mẹ xem trực tiếp" }).click();
   await expect(sheet).toHaveCount(0);
