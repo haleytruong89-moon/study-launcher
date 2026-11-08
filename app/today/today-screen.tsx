@@ -20,7 +20,8 @@ import { isChildTab, tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
 import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
-import { FeelInvite, FeelWeek, PillarCards, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
+import { PillarCards } from "./pillars";
+import { FeelInvite, FeelWeek, StudyCorner, WeekAreas, WeekProgress } from "./tabs";
 import { WorldMini, WorldTab } from "./world";
 import type { WeekDaysView } from "@/lib/today/weekDays";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
@@ -101,6 +102,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const [busy, setBusy] = useState<string | null>(null);
   // Focus mode opens for a running task unless the child minimised THAT task.
   const [minimized, setMinimized] = useState<string | null>(null);
+  // A running task the child asked to open (e.g. a skill while homework also runs).
+  const [focusKey, setFocusKey] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"plan" | "icon" | null>(null);
   // "Nộp ảnh bài" sheet: the homework key it is open for, and upload progress.
   const [proofKey, setProofKey] = useState<string | null>(null);
@@ -325,7 +328,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const showNudge = !view.plan && !s.part1.complete && planItems.length >= 2 && planLater !== s.localDate;
   const planDone = view.plan ? planProgress(s, view.plan) : null;
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
-  const focusItem = !paused && next?.state === "running" && minimized !== next.key ? next : null;
+  const asked = focusKey ? ([...s.part1.items, ...s.part2.items].find((i) => i.key === focusKey && i.state === "running") ?? null) : null;
+  const focusItem = paused ? null : (asked ?? (next?.state === "running" && minimized !== next.key ? next : null));
   const proofItem = proofKey ? (s.part1.items.find((i) => i.key === proofKey) ?? null) : null;
   // Finished (e.g. from the phone) or gone: the sheet closes by itself.
   const proofOpen = proofItem !== null && proofItem.state === "running";
@@ -343,7 +347,10 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       setProofKey(item.key);
     },
     onDoneNow: (item) => void doneNow(item),
-    onFocus: () => setMinimized(null),
+    onFocus: (item) => {
+      setMinimized(null);
+      setFocusKey(item && item.key !== next?.key ? item.key : null);
+    },
     reviewed: new Set(view.reviewed ?? []),
     asked: new Set(view.asked ?? []),
   };
@@ -403,7 +410,10 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       {dialog === "icon" && (
         <IconPicker current={view.icon} color={color} busy={!!busy} error={error} onPick={(icon) => act({ url: "/api/profile/icon", body: { icon } })} onClose={() => setDialog(null)} />
       )}
-      {focusItem && <FocusView item={focusItem} ctx={ctx} dark={shade(color)} onClose={() => setMinimized(focusItem.key)} />}
+      {focusItem && <FocusView item={focusItem} ctx={ctx} dark={shade(color)} onClose={() => {
+            setFocusKey(null);
+            setMinimized(focusItem.key);
+          }} />}
       {proofOpen && proofItem && (
         <ProofSheet
           key={proofItem.key}
@@ -537,11 +547,14 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
 
             <PillarCards
               s={s}
+              view={view}
               today={week?.days.find((d) => d.date === s.localDate) ?? null}
               byEnabled={byEnabled}
               color={color}
               nowMs={nowMs}
               freeMinutes={view.rules.freeMinutes}
+              voice={voice}
+              ctx={ctx}
               onStudy={() => selectTab("hoc-tap")}
             />
 

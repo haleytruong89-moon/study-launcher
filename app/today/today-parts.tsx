@@ -23,7 +23,8 @@ export interface TaskCtx {
   onProofOpen: (item: TaskView) => void;
   /** Homework already done in the notebook: start it (no focus screen) and open "Nộp ảnh bài". */
   onDoneNow: (item: TaskView) => void;
-  onFocus: () => void;
+  /** Opens the focus view; with an item, that running item (not only the suggested one). */
+  onFocus: (item?: TaskView) => void;
   /** Run ids a parent has looked at ("Bố mẹ đã xem ✓"). */
   reviewed: ReadonlySet<string>;
   /** Run ids waiting for "Nhờ bố mẹ xem trực tiếp". */
@@ -48,7 +49,8 @@ const TONE = {
   later: { dot: "#9AA19C", text: "#4A4F4C", chipBg: "#EEF0EC" },
 } as const;
 
-function isWaiting(item: TaskView, ctx: TaskCtx): boolean {
+/** A timed task that waits for another running timed task (one at a time). */
+export function isWaiting(item: TaskView, ctx: TaskCtx): boolean {
   return item.state === "todo" && ctx.runningTimed !== null && ctx.runningTimed.key !== item.key && item.source === "template" && item.minMinutes > 0;
 }
 
@@ -190,7 +192,7 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
           running && item.requiresProof && <ProofButton item={item} ctx={ctx} />
         )}
         {running && (
-          <button type="button" onClick={ctx.onFocus} className="min-h-11 rounded-full px-4 text-sm font-bold text-white" style={{ background: ctx.color }}>
+          <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-11 rounded-full px-4 text-sm font-bold text-white" style={{ background: ctx.color }}>
             Đang làm · mở
           </button>
         )}
@@ -267,12 +269,12 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
               Nộp ảnh bài
             </button>
           )}
-          <button type="button" onClick={ctx.onFocus} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold">
+          <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold">
             Mở màn tập trung
           </button>
         </div>
       ) : (
-        <button type="button" onClick={ctx.onFocus} className="min-h-14 rounded-2xl text-[17px] font-bold text-white" style={{ background: ctx.color }}>
+        <button type="button" onClick={() => ctx.onFocus(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white" style={{ background: ctx.color }}>
           Đang làm · mở màn tập trung
         </button>
       )}

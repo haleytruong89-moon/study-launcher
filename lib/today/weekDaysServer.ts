@@ -29,7 +29,7 @@ export async function weekDays(ctx: ChildContext, now = new Date()): Promise<Wee
   if (by.enabled) {
     const { data, error } = await admin
       .from("by_checkins")
-      .select("local_date, quad, word_key, created_at")
+      .select("local_date, quad, word_key, created_at, activity_key")
       .eq("child_id", ctx.childId)
       .gte("local_date", monday)
       .lte("local_date", sunday);
