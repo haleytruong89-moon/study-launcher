@@ -1022,7 +1022,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const bankMode = input.breaks !== null;
   const tiers = breakTiersOf(settings.breakTiers);
   const maxPerDay = bankMode ? breakMaxOf(settings.breakMaxPerDay) : 1;
-  const dayBreaks: { startMs: number; plannedMinutes: number; endedMs: number | null }[] = [];
+  const allBreaks: { startMs: number; plannedMinutes: number; endedMs: number | null }[] = [];
   for (const b of input.breaks ?? []) {
     // Validate every row (malformed input throws, interpretation 16).
     const startMs = toMs(b.startedAt, "day_breaks.started_at");
@@ -1030,7 +1030,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     if (!Number.isInteger(b.plannedMinutes) || b.plannedMinutes <= 0) {
       throw new Error(`computeDayState: invalid day_breaks.planned_minutes: ${b.plannedMinutes}`);
     }
-    if (b.localDate === today) dayBreaks.push({ startMs, plannedMinutes: b.plannedMinutes, endedMs });
+    if (b.localDate === today) allBreaks.push({ startMs, plannedMinutes: b.plannedMinutes, endedMs });
   }
   // Legacy: the day_sessions break of break_minutes (before 0014 the only one; after it, a day in
   // flight). The new route never writes these columns, so it is never the same break as a
@@ -1039,13 +1039,21 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const legacyStartMs = toMsOrNull(session.breakStartedAt, "day_sessions.break_started_at");
   const legacyEndedMs = toMsOrNull(session.breakEndedAt, "day_sessions.break_ended_at");
   const legacySkipped = session.breakSkipped && legacyStartMs === null;
-  if (legacyStartMs !== null) dayBreaks.push({ startMs: legacyStartMs, plannedMinutes: Math.max(0, settings.breakMinutes), endedMs: legacyEndedMs });
+  if (legacyStartMs !== null) allBreaks.push({ startMs: legacyStartMs, plannedMinutes: Math.max(0, settings.breakMinutes), endedMs: legacyEndedMs });
   const legacySkippedMinutes = legacySkipped ? Math.max(0, settings.breakMinutes) : 0;
-  dayBreaks.sort((a, b) => a.startMs - b.startMs);
-  const takenToday = dayBreaks.length + (legacySkipped ? 1 : 0);
+  allBreaks.sort((a, b) => a.startMs - b.startMs);
   /** When a break really ended: "Học tiếp", its planned end, free time starting, or 00:00. */
-  const realEnd = (b: (typeof dayBreaks)[number]) =>
+  const realEnd = (b: (typeof allBreaks)[number]) =>
     Math.min(b.endedMs ?? Infinity, b.startMs + b.plannedMinutes * MINUTE_MS, freeStartMs ?? Infinity, midnightMs);
+  // A break can only start while none runs (BREAK is not a locked study status), so a row that starts
+  // before the previous break really ended is a duplicate of it (two "start" requests at once: a
+  // double tap, two devices). It is ignored: counted once, its minutes not used twice.
+  const dayBreaks: typeof allBreaks = [];
+  for (const b of allBreaks) {
+    const prev = dayBreaks[dayBreaks.length - 1];
+    if (prev === undefined || b.startMs >= realEnd(prev)) dayBreaks.push(b);
+  }
+  const takenToday = dayBreaks.length + (legacySkipped ? 1 : 0);
 
   // --- Focus and the bank (interpretation 19) ---
   let bank: BankResult | null = null;

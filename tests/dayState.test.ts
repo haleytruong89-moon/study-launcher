@@ -1990,6 +1990,17 @@ describe("R8b break bank", () => {
       expect(computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:50")], breaks: [brk("15:50", 10, "15:52")] }), at("15:53")).status).toBe("LOCK_P1");
     });
 
+    it("two “start” requests at once (double tap): the duplicate row counts once and its minutes are not used twice", () => {
+      const runs = [tplRun("e1", "15:00", "15:50"), tplRun("s1", "16:00", "16:50")];
+      const dup = [brk("15:50", 10), { ...brk("15:50", 10), startedAt: new Date(vn(`${TODAY} 15:50`).getTime() + 300).toISOString() }];
+      const during = computeDayState(normalDay({ runs: runs.slice(0, 1), breaks: dup }), at("15:55"));
+      expect(during.status).toBe("BREAK");
+      expect(during.openUntil).toBe(t("16:00"));
+      expect(during.break).toMatchObject({ takenToday: 1, plannedMinutes: 10 });
+      // 50' → 10, break used 10, then 50' → 10: bank 10 (not 0 from a doubled use).
+      expect(computeDayState(normalDay({ runs, breaks: dup }), at("16:51")).break).toMatchObject({ takenToday: 1, bankMinutes: 10, canStart: true });
+    });
+
     it("breaks of other days are ignored; malformed day_breaks rows throw (fail-closed)", () => {
       const old = { ...brk("15:50", 10), localDate: YESTERDAY, startedAt: iso(`${YESTERDAY} 15:50`) };
       expect(computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:50")], breaks: [old] }), at("15:55")).break).toMatchObject({ takenToday: 0, bankMinutes: 10 });
