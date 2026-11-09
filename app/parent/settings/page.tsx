@@ -1,4 +1,5 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
+import { breakTiersOf, DEFAULT_BREAK_MAX_PER_DAY } from "@/lib/dayState";
 import { talkRecipients } from "@/lib/binhYen/talk";
 import { ParentHeader } from "../parent-header";
 import { PhotoCleanup } from "./photo-cleanup";
@@ -34,6 +35,13 @@ export default async function SettingsPage() {
                 ...(typeof s.homework_min_upcoming === "number" ? { homeworkMinUpcoming: s.homework_min_upcoming } : {}),
                 photoRetentionDays: s.photo_retention_days,
                 ...(typeof s.allow_local_files === "boolean" ? { allowLocalFiles: s.allow_local_files } : {}),
+                // R8b (0014): shown once the columns exist; a malformed stored value shows the defaults.
+                ...("break_tiers" in s && "break_max_per_day" in s
+                  ? {
+                      breakTiers: breakTiersOf(s.break_tiers).map(([f, b]): [number, number] => [f, b]),
+                      breakMaxPerDay: typeof s.break_max_per_day === "number" ? s.break_max_per_day : DEFAULT_BREAK_MAX_PER_DAY,
+                    }
+                  : {}),
                 ...(typeof s.by_enabled === "boolean"
                   ? { byEnabled: s.by_enabled, byStudyMinutes: s.by_study_minutes }
                   : {}),

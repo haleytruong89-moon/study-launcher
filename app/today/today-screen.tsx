@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
-import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, statusPill } from "@/lib/today/view";
+import { bannerFor, breakLine, clock, dayProgress, daySteps, longDate, nextTask, statusPill } from "@/lib/today/view";
 import { Character } from "../avatar-face";
 import { SignOutButton } from "../sign-out-button";
 import { TalkPanel } from "../binh-yen/talk-panel";
@@ -384,7 +384,9 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const planItems = plannable(s).filter((i) => i.state !== "done");
   const showNudge = !view.plan && !s.part1.complete && planItems.length >= 2 && planLater !== s.localDate;
   const planDone = view.plan ? planProgress(s, view.plan) : null;
-  const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
+  // R8b: the break counts down in whole minutes (breakLine below), never in seconds.
+  const countdownTo = s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
+  const brk = breakLine(s, nowMs);
   // R8a: a "Làm thêm" run is listed as a running task (chip, focus view, start card).
   const running = runningItems(s);
   // Shown only when the child asked for it, while that task runs, and not during the break.
@@ -439,6 +441,12 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   );
   const controls = (
     <>
+      {brk && (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-semibold">{brk.text}</span>
+          {brk.hint && <span className="text-[13px] text-ink/70">{brk.hint}</span>}
+        </div>
+      )}
       {(s.break.canStart || s.free.canStart) && (
         <div className="flex flex-wrap gap-2">
           {s.free.canStart && (
@@ -448,7 +456,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
           )}
           {s.break.canStart && (
             <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "start" } })} className="btn border-[1.5px] bg-white disabled:opacity-60" style={{ borderColor: color, color }}>
-              ☕ Nghỉ {view.rules.breakMinutes} phút (1 lần/ngày)
+              {s.break.legacy ? `☕ Nghỉ ${view.rules.breakMinutes} phút (1 lần/ngày)` : (brk?.button ?? `Nghỉ ${s.break.bankMinutes}'`)}
             </button>
           )}
         </div>
