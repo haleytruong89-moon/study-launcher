@@ -118,8 +118,9 @@ interface DayState {
   openUntil: string | null     // ISO, để extension đặt alarm đúng lúc
   part1: { total: number; done: number; items: TaskView[] }
   part2: { total: number; done: number; items: TaskView[] }     // R1: không còn `locked`
-  break: { state; canStart: boolean; … }   // canStart: hiện nút Nghỉ, /api/day/break start được phép
-  free: { canStart: boolean; … }           // ngày không có việc nào: nút "Bắt đầu giờ tự do"
+  break: { state; canStart: boolean; bankMinutes; blockFocusMinutes; nextTier; takenToday; maxPerDay; plannedMinutes; legacy; … }
+                                           // canStart: hiện nút Nghỉ, /api/day/break start được phép (R8b: ngân hàng giờ nghỉ)
+  free: { canStart: boolean; bonusMinutes; … }  // ngày không có việc nào: nút "Bắt đầu giờ tự do"; bonusMinutes = phút nghỉ chưa dùng cộng vào giờ tự do
   passAvailable: boolean
   week: { date: string; result: 'ok' | 'pass' | 'miss' | 'today' | 'sick' }[]   // 7 ngày qua
   trust: { mode: 'lock' | 'trust'; weeksMet: number; weeksNeeded: number }
@@ -127,16 +128,16 @@ interface DayState {
 }
 ```
 
-Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đúng thì dừng). **R1 — bố mẹ chốt 07/11/2026** (`docs/MAN_CHINH_MOI.md` §1, ví dụ E1–E24): kỹ năng làm song song với bài tập; giờ tự do khi xong **cả hai** phần; nghỉ 10' khi xong **một** trong hai phần.
+Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đúng thì dừng). **R1 — bố mẹ chốt 07/11/2026** (`docs/MAN_CHINH_MOI.md` §1, ví dụ E1–E24): kỹ năng làm song song với bài tập; giờ tự do khi xong **cả hai** phần. **R8b — bố mẹ chốt 08/11/2026** (`docs/superpowers/specs/2026-11-09-r8-design.md`, ví dụ G1–G18): nghỉ theo **ngân hàng giờ nghỉ** (thay cho "nghỉ 10' khi xong một phần").
 
 | # | Điều kiện | Status | open |
 |---|---|---|---|
 | 1–2 | Override **mới nhất** của hôm nay còn hiệu lực (chốt 14/10/2026: bản mới nhất thay hẳn bản cũ; hết hạn → về luồng thường): `lock_until` → LOCK_OVERRIDE; `open_until` → OPEN_OVERRIDE | LOCK_OVERRIDE / OPEN_OVERRIDE | ✗ / ✓ đến `until` |
 | 3 | `trust_state.mode = trust` | OPEN_TRUST | ✓ (vẫn hiện việc + nhắc) |
 | 4 | `day_type = sick` | OPEN_SICK | ✓ cả ngày |
-| 5 | `free_started_at` có và `now ≥ free_started_at + free_minutes` | LOCK_END | ✗ |
-| 6 | `free_started_at` có (do xong cả hai phần hoặc dùng thẻ) | FREE | ✓ đến hết 45' |
-| 7 | `break_started_at` có, chưa `break_ended_at`, và `now < break_started_at + break_minutes` | BREAK | ✓ đến hết nghỉ |
+| 5 | `free_started_at` có và `now ≥ free_started_at + free_minutes + ngân hàng lúc free_started_at` (R8b) | LOCK_END | ✗ |
+| 6 | `free_started_at` có (do xong cả hai phần hoặc dùng thẻ) | FREE | ✓ đến hết 45' + phút nghỉ chưa dùng |
+| 7 | Lần nghỉ mới nhất hôm nay (`day_breaks`; trước 0014 / ngày đang dở: `day_sessions.break_*`) chưa `ended_at` và `now < started_at + planned_minutes` | BREAK | ✓ đến hết nghỉ |
 | 8 | Phần 1 chưa xong | LOCK_P1 | ✗ |
 | 9 | Phần 1 xong, Phần 2 chưa xong | LOCK_P2 | ✗ |
 | 10 | Cả hai phần **không có việc nào**, con chưa bấm "Bắt đầu giờ tự do" (chốt 07/11/2026) | FREE_READY | ✗ |
@@ -147,7 +148,15 @@ Quy tắc phụ:
   - *Chốt 14/10 + 07/11/2026:* phần rỗng **chưa ghi** mốc cho đến khi **phần kia có mốc**; lúc đó ghi luôn (kể cả đang bị khóa tay, để "ngày đạt" không bị trễ). Bài / kỹ năng giao trước lúc đó vẫn khóa lại.
   - **Cả hai phần rỗng** → FREE_READY: không tự ghi gì (extension hỏi cả lúc 00:00). Con bấm "Bắt đầu giờ tự do" (`POST /api/day/free`, nút chỉ có ở FREE_READY và chế độ Tin tưởng) thì mới ghi 2 mốc + `free_started_at`. Ngày đó không mời dùng thẻ. Dùng thẻ không bao giờ ghi mốc phần.
 - **Hai phần mở song song** (R1): bắt đầu / xong việc của phần nào cũng được, bất kể status. Mỗi lúc vẫn chỉ 1 việc có giờ tối thiểu (chốt 15/10).
-- **Nghỉ** (R1): `break.canStart` khi Phần 1 đã xong (Phần 1 rỗng tính là xong, như trước R1) **hoặc** Phần 2 đã xong thật (Phần 2 rỗng một mình không mở nghỉ: ngày không có kỹ năng thì vẫn nghỉ sau bài tập), chưa nghỉ hôm nay (kể cả dòng cũ có `break_skipped = true`), chưa có giờ tự do, `break_minutes > 0`, máy đang khóa giờ học (LOCK_P1 / LOCK_P2 / FREE_READY — không phải khóa tay, Tin tưởng, ngày ốm, bố mẹ mở), và **không** có việc có giờ tối thiểu đang chạy. Trong lúc nghỉ (kể cả khi bố mẹ khóa tay giữa lúc nghỉ), route bắt đầu / xong / nộp ảnh / nhờ bố mẹ xem từ chối ("Đang nghỉ — bấm Học tiếp"). Giờ tự do bắt đầu trong lúc nghỉ (vd bố mẹ xác nhận bài cuối) → FREE ngay, phần nghỉ còn lại bỏ.
+- **Nghỉ — ngân hàng giờ nghỉ** (R8b, chốt 08/11/2026; `computeDayState` diễn giải 2 + 19; giờ máy chủ, mọi khoảng cắt ở 00:00):
+  - **Giờ tập trung** = hợp các khoảng `[started_at, done_at ?? now]` của các lượt làm hôm nay (bài trên lớp, bài bổ sung, kỹ năng, làm thêm; chồng nhau chỉ tính **một lần**). **Không tính**: trong lúc nghỉ; từ `free_started_at`; lúc bố mẹ **mở** máy (mỗi override có hiệu lực từ `created_at` đến `until` hoặc override mới hơn); cả ngày khi đang Tin tưởng hoặc ngày ốm; chế độ Khóa mà `trust_state.since` là hôm nay → phần trước `since`. Lúc bố mẹ **khóa** máy **vẫn tính**.
+  - **Khối** = giờ tập trung từ lúc bắt đầu lần nghỉ gần nhất (hoặc 00:00). Bắt đầu nghỉ là đóng khối (nghỉ hết hay "Học tiếp" sớm cũng vậy).
+  - **Bậc** = `family_settings.break_tiers` (mặc định `[[45,10],[90,30],[120,45],[180,60]]`): khối F phút được nghỉ bằng bậc cao nhất có phút tập trung ≤ F; từ bậc cuối (180) phần còn lại tính lại như khối mới (225 → 70, 270 → 90, 360 → 120). Bậc hỏng → dùng mặc định.
+  - **Ngân hàng** = tổng phút được nghỉ của mọi khối − phút **đã dùng** của mọi lần nghỉ (làm tròn xuống phút; "Học tiếp" sớm chỉ trừ phần đã dùng), không âm.
+  - `break.canStart` khi ngân hàng **≥ 5'**, số lần nghỉ hôm nay < `break_max_per_day` (mặc định 6), chưa có giờ tự do, máy đang khóa giờ học (LOCK_P1 / LOCK_P2 / FREE_READY — không phải khóa tay, Tin tưởng, ngày ốm, bố mẹ mở), và **không** có việc có giờ tối thiểu đang chạy (kể cả làm thêm). **Bỏ** điều kiện "xong một phần". Bắt đầu nghỉ dùng **cả** ngân hàng (`planned_minutes = ngân hàng`); bài trên lớp vẫn chạy được trong lúc nghỉ nhưng không tính tập trung.
+  - Trong lúc nghỉ (kể cả khi bố mẹ khóa tay giữa lúc nghỉ), route bắt đầu / xong / nộp ảnh / nhờ bố mẹ xem từ chối ("Đang nghỉ — bấm Học tiếp"). Giờ tự do bắt đầu trong lúc nghỉ → FREE ngay; phần nghỉ chưa dùng nằm lại ngân hàng.
+  - **Giờ tự do** = `free_minutes` + ngân hàng **tại `free_started_at`** (tính từ dữ liệu tới lúc đó nên lần đọc nào cũng ra một số), vẫn cắt ở 00:00.
+  - **Dữ liệu cũ:** `day_sessions.break_started_at` (hoặc `break_skipped`) tính là 1 lần nghỉ `break_minutes` (route mới không ghi các cột này nữa; `break_minutes` không còn quyết định gì khác). **Trước khi 0014 chạy** (preview dùng DB thật): `breaks: null` → luật cũ nguyên vẹn (1 lần/ngày sau khi xong một phần, `break_minutes`), không cộng vào giờ tự do.
 - Phút tối thiểu của một việc = `task_templates.min_minutes` nếu có, nếu không lấy `extra_min_minutes` / `skill_min_minutes` trong `family_settings`.
 - **Làm thêm** (R8a, chốt 08/11/2026): bài bổ sung / kỹ năng đã xong hôm nay bấm "Làm thêm" được → thêm 1 `task_run` mới. Lượt **bắt buộc** = lượt xong sớm nhất hôm nay; lượt bắt đầu từ lúc đó trở đi là lượt làm thêm. Lượt làm thêm **không** đổi việc đã xong, mốc phần, giờ tự do hay khóa/mở; không có tối thiểu; vẫn tính là "việc có giờ" (1 việc một lúc, không nghỉ khi đang chạy). Bài trên lớp không có "Làm thêm". `TaskView` thêm `todayMinutes`, `sessions`, `extra` (chỉ để hiển thị).
 - *Chốt 17/10/2026 (S2c, `computeDayState` diễn giải 17–18):* **mọi** `homework_items` chưa xong, chưa `archived_at` đều trả về, với `group`: `due` (`due_date ≤ localDate + homework_lookahead_days`, bắt buộc từng bài) hoặc `upcoming` (không bắt buộc từng bài). Ngày không có bài `due` nào (kể cả đã xong hôm nay) → Phần 1 thêm `pick.needed = min(homework_min_upcoming, số bài upcoming)` "chỗ", lấp bằng bài upcoming xong hôm nay. `early` = xong vào ngày ≤ `due_date − 2`; `earlyThisWeek` đếm từ thứ Hai — chỉ hiển thị, không đổi trạng thái.
@@ -173,7 +182,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 | `POST /api/tasks/start` | con | Tạo `task_run` (R1: cả hai phần mở; chặn khi **đang nghỉ**; chặn nếu đã có run mở cho việc đó; 1 việc có giờ tối thiểu một lúc). R8a: việc bổ sung / kỹ năng đã xong → tạo lượt **làm thêm** (bấm lại khi đang chạy → trả lượt đang chạy); bài trên lớp đã xong → 409 |
 | `POST /api/tasks/finish` | con | Kiểm `now − started_at ≥ min_minutes` (template) → nếu thiếu trả **409**. Homework: cần ≥ 1 `proof_path` → set `homework_items.done_at`. Cập nhật mốc phần. Chặn khi **đang nghỉ** (R1). R8a: lượt làm thêm xong lúc nào cũng được (không kiểm tối thiểu) |
 | `POST /api/tasks/proof` | con | Ghi đường dẫn ảnh đã tải lên Storage vào `task_run`. Chặn khi **đang nghỉ** (R1; cả "Nhờ bố mẹ xem" `confirm-request`) |
-| `POST /api/day/break` | con | `start` (khi `break.canStart`, R1); `end` (chỉ ở BREAK — nút "Học tiếp", ghi `break_ended_at`). `skip` bỏ ở R1 (trả 400) |
+| `POST /api/day/break` | con | *(R8b)* `start` (khi `break.canStart`): máy chủ tính lại rồi thêm 1 dòng `day_breaks` với `planned_minutes` = ngân hàng, `started_at = now`; `end` ("Học tiếp"): `ended_at = now` cho các dòng hôm nay chưa có `ended_at` (kể cả lần nghỉ cũ `break_ended_at` nếu còn). Cả hai **idempotent**: bấm "Nghỉ" khi đang nghỉ / "Học tiếp" khi không nghỉ → 200, không ghi gì. Trước khi 0014 chạy: luật cũ trên `day_sessions.break_*`; nếu bảng mất giữa chừng → 503 có câu giải thích. `skip` bỏ ở R1 (trả 400) |
 | `POST /api/day/free` | con | Ngày không có việc nào (FREE_READY): ghi `part1_done_at` + `part2_done_at` + `free_started_at` trong 1 câu lệnh (R1, chốt 07/11/2026) |
 | `GET /api/week/days` | con | R2 "Tuần của con": 7 ngày T2–CN, mỗi ngày Cảm xúc (lượt ghé Góc bình yên **cuối cùng** của ngày: vùng + từ, chỉ khi Góc bình yên bật), Học tập / Kỹ năng (mốc phần), Vui chơi (`free_started_at`). **Chỉ phiên của con** (bố mẹ 403): cảm xúc không bao giờ nằm trong `DayState` / `todayView` / tổng kết tuần mà trang bố mẹ dùng lại (chốt 07/11/2026) |
 | `GET /api/week/days?week=YYYY-MM-DD` | con | R5 Truyện của Nguyên: đọc một tuần cũ cho kệ truyện. `week` phải là **thứ Hai** (sai → 400), từ tuần có bản ghi đầu tiên (`day_sessions` / `by_checkins`) đến tuần này (khác → 404). Mọi câu trả lời thêm `volume` (Tập N = số tuần từ tuần bản ghi đầu + 1) và `shelf` (tuần trước có bản ghi, mới nhất trước, tối đa 12). **Chỉ phiên của con** (bố mẹ 403), `no-store` |
