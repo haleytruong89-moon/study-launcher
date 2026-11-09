@@ -146,7 +146,7 @@ test("R8b break bank: 50' of focus → “nghỉ được 10'” + “Nghỉ 10'
     await db.from("day_breaks").update({ started_at: new Date(Date.now() - 3 * 60_000).toISOString() }).eq("id", rows?.[0]?.id ?? "");
     await page.reload();
     await status.getByRole("button", { name: "Học tiếp" }).click();
-    await expect(status).toContainText("nghỉ được 7'");
+    await expect(status).toContainText("Con còn 7' nghỉ để dành");
     await expect(status.getByRole("button", { name: "Nghỉ 7'" })).toBeVisible();
     const after = await todayState(page);
     expect(after.open).toBe(false);

@@ -153,16 +153,17 @@ export function breakLine(state: DayState, nowMs: number): { text: string; hint:
   if (b.bankMinutes >= MIN_BREAK_MINUTES) {
     const busy = !b.canStart && runningTimedTask(state) !== null;
     return {
-      text: `Con đã tập trung ${b.blockFocusMinutes}' · nghỉ được ${b.bankMinutes}'`,
+      // Right after an early "Học tiếp" the block is 0: say the minutes were kept, not "0'".
+      text: b.blockFocusMinutes > 0 ? `Con đã tập trung ${b.blockFocusMinutes}' · nghỉ được ${b.bankMinutes}'` : `Con còn ${b.bankMinutes}' nghỉ để dành`,
       hint: busy
         ? "Bấm Xong việc đang làm rồi nghỉ nhé"
-        : next
+        : next && next.minutes > b.bankMinutes
           ? `Học thêm ${next.atFocus - b.blockFocusMinutes}' nữa (không nghỉ) để được nghỉ ${next.minutes}'`
           : null,
       button: b.canStart ? `Nghỉ ${b.bankMinutes}'` : null,
     };
   }
-  if (!next) return null;
+  if (!next || next.minutes <= 0) return null;
   const goal = `Tập trung đủ ${next.atFocus}' để được nghỉ ${next.minutes}'`;
   return { text: b.blockFocusMinutes > 0 ? `Con đã tập trung ${b.blockFocusMinutes}' · ${goal[0]?.toLowerCase()}${goal.slice(1)}` : goal, hint: null, button: null };
 }

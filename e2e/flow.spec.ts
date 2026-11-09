@@ -435,6 +435,10 @@ test("S1 children: a child cannot rename itself or reset any password", async ({
 // ---------------------------------------------------------------------------
 
 test("S2b today: a full day from Part 1 to free time, with the server enforcing every rule", async ({ page }) => {
+  // R8b: the run below is backdated 51 minutes; between 00:00 and 00:51 VN it would start
+  // yesterday and earn no break, so skip that hour (same as e2e/r8b.spec.ts).
+  const vnHour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+  test.skip(vnHour < 1, "a 51-minute-old run would start yesterday in Vietnam");
   const db = admin();
   const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
   const childId = kid?.id ?? "";
@@ -601,7 +605,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   expect(duringBreak).toBe(409);
   await banner.getByRole("button", { name: "Học tiếp" }).click();
   await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
-  await expect(banner).toContainText(/nghỉ được (9|10)'/); // "Học tiếp" at once: the minutes stay in the bank
+  await expect(banner).toContainText(/Con còn (9|10)' nghỉ để dành/); // "Học tiếp" at once: the minutes stay in the bank
   await work.getByRole("button", { name: "Bắt đầu" }).click();
   await page.getByRole("dialog", { name: "Mục tiêu nhỏ: Đọc sách e2e" }).getByRole("button", { name: "Để sau" }).click();
   await work.getByRole("button", { name: "Xong", exact: true }).click(); // R7a: no minimum, so Xong is right in the panel

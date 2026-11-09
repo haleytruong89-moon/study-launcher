@@ -446,6 +446,15 @@ describe("R8b break bank wording (minutes only, tier values from the server)", (
     expect(statusPill(on, vn("15:57:30").getTime()).label).toBe("Giờ nghỉ · còn 8 phút");
   });
 
+  it("right after an early “Học tiếp”: the kept minutes, not “tập trung 0'”", () => {
+    const s = computeDayState(day({ runs: [ex("15:00", "15:55")], breaks: [brk("15:55", 10, "15:57")] }), vn("15:57:30"));
+    expect(breakLine(s, vn("15:57:30").getTime())).toEqual({
+      text: "Con còn 8' nghỉ để dành",
+      hint: "Học thêm 45' nữa (không nghỉ) để được nghỉ 18'",
+      button: "Nghỉ 8'",
+    });
+  });
+
   it("a timed task running: no button, ask to press Xong first", () => {
     const s = computeDayState(day({ runs: [ex("15:00", "15:55"), run(RUN_SK, { source: "template", ref: SKILL, startedAt: at("15:56") })] }), vn("16:00"));
     expect(breakLine(s, vn("16:00").getTime())).toMatchObject({ button: null, hint: "Bấm Xong việc đang làm rồi nghỉ nhé" });
