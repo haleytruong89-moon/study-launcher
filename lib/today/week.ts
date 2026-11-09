@@ -5,6 +5,7 @@
  */
 import { isDayOk, type DaySessionInput, type DayState, type TaskView } from "@/lib/dayState";
 import { addDays, atLocalTime, isoWeekday, localDate, weekStart } from "@/lib/time";
+import { runningItems } from "@/lib/today/rules";
 
 // ---------------------------------------------------------------------------
 // Icon (a fixed set; no photos of the child are ever stored)
@@ -49,7 +50,8 @@ export function cleanPlan(state: DayState, keys: string[]): string[] | null {
 export function nextFromPlan(state: DayState, plan: string[] | null): TaskView | null {
   if (!plan || plan.length === 0) return null;
   const items = plannable(state);
-  const running = items.find((i) => i.state === "running");
+  // R8a: a running "Làm thêm" run counts as running.
+  const running = runningItems(state).find((i) => !i.placeholder);
   if (running) return running;
   const byKey = new Map(items.map((i) => [i.key, i]));
   for (const k of plan) {

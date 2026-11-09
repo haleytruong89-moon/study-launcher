@@ -31,9 +31,9 @@
  *     free time has not started,
  *     break_minutes > 0, the laptop is in a locked study status (LOCK_P1 / LOCK_P2 /
  *     FREE_READY; not a parent lock, trust, sick or a parent open) and no timed task is
- *     running (so the 10' are never counted as task minutes). BREAK (row 7) is open until
- *     break_started_at + break_minutes or "Học tiếp" (break_ended_at). A legacy
- *     break_skipped = true means the break of that day is used.
+ *     running, a "Làm thêm" run included (R8a), so the 10' are never counted as task
+ *     minutes. BREAK (row 7) is open until break_started_at + break_minutes or "Học tiếp"
+ *     (break_ended_at). A legacy break_skipped = true means the break of that day is used.
  *  3. OPEN_TRUST and OPEN_SICK: openUntil = next 00:00. Every locked status
  *     (LOCK_*): openUntil = null.
  *  4. Overrides (parent decision 14/10/2026): the NEWEST override of today (by
@@ -69,8 +69,17 @@
  *     today with done_at; the minimum minutes are enforced by the finish route and
  *     NOT re-checked here (so a settings change mid-day never re-locks a finished
  *     task).
+ *     R8a "Làm thêm" (parent decision 08/11/2026): a done template may be started again. Its
+ *     REQUIRED run is the earliest run of today with done_at; a run started at or after that
+ *     done_at is an EXTRA run. Extra runs never change completion, the part milestones, free
+ *     time or any lock, have no minimum, and the running one (latest started, not finished)
+ *     is `extra`. It still counts as a timed task: one timed task at a time, and no break while
+ *     it runs (interpretation 2). An unfinished run that started before the required run was
+ *     done (a double start) is ignored, as before. `todayMinutes` / `sessions` count the
+ *     required run, the finished extra runs and the running extra (server clock, a running
+ *     run up to now, the sum floored to whole minutes). Display only.
  * 11. Only today's task_runs are used; an unfinished run from a previous day is
- *     ignored (the child starts again).
+ *     ignored (the child starts again). This includes an unfinished extra run.
  * 12. Placeholder app slots are shown with `placeholder: true` and never counted in
  *     EITHER part (a placeholder task cannot be done, so counting it would lock the
  *     day forever). A slot's `active` flag does not change this; only the
@@ -267,6 +276,15 @@ export interface TaskView {
   /** Homework finished >= 2 days before its due date (interpretation 18). */
   early: boolean;
   state: "todo" | "running" | "done" | "placeholder";
+  /**
+   * R8a (interpretation 10): minutes worked on this task today (required run + extra runs, a
+   * running run up to now, server clock, floored). Display only.
+   */
+  todayMinutes: number;
+  /** R8a: today's counted runs that have started (required + extra). Display only. */
+  sessions: number;
+  /** R8a: the running "Làm thêm" run of a done template, else null. Never changes `state`. */
+  extra: { runId: string; startedAt: string } | null;
 }
 
 /** Interpretation 17: the "choose upcoming homework" quota of a day with no due homework. */
@@ -400,6 +418,48 @@ function pickRun(runs: TaskRunInput[]): TaskRunInput | null {
   return best;
 }
 
+/** R8a: the runs of one template today (interpretation 10). */
+interface TemplateRuns {
+  /** The required run: the earliest finished one, else the latest started (as pickRun). */
+  run: TaskRunInput | null;
+  /** The running extra run of a done template. */
+  extra: TaskRunInput | null;
+  /** Runs counted in todayMinutes / sessions. */
+  counted: TaskRunInput[];
+}
+
+function templateRuns(runs: TaskRunInput[]): TemplateRuns {
+  let required: TaskRunInput | null = null;
+  let requiredDone = Infinity;
+  for (const r of runs) {
+    toMsOrNull(r.startedAt, "task_runs.started_at"); // validate every row (malformed input throws)
+    const done = toMsOrNull(r.doneAt, "task_runs.done_at");
+    if (done !== null && (done < requiredDone || (done === requiredDone && required !== null && r.id < required.id))) {
+      required = r;
+      requiredDone = done;
+    }
+  }
+  if (required === null) {
+    const run = pickRun(runs);
+    return { run, extra: null, counted: run?.startedAt ? [run] : [] };
+  }
+  const later = runs.filter((r) => r !== required && r.startedAt !== null && toMs(r.startedAt, "task_runs.started_at") >= requiredDone);
+  const finished = later.filter((r) => r.doneAt !== null);
+  const extra = pickRun(later.filter((r) => r.doneAt === null));
+  return { run: required, extra, counted: [required, ...finished, ...(extra ? [extra] : [])].filter((r) => r.startedAt !== null) };
+}
+
+/** R8a: whole minutes worked in these runs (a running run counts up to now). */
+function workedMinutes(runs: TaskRunInput[], nowMs: number, fallbackDoneAt: string | null = null): number {
+  let ms = 0;
+  for (const r of runs) {
+    if (r.startedAt === null) continue;
+    const end = toMsOrNull(r.doneAt ?? fallbackDoneAt, "task_runs.done_at") ?? nowMs;
+    ms += Math.max(0, end - toMs(r.startedAt, "task_runs.started_at"));
+  }
+  return Math.floor(ms / MINUTE_MS);
+}
+
 function taskState(placeholder: boolean, run: TaskRunInput | null, doneAt: string | null): TaskView["state"] {
   if (placeholder) return "placeholder";
   if (doneAt !== null) return "done";
@@ -424,6 +484,7 @@ function templateViews(
   weekday: number,
   disabled: Set<string>,
   runsToday: TaskRunInput[],
+  nowMs: number,
 ): TaskView[] {
   const slots = new Map(input.appSlots.map((s) => [s.id, s]));
   const fallbackMin = part === "extra" ? input.settings.extraMinMinutes : input.settings.skillMinMinutes;
@@ -433,9 +494,10 @@ function templateViews(
     .map((t) => {
       const slot = t.appSlotId !== null ? slots.get(t.appSlotId) : undefined;
       const placeholder = slot?.kind === "placeholder";
-      const run = placeholder
-        ? null
-        : pickRun(runsToday.filter((r) => r.source === "template" && r.templateId === t.id));
+      const runs = placeholder
+        ? { run: null, extra: null, counted: [] }
+        : templateRuns(runsToday.filter((r) => r.source === "template" && r.templateId === t.id));
+      const run = runs.run;
       const minMinutes = t.minMinutes ?? fallbackMin;
       const startedAt = run?.startedAt ?? null;
       const doneAt = run?.doneAt ?? null;
@@ -463,6 +525,9 @@ function templateViews(
         group: null,
         early: false,
         state: taskState(placeholder, run, doneAt),
+        todayMinutes: workedMinutes(runs.counted, nowMs),
+        sessions: runs.counted.length,
+        extra: runs.extra?.startedAt ? { runId: runs.extra.id, startedAt: runs.extra.startedAt } : null,
       } satisfies TaskView;
     });
 }
@@ -473,7 +538,7 @@ function isEarly(h: HomeworkItemInput): boolean {
   return localDate(new Date(toMs(h.doneAt, "homework_items.done_at"))) <= addDays(h.dueDate, -2);
 }
 
-function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[]): TaskView[] {
+function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[], nowMs: number): TaskView[] {
   const cutoff = addDays(today, input.settings.homeworkLookaheadDays);
   return input.homework
     .filter((h) => {
@@ -515,6 +580,9 @@ function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[]
         group: h.dueDate > cutoff ? "upcoming" : "due",
         early: isEarly(h),
         state: taskState(false, run, h.doneAt),
+        todayMinutes: run ? workedMinutes([run], nowMs, h.doneAt) : 0,
+        sessions: run?.startedAt ? 1 : 0,
+        extra: null,
       } satisfies TaskView;
     });
 }
@@ -609,10 +677,10 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const disabled = new Set(session.disabledTemplateIds);
 
   // --- Part 1: due homework + extra templates of today + upcoming homework (17) ---
-  const homework = homeworkViews(input, today, runsToday);
+  const homework = homeworkViews(input, today, runsToday, nowMs);
   const part1Items = [
     ...homework.filter((i) => i.group === "due"),
-    ...templateViews(input, "extra", weekday, disabled, runsToday),
+    ...templateViews(input, "extra", weekday, disabled, runsToday, nowMs),
     ...homework.filter((i) => i.group === "upcoming"),
   ];
   const pick = pickQuota(part1Items, settings.homeworkMinUpcoming);
@@ -621,7 +689,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const part1Empty = part1Count.total === 0;
 
   // --- Part 2: skill templates of today. Open in parallel with Part 1 (R1, 07/11/2026) ---
-  const part2Items = templateViews(input, "skill", weekday, disabled, runsToday);
+  const part2Items = templateViews(input, "skill", weekday, disabled, runsToday, nowMs);
   const part2Count = countPart(part2Items);
   const part2Empty = part2Count.total === 0;
 
@@ -721,8 +789,9 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   if (openUntilMs !== null) openUntilMs = Math.min(openUntilMs, midnightMs);
   const open = openUntilMs !== null;
 
+  // R8a: a running "Làm thêm" run counts as timed too (no break while it runs).
   const timedRunning = [...part1Items, ...part2Items].some(
-    (i) => i.state === "running" && i.source === "template" && i.minMinutes > 0,
+    (i) => (i.state === "running" && i.source === "template" && i.minMinutes > 0) || i.extra !== null,
   );
   const breakTaken = session.breakSkipped || breakStartMs !== null;
   const lockedStatus = status === "LOCK_P1" || status === "LOCK_P2" || status === "FREE_READY";

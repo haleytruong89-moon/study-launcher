@@ -8,7 +8,8 @@ const bodySchema = z.object({ runId: z.uuid() });
 
 /**
  * Child presses "Xong". Refused with 409 (nothing recorded) when the minimum time has not
- * passed on the SERVER clock, or when homework has no proof photo (SPEC 2.6).
+ * passed on the SERVER clock, or when homework has no proof photo (SPEC 2.6). A "Làm thêm" run
+ * (R8a) has no minimum and never changes whether the task is done.
  */
 export async function POST(request: Request) {
   const guard = await requireChild();

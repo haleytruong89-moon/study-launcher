@@ -17,6 +17,15 @@ export function minutesLabel(ms: number): string {
   return `${Math.floor(m / 60)} giờ ${String(m % 60).padStart(2, "0")} phút`;
 }
 
+/**
+ * R8a: "Hôm nay: 1 giờ 30 phút · 2 lần" under a done task (minutes only, same style as the
+ * timers). Display only: no "+1", no counters of extra sessions beyond this plain total.
+ */
+export function todayLine(item: Pick<TaskView, "todayMinutes" | "sessions">): string {
+  const time = item.todayMinutes < 1 ? "dưới 1 phút" : minutesLabel(item.todayMinutes * MIN);
+  return `Hôm nay: ${time} · ${item.sessions} lần`;
+}
+
 /** Whole minutes left, rounded up ("còn khoảng 3 phút"), never below 0. */
 export function remainingMinutes(ms: number): number {
   return ms <= 0 ? 0 : Math.ceil(ms / MIN);

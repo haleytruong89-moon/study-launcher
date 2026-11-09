@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Voice } from "@/lib/binhYen/catalog";
 import type { TaskView } from "@/lib/dayState";
 import { elapsedMs, focusLine, isLongRunning, isTimed, minutesLabel, remainingMinutes } from "@/lib/today/focus";
+import { isExtraRun } from "@/lib/today/rules";
 import { taskProgress } from "@/lib/today/view";
 import { BodyPortal, escFrom, returnFocus } from "./portal";
 import { FileLinks, FinishButton, canFinishWithPhotos, isAsked, whereLine, type TaskCtx } from "./today-parts";
@@ -84,6 +85,8 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
   const snoozeUntil = snoozedNow ?? stored;
 
   const elapsed = elapsedMs(item, ctx.nowMs);
+  // R8a "Làm thêm": no minimum (minMinutes 0), so no ring progress and Xong at once.
+  const extra = isExtraRun(item);
   const timed = isTimed(item);
   const remaining = item.canFinishAt ? Date.parse(item.canFinishAt) - ctx.nowMs : 0;
   const ready = !item.requiresProof && remaining <= 0;
@@ -94,11 +97,11 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
   const kind =
     item.source === "homework"
       ? "Bài trên lớp · chụp ảnh khi xong"
-      : [item.part === 1 ? "Bài bổ sung" : "Kỹ năng", whereLine(item), item.minMinutes > 0 ? `ít nhất ${item.minMinutes} phút` : ""].filter(Boolean).join(" · ");
+      : [extra ? "Làm thêm" : "", item.part === 1 ? "Bài bổ sung" : "Kỹ năng", whereLine(item), item.minMinutes > 0 ? `ít nhất ${item.minMinutes} phút` : ""].filter(Boolean).join(" · ");
   const under = item.requiresProof
     ? "Không cần đủ giờ. Làm xong trong vở thì chụp ảnh nộp."
     : !timed
-      ? "Không giới hạn thời gian. Làm xong thì bấm Xong."
+      ? extra ? "Không bắt buộc — làm bao lâu cũng được. Xong thì bấm Xong." : "Không giới hạn thời gian. Làm xong thì bấm Xong."
       : ready
         ? `Đủ ${item.minMinutes} phút rồi ✓ — làm xong thì bấm Xong`
         : `Còn khoảng ${remainingMinutes(remaining)} phút nữa là bấm Xong được`;

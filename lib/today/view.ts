@@ -5,6 +5,7 @@
 import type { DayState, TaskView, WeekResult } from "@/lib/dayState";
 import { addDays, isoWeekday } from "@/lib/time";
 import { minutesLabel } from "@/lib/today/focus";
+import { isExtraRun, runningItems } from "@/lib/today/rules";
 
 export interface Banner {
   title: string;
@@ -186,6 +187,7 @@ export function taskMeta(item: TaskView, nowMs: number, today = ""): string {
   if (item.state === "running" && item.startedAt) {
     // R7a: minutes only, never a ticking seconds clock.
     const elapsed = minutesLabel(nowMs - new Date(item.startedAt).getTime());
+    if (isExtraRun(item)) return `Đang làm thêm · ${elapsed} — không bắt buộc`;
     if (item.requiresProof) return `Đang làm · ${elapsed} — làm xong thì chụp ảnh bài`;
     if (item.canFinishAt && nowMs < new Date(item.canFinishAt).getTime())
       return nowMs - new Date(item.startedAt).getTime() < 60_000 ? `Đang làm · vừa bắt đầu · ít nhất ${item.minMinutes} phút` : `Đang làm · ${elapsed} / ${item.minMinutes} phút`;
@@ -216,7 +218,8 @@ export function taskProgress(item: TaskView, nowMs: number): number {
  * suggest. Display only: the server still decides what may start.
  */
 export function nextTask(state: DayState): TaskView | null {
-  const running = [...state.part1.items, ...state.part2.items].find((i) => i.state === "running");
+  // R8a: a running "Làm thêm" run counts as running (shown with its Xong).
+  const running = runningItems(state)[0];
   if (running) return running;
   return nextPart1(state, null) ?? state.part2.items.find((i) => i.state === "todo") ?? null;
 }
