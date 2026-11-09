@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
-import { decideBreak, decideConfirmRequest, decideFinish, decideFreeStart, decidePass, decideProof, decideStart, isProofPath, ON_BREAK_TEXT, passOffered, runningTimedTask } from "@/lib/today/rules";
+import { decideBreak, decideConfirmRequest, decideFinish, decideFreeStart, decidePass, decideProof, decideStart, extraRunView, isExtraRun, isProofPath, ON_BREAK_TEXT, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
 import { bannerFor, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, groupLabel, leftCount, longDate, nextPart1, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
 
 // Wednesday 2026-10-14, Vietnam time.
@@ -114,14 +114,14 @@ describe("decideStart", () => {
     expect(decideStart(computeDayState(thursdayOnly, vn("15:00")), "template", EXTRA)).toMatchObject({ ok: false, status: 404 });
   });
 
-  it("is idempotent for a running task and refuses a finished one", () => {
+  it("is idempotent for a running task; a finished template starts “Làm thêm” instead (R8a)", () => {
     const running = computeDayState(day({ runs: [run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00") })] }), vn("15:05"));
-    expect(decideStart(running, "template", EXTRA)).toMatchObject({ ok: true, value: { alreadyRunning: true } });
+    expect(decideStart(running, "template", EXTRA)).toMatchObject({ ok: true, value: { alreadyRunning: true, extra: false } });
     const done = computeDayState(
       day({ runs: [run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00"), doneAt: at("15:25") })] }),
       vn("15:30"),
     );
-    expect(decideStart(done, "template", EXTRA)).toMatchObject({ ok: false, status: 409 });
+    expect(decideStart(done, "template", EXTRA)).toMatchObject({ ok: true, value: { alreadyRunning: false, extra: true } });
   });
 });
 
@@ -156,6 +156,99 @@ describe("one timed task at a time (decision 15/10/2026)", () => {
     );
     expect(runningTimedTask(s)).toBeNull();
     expect(decideStart(s, "template", EXTRA2)).toMatchObject({ ok: true });
+  });
+});
+
+describe("R8a “Làm thêm” (parent decision 08/11/2026)", () => {
+  const RUN_X = "88888888-8888-4888-8888-888888888881";
+  const RUN_X2 = "88888888-8888-4888-8888-888888888882";
+  const exDone = run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at("15:00"), doneAt: at("15:25") });
+  const extraRun = run(RUN_X, { source: "template", ref: EXTRA, startedAt: at("15:40") });
+
+  it("a second start while the extra run is running returns it (idempotent)", () => {
+    const s = computeDayState(day({ runs: [exDone, extraRun] }), vn("15:41"));
+    expect(decideStart(s, "template", EXTRA)).toMatchObject({ ok: true, value: { alreadyRunning: true, extra: true } });
+  });
+
+  it("start is refused for homework that is done (no Làm thêm for homework)", () => {
+    const s = computeDayState(
+      day({
+        homework: [{ ...day().homework[0]!, doneAt: at("15:10") }],
+        runs: [run(RUN_HW, { source: "homework", ref: HW, startedAt: at("15:00"), doneAt: at("15:10"), proofs: ["p.jpg"] })],
+      }),
+      vn("15:20"),
+    );
+    const d = decideStart(s, "homework", HW);
+    expect(d).toMatchObject({ ok: false, status: 409 });
+    if (!d.ok) expect(d.error).toBe("Việc này đã xong rồi.");
+    expect(s.part1.items.find((i) => i.id === HW)?.extra).toBeNull();
+  });
+
+  it("finishing an extra run has no minimum (Xong right after the start), and the task stays done", () => {
+    const now = vn("15:40:05");
+    const s = computeDayState(day({ runs: [exDone, extraRun] }), now);
+    const d = decideFinish(s, RUN_X, now);
+    expect(d).toMatchObject({ ok: true, value: { item: { runId: RUN_X, source: "template", id: EXTRA, state: "running" } } });
+    // The required run is still the done one: finishing it again is refused.
+    expect(decideFinish(s, RUN_EX, now)).toMatchObject({ ok: false, status: 409 });
+    expect(s.part1.items.find((i) => i.id === EXTRA)).toMatchObject({ state: "done", runId: RUN_EX, doneAt: at("15:25") });
+  });
+
+  it("an extra run counts as timed: other timed tasks wait, and it waits for them", () => {
+    const s = computeDayState(day({ runs: [exDone, extraRun] }), vn("15:45"));
+    const timed = runningTimedTask(s);
+    expect(timed).toMatchObject({ id: EXTRA, runId: RUN_X, state: "running" });
+    expect(timed && isExtraRun(timed)).toBe(true);
+    const d = decideStart(s, "template", SKILL);
+    expect(d).toMatchObject({ ok: false, status: 409 });
+    if (!d.ok) expect(d.error).toContain("Toán bổ sung");
+    // Homework (no minimum) can still start meanwhile, as before.
+    expect(decideStart(s, "homework", HW)).toMatchObject({ ok: true });
+
+    const skillRunning = computeDayState(day({ runs: [exDone, run(RUN_SK, { source: "template", ref: SKILL, startedAt: at("15:30") })] }), vn("15:45"));
+    const e = decideStart(skillRunning, "template", EXTRA);
+    expect(e).toMatchObject({ ok: false, status: 409 });
+    if (!e.ok) expect(e.error).toContain("Đọc sách");
+  });
+
+  it("an extra run of a no-minimum task still counts as timed (one at a time)", () => {
+    const noMin = day({ templates: day().templates.map((t) => (t.id === EXTRA ? { ...t, minMinutes: 0 } : t)), runs: [exDone, extraRun] });
+    const s = computeDayState(noMin, vn("15:45"));
+    expect(runningTimedTask(s)?.runId).toBe(RUN_X);
+    expect(decideStart(s, "template", SKILL)).toMatchObject({ ok: false, status: 409 });
+  });
+
+  it("no extra run during the break; no break while an extra run runs", () => {
+    const onBreak = day({ sessions: [session({ part1DoneAt: at("15:30"), breakStartedAt: at("15:35") })], runs: [exDone] });
+    expect(decideStart(computeDayState(onBreak, vn("15:40")), "template", EXTRA)).toMatchObject({ ok: false, status: 409, error: ON_BREAK_TEXT });
+
+    const p1 = day({ homework: [], sessions: [session({ part1DoneAt: at("15:30") })], runs: [exDone, extraRun] });
+    const s = computeDayState(p1, vn("15:45"));
+    expect(s.break.canStart).toBe(false);
+    const d = decideBreak(s, "start");
+    expect(d).toMatchObject({ ok: false, status: 409 });
+    if (!d.ok) expect(d.error).toContain("Xong việc đang làm");
+  });
+
+  it("runningItems lists the extra run as a running view; extraRunView is null without one", () => {
+    const s = computeDayState(day({ runs: [exDone, extraRun, run(RUN_HW, { source: "homework", ref: HW, startedAt: at("15:41") })] }), vn("15:45"));
+    expect(runningItems(s).map((i) => [i.id, i.runId])).toEqual([
+      [HW, RUN_HW],
+      [EXTRA, RUN_X],
+    ]);
+    const view = runningItems(s)[1]!;
+    expect(view).toMatchObject({ minMinutes: 0, canFinishAt: at("15:40"), startedAt: at("15:40"), doneAt: null, extra: { runId: RUN_X } });
+    const plain = computeDayState(day({ runs: [exDone] }), vn("15:45"));
+    expect(plain.part1.items.map(extraRunView).every((v) => v === null)).toBe(true);
+    expect(runningItems(plain)).toEqual([]);
+  });
+
+  it("after the extra run is finished, another one can start (sessions grow)", () => {
+    const finished = run(RUN_X, { source: "template", ref: EXTRA, startedAt: at("15:40"), doneAt: at("15:50") });
+    const s = computeDayState(day({ runs: [exDone, finished] }), vn("16:00"));
+    expect(decideStart(s, "template", EXTRA)).toMatchObject({ ok: true, value: { alreadyRunning: false, extra: true } });
+    const again = computeDayState(day({ runs: [exDone, finished, run(RUN_X2, { source: "template", ref: EXTRA, startedAt: at("16:00") })] }), vn("16:05"));
+    expect(again.part1.items.find((i) => i.id === EXTRA)).toMatchObject({ state: "done", sessions: 3, todayMinutes: 40, extra: { runId: RUN_X2 } });
   });
 });
 
