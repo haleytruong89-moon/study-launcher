@@ -3,7 +3,7 @@
 -- is added to free time. The rules live in lib/dayState.ts (interpretation 19); this file only
 -- stores the breaks and the two family rules.
 --
--- ADDITIVE and idempotent: one new table, two new family_settings columns, constraints, grants,
+-- ADDITIVE and idempotent: one new table, three new family_settings columns, constraints, grants,
 -- policies. Nothing is dropped, no existing row is changed. family_settings.break_minutes and the
 -- day_sessions.break_* columns stay (legacy, read only for days in flight).
 --
@@ -50,13 +50,15 @@ create policy parent_select on public.day_breaks
   for select to authenticated
   using (public.auth_role() = 'parent' and family_id = public.auth_family_id());
 
--- The family rules (never hard-coded): [[focusMinutes, breakMinutes], ...] ascending, and the
--- number of breaks per day. The server validates the tiers; a malformed value falls back to the
+-- The family rules (never hard-coded): [[focusMinutes, breakMinutes], ...] ascending, the
+-- number of breaks per day, and (parent decision 09/11/2026) the most focus one finished run adds. The server validates the tiers; a malformed value falls back to the
 -- defaults in lib/dayState.ts.
 alter table public.family_settings
   add column if not exists break_tiers jsonb not null default '[[45,10],[90,30],[120,45],[180,60]]'::jsonb;
 alter table public.family_settings
   add column if not exists break_max_per_day integer not null default 6;
+alter table public.family_settings
+  add column if not exists break_run_cap_minutes integer not null default 180;
 
 do $$
 begin
@@ -67,5 +69,9 @@ begin
   if not exists (select 1 from pg_constraint where conname = 'family_settings_break_max_per_day_range' and conrelid = 'public.family_settings'::regclass) then
     alter table public.family_settings add constraint family_settings_break_max_per_day_range
       check (break_max_per_day between 0 and 12);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'family_settings_break_run_cap_minutes_range' and conrelid = 'public.family_settings'::regclass) then
+    alter table public.family_settings add constraint family_settings_break_run_cap_minutes_range
+      check (break_run_cap_minutes between 30 and 600);
   end if;
 end $$;

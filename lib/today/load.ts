@@ -91,9 +91,14 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
   else settingsRow.homework_min_upcoming = minUpcoming.data?.homework_min_upcoming ?? DEFAULT_MIN_UPCOMING;
   // R8b (0014): the break bank settings, read on their own like 0002 above. Missing -> the old
   // single break (`breaks: null` below); any other error throws (fail-closed).
-  const bankSettings = (await db.from("family_settings").select("break_tiers, break_max_per_day").eq("family_id", familyId).maybeSingle()) as Res<{
+  const bankSettings = (await db
+    .from("family_settings")
+    .select("break_tiers, break_max_per_day, break_run_cap_minutes")
+    .eq("family_id", familyId)
+    .maybeSingle()) as Res<{
     break_tiers: unknown;
     break_max_per_day: number;
+    break_run_cap_minutes: number;
   }>;
   if (bankSettings.error && !notMigratedYet(bankSettings.error)) throw new Error(`loadDay: family_settings (0014): ${bankSettings.error.message}`);
   const settings: FamilySettingsInput = {
@@ -109,7 +114,11 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
     homeworkMinUpcoming: settingsRow.homework_min_upcoming ?? DEFAULT_MIN_UPCOMING,
     ...(bankSettings.error || !bankSettings.data
       ? {}
-      : { breakTiers: bankSettings.data.break_tiers, breakMaxPerDay: bankSettings.data.break_max_per_day }),
+      : {
+          breakTiers: bankSettings.data.break_tiers,
+          breakMaxPerDay: bankSettings.data.break_max_per_day,
+          breakRunCapMinutes: bankSettings.data.break_run_cap_minutes,
+        }),
   };
   const historyFrom = addDays(weekStart(today), -7 * settings.trustUpWeeks);
 

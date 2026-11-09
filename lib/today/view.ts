@@ -165,7 +165,9 @@ export function breakLine(state: DayState, nowMs: number): { text: string; hint:
   }
   if (!next || next.minutes <= 0) return null;
   const goal = `Tập trung đủ ${next.atFocus}' để được nghỉ ${next.minutes}'`;
-  return { text: b.blockFocusMinutes > 0 ? `Con đã tập trung ${b.blockFocusMinutes}' · ${goal[0]?.toLowerCase()}${goal.slice(1)}` : goal, hint: null, button: null };
+  // Parent 09/11/2026: a run adds focus only once it is finished, so say so while one runs.
+  const hint = runningTimedTask(state) !== null ? "Bấm Xong để tính giờ tập trung" : null;
+  return { text: b.blockFocusMinutes > 0 ? `Con đã tập trung ${b.blockFocusMinutes}' · ${goal[0]?.toLowerCase()}${goal.slice(1)}` : goal, hint, button: null };
 }
 
 /** R8b: "Giờ tự do 45' + 30' nghỉ chưa dùng = 75'" — only when unused break minutes are added. */

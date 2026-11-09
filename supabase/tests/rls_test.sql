@@ -1038,9 +1038,9 @@ insert into public.day_breaks (family_id, child_id, local_date, started_at, plan
   ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, now(), 10),
   ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c2', current_date, now(), 30),
   ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', current_date, now(), 45);
-select test_helpers.expect_count('family_settings break defaults (tiers + 6 per day)',
+select test_helpers.expect_count('family_settings break defaults (tiers + 6 per day + 180'' per run)',
   (select count(*) from public.family_settings
-     where break_tiers = '[[45,10],[90,30],[120,45],[180,60]]'::jsonb and break_max_per_day = 6), 2);
+     where break_tiers = '[[45,10],[90,30],[120,45],[180,60]]'::jsonb and break_max_per_day = 6 and break_run_cap_minutes = 180), 2);
 do $$
 begin
   begin
@@ -1064,6 +1064,11 @@ begin
     update public.family_settings set break_max_per_day = 13 where family_id = '10000000-0000-0000-0000-00000000000a';
     raise exception 'FAIL: break_max_per_day 13 stored';
   exception when check_violation then raise notice 'ok: break_max_per_day between 0 and 12';
+  end;
+  begin
+    update public.family_settings set break_run_cap_minutes = 29 where family_id = '10000000-0000-0000-0000-00000000000a';
+    raise exception 'FAIL: break_run_cap_minutes 29 stored';
+  exception when check_violation then raise notice 'ok: break_run_cap_minutes between 30 and 600';
   end;
 end $$;
 select test_helpers.expect_count('day_breaks has RLS on',
