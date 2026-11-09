@@ -357,12 +357,28 @@ describe("decideBreak (R8b break bank; the R1 rule before 0014)", () => {
     expect(decideBreak(computeDayState(locked, vn("16:05")), "start")).toMatchObject({ ok: false, error: "Bố mẹ đang khóa máy." });
   });
 
-  it("a break still running under a parent lock keeps tasks paused (no timer resumes inside the break)", () => {
+  it("R8b (09/11): a parent lock during a break ends it; tasks may start again, the rest is back in the bank", () => {
     const s = computeDayState(
       day({
         sessions: [session({ part1DoneAt: at("16:00"), breakStartedAt: at("16:01") })],
         overrides: [{ id: "o", localDate: TODAY, kind: "lock_until", until: at("16:20"), createdAt: at("16:02") }],
       }),
+      vn("16:05"),
+    );
+    expect(s.status).toBe("LOCK_OVERRIDE");
+    expect(s.break.state).not.toBe("running");
+    expect(decideStart(s, "template", SKILL)).toMatchObject({ ok: true });
+    expect(decideBreak(s, "end")).toEqual({ ok: true, value: { write: false } });
+  });
+
+  it("before 0014: a break still running under a parent lock keeps tasks paused (no timer resumes inside the break)", () => {
+    const s = computeDayState(
+      legacy(
+        day({
+          sessions: [session({ part1DoneAt: at("16:00"), breakStartedAt: at("16:01") })],
+          overrides: [{ id: "o", localDate: TODAY, kind: "lock_until", until: at("16:20"), createdAt: at("16:02") }],
+        }),
+      ),
       vn("16:05"),
     );
     expect(s.status).toBe("LOCK_OVERRIDE");
@@ -458,6 +474,11 @@ describe("R8b break bank wording (minutes only, tier values from the server)", (
   it("a timed task running: no button, ask to press Xong first", () => {
     const s = computeDayState(day({ runs: [ex("15:00", "15:55"), run(RUN_SK, { source: "template", ref: SKILL, startedAt: at("15:56") })] }), vn("16:00"));
     expect(breakLine(s, vn("16:00").getTime())).toMatchObject({ button: null, hint: "Bấm Xong việc đang làm rồi nghỉ nhé" });
+  });
+
+  it("a timed run running with bank < 5: it counts once finished (09/11)", () => {
+    const s = computeDayState(day({ runs: [ex("15:00", null)] }), vn("16:00"));
+    expect(breakLine(s, vn("16:00").getTime())).toEqual({ text: "Tập trung đủ 45' để được nghỉ 10'", hint: "Bấm Xong để tính giờ tập trung", button: null });
   });
 
   it("custom tiers come from family_settings", () => {

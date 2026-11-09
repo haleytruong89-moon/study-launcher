@@ -59,7 +59,7 @@ test("R8b break bank: 50' of focus → “nghỉ được 10'” + “Nghỉ 10'
     db.from("day_breaks").select("*").eq("child_id", childId).eq("local_date", today),
     db.from("overrides").select("*").eq("child_id", childId).eq("local_date", today),
     db.from("trust_state").select("*").eq("child_id", childId).maybeSingle(),
-    db.from("family_settings").select("break_tiers, break_max_per_day").eq("family_id", familyId).single(),
+    db.from("family_settings").select("break_tiers, break_max_per_day, break_run_cap_minutes").eq("family_id", familyId).single(),
   ]);
   expect(breaksBefore.error).toBeNull(); // migration 0014 is applied in CI
   const token = randomBytes(32).toString("base64url");
@@ -73,7 +73,7 @@ test("R8b break bank: 50' of focus → “nghỉ được 10'” + “Nghỉ 10'
     await db.from("overrides").delete().eq("child_id", childId).eq("local_date", today);
     // Lock mode, not changed today (a change today would make the earlier focus not count).
     if (trustBefore.data) await db.from("trust_state").update({ mode: "lock", since: trustBefore.data.created_at }).eq("child_id", childId);
-    await db.from("family_settings").update({ break_tiers: [[45, 10], [90, 30], [120, 45], [180, 60]], break_max_per_day: 6 }).eq("family_id", familyId);
+    await db.from("family_settings").update({ break_tiers: [[45, 10], [90, 30], [120, 45], [180, 60]], break_max_per_day: 6, break_run_cap_minutes: 180 }).eq("family_id", familyId);
     await db.from("day_sessions").upsert({ child_id: childId, family_id: familyId, local_date: today }, { onConflict: "child_id,local_date", ignoreDuplicates: true });
     await db
       .from("day_sessions")
