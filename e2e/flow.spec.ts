@@ -179,6 +179,12 @@ test("S1 settings: parent changes family rules and a bedtime; they persist and a
   await page.reload();
   await expect(page.getByLabel("Giờ tự do sau khi xong (phút)")).toHaveValue("40");
   await expect(page.getByLabel("Giờ ngủ của Hạnh Nguyên")).toHaveValue("21:00");
+  // R8b: "Nghỉ giữa giờ" shows the 4 tiers + breaks per day; the old "Nghỉ giữa 2 phần" is hidden.
+  const breaks = page.getByRole("group", { name: "Nghỉ giữa giờ" });
+  await expect(breaks.getByLabel("Bậc 1: phút tập trung")).toHaveValue("45");
+  await expect(breaks.getByLabel("Bậc 4: phút nghỉ")).toHaveValue("60");
+  await expect(breaks.getByLabel("Số lần nghỉ tối đa mỗi ngày")).toHaveValue("6");
+  await expect(page.getByLabel("Nghỉ giữa 2 phần (phút)")).toHaveCount(0);
 
   // Out-of-range values are refused by the server, not just the browser.
   const status = await page.evaluate(async () => {
@@ -193,9 +199,23 @@ test("S1 settings: parent changes family rules and a bedtime; they persist and a
     return r.status;
   });
   expect(status).toBe(400);
+  // R8b: break tiers must go up (validated by the server too).
+  const badTiers = await page.evaluate(async () => {
+    const r = await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        breakMinutes: 10, freeMinutes: 40, extraMinMinutes: 20, skillMinMinutes: 20, passesPerWeek: 1,
+        trustUpPct: 90, trustUpWeeks: 3, trustDownPct: 70, homeworkLookaheadDays: 1, photoRetentionDays: 120,
+        breakTiers: [[90, 30], [45, 10]], breakMaxPerDay: 6,
+      }),
+    });
+    return r.status;
+  });
+  expect(badTiers).toBe(400);
 
-  const { data: s } = await admin().from("family_settings").select("free_minutes, break_minutes").single();
-  expect(s).toEqual({ free_minutes: 40, break_minutes: 10 });
+  const { data: s } = await admin().from("family_settings").select("free_minutes, break_minutes, break_tiers, break_max_per_day").single();
+  expect(s).toEqual({ free_minutes: 40, break_minutes: 10, break_tiers: [[45, 10], [90, 30], [120, 45], [180, 60]], break_max_per_day: 6 });
   const { data: log } = await admin().from("audit_log").select("action").eq("action", "settings.update");
   expect(log?.length).toBeGreaterThanOrEqual(1);
 });
@@ -483,11 +503,12 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(work.getByRole("heading", { name: "Đọc sách e2e" })).toBeVisible();
   await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
 
-  // The server refuses a break before any part is done, and an early finish, whatever the browser does.
+  // The server refuses a break before 45' of focus (R8b), and an early finish, whatever the browser does.
   const today1 = await page.evaluate(async () => (await (await fetch("/api/today")).json()) as { state: { part1: { items: { id: string; title: string }[] }; part2: { items: { id: string; title: string }[] } } });
   const skillId = today1.state.part2.items.find((i) => i.title === "Đọc sách e2e")?.id;
   const extraId = today1.state.part1.items.find((i) => i.title === "Luyện đề e2e")?.id;
-  await expect(banner.getByRole("button", { name: /Nghỉ \d+ phút/ })).toHaveCount(0);
+  await expect(banner.getByRole("button", { name: /^Nghỉ \d+'$/ })).toHaveCount(0);
+  await expect(banner).toContainText("Tập trung đủ 45' để được nghỉ 10'");
   const earlyBreak = await page.evaluate(async () => (await fetch("/api/day/break", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start" }) })).status);
   expect(earlyBreak).toBe(409);
   const oldSkip = await page.evaluate(async () => (await fetch("/api/day/break", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) })).status);
@@ -558,26 +579,29 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const { data: stillOpen } = await db.from("task_runs").select("done_at").eq("id", run?.id ?? "").single();
   expect(stillOpen?.done_at).toBeNull(); // refused = nothing recorded
 
-  // Pretend 21 minutes have passed (server data), then the button works. The focus screen the
-  // child opened stays open after a reload (this tab only).
-  await db.from("task_runs").update({ started_at: new Date(Date.now() - 21 * 60_000).toISOString() }).eq("id", run?.id ?? "");
+  // Pretend 51 minutes have passed (server data), then the button works. The focus screen the
+  // child opened stays open after a reload (this tab only). R8b: 51' of focus earn a 10' break.
+  await db.from("task_runs").update({ started_at: new Date(Date.now() - 51 * 60_000).toISOString() }).eq("id", run?.id ?? "");
   await page.reload();
   await focus.getByRole("button", { name: "Xong", exact: true }).click();
   await expect(focus).toHaveCount(0);
   await expect(page.getByRole("listitem", { name: "Luyện đề e2e" }).getByText("✓ Xong")).toBeVisible();
 
-  // Part 1 done -> the break may start (optional). During it the task buttons pause; "Học tiếp" resumes.
+  // R8b: 51' of focus -> a 10' break may start (optional; no part needed). During it the task
+  // buttons pause; "Học tiếp" resumes and the unused minutes stay in the bank.
   await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
-  await banner.getByRole("button", { name: /Nghỉ \d+ phút/ }).click();
+  await expect(banner).toContainText(/Con đã tập trung 5\d' · nghỉ được 10'/);
+  await banner.getByRole("button", { name: "Nghỉ 10'" }).click();
   await expect(banner).toContainText("Đang nghỉ");
-  await expect(page.getByText(/Giờ nghỉ · còn \d\d:\d\d/)).toBeVisible();
+  await expect(banner).toContainText(/Đang nghỉ · còn (9|10) phút/);
+  await expect(page.getByText(/Giờ nghỉ · còn (9|10) phút/)).toBeVisible();
   await skill.getByRole("button").first().click();
   await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
   const duringBreak = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
   expect(duringBreak).toBe(409);
   await banner.getByRole("button", { name: "Học tiếp" }).click();
   await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
-  await expect(banner.getByRole("button", { name: /Nghỉ \d+ phút/ })).toHaveCount(0); // once a day
+  await expect(banner).toContainText(/nghỉ được (9|10)'/); // "Học tiếp" at once: the minutes stay in the bank
   await work.getByRole("button", { name: "Bắt đầu" }).click();
   await page.getByRole("dialog", { name: "Mục tiêu nhỏ: Đọc sách e2e" }).getByRole("button", { name: "Để sau" }).click();
   await work.getByRole("button", { name: "Xong", exact: true }).click(); // R7a: no minimum, so Xong is right in the panel
@@ -591,6 +615,8 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(study).toContainText("Xong hết bài hôm nay ✓");
   await expect(cards.getByRole("listitem", { name: "3 · Kỹ năng" })).toContainText("✓ Xong");
   await expect(play).toContainText("Giờ tự do đang chạy");
+  // R8b: the unused break minutes are added to free time (40' set by the parent in S1).
+  await expect(play).toContainText(/Giờ tự do 40' \+ (9|10)' nghỉ chưa dùng = (49|50)'/);
   await expect(play).toContainText(`Con định: ${chipName}`);
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
   // Tuần của con: today's three areas are ticked.
@@ -602,9 +628,13 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   expect(day?.part1_done_at).toBeTruthy();
   expect(day?.part2_done_at).toBeTruthy();
   expect(day?.free_started_at).toBe(day?.part2_done_at);
-  expect(day?.break_started_at).toBeTruthy();
-  expect(day?.break_ended_at).toBeTruthy();
+  // R8b: the break is a day_breaks row (the legacy day_sessions columns stay empty).
+  expect(day?.break_started_at).toBeNull();
   expect(day?.break_skipped).toBe(false);
+  const { data: breaks } = await db.from("day_breaks").select("planned_minutes, ended_at").eq("child_id", childId).eq("local_date", today);
+  expect(breaks).toHaveLength(1);
+  expect(breaks?.[0]?.planned_minutes).toBe(10);
+  expect(breaks?.[0]?.ended_at).toBeTruthy();
   const { data: hwRow } = await db.from("homework_items").select("done_at").eq("subject", "Ngữ văn").single();
   expect(hwRow?.done_at).toBeTruthy();
   const { data: proofRun } = await db.from("task_runs").select("proof_paths").eq("source", "homework").not("done_at", "is", null).single();

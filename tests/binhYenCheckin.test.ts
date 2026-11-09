@@ -69,7 +69,7 @@ describe("R5 study time (server clock, computeDayState)", () => {
   const day = (status: string, extra: { open?: boolean; free?: string | null; part1?: boolean; part2?: boolean } = {}) => ({
     status: status as never,
     open: extra.open ?? false,
-    free: { canStart: false, startedAt: extra.free ?? null, endsAt: null },
+    free: { canStart: false, startedAt: extra.free ?? null, endsAt: null, bonusMinutes: 0 },
     part1: { complete: extra.part1 ?? false } as never,
     part2: { complete: extra.part2 ?? false } as never,
   });

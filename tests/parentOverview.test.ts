@@ -55,6 +55,7 @@ function day(patch: Partial<DayInput> = {}): DayInput {
     appSlots: [],
     runs: [],
     overrides: [],
+    breaks: [],
     ...patch,
   };
 }
