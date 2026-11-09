@@ -3,7 +3,7 @@
  * DayState computed from server data and the server clock, never at anything the child's
  * browser claims. Routes call these, then write with service_role only when allowed.
  */
-import type { DayState, TaskView } from "@/lib/dayState";
+import { MIN_BREAK_MINUTES, type DayState, type TaskView } from "@/lib/dayState";
 
 export type Decision<T> = { ok: true; value: T } | { ok: false; status: number; error: string };
 
@@ -51,7 +51,7 @@ export function passOffered(state: DayState): boolean {
   return state.passAvailable && state.status !== "LOCK_OVERRIDE" && !state.free.canStart;
 }
 
-/** R1 E8 (07/11/2026): during the 10' break the task buttons pause; "Học tiếp" ends the break. */
+/** R1 E8 (07/11/2026): during a break the task buttons pause; "Học tiếp" ends the break. */
 export const ON_BREAK_TEXT = "Đang nghỉ — bấm Học tiếp để làm tiếp.";
 
 /** A break that is still running pauses tasks even under a parent lock (no timer then resumes inside the break). */
@@ -138,23 +138,25 @@ export function decideConfirmRequest(state: DayState, runId: string): Decision<{
 export type BreakAction = "start" | "end";
 
 /**
- * Break (R1, parent decision 07/11/2026): start only when computeDayState says `break.canStart`
- * (Part 1 or Part 2 done, once a day, before free time, no timed task running, not under a
- * parent lock / open window); end ("Học tiếp") only while it runs.
+ * Break. R8b "ngân hàng giờ nghỉ" (parent decision 08/11/2026): start only when computeDayState says
+ * `break.canStart` (bank >= 5', fewer than break_max_per_day breaks, before free time, no timed task
+ * running, not under a parent lock / open window); the route then plans the WHOLE bank. Both
+ * actions are idempotent: `write: false` = nothing to write (start while a break runs, end when
+ * none runs). Before 0014 (`break.legacy`) the old rule applies: once a day, after a part is done.
  */
-export function decideBreak(state: DayState, action: BreakAction): Decision<null> {
-  if (action === "end") {
-    return state.break.state === "running" ? { ok: true, value: null } : deny(409, "Không có giờ nghỉ đang chạy.");
-  }
-  if (state.break.canStart) return { ok: true, value: null };
-  if (state.break.state === "running" || state.break.state === "done" || state.break.state === "skipped") {
-    return deny(409, "Hôm nay con đã nghỉ rồi.");
-  }
+export function decideBreak(state: DayState, action: BreakAction): Decision<{ write: boolean }> {
+  const b = state.break;
+  if (action === "end") return { ok: true, value: { write: b.state === "running" } };
+  if (b.state === "running") return { ok: true, value: { write: false } };
+  if (b.canStart) return { ok: true, value: { write: true } };
+  if (b.legacy && (b.state === "done" || b.state === "skipped")) return deny(409, "Hôm nay con đã nghỉ rồi.");
   if (state.status === "LOCK_OVERRIDE") return deny(409, "Bố mẹ đang khóa máy.");
   if (state.free.startedAt !== null) return deny(409, "Hôm nay đã có giờ tự do.");
   if (state.open) return deny(409, "Máy đang mở rồi, không cần nghỉ.");
+  if (!b.legacy && b.takenToday >= b.maxPerDay) return deny(409, `Hôm nay con đã nghỉ đủ ${b.maxPerDay} lần.`);
   if (runningTimedTask(state)) return deny(409, "Bấm Xong việc đang làm trước rồi hãy nghỉ.");
-  if (!state.part1.complete && !state.part2.complete) return deny(409, "Xong bài tập hoặc xong kỹ năng là được nghỉ.");
+  if (b.legacy && !state.part1.complete && !state.part2.complete) return deny(409, "Xong bài tập hoặc xong kỹ năng là được nghỉ.");
+  if (!b.legacy && b.bankMinutes < MIN_BREAK_MINUTES) return deny(409, "Chưa đủ giờ tập trung để nghỉ.");
   return deny(409, "Bây giờ chưa nghỉ được.");
 }
 

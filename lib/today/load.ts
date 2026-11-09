@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   AppSlotInput,
+  BreakRowInput,
   DayInput,
   DaySessionInput,
   FamilySettingsInput,
@@ -36,10 +37,29 @@ interface SettingsRow {
 /** Default of family_settings.homework_min_upcoming (0002). */
 export const DEFAULT_MIN_UPCOMING = 1;
 
+/**
+ * Before a migration adds a table or a column (a preview on the production database until the
+ * parents merge): Postgres 42P01 / 42703, PostgREST PGRST205 / PGRST204. Never anything else.
+ */
+export function notMigratedYet(e: { code?: string; message: string }): boolean {
+  return (
+    e.code === "42P01" ||
+    e.code === "42703" ||
+    e.code === "PGRST205" ||
+    e.code === "PGRST204" ||
+    /relation .* does not exist|could not find the table|column .* does not exist/i.test(e.message)
+  );
+}
+
 function must<T>(res: { data: T | null; error: { message: string } | null }, what: string): NonNullable<T> {
   if (res.error) throw new Error(`loadDay: ${what}: ${res.error.message}`);
   if (res.data === null || res.data === undefined) throw new Error(`loadDay: ${what}: no data`);
   return res.data as NonNullable<T>;
+}
+
+function trustChangedAt(since: string | null | undefined, createdAt: string | null | undefined): string | null {
+  if (!since || !createdAt) return null;
+  return Date.parse(since) > Date.parse(createdAt) ? since : null;
 }
 
 /**
@@ -69,6 +89,13 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
   }>;
   if (minUpcoming.error) settingsRow.homework_min_upcoming = DEFAULT_MIN_UPCOMING;
   else settingsRow.homework_min_upcoming = minUpcoming.data?.homework_min_upcoming ?? DEFAULT_MIN_UPCOMING;
+  // R8b (0014): the break bank settings, read on their own like 0002 above. Missing -> the old
+  // single break (`breaks: null` below); any other error throws (fail-closed).
+  const bankSettings = (await db.from("family_settings").select("break_tiers, break_max_per_day").eq("family_id", familyId).maybeSingle()) as Res<{
+    break_tiers: unknown;
+    break_max_per_day: number;
+  }>;
+  if (bankSettings.error && !notMigratedYet(bankSettings.error)) throw new Error(`loadDay: family_settings (0014): ${bankSettings.error.message}`);
   const settings: FamilySettingsInput = {
     breakMinutes: settingsRow.break_minutes,
     freeMinutes: settingsRow.free_minutes,
@@ -80,12 +107,15 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
     trustDownPct: settingsRow.trust_down_pct,
     homeworkLookaheadDays: settingsRow.homework_lookahead_days,
     homeworkMinUpcoming: settingsRow.homework_min_upcoming ?? DEFAULT_MIN_UPCOMING,
+    ...(bankSettings.error || !bankSettings.data
+      ? {}
+      : { breakTiers: bankSettings.data.break_tiers, breakMaxPerDay: bankSettings.data.break_max_per_day }),
   };
   const historyFrom = addDays(weekStart(today), -7 * settings.trustUpWeeks);
 
-  const [profile, trust, sessions, homework, templates, slots, runs, overrides] = await Promise.all([
+  const [profile, trust, sessions, homework, templates, slots, runs, overrides, breaks] = await Promise.all([
     db.from("profiles").select("bedtime").eq("id", childId).single(),
-    db.from("trust_state").select("mode").eq("child_id", childId).maybeSingle(),
+    db.from("trust_state").select("mode, since, created_at").eq("child_id", childId).maybeSingle(),
     db
       .from("day_sessions")
       .select("local_date, day_type, disabled_template_ids, break_started_at, break_ended_at, break_skipped, part1_done_at, part2_done_at, free_started_at, pass_used_at")
@@ -110,16 +140,23 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
       .eq("child_id", childId)
       .eq("local_date", today),
     db.from("overrides").select("id, local_date, kind, until, created_at").eq("child_id", childId).eq("local_date", today),
+    db.from("day_breaks").select("id, local_date, started_at, planned_minutes, ended_at").eq("child_id", childId).eq("local_date", today),
   ]);
 
   const bedtime = must(profile, "profiles").bedtime as string;
   if (trust.error) throw new Error(`loadDay: trust_state: ${trust.error.message}`);
+  if (breaks.error && !notMigratedYet(breaks.error)) throw new Error(`loadDay: day_breaks: ${breaks.error.message}`);
+  // Bank mode needs both the table and the settings columns of 0014 (one migration, so both or none).
+  const bankReady = !breaks.error && !bankSettings.error;
 
   const homeworkRows = must(homework, "homework_items");
   const input: DayInput = {
     settings,
     bedtime,
     trustMode: trust.data?.mode === "trust" ? "trust" : "lock",
+    // R8b focus (interpretation 19): `since` only when the mode was CHANGED then (since > created_at;
+    // the row is created with since = created_at in lock mode, and before it the mode was lock too).
+    trustSince: trustChangedAt(trust.data?.since as string | null | undefined, trust.data?.created_at as string | null | undefined),
     sessions: must(sessions, "day_sessions").map(
       (s): DaySessionInput => ({
         localDate: s.local_date,
@@ -175,6 +212,17 @@ export async function loadDay(db: SupabaseClient, childId: string, familyId: str
     overrides: must(overrides, "overrides").map(
       (o): OverrideInput => ({ id: o.id, localDate: o.local_date, kind: o.kind, until: o.until, createdAt: o.created_at }),
     ),
+    breaks: bankReady
+      ? (breaks.data ?? []).map(
+          (b): BreakRowInput => ({
+            id: b.id,
+            localDate: b.local_date,
+            startedAt: b.started_at,
+            plannedMinutes: b.planned_minutes,
+            endedAt: b.ended_at,
+          }),
+        )
+      : null,
   };
 
   const homeworkPhotos: Record<string, string[]> = {};
