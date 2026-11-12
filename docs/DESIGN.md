@@ -104,6 +104,8 @@ Tất cả bảng có `id uuid default gen_random_uuid()` (trừ khi ghi khác),
 
 Hàm thuần, không I/O, test bằng Vitest với `now` truyền vào:
 
+> *(12/11/2026)* Code tách thành thư mục `lib/dayState/` (types, instants, runs, tasks, week, overrides, breakBank, compute); `lib/dayState.ts` vẫn là cửa vào duy nhất (luật 1–19 + re-export y nguyên). Không đổi hành vi.
+
 ```ts
 computeDayState(input: DayInput, now: Date): DayState
 
