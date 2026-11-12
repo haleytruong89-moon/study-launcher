@@ -53,6 +53,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply migrations twice and run RLS smoke test
         run: bash scripts/test-db.sh
+      - name: Preview database guards and reset (fake values, throwaway database)
+        run: |
+          bash scripts/preview-db/test-guard.sh
+          bash scripts/preview-db/test-reset.sh
 
   e2e:
     name: end-to-end (real local Supabase + browser)
@@ -94,6 +98,37 @@ jobs:
         run: |
           set -o pipefail
           npm run e2e 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+      # D4 (12/11/2026): the preview-db scripts against a REAL (local) Supabase stack, after the
+      # e2e tests are done with it: wipe -> reset.sql -> db push -> seed twice (idempotent).
+      # Not blocking yet (first run happens on the PR); make it blocking once it has passed.
+      - name: Preview database scripts on the local Supabase stack
+        continue-on-error: true
+        env:
+          PREVIEW_LOCAL_API_URL: ${{ env.NEXT_PUBLIC_SUPABASE_URL }}
+          PREVIEW_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }}
+          PREVIEW_PARENT_PASSWORD: ci-preview-Passw0rd-123
+        run: |
+          set -euo pipefail
+          q() { psql "$E2E_DB_URL" -X -At -v ON_ERROR_STOP=1 -c "$1"; }
+          PREVIEW_DB_URL="$E2E_DB_URL" bash scripts/preview-db/db-guard.sh
+          node scripts/preview-db/preview-db.mjs wipe
+          test "$(q "select count(*) from auth.users")" = 0
+          psql "$E2E_DB_URL" -X -q -v ON_ERROR_STOP=1 -f scripts/preview-db/reset.sql
+          supabase db push --db-url "$E2E_DB_URL" --include-all --skip-vault --yes
+          node scripts/preview-db/preview-db.mjs seed
+          node scripts/preview-db/preview-db.mjs seed
+          test "$(q "select count(*) from public.families")" = 1
+          test "$(q "select string_agg(display_name, ',' order by display_name) from public.profiles where role = 'child'")" = "Con A,Con B"
+          test "$(q "select count(*) from public.task_templates")" = 4
+          test "$(q "select count(*) from public.homework_items")" = 4
+          test "$(q "select count(*) from public.allowlist_entries where child_id is null")" -ge 1
+          curl --fail --silent --show-error -o /dev/null -X POST "$PREVIEW_LOCAL_API_URL/auth/v1/admin/users" \
+            -H "apikey: $PREVIEW_SERVICE_ROLE_KEY" -H "Authorization: Bearer $PREVIEW_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" -d '{"email":"someone@gmail.com","password":"Real-looking-Passw0rd","email_confirm":true}'
+          if PREVIEW_DB_URL="$E2E_DB_URL" bash scripts/preview-db/db-guard.sh; then echo "db-guard accepted a real e-mail" >&2; exit 1; fi
+          if node scripts/preview-db/preview-db.mjs wipe; then echo "wipe ran with a real e-mail" >&2; exit 1; fi
+          test "$(q "select count(*) from auth.users")" = 4
+          echo "preview-db scripts OK on the local stack"
       - name: Diagnostics on failure (shown as annotations on the check)
         if: failure()
         run: |
