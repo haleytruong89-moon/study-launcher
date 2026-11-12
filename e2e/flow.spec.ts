@@ -1057,6 +1057,18 @@ test("S3d: parent adds a study site; YouTube cannot be added for good; a child c
 });
 
 test("Thêm nhanh: one tap adds Google Meet for both children; saved HTML/PDF files can be allowed", async ({ page }) => {
+  // 0016 (12/11/2026): a new family starts with Meet, NotebookLM, Docs, Zalo and saved files open.
+  const seeded = ["meet.google.com", "notebooklm.google.com", "docs.google.com", "zalo.me"];
+  const { data: open } = await admin().from("allowlist_entries").select("domain").is("child_id", null).is("expires_at", null).in("domain", seeded);
+  expect(new Set((open ?? []).map((r) => r.domain))).toEqual(new Set(seeded));
+  const { data: fs0 } = await admin().from("family_settings").select("allow_local_files").single();
+  expect(fs0?.allow_local_files).toBe(true);
+  // The rest of this file was written for a family without them (Thêm nhanh, requests for
+  // notebooklm / docs / zalo): take them away, as a parent could, and test from there.
+  const presetDomains = ["meet.google.com", "ogs.google.com", "apis.google.com", "contacts.google.com", "notebooklm.google.com", "notebooklm.google", "docs.google.com", "drive.google.com", "drive.usercontent.google.com", "forms.gle", "zalo.me"];
+  await admin().from("allowlist_entries").delete().is("child_id", null).in("domain", presetDomains);
+  await admin().from("family_settings").update({ allow_local_files: false }).not("family_id", "is", null);
+
   await login(page, env.parentEmail, env.parentPassword);
   await page.goto("/parent/allowlist");
   await page.getByRole("button", { name: "Thêm Google Meet" }).click();

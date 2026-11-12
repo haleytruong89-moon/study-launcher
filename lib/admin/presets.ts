@@ -6,7 +6,7 @@
  * Extra pieces a page turns out to need are found by the extension's blocked-frame report.
  */
 export interface Preset {
-  id: "meet" | "notebooklm" | "gdocs";
+  id: "meet" | "notebooklm" | "gdocs" | "zalo";
   label: string;
   sub: string;
   domains: readonly string[];
@@ -32,6 +32,13 @@ export const PRESETS: readonly Preset[] = [
     label: "Google Docs / Drive / Forms",
     sub: "Link bài tập là tài liệu, bảng tính, Form hoặc file Drive",
     domains: ["docs.google.com", "drive.google.com", "drive.usercontent.google.com", "forms.gle"],
+  },
+  {
+    // 12/11/2026: on by default (migration 0016); zalo.me also covers chat.zalo.me.
+    id: "zalo",
+    label: "Zalo",
+    sub: "Nhắn thầy cô, nhận file bài tập qua Zalo trên web",
+    domains: ["zalo.me"],
   },
 ];
 
