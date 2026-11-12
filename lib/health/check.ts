@@ -50,11 +50,14 @@ export function silentDevices(
 ): DeviceProblem[] {
   const cutoff = now.getTime() - DEVICE_SILENT_HOURS * 3600_000;
   const worked = new Set(runs.filter((r) => r.started_at !== null && Date.parse(r.started_at) >= cutoff && Date.parse(r.started_at) <= now.getTime()).map((r) => r.child_id));
+  // A re-paired laptop leaves its old row behind (nothing revokes it): a child with another
+  // device seen in the window is fine, so the old row never raises a daily false alarm.
+  const seenRecently = new Set(devices.filter((d) => d.last_seen_at !== null && Date.parse(d.last_seen_at) >= cutoff).map((d) => d.child_id));
   const out: DeviceProblem[] = [];
   for (const d of devices) {
     const since = d.last_seen_at ?? d.created_at;
     const sinceMs = Date.parse(since);
-    if (!Number.isFinite(sinceMs) || sinceMs >= cutoff || !worked.has(d.child_id)) continue;
+    if (!Number.isFinite(sinceMs) || sinceMs >= cutoff || !worked.has(d.child_id) || seenRecently.has(d.child_id)) continue;
     out.push({ kind: "device_silent", familyId: d.family_id, deviceId: d.id, childName: names.get(d.child_id) ?? "con", since, neverSeen: d.last_seen_at === null });
   }
   return out;

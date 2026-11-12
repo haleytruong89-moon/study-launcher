@@ -31,6 +31,11 @@ describe("silentDevices", () => {
     expect(silentDevices([device("d1", "an", hoursAgo(50))], [{ child_id: "an", started_at: null }], NAMES, NOW)).toEqual([]);
   });
 
+  it("an old row left by re-pairing stays quiet when the child's other laptop reports", () => {
+    const devs = [device("old", "an", hoursAgo(200)), device("new", "an", hoursAgo(1))];
+    expect(silentDevices(devs, [{ child_id: "an", started_at: hoursAgo(3) }], NAMES, NOW)).toEqual([]);
+  });
+
   it("seen within 48 h → nothing", () => {
     expect(silentDevices([device("d1", "an", hoursAgo(47))], [{ child_id: "an", started_at: hoursAgo(1) }], NAMES, NOW)).toEqual([]);
   });
