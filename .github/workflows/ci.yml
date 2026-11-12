@@ -8,7 +8,43 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR cancels the older run (saves Actions minutes). Runs on `main`
+# are never cancelled: each merge gets its full check.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # Docs-only PRs (docs/** or any *.md) skip the heavy steps of `database` and `e2e`. The jobs
+  # themselves still run and pass, so required checks stay green. Pushes to `main`, and any
+  # doubt (git error, empty diff), mean a full run.
+  changes:
+    name: what changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A PR checks out its merge commit: parent 1 = base branch, so HEAD^1..HEAD is the PR.
+          fetch-depth: 2
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; echo "Not a PR: full run."; exit 0
+          fi
+          if ! files="$(git diff --name-only --no-renames HEAD^1 HEAD)" || [ -z "$files" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; echo "Could not list changed files: full run."; exit 0
+          fi
+          echo "$files"
+          if echo "$files" | grep -Ev '^docs/|\.md$' > /dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; echo "Code changed: full run."
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"; echo "Docs only: database and e2e skip their heavy steps."
+          fi
+
   app:
     name: typecheck, lint, test, build
     runs-on: ubuntu-latest
@@ -32,6 +68,7 @@ jobs:
 
   database:
     name: migrations + RLS test (throwaway Postgres)
+    needs: changes
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -50,8 +87,13 @@ jobs:
       PGUSER: postgres
       PGPASSWORD: postgres
     steps:
+      - name: Docs only, nothing to test
+        if: needs.changes.outputs.code != 'true'
+        run: echo "Docs-only change, migrations not re-run."
       - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
       - name: Apply migrations twice and run RLS smoke test
+        if: needs.changes.outputs.code == 'true'
         run: bash scripts/test-db.sh
       - name: Preview database guards and reset (fake values, throwaway database)
         run: |
@@ -60,21 +102,31 @@ jobs:
 
   e2e:
     name: end-to-end (real local Supabase + browser)
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Docs only, nothing to test
+        if: needs.changes.outputs.code != 'true'
+        run: echo "Docs-only change, end-to-end tests not run."
       - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
       - uses: actions/setup-node@v4
+        if: needs.changes.outputs.code == 'true'
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+        if: needs.changes.outputs.code == 'true'
       - uses: supabase/setup-cli@v1
+        if: needs.changes.outputs.code == 'true'
         with:
           version: 2.120.0
       - name: Start local Supabase (applies supabase/migrations on the real Supabase stack)
+        if: needs.changes.outputs.code == 'true'
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,mailpit,postgres-meta,supavisor,realtime
       - name: Export local connection values
+        if: needs.changes.outputs.code == 'true'
         run: |
           supabase status -o env > "$RUNNER_TEMP/sb.env"
           get() { grep "^$1=" "$RUNNER_TEMP/sb.env" | head -1 | cut -d= -f2- | tr -d '"'; }
@@ -92,9 +144,12 @@ jobs:
           # S3e: local database URL (the cleanup test ages its own files). CRON_SECRET comes from S5 above.
           echo "E2E_DB_URL=$(get DB_URL)" >> "$GITHUB_ENV"
       - run: npx playwright install --with-deps chromium
+        if: needs.changes.outputs.code == 'true'
       - name: Build
+        if: needs.changes.outputs.code == 'true'
         run: npm run build
       - name: Run end-to-end tests
+        if: needs.changes.outputs.code == 'true'
         run: |
           set -o pipefail
           npm run e2e 2>&1 | tee "$RUNNER_TEMP/e2e.log"
