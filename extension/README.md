@@ -33,6 +33,12 @@ cannot be loaded yet.
 - S6 (0.3.3, 01/11/2026): after pairing, `chrome.runtime.setUninstallURL(<launcher>/api/ext/uninstalled?k=<sha256(token)>)`
   (`src/core/uninstall.ts`; never the token itself) so the parents hear when it is removed. The Launcher's `/today`
   pings the content script and reports when no extension answers (desktop Chrome / Edge only).
+- D2 A2 (0.3.4, 12/11/2026): a heads-up 5 minutes before an open window ends (`src/core/warn.ts`):
+  a one-shot `warn|<openUntil>` alarm at openUntil − 5 min (server clock, re-planned on every
+  successful poll, not created when < 1 min away — the next poll warns instead), badge `5'` in
+  #2B5D4F and the popup line "Còn N phút nữa máy khóa lại — lưu bài nhé". Display only: no new
+  permission, openUntil / locking unchanged. Follow-up (not done, needs the `notifications`
+  permission, which disables manual installs until re-approved): a system notification.
 - Still later: store packaging (unlisted) + force-install policy (S6), icons.
 
 ## Checked in a real browser (S4b, Chromium + mock server)

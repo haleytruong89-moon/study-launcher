@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
-import { bannerFor, breakLine, clock, dayProgress, daySteps, longDate, nextTask, statusPill } from "@/lib/today/view";
+import { bannerFor, breakLine, clock, dayProgress, daySteps, lockSoonMinutes, lockSoonText, longDate, nextTask, statusPill } from "@/lib/today/view";
 import { Character } from "../avatar-face";
 import { SignOutButton } from "../sign-out-button";
 import { TalkPanel } from "../binh-yen/talk-panel";
@@ -351,6 +351,18 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
     return () => window.clearInterval(id);
   }, [fastMs, refresh]);
 
+  // D2 A2: in the last 5 minutes of a break / free time the tab title says so (the child may be
+  // on another tab); the original title comes back afterwards. Minutes only, server clock.
+  const soonMinutes = view ? lockSoonMinutes(view.state, nowMs) : null;
+  useEffect(() => {
+    if (soonMinutes === null) return;
+    const before = document.title;
+    document.title = lockSoonText(soonMinutes).title;
+    return () => {
+      document.title = before;
+    };
+  }, [soonMinutes]);
+
   const color = child.color ?? "#2b5d4f";
   // R4: An (scientist voice) has her world of the month in the 4th tab.
   const voice = voiceFor(child.grade);
@@ -431,6 +443,11 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       <div className="flex min-w-0 grow basis-60 flex-col gap-0.5">
         <strong className="text-lg">{banner.title}</strong>
         <span className="text-sm text-ink/75">{banner.sub}</span>
+        {soonMinutes !== null && (
+          <span className="text-sm font-semibold" style={{ color: "#2B5D4F" }}>
+            {lockSoonText(soonMinutes).line}
+          </span>
+        )}
       </div>
       {countdownTo && (
         <span className="text-3xl font-bold tabular-nums" style={{ color }} aria-label="Thời gian còn lại">

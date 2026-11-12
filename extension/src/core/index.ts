@@ -6,3 +6,4 @@ export * from "./sweep";
 export * from "./sync";
 export * from "./frames";
 export * from "./uninstall";
+export * from "./warn";

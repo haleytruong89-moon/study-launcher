@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
 import { decideBreak, decideConfirmRequest, decideFinish, decideFreeStart, decidePass, decideProof, decideStart, extraRunView, isExtraRun, isProofPath, ON_BREAK_TEXT, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
-import { bannerFor, breakLine, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, freeBonusLine, groupLabel, leftCount, longDate, nextPart1, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
+import { bannerFor, breakLine, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, freeBonusLine, groupLabel, leftCount, lockSoonMinutes, lockSoonText, longDate, nextPart1, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
 
 // Wednesday 2026-10-14, Vietnam time.
 const TODAY = "2026-10-14";
@@ -626,5 +626,45 @@ describe("nextPart1 (R6d Học tập card: never a skill)", () => {
     const s = computeDayState(day({ sessions: [session({ part1DoneAt: at("16:00") })] }), vn("16:05"));
     expect(s.part1.complete).toBe(true);
     expect(nextPart1(s, null)).toBeNull();
+  });
+});
+
+describe("D2 A2: warn 5 minutes before the laptop locks again (server timestamps, minutes only)", () => {
+  const ex = (from: string, to: string) => run(RUN_EX, { source: "template", ref: EXTRA, startedAt: at(from), doneAt: at(to) });
+  const brk = (start: string, planned: number) => ({ id: `b-${start}`, localDate: TODAY, startedAt: at(start), plannedMinutes: planned, endedAt: null });
+  const soon = (input: DayInput, t: string) => lockSoonMinutes(computeDayState(input, vn(t)), vn(t).getTime());
+
+  it("free time: only in the last 5 minutes, rounded up; nothing once it ended", () => {
+    const free = day({ sessions: [session({ passUsedAt: at("16:00"), freeStartedAt: at("16:00") })] });
+    expect(computeDayState(free, vn("16:10")).free.endsAt).toBe(at("16:45"));
+    expect(soon(free, "16:10")).toBeNull();
+    expect(soon(free, "16:39:59")).toBeNull();
+    expect(soon(free, "16:40")).toBe(5);
+    expect(soon(free, "16:42:30")).toBe(3);
+    expect(soon(free, "16:44:59")).toBe(1);
+    expect(soon(free, "16:45")).toBeNull(); // LOCK_END
+  });
+
+  it("a break uses its server end", () => {
+    const b = day({ runs: [ex("15:00", "15:55")], breaks: [brk("15:55", 10)] });
+    expect(soon(b, "15:59")).toBeNull();
+    expect(soon(b, "16:00")).toBe(5);
+    expect(soon(b, "16:03:10")).toBe(2);
+  });
+
+  it("free time clipped at 00:00 warns before midnight", () => {
+    const late = day({ sessions: [session({ passUsedAt: at("23:40"), freeStartedAt: at("23:40") })] });
+    expect(soon(late, "23:50")).toBeNull();
+    expect(soon(late, "23:57")).toBe(3);
+  });
+
+  it("never while studying (locked), in trust mode or on a sick day", () => {
+    expect(soon(day(), "15:00")).toBeNull();
+    expect(soon(day({ trustMode: "trust" }), "23:57")).toBeNull();
+    expect(soon(day({ sessions: [session({ dayType: "sick" })] }), "23:57")).toBeNull();
+  });
+
+  it("wording", () => {
+    expect(lockSoonText(3)).toEqual({ line: "Còn 3 phút nữa máy khóa lại", title: "⏰ Còn 3' — Study Launcher" });
   });
 });
