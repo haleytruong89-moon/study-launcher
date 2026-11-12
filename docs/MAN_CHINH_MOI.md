@@ -33,7 +33,7 @@ Bố mẹ ưu tiên trải nghiệm của con: con không thấy thoải mái th
 
 - **Phần 1** (bài trên lớp đến hạn + bài bổ sung) và **Phần 2** (kỹ năng) **mở cùng lúc** từ đầu ngày. Con tự chọn thứ tự. SPEC §3 vốn đã cho con "quyền quyết thứ tự 2 phần".
 - **Giờ tự do** bắt đầu khi **cả hai phần xong**, hoặc khi con dùng thẻ miễn. Vẫn 45', 1 lần/ngày, dừng ở 00:00.
-- **Nghỉ 10'**:
+- **Nghỉ 10'** *(thay bằng ngân hàng giờ nghỉ, R8b — DESIGN §5)*:
   - Mở khi con **xong Phần 1 hoặc xong Phần 2** (phần nào trước cũng được) và **chưa có giờ tự do**. Vẫn 1 lần/ngày. Trong 10' đó máy mở mọi trang.
   - Ngày không có bài tập và bài bổ sung (Phần 1 rỗng) thì nghỉ được ngay, như cũ.
   - Ngày không có kỹ năng (Phần 2 rỗng) thì vẫn nghỉ **sau khi xong bài tập**, như cũ. Phần 2 rỗng không tự mở nghỉ.
@@ -121,7 +121,7 @@ Không cần luật riêng cho ngày cũ: đã kiểm lịch sử code, từ l�
 
 ### 1.5 Đã chốt / mặc định (07/11)
 
-1. **Nghỉ 10'** mở khi xong Phần 1 **hoặc** Phần 2 (bố mẹ sửa lại 07/11, xem E5–E5d).
+1. **Nghỉ 10'** mở khi xong Phần 1 **hoặc** Phần 2 (bố mẹ sửa lại 07/11, xem E5–E5d). *(Thay bằng ngân hàng giờ nghỉ, R8b.)*
 2. **E7 + E8 — nghỉ và đồng hồ việc** (áp dụng mặc định, bố mẹ chưa chọn khác):
    - Không cho nghỉ khi đang chạy đồng hồ một việc (ví dụ đã xong kỹ năng, đang làm bài bổ sung 20').
    - Trong lúc nghỉ, các nút việc tạm khóa.
@@ -170,7 +170,7 @@ Không cần luật riêng cho ngày cũ: đã kiểm lịch sử code, từ l�
    - Mỗi ngày một ô mang màu vùng (đỏ / vàng / xanh dương / xanh lá) và biểu tượng của từ con chọn.
    - Ngày không ghé thì ô trống, không có chữ trách.
 3. **Bốn mảng hôm nay**: Cảm xúc · Học tập · Kỹ năng · Vui chơi. Mỗi mảng là một thẻ ghi đã làm gì, còn gì, kèm nút đi tiếp ("Vào Góc học tập", "Bắt đầu kỹ năng").
-4. **Trạng thái máy + đồng hồ** (khóa / đang nghỉ đến … / giờ tự do đến …). Nút Nghỉ 10' hiện khi `break.canStart`; nút thẻ miễn như cũ.
+4. **Trạng thái máy + đồng hồ** (khóa / đang nghỉ đến … / giờ tự do đến …). Nút Nghỉ 10' hiện khi `break.canStart` *(R8b: nghỉ theo ngân hàng giờ nghỉ)*; nút thẻ miễn như cũ.
 5. **Thế giới của con**:
    - Nguyên: trang truyện hôm nay, khung được vẽ thêm theo mảng đã xong.
    - An: khu rừng thu nhỏ; bấm vào mở tab Khu rừng.
@@ -184,7 +184,7 @@ Không có điểm, streak, bảng xếp hạng; không so sánh hai con (SPEC �
 | Danh sách bên trái | Nhóm: Bài trên lớp · Bài bổ sung · Kỹ năng · Làm trước ★. Kéo ⋮⋮ hoặc bấm ↑↓ để xếp. Thứ tự lưu vào `day_plans` qua `/api/day/plan` (đã có); chỉ để hiển thị, **không đổi khóa/mở**. Kỹ năng nay xếp được cùng bài tập |
 | Khung làm bài bên phải | Đề bài / file bố mẹ đính kèm (`homework_items.photo_paths`, đọc qua route file đã có); đồng hồ theo giờ server; nộp ảnh / nhờ bố mẹ xem (như #21, #23); nút Xong |
 | Chế độ tập trung | Ẩn danh sách, chỉ còn khung làm bài. Chỉ chạy trên trình duyệt, không ghi gì |
-| Nghỉ 10' | Nút ở cuối danh sách; hiện khi đã xong một phần (§1.1, §1.4) |
+| Nghỉ 10' | Nút ở cuối danh sách; hiện khi đã xong một phần (§1.1, §1.4) *(thay bằng ngân hàng giờ nghỉ, R8b: hiện khi `break.canStart`)* |
 | "Làm trước" | Bài "Sắp tới" có nút "+ Làm trước"; ngày không có bài đến hạn vẫn bắt buộc 1 bài (§1.5 điểm 3) |
 
 Màn rộng ≥ 1024px chia 2 cột. Màn hẹp hơn: hiện danh sách, bấm vào bài thì khung làm bài mở toàn màn.
