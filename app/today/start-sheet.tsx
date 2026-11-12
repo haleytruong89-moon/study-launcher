@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import type { TaskView } from "@/lib/dayState";
 import { isTimed } from "@/lib/today/focus";
+import { isExtraRun } from "@/lib/today/rules";
 import { BodyPortal, escFrom, returnFocus } from "./portal";
 
 /**
@@ -42,9 +43,12 @@ export function StartSheet({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // R8a "Làm thêm": never required, no minimum.
+  const extra = isExtraRun(item);
   const subject = item.subject?.trim() && item.subject.trim().toLowerCase() !== item.title.trim().toLowerCase() ? item.subject.trim() : item.part === 1 ? "Bài bổ sung" : "Kỹ năng";
-  const sub =
-    item.source === "homework"
+  const sub = extra
+    ? "Không bắt buộc — làm bao lâu cũng được"
+    : item.source === "homework"
       ? "Làm xong trong vở thì chụp ảnh nộp."
       : [subject, isTimed(item) ? `ít nhất ${item.minMinutes} phút` : "không giới hạn thời gian", item.appLabel ? `trên ${item.appLabel}` : null].filter(Boolean).join(" · ");
   const link = item.source === "template" ? item.deepLink : null;
@@ -67,7 +71,7 @@ export function StartSheet({
               Bắt đầu rồi ✓
             </span>
             <h2 id={titleId} className="text-[21px] leading-snug font-bold break-words">
-              Mục tiêu nhỏ: {item.title}
+              {extra ? `Làm thêm: ${item.title}` : `Mục tiêu nhỏ: ${item.title}`}
             </h2>
             <p className="text-[15px] text-ink/75">{sub}</p>
             {item.source === "homework" && item.note && <p className="text-[15px] text-ink/75">{item.note}</p>}

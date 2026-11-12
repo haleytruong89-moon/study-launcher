@@ -5,9 +5,10 @@ import type { DayState, TaskView } from "@/lib/dayState";
 import { dropOrder } from "@/lib/today/reorder";
 import type { TodayView } from "@/lib/today/service";
 import { studyTimerLabel } from "@/lib/today/focus";
+import { extraRunView, isExtraRun, runningItems } from "@/lib/today/rules";
 import { dayMonth, dueLabel, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
 import { plannable } from "@/lib/today/week";
-import { FilesFold, TaskActions, TaskRow, isWaiting, whereLine, type TaskCtx } from "./today-parts";
+import { FilesFold, LamThem, TaskActions, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
 /**
  * Góc học tập (R2 §3, R6c: artifact vStudy / workPanel, audit items K and L). The child puts
@@ -46,6 +47,7 @@ function dueText(i: TaskView, today: string): string | null {
 /** "{note / where} · {due} · ≥ N phút" under a row title. */
 function rowSub(i: TaskView, ctx: TaskCtx): string {
   if (i.state === "running" && i.runId && ctx.asked.has(i.runId)) return "Đang chờ bố mẹ xem…";
+  if (i.state === "done" && i.source === "template") return doneLine(i, ctx.nowMs); // R8a
   return [whereLine(i) || i.note, dueText(i, ctx.today), i.minMinutes > 0 && !i.requiresProof ? `≥ ${i.minMinutes} phút` : null].filter(Boolean).join(" · ");
 }
 
@@ -84,8 +86,10 @@ export function StudyCorner({
   useEffect(() => () => stopDrag.current?.(), []);
 
   const all = [...list, ...upcoming];
-  const running = all.find((i) => i.state === "running") ?? null;
-  const current = all.find((i) => i.key === picked) ?? running ?? suggested ?? list.find((i) => i.state !== "done") ?? null;
+  // R8a: a running "Làm thêm" run counts as running; its done task opens as that run.
+  const running = all.find((i) => i.state === "running") ?? runningItems(s)[0] ?? null;
+  const chosen = all.find((i) => i.key === picked) ?? running ?? suggested ?? list.find((i) => i.state !== "done") ?? null;
+  const current = chosen ? (extraRunView(chosen) ?? chosen) : null;
 
   function save(keys: string[]) {
     // Keep what the plan already had that this list does not show (e.g. upcoming picks).
@@ -221,7 +225,7 @@ export function StudyCorner({
                       </span>
                       <b className="text-base break-words">
                         {item.title}
-                        {item.state === "running" ? " · đang làm" : ""}
+                        {item.state === "running" ? " · đang làm" : item.extra ? " · đang làm thêm" : ""}
                       </b>
                       {rowSub(item, ctx) && <span className="text-[13px] text-ink/70">{rowSub(item, ctx)}</span>}
                     </button>
@@ -305,6 +309,12 @@ function WorkPanel({ item, ctx }: { item: TaskView | null; ctx: TaskCtx }) {
         </span>
         <h3 className="text-[23px] leading-tight font-bold">{item.title} ✓</h3>
         <p className="text-sm text-ink/70">Đã xong. Chọn việc khác trong danh sách.</p>
+        {item.source === "template" && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm text-ink/80">{doneLine(item, ctx.nowMs)}</span>
+            <LamThem item={item} ctx={ctx} />
+          </div>
+        )}
       </>
     );
   }
@@ -314,7 +324,7 @@ function WorkPanel({ item, ctx }: { item: TaskView | null; ctx: TaskCtx }) {
     <>
       <div className="flex flex-col gap-1">
         <span className={EYEBROW} style={{ color: ctx.color }}>
-          {item.state === "running" ? "Đang làm" : "Việc tiếp theo"} · {tagLabel(item)}
+          {isExtraRun(item) ? "Đang làm thêm" : item.state === "running" ? "Đang làm" : "Việc tiếp theo"} · {tagLabel(item)}
         </span>
         <h3 className="text-[26px] leading-tight font-bold break-words">{item.title}</h3>
         {sub && <p className="text-[15px] text-ink/75">{sub}</p>}
@@ -357,7 +367,9 @@ function StudyTimer({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
             ? `Đủ ${item.minMinutes} phút rồi ✓ — làm xong thì bấm Xong.`
             : timed
               ? `Ít nhất ${item.minMinutes} phút. Nút Xong mở khi đủ giờ (giờ máy chủ).`
-              : "Không giới hạn thời gian. Làm xong thì bấm Xong."}
+              : isExtraRun(item)
+                ? "Không bắt buộc — làm bao lâu cũng được."
+                : "Không giới hạn thời gian. Làm xong thì bấm Xong."}
       </p>
     </div>
   );

@@ -7,7 +7,7 @@ import type { TaskView } from "@/lib/dayState";
 import { compressImage } from "@/lib/images";
 import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
-import { MAX_PROOFS, passOffered, runningTimedTask } from "@/lib/today/rules";
+import { MAX_PROOFS, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
 import { bannerFor, clock, dayProgress, daySteps, longDate, nextTask, statusPill } from "@/lib/today/view";
 import { Character } from "../avatar-face";
@@ -259,7 +259,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
       void loadWeek(true);
       if (url === "/api/tasks/start" && opts?.sheet !== false) {
         const b = (body ?? {}) as { source?: string; id?: string };
-        const item = [...data.state.part1.items, ...data.state.part2.items].find((i) => i.source === b.source && i.id === b.id && i.state === "running");
+        // R8a: "Làm thêm" on a done task shows the same card, for its extra run.
+        const item = runningItems(data.state).find((i) => i.source === b.source && i.id === b.id);
         if (item) setStarted({ key: item.key, runId: item.runId, opener });
       }
       return true;
@@ -333,14 +334,14 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   // R7a: forget the open focus screen once its task stops running (finished, or a new day).
   useEffect(() => {
     if (!view || !storedFocus) return;
-    const still = [...view.state.part1.items, ...view.state.part2.items].some((i) => i.key === storedFocus && i.state === "running");
+    const still = runningItems(view.state).some((i) => i.key === storedFocus);
     if (!still) writeFocusOpen(null);
   }, [view, storedFocus]);
 
   // Check often while something is in progress, so a photo sent from the phone or a parent's
   // confirmation shows here within seconds (the clock never keeps running after "done").
   const sheetOpen = !!proofKey && !!view?.state.part1.items.some((i) => i.key === proofKey && i.state === "running");
-  const anyRunning = !!view && [...view.state.part1.items, ...view.state.part2.items].some((i) => i.state === "running");
+  const anyRunning = !!view && runningItems(view.state).length > 0;
   const fastMs = sheetOpen ? 4000 : anyRunning ? 10_000 : 0;
   useEffect(() => {
     if (!fastMs) return;
@@ -384,7 +385,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const showNudge = !view.plan && !s.part1.complete && planItems.length >= 2 && planLater !== s.localDate;
   const planDone = view.plan ? planProgress(s, view.plan) : null;
   const countdownTo = s.status === "BREAK" ? s.break.endsAt : s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
-  const running = [...s.part1.items, ...s.part2.items].filter((i) => i.state === "running");
+  // R8a: a "Làm thêm" run is listed as a running task (chip, focus view, start card).
+  const running = runningItems(s);
   // Shown only when the child asked for it, while that task runs, and not during the break.
   const focusItem = paused || !focusKey ? null : (running.find((i) => i.key === focusKey && (!focusChoice || i.runId === focusChoice.runId)) ?? null);
   const startedItem = started && !focusItem ? (running.find((i) => i.key === started.key && i.runId === started.runId) ?? null) : null;

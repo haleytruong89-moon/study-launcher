@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { TaskView } from "@/lib/dayState";
-import { FOCUS_LINES, chipTime, focusLine, isLongRunning, minutesLabel, pickHash, remainingMinutes, shortTitle, studyTimerLabel } from "@/lib/today/focus";
+import { FOCUS_LINES, chipTime, focusLine, isLongRunning, minutesLabel, pickHash, remainingMinutes, shortTitle, studyTimerLabel, todayLine } from "@/lib/today/focus";
+import { extraRunView } from "@/lib/today/rules";
+import { taskMeta } from "@/lib/today/view";
 
 const MIN = 60_000;
 
@@ -28,6 +30,9 @@ const base: TaskView = {
   group: null,
   early: false,
   state: "todo",
+  todayMinutes: 0,
+  sessions: 0,
+  extra: null,
 };
 const now = Date.parse("2026-11-08T10:00:00Z");
 
@@ -159,5 +164,31 @@ describe("sceneKeyOf (focus background of An's world)", () => {
     expect(sceneKeyOf("sa_mac")).toBe("rung");
     expect(sceneKeyOf(null)).toBe("rung");
     expect(sceneKeyOf(undefined)).toBe("rung");
+  });
+});
+
+describe("R8a Làm thêm wording (minutes only, no counters)", () => {
+  it("todayLine: “Hôm nay: 1 giờ 30 phút · 2 lần”", () => {
+    expect(todayLine({ todayMinutes: 90, sessions: 2 })).toBe("Hôm nay: 1 giờ 30 phút · 2 lần");
+    expect(todayLine({ todayMinutes: 25, sessions: 1 })).toBe("Hôm nay: 25 phút · 1 lần");
+    expect(todayLine({ todayMinutes: 0, sessions: 1 })).toBe("Hôm nay: dưới 1 phút · 1 lần");
+  });
+
+  it("the running extra view: no minimum, Xong at once, calm line", () => {
+    const done: TaskView = {
+      ...base,
+      state: "done",
+      runId: "r1",
+      startedAt: "2026-11-08T08:00:00Z",
+      canFinishAt: "2026-11-08T08:20:00Z",
+      doneAt: "2026-11-08T08:25:00Z",
+      extra: { runId: "r2", startedAt: "2026-11-08T09:48:00Z" },
+    };
+    const v = extraRunView(done);
+    expect(v).toMatchObject({ state: "running", runId: "r2", minMinutes: 0, canFinishAt: "2026-11-08T09:48:00Z" });
+    expect(taskMeta(v!, now)).toBe("Đang làm thêm · 12 phút — không bắt buộc");
+    expect(studyTimerLabel(v!, now)).toBe("đã làm 12 phút");
+    expect(extraRunView({ ...done, extra: null })).toBeNull();
+    expect(extraRunView({ ...done, state: "running" })).toBeNull();
   });
 });

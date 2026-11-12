@@ -26,6 +26,9 @@ const base: TaskView = {
   group: null,
   early: false,
   state: "todo",
+  todayMinutes: 0,
+  sessions: 0,
+  extra: null,
 };
 const now = Date.parse("2026-11-08T10:00:00Z");
 

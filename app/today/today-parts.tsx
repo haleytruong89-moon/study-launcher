@@ -3,6 +3,8 @@
 import type { DayState, TaskView } from "@/lib/dayState";
 import { KIND_LABEL, type AttachmentView } from "@/lib/files";
 import { addDays } from "@/lib/time";
+import { elapsedMs, minutesLabel, todayLine } from "@/lib/today/focus";
+import { extraRunView, isExtraRun } from "@/lib/today/rules";
 import { dayLabel, dayMonth, dueLabel, dueTone, earlyUntil, isOkResult, taskMeta } from "@/lib/today/view";
 
 export type Act = { url: string; body?: unknown; confirm?: string };
@@ -141,6 +143,61 @@ export function FilesFold({ files }: { files: AttachmentView[] }) {
   );
 }
 
+/**
+ * R8a: the line under a done template: "Hôm nay: 1 giờ 30 phút · 2 lần", or "Đang làm thêm · 12
+ * phút" while a "Làm thêm" run runs (minutes only, on the server clock).
+ */
+export function doneLine(item: TaskView, nowMs: number): string {
+  const run = extraRunView(item);
+  return run ? `Đang làm thêm · ${minutesLabel(elapsedMs(run, nowMs))}` : todayLine(item);
+}
+
+/**
+ * R8a "Làm thêm" (parent 08/11/2026): a done supplementary task or skill may be done again. The
+ * button starts an extra run (server route, server clock); while it runs: 🎯 Tập trung and Xong at
+ * once (no minimum). It never changes what is done or what is open. Never shown for homework.
+ */
+export function LamThem({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
+  if (item.source !== "template" || item.state !== "done") return null;
+  const run = extraRunView(item);
+  const off = !!ctx.busy || ctx.paused;
+  const btn = "min-h-11 shrink-0 rounded-full border-[1.5px] bg-white px-4 text-sm font-bold whitespace-nowrap disabled:opacity-50";
+  if (run) {
+    return (
+      <span className="flex flex-wrap justify-end gap-2">
+        <button type="button" aria-label={`Tập trung: ${item.title}`} disabled={ctx.paused} onClick={() => ctx.onFocus(run)} className={btn} style={{ borderColor: ctx.color, color: ctx.color }}>
+          🎯 Tập trung
+        </button>
+        <button
+          type="button"
+          aria-label={`Xong làm thêm: ${item.title}`}
+          disabled={off}
+          onClick={() => void ctx.onAct({ url: "/api/tasks/finish", body: { runId: run.runId } })}
+          className="min-h-11 shrink-0 rounded-full px-4 text-sm font-bold whitespace-nowrap text-white disabled:opacity-50"
+          style={{ background: ctx.color }}
+        >
+          Xong
+        </button>
+      </span>
+    );
+  }
+  // One timed task at a time: an extra run waits for the running one (the server checks too).
+  const other = ctx.runningTimed;
+  return (
+    <button
+      type="button"
+      aria-label={`Làm thêm: ${item.title}`}
+      title={other ? `Làm xong “${other.title}” rồi làm thêm` : undefined}
+      disabled={off || other !== null}
+      onClick={() => void ctx.onAct({ url: "/api/tasks/start", body: { source: item.source, id: item.id } })}
+      className={btn}
+      style={{ borderColor: ctx.color, color: ctx.color }}
+    >
+      Làm thêm
+    </button>
+  );
+}
+
 /** One row of a task list (homework, extra, upcoming or skill). */
 export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: TaskCtx; locked?: boolean }) {
   const done = item.state === "done";
@@ -233,10 +290,11 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
   const files = ctx.files(item);
   const tone = item.dueDate ? TONE[dueTone(item.dueDate, ctx.today)] : null;
   const kind = item.source === "homework" ? (item.group === "upcoming" ? "Bài trên lớp · làm trước" : "Bài trên lớp") : item.part === 1 ? "Bài bổ sung" : "Kỹ năng";
+  const extra = isExtraRun(item); // R8a
   return (
     <div className="flex flex-col gap-3">
       <div className="text-xs font-bold tracking-[0.08em] uppercase" style={{ color: ctx.color }}>
-        {label}
+        {extra ? "Đang làm thêm" : label}
       </div>
       <div className="flex flex-col gap-1">
         <div className="text-[23px] leading-tight font-bold">{item.title}</div>
@@ -253,7 +311,7 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
           </span>
         )}
         <span className="rounded-full bg-[#EEF0EC] px-2.5 py-1 text-[13px] font-semibold text-ink/80">
-          {item.requiresProof ? "Cần ảnh bài làm" : item.minMinutes > 0 ? `Ít nhất ${item.minMinutes} phút` : "Không giới hạn thời gian"}
+          {item.requiresProof ? "Cần ảnh bài làm" : extra ? "Không bắt buộc — làm bao lâu cũng được" : item.minMinutes > 0 ? `Ít nhất ${item.minMinutes} phút` : "Không giới hạn thời gian"}
         </span>
       </div>
       <FilesFold files={files} />

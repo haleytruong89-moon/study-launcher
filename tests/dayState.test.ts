@@ -1171,6 +1171,123 @@ describe("task views", () => {
 });
 
 // ---------------------------------------------------------------------------
+// R8a "Làm thêm": extra runs of a done template (interpretation 10)
+// ---------------------------------------------------------------------------
+
+describe("R8a Làm thêm (extra runs)", () => {
+  const required = () => run({ id: "req", templateId: "e1", startedAt: iso(`${TODAY} 14:00`), doneAt: iso(`${TODAY} 14:25`) });
+  const extraOpen = () => run({ id: "x1", templateId: "e1", startedAt: iso(`${TODAY} 15:00`) });
+  /** Both parts done (only e1 + s1), free time started at 14:50 (open until 15:35). */
+  const doneDay = (runs: TaskRunInput[]) =>
+    input({
+      templates: [tpl("e1", "extra"), tpl("s1", "skill")],
+      sessions: [session(TODAY, { part1DoneAt: iso(`${TODAY} 14:30`), part2DoneAt: iso(`${TODAY} 14:30`), freeStartedAt: iso(`${TODAY} 14:50`) })],
+      runs: [required(), run({ id: "s-run", templateId: "s1", startedAt: iso(`${TODAY} 13:00`), doneAt: iso(`${TODAY} 13:20`) }), ...runs],
+    });
+  const strip = (st: ReturnType<typeof computeDayState>) => ({
+    status: st.status,
+    open: st.open,
+    openUntil: st.openUntil,
+    p1: [st.part1.total, st.part1.done, st.part1.complete, st.part1.doneAt],
+    p2: [st.part2.total, st.part2.done, st.part2.complete, st.part2.doneAt],
+    free: st.free,
+    breakView: st.break,
+    milestones: st.milestones,
+  });
+
+  it("done + extra running: still done, parts / free time / lock unchanged, todayMinutes sums", () => {
+    const now = vn(`${TODAY} 15:30:40`);
+    const without = computeDayState(doneDay([]), now);
+    const withExtra = computeDayState(doneDay([extraOpen()]), now);
+    expect(strip(withExtra)).toEqual(strip(without));
+    expect(withExtra.status).toBe("FREE");
+    expect(withExtra.part1.items.find((x) => x.id === "e1")).toMatchObject({
+      state: "done",
+      runId: "req",
+      startedAt: iso(`${TODAY} 14:00`),
+      doneAt: iso(`${TODAY} 14:25`),
+      extra: { runId: "x1", startedAt: iso(`${TODAY} 15:00`) },
+      todayMinutes: 55, // 25 + 30 (the running run up to now, floored)
+      sessions: 2,
+    });
+    expect(without.part1.items.find((x) => x.id === "e1")).toMatchObject({ extra: null, todayMinutes: 25, sessions: 1 });
+  });
+
+  it("an extra run never re-locks or finishes a part: Part 2 still open stays LOCK_P2", () => {
+    const now = vn(`${TODAY} 15:30`);
+    const d = input({ templates: [tpl("e1", "extra"), tpl("s1", "skill")], runs: [required(), extraOpen()] });
+    const s = computeDayState(d, now);
+    expect(s.status).toBe("LOCK_P2");
+    expect(s.part1.complete).toBe(true);
+    expect(s.part2).toMatchObject({ total: 1, done: 0, complete: false });
+    expect(s.milestones).toEqual({ part1DoneAt: now.toISOString() });
+    // A timed (extra) run is running: no break (interpretation 2).
+    expect(s.break.canStart).toBe(false);
+    expect(computeDayState(input({ templates: [tpl("e1", "extra"), tpl("s1", "skill")], runs: [required()] }), now).break.canStart).toBe(true);
+  });
+
+  it("the earliest done run is the required one, whatever the order; later runs are extra", () => {
+    const later = run({ id: "later", templateId: "e1", startedAt: iso(`${TODAY} 14:30`), doneAt: iso(`${TODAY} 14:35`) });
+    const s = computeDayState(normalDay({ runs: [later, required()] }), vn(`${TODAY} 15:00`));
+    expect(s.part1.items.find((x) => x.id === "e1")).toMatchObject({
+      runId: "req",
+      startedAt: iso(`${TODAY} 14:00`),
+      doneAt: iso(`${TODAY} 14:25`),
+      canFinishAt: iso(`${TODAY} 14:20`),
+      extra: null,
+      todayMinutes: 30,
+      sessions: 2,
+    });
+  });
+
+  it("an unfinished extra run from yesterday is ignored (rule 11)", () => {
+    const stale = run({ id: "old", templateId: "e1", localDate: YESTERDAY, startedAt: iso(`${YESTERDAY} 20:00`) });
+    const s = computeDayState(normalDay({ runs: [required(), stale] }), vn(`${TODAY} 15:00`));
+    expect(s.part1.items.find((x) => x.id === "e1")).toMatchObject({ state: "done", runId: "req", extra: null, todayMinutes: 25, sessions: 1 });
+  });
+
+  it("an unfinished run started before the required run was done (a double start) is ignored", () => {
+    const orphan = run({ id: "orphan", templateId: "e1", startedAt: iso(`${TODAY} 14:00:01`) });
+    const s = computeDayState(normalDay({ runs: [required(), orphan] }), vn(`${TODAY} 18:00`));
+    expect(s.part1.items.find((x) => x.id === "e1")).toMatchObject({ state: "done", extra: null, todayMinutes: 25, sessions: 1 });
+  });
+
+  it("todayMinutes floors the SUM of the runs; a running required run counts up to now", () => {
+    const a = run({ id: "a", templateId: "e1", startedAt: iso(`${TODAY} 14:00:00`), doneAt: iso(`${TODAY} 14:20:30`) });
+    const b = run({ id: "b", templateId: "e1", startedAt: iso(`${TODAY} 14:30:00`), doneAt: iso(`${TODAY} 14:30:40`) });
+    const s = computeDayState(normalDay({ runs: [a, b] }), vn(`${TODAY} 15:00`));
+    expect(s.part1.items.find((x) => x.id === "e1")).toMatchObject({ todayMinutes: 21, sessions: 2 });
+
+    const r = computeDayState(normalDay({ runs: [run({ id: "r", templateId: "e1", startedAt: iso(`${TODAY} 14:50`) })] }), vn(`${TODAY} 15:02:59`));
+    expect(r.part1.items.find((x) => x.id === "e1")).toMatchObject({ state: "running", extra: null, todayMinutes: 12, sessions: 1 });
+    const todo = computeDayState(normalDay(), vn(`${TODAY} 15:00`));
+    expect(todo.part1.items.map((x) => [x.id, x.todayMinutes, x.sessions, x.extra])).toEqual([
+      ["h1", 0, 0, null],
+      ["e1", 0, 0, null],
+    ]);
+  });
+
+  it("homework never has an extra run, even with a later run of its own", () => {
+    const s = computeDayState(
+      normalDay({
+        homework: [hw("h1", { doneAt: iso(`${TODAY} 14:10`) })],
+        runs: [
+          run({ id: "h-run", source: "homework", homeworkItemId: "h1", startedAt: iso(`${TODAY} 14:00`), doneAt: iso(`${TODAY} 14:10`) }),
+          run({ id: "h-again", source: "homework", homeworkItemId: "h1", startedAt: iso(`${TODAY} 14:30`) }),
+        ],
+      }),
+      vn(`${TODAY} 15:00`),
+    );
+    expect(s.part1.items.find((x) => x.id === "h1")).toMatchObject({ state: "done", extra: null, sessions: 1 });
+  });
+
+  it("a malformed instant in an extra run throws (fail-closed)", () => {
+    const bad = run({ id: "bad", templateId: "e1", startedAt: "not-a-date" });
+    expect(() => computeDayState(normalDay({ runs: [required(), bad] }), vn(`${TODAY} 15:00`))).toThrow(/invalid instant/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // "Ngày đạt" and the 7-day strip
 // ---------------------------------------------------------------------------
 

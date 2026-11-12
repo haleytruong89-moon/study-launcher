@@ -10,7 +10,7 @@ import { readPlayPlan, writePlayPlan } from "@/lib/today/playPlan";
 import type { TodayView } from "@/lib/today/service";
 import { clock, dayMonth, dueLabel, groupLabel, leftCount, nextPart1, taskMeta, vnTime } from "@/lib/today/view";
 import type { WeekDay } from "@/lib/today/weekDays";
-import { isWaiting, whereLine, type TaskCtx } from "./today-parts";
+import { LamThem, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
 /**
  * R6d (artifact vHome, audit item I): the four areas of Hôm nay — Cảm xúc, Học tập, Kỹ năng,
@@ -82,6 +82,22 @@ function TaskLine({ item, ctx, eyebrow, sub }: { item: TaskView; ctx: TaskCtx; e
   );
 }
 
+/** R8a: a done supplementary task or skill: today's total and "Làm thêm" (never a counter). */
+function DoneTemplateRow({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
+  return (
+    <div className={`${DONE_ROW} flex-wrap`}>
+      <div className="flex min-w-0 grow basis-40 flex-col gap-0.5">
+        <b className="break-words">{item.title}</b>
+        <span className="text-[13px] text-ink/75">{doneLine(item, ctx.nowMs)}</span>
+      </div>
+      <span className="flex shrink-0 flex-col items-end gap-1.5">
+        {item.extra === null && <span className="text-sm font-bold whitespace-nowrap text-[#2F6E45]">✓ Xong</span>}
+        <LamThem item={item} ctx={ctx} />
+      </span>
+    </div>
+  );
+}
+
 function Card({ n, name, tag, top, children }: { n: number; name: string; tag: string; top: string; children: React.ReactNode }) {
   return (
     <section role="listitem" aria-label={`${n} · ${name}`} className="flex min-w-0 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-4" style={{ borderTop: `6px solid ${top}` }}>
@@ -149,6 +165,8 @@ export function PillarCards({
   const next1 = nextPart1(s, view.plan);
   const pct = s.part1.total ? Math.round((s.part1.done / s.part1.total) * 100) : 100;
   const skills = s.part2.items.filter((i) => !i.placeholder);
+  // R8a: done supplementary tasks stay on the card for "Làm thêm" (the progress above stays the required work).
+  const doneExtras = s.part1.items.filter((i) => i.source === "template" && i.state === "done");
   const left = leftCount(s);
   const freeEnds = s.free.endsAt ? Date.parse(s.free.endsAt) : null;
   // The server's status, not the free-time clock: a parent's lock wins over free time (DESIGN §5).
@@ -205,6 +223,9 @@ export function PillarCards({
             <b className="text-[#24563A]">{s.part1.total ? "Xong hết bài hôm nay ✓" : "Hôm nay không có bài tập."}</b>
           </div>
         ) : null}
+        {doneExtras.map((i) => (
+          <DoneTemplateRow key={i.key} item={i} ctx={ctx} />
+        ))}
         <button type="button" onClick={onStudy} className="btn self-start border-[1.5px] bg-white text-sm" style={{ borderColor: color, color }}>
           📚 Vào Góc học tập · xếp bài
         </button>
@@ -216,13 +237,7 @@ export function PillarCards({
         ) : (
           skills.map((i) =>
             i.state === "done" ? (
-              <div key={i.key} className={DONE_ROW}>
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <b className="break-words">{i.title}</b>
-                  <span className="text-[13px] text-ink/75">{minutesLine(i)}</span>
-                </div>
-                <span className="shrink-0 text-sm font-bold whitespace-nowrap text-[#2F6E45]">✓ Xong</span>
-              </div>
+              <DoneTemplateRow key={i.key} item={i} ctx={ctx} />
             ) : (
               <TaskLine key={i.key} item={i} ctx={ctx} sub={`${minutesLine(i)} · làm lúc nào cũng được`} />
             ),

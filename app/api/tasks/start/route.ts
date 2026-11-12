@@ -6,7 +6,11 @@ import { jsonError, readToday, requireChild, serverError, todayView } from "@/li
 
 const bodySchema = z.object({ source: z.enum(["homework", "template"]), id: z.uuid() });
 
-/** Child presses "Bắt đầu": creates a task_run with started_at = server time. */
+/**
+ * Child presses "Bắt đầu": creates a task_run with started_at = server time. R8a: "Làm thêm" on a
+ * done supplementary task or skill uses the same route and creates an extra run (idempotent while
+ * one runs); decideStart decides.
+ */
 export async function POST(request: Request) {
   const guard = await requireChild();
   if (!guard.ok) return guard.response;

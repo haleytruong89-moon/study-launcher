@@ -18,9 +18,31 @@ export function isTimed(item: TaskView): boolean {
   return item.source === "template" && item.minMinutes > 0;
 }
 
-/** The timed task currently running, if any (at most one at a time). */
+/**
+ * R8a "Làm thêm": the running extra run of a done template, shown as a running task with no
+ * minimum (Xong at once). The task itself stays done; this view is only for the screen and for
+ * the rules below (it carries the extra run's id and start time). null when none runs.
+ */
+export function extraRunView(item: TaskView): TaskView | null {
+  if (item.state !== "done" || item.extra === null) return null;
+  const { runId, startedAt } = item.extra;
+  return { ...item, state: "running", runId, startedAt, canFinishAt: startedAt, doneAt: null, minMinutes: 0, proofCount: 0, early: false };
+}
+
+/** R8a: this view is a running "Làm thêm" run (see extraRunView). */
+export function isExtraRun(item: TaskView): boolean {
+  return item.state === "running" && item.extra !== null && item.extra.runId === item.runId;
+}
+
+/** Every running task of today: required runs, then the "Làm thêm" runs (R8a). */
+export function runningItems(state: DayState): TaskView[] {
+  const items = allItems(state);
+  return [...items.filter((i) => i.state === "running"), ...items.map(extraRunView).filter((i): i is TaskView => i !== null)];
+}
+
+/** The timed task currently running, if any (at most one at a time). A "Làm thêm" run counts (R8a). */
 export function runningTimedTask(state: DayState): TaskView | null {
-  return allItems(state).find((i) => i.state === "running" && isTimed(i)) ?? null;
+  return runningItems(state).find((i) => isTimed(i) || isExtraRun(i)) ?? null;
 }
 
 /** Whether the pass button should be offered (refused while a parent lock is in effect). */
@@ -37,30 +59,45 @@ function onBreak(state: DayState): boolean {
   return state.break.state === "running";
 }
 
-/** Start a task: it must be today's, countable and not done; never during the break. Both parts are open (R1). */
+/**
+ * Start a task: it must be today's, countable and not done; never during the break. Both parts are
+ * open (R1). R8a: a done template starts a "Làm thêm" run (`extra`; a second press while it runs
+ * returns the running one). Homework that is done cannot be started again.
+ */
 export function decideStart(
   state: DayState,
   source: "homework" | "template",
   id: string,
-): Decision<{ item: TaskView; alreadyRunning: boolean }> {
+): Decision<{ item: TaskView; alreadyRunning: boolean; extra: boolean }> {
   const item = allItems(state).find((i) => i.source === source && i.id === id);
   if (!item) return deny(404, "Không có việc này hôm nay.");
   if (item.state === "placeholder") return deny(409, "App này đang xây, chưa làm được.");
-  if (item.state === "done") return deny(409, "Việc này đã xong rồi.");
+  if (item.state === "done") {
+    if (item.source !== "template") return deny(409, "Việc này đã xong rồi.");
+    if (item.extra !== null) return { ok: true, value: { item, alreadyRunning: true, extra: true } };
+    if (onBreak(state)) return deny(409, ON_BREAK_TEXT);
+    // An extra run is timed for "one at a time" (R8a), whatever the task's minimum.
+    const other = runningTimedTask(state);
+    if (other) return deny(409, `Đang làm “${other.title}” — bấm Xong việc đó trước.`);
+    return { ok: true, value: { item, alreadyRunning: false, extra: true } };
+  }
   if (onBreak(state)) return deny(409, ON_BREAK_TEXT);
   if (item.state !== "running" && isTimed(item)) {
     // Parent decision 15/10/2026: one timed task at a time, so one wait cannot count twice.
     const other = runningTimedTask(state);
     if (other) return deny(409, `Đang làm “${other.title}” — bấm Xong việc đó trước.`);
   }
-  return { ok: true, value: { item, alreadyRunning: item.state === "running" } };
+  return { ok: true, value: { item, alreadyRunning: item.state === "running", extra: false } };
 }
 
 /**
  * Finish a running task. Templates: server time must have reached started_at + minimum
  * (SPEC 2.6: calling earlier is refused and nothing is recorded). Homework: >= 1 proof photo.
+ * R8a: a "Làm thêm" run has no minimum (it never changes whether the task is done).
  */
 export function decideFinish(state: DayState, runId: string, now: Date): Decision<{ item: TaskView }> {
+  const extra = allItems(state).map(extraRunView).find((i) => i?.runId === runId);
+  if (extra) return onBreak(state) ? deny(409, ON_BREAK_TEXT) : { ok: true, value: { item: extra } };
   const item = allItems(state).find((i) => i.runId === runId);
   if (!item) return deny(404, "Không tìm thấy lượt làm này.");
   if (item.state === "done") return deny(409, "Việc này đã xong rồi.");
