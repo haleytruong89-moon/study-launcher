@@ -61,8 +61,8 @@ Vai trò trong hub:
 - Bài trên lớp: bấm Xong bắt buộc tải ≥ 1 ảnh bài đã làm thì việc mới thành "xong".
 - *(R1, chốt 07/11/2026 — `docs/MAN_CHINH_MOI.md` §1.4, E1–E24)* Phần 1 và Phần 2 **mở cùng lúc**: con bắt đầu kỹ năng trước bài tập được.
 - Xong **cả hai** phần → giờ tự do bắt đầu tại thời điểm server ghi nhận; đúng 45' sau chuyển sang KHÓA_HẾT_NGÀY. Ngày **không có việc nào** → con bấm "Bắt đầu giờ tự do" thì 45' mới bắt đầu.
-- Nghỉ 10' (tùy chọn) mở khi con xong **Phần 1 hoặc Phần 2**, trước giờ tự do; không nghỉ được khi đang chạy đồng hồ một việc có giờ tối thiểu, khi bố mẹ khóa tay, hoặc khi máy đang mở sẵn. Trong lúc nghỉ, nút việc tạm khóa; "Học tiếp" kết thúc nghỉ sớm.
-- Nghỉ 10' và giờ tự do mỗi thứ tối đa 1 lần/ngày.
+- *(R8b, đổi 08–09/11/2026 — §18, DESIGN §5)* Nghỉ theo **ngân hàng giờ nghỉ** (thay luật cũ "nghỉ 10' một lần khi xong một phần"): tập trung liên tục 45'→10', 90'→30', 120'→45', 180'→60' (bậc là dữ liệu `break_tiers`); chỉ tính lượt đã Xong/nộp, mỗi lượt tối đa 180'. Nghỉ dùng cả ngân hàng (≥ 5'), tối đa 6 lần/ngày; phút chưa dùng cộng vào giờ tự do; "Học tiếp" sớm hoặc bố mẹ khóa giữa giờ nghỉ → phần còn lại cất lại. Không nghỉ được khi đang chạy đồng hồ một việc có giờ tối thiểu, khi bố mẹ khóa tay, hoặc khi máy đang mở sẵn. Trong lúc nghỉ, nút việc tạm khóa.
+- Giờ tự do tối đa 1 lần/ngày.
 - Thẻ miễn chỉ dùng được khi còn thẻ trong tuần (tuần bắt đầu thứ Hai); dùng → giờ tự do bắt đầu ngay, ngày tính "đạt".
 - 00:00 giờ Việt Nam: trạng thái về KHÓA_BÀI_TẬP; nghỉ/giờ tự do không cộng dồn sang ngày sau.
 - Không hiển thị streak hay bảng xếp hạng; chỉ "7 ngày qua" + tiến độ Tin tưởng.
@@ -136,7 +136,7 @@ Cả nhà cùng chốt luật; con được quyền quyết: thứ tự 2 phần
    - **Phần 2 — Kỹ năng**: hoạt động SkillGrow của ngày. *(R1, 07/11/2026)* Làm song song với Phần 1, thứ tự do con chọn.
    - **Bài trên lớp**: không có thời gian tối thiểu (độ dài do cô giáo quyết định) — đồng hồ vẫn chạy để ghi nhận thời gian; làm xong bấm Xong và **chụp ảnh** làm bằng chứng.
    - **Bài bổ sung + kỹ năng**: nút **Xong** chỉ bật khi đồng hồ đạt **tối thiểu 20 phút** (phụ huynh chỉnh riêng được từng việc).
-3. Xong **một** phần (bài tập hoặc kỹ năng) → được **nghỉ 10 phút** (tùy chọn, mở mọi trang) → khóa lại → làm phần còn lại.
+3. Xong **một** phần (bài tập hoặc kỹ năng) → được **nghỉ 10 phút** (tùy chọn, mở mọi trang) → khóa lại → làm phần còn lại. *(Thay bằng ngân hàng giờ nghỉ, R8b — xem §2.)*
 4. Xong **cả hai** phần → **giờ tự do 45 phút** → hết giờ khóa lại đến hết ngày.
 5. Gặp trang bị khóa mà cần cho bài → bấm **"Xin mở trang này"** → phụ huynh duyệt trên điện thoại.
 
@@ -156,7 +156,7 @@ Cả nhà cùng chốt luật; con được quyền quyết: thứ tự 2 phần
 
 Quy tắc:
 - Reset 00:00 mỗi ngày → về KHÓA_BÀI_TẬP. **Mọi khoảng mở (nghỉ, giờ tự do, override) kết thúc muộn nhất 00:00.** Không có bài trên lớp → Phần 1 chỉ còn bài bổ sung; một phần **không có việc nào** thì coi như đã xong. *(R1)* Cả hai phần không có việc nào → con bấm "Bắt đầu giờ tự do" thì 45' mới tính (không tự chạy lúc 00:00).
-- Mỗi ngày **1 lần** nghỉ 10' và **1 lần** giờ tự do 45'.
+- Mỗi ngày **1 lần** nghỉ 10' và **1 lần** giờ tự do 45'. *(Nghỉ: thay bằng ngân hàng giờ nghỉ, R8b — xem §2.)*
 - Mọi thời gian (đồng hồ việc, nghỉ, giờ tự do) tính theo **đồng hồ server** (chống chỉnh giờ máy).
 - Mất mạng / không đọc được trạng thái → **mặc định khóa**.
 - **Phụ huynh override**: PIN → mở khóa thủ công / cộng thêm phút / khóa ngay.
