@@ -2,21 +2,10 @@ import { execFileSync } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
-import { e2eEnv } from "./env";
+import { admin, byCall, byPsql, env, login } from "./helpers";
 import { makePng } from "./png";
 import { addDays, localDate, weekStart } from "../lib/time";
 import { inEveningWindow } from "../lib/push/window";
-
-const env = e2eEnv();
-
-async function login(page: Page, email: string, password: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Mật khẩu").fill(password);
-  await page.getByRole("button", { name: "Đăng nhập" }).click();
-  // Wait until the session cookie is set and the app has redirected away from /login.
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
-}
 
 // Shared across the ordered tests below.
 let childEmail = "";
@@ -163,8 +152,6 @@ test("database rules hold when the child talks to Supabase directly with their o
 // ---------------------------------------------------------------------------
 // S1 — parent: family settings, app slots, task templates, homework with photos
 // ---------------------------------------------------------------------------
-
-const admin = () => createClient(env.supabaseUrl, env.serviceKey, { auth: { persistSession: false } });
 
 test("S1 settings: parent changes family rules and a bedtime; they persist and are audited", async ({ page }) => {
   await login(page, env.parentEmail, env.parentPassword);
@@ -1883,18 +1870,6 @@ test("S3d trust: suggestion -> 'Để sau'; parent switches to Tin tưởng and 
 // (study-time limit, R5). "Con muốn nói chuyện" → parent "Đã thấy".
 // ---------------------------------------------------------------------------
 
-function byPsql(sql: string): string {
-  const dbUrl = process.env.E2E_DB_URL ?? "";
-  expect(dbUrl, "E2E_DB_URL (local Supabase) is needed to age Góc bình yên rows").not.toBe("");
-  return execFileSync("psql", [dbUrl, "-v", "ON_ERROR_STOP=1", "-qAt", "-c", sql], { encoding: "utf8" }).trim();
-}
-
-const byCall = (p: Page, method: string, url: string, body?: unknown) =>
-  p.evaluate(
-    async ([m, u, b]) => (await fetch(u as string, { method: m as string, headers: { "Content-Type": "application/json" }, body: b === undefined ? undefined : JSON.stringify(b) })).status,
-    [method, url, body] as const,
-  );
-
 test("Góc bình yên: off by default; the child opens it WITHOUT a PIN; one server-held visit; no idle lock; parents and anon refused", async ({ page, browser, request }) => {
   const db = admin();
   const { data: kid } = await db.from("profiles").select("id, family_id, display_name").eq("role", "child").single();
@@ -1960,6 +1935,11 @@ test("Góc bình yên: off by default; the child opens it WITHOUT a PIN; one ser
   // A reload continues the same visit (the study-time limit cannot be reset by reloading).
   await k.reload();
   await expect(home).toBeVisible();
+  // The corner is server-rendered: it shows before the page hydrates. Wait until the hydrated
+  // page has made its own first request (the list loads through /api/by/checkins). Aging the visit
+  // while that request is still on its way made it end the visit and open a new one from the old
+  // page while the reload below was running: two open visits (flaky in CI).
+  await expect(k.getByRole("region", { name: "Lần ghé gần đây" })).toContainText("Chưa có lần nào");
   const { data: same } = await db.from("by_sessions").select("id").eq("child_id", childId).is("ended_at", null).single();
   expect(same?.id).toBe(first?.id);
   // No one in the browser reads the visits.
