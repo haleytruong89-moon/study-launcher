@@ -1,7 +1,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, type CurrentUser } from "@/lib/auth";
 import { computeDayState, type DayMilestones, type DayState } from "@/lib/dayState";
 import { attachmentViews, type AttachmentView } from "@/lib/files";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -52,9 +52,14 @@ export function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-/** Route guard for the child's routes: signed in AND role child. */
-export async function requireChild(): Promise<{ ok: true; ctx: ChildContext } | { ok: false; response: NextResponse }> {
-  const me = await getCurrentUser();
+/**
+ * Route guard for the child's routes: signed in AND role child. A page that has already read
+ * the user (same request) passes it in, which saves the two auth round trips.
+ */
+export async function requireChild(
+  known?: CurrentUser | null,
+): Promise<{ ok: true; ctx: ChildContext } | { ok: false; response: NextResponse }> {
+  const me = known === undefined ? await getCurrentUser() : known;
   if (!me) return { ok: false, response: jsonError("Bạn chưa đăng nhập.", 401) };
   if (me.profile?.role !== "child") return { ok: false, response: jsonError("Chỉ tài khoản của con mới dùng được.", 403) };
   return {
@@ -137,20 +142,24 @@ export async function readToday(
   return { state, homeworkPhotos: loaded.homeworkPhotos, rules: { breakMinutes, freeMinutes, trustUpPct }, bedtime: loaded.input.bedtime };
 }
 
-/** Day state + attachments of the homework that is on today's list. */
+/**
+ * Day state + attachments of the homework that is on today's list. The display-only extras do
+ * not depend on the day state (today's date is `localDate(now)`, the same date computeDayState
+ * uses), so they are read in parallel with it; only the weekly card waits for the bedtime.
+ */
 export async function todayView(ctx: ChildContext, now = new Date()): Promise<TodayView> {
-  const { state, homeworkPhotos, rules, bedtime } = await readToday(ctx, now);
+  const date = localDate(now);
+  const [{ state, homeworkPhotos, rules, weekly }, first, plan, icon, reviewed, asked] = await Promise.all([
+    readToday(ctx, now).then(async (read) => ({ ...read, weekly: await readWeekly(ctx, now, read.bedtime) })),
+    ctx.db.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date").limit(1).maybeSingle(),
+    readPlan(ctx, date),
+    readIcon(ctx),
+    readReviewed(ctx, date),
+    readAsked(ctx, date),
+  ]);
   const files: Record<string, AttachmentView[]> = {};
   for (const i of state.part1.items) if (i.source === "homework") files[i.id] = attachmentViews(homeworkPhotos[i.id] ?? []);
-  const first = await ctx.db.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date").limit(1).maybeSingle();
   const firstDay = (first.data?.local_date as string | undefined) ?? state.localDate;
-  const [plan, icon, weekly, reviewed, asked] = await Promise.all([
-    readPlan(ctx, state.localDate),
-    readIcon(ctx),
-    readWeekly(ctx, now, bedtime),
-    readReviewed(ctx, state.localDate),
-    readAsked(ctx, state.localDate),
-  ]);
   return { state, homeworkFiles: files, rules, firstDay, plan, icon, weekly, reviewed, asked };
 }
 

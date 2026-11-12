@@ -25,17 +25,24 @@ export async function loadVerdicts(db: SupabaseClient, date: string): Promise<{ 
 
 /** Each child's live day (server clock), read with the parent's own session. Display only. */
 export async function loadChildrenToday(db: SupabaseClient, familyId: string, children: ChildSummary[], today: string, now: Date): Promise<ChildToday[]> {
-  const { verdicts, asked } = await loadVerdicts(db, today);
-  return Promise.all(
-    children.map(async (child) => {
-      try {
-        const { input } = await loadDay(db, child.id, familyId, today);
-        const state = computeDayState(input, now);
-        return { child, state, overview: childOverview(state, verdicts, now, asked) };
-      } catch (e) {
-        console.error("parent overview failed", e instanceof Error ? e.message : e);
-        return { child, state: null, overview: null };
-      }
-    }),
+  // The verdicts and each child's day are independent reads: all at once. A verdicts error
+  // still fails the whole call; a child's day error still only blanks that child's card.
+  const days = children.map((child) =>
+    loadDay(db, child.id, familyId, today).then(
+      ({ input }) => ({ ok: true as const, input }),
+      (e: unknown) => ({ ok: false as const, e }),
+    ),
   );
+  const [{ verdicts, asked }, loaded] = await Promise.all([loadVerdicts(db, today), Promise.all(days)]);
+  return children.map((child, i) => {
+    try {
+      const day = loaded[i]!;
+      if (!day.ok) throw day.e;
+      const state = computeDayState(day.input, now);
+      return { child, state, overview: childOverview(state, verdicts, now, asked) };
+    } catch (e) {
+      console.error("parent overview failed", e instanceof Error ? e.message : e);
+      return { child, state: null, overview: null };
+    }
+  });
 }

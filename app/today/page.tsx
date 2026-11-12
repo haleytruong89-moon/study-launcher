@@ -20,7 +20,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   if (!me?.profile) redirect(back);
   if (me.profile.role === "parent") redirect("/parent");
 
-  const guard = await requireChild();
+  const guard = await requireChild(me); // same request: reuse the user read above
   if (!guard.ok) redirect(back);
   const { ctx } = guard;
 
