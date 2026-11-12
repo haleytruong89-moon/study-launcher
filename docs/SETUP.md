@@ -1,6 +1,6 @@
 # Study Launcher — Hướng dẫn chuẩn bị (cho phụ huynh)
 
-Cập nhật: 13/10/2026. Làm theo thứ tự A → D. Phần B làm được ngay, **không cần code**, và nên làm sớm nhất vì nó kiểm tra giả định rủi ro nhất của dự án.
+Cập nhật: 13/10/2026 (phần C viết lại 12/11/2026). Làm theo thứ tự A → D. Phần B làm được ngay, **không cần code**, và nên làm sớm nhất vì nó kiểm tra giả định rủi ro nhất của dự án.
 
 ---
 
@@ -70,7 +70,7 @@ reg delete "HKLM\SOFTWARE\Policies\Google\Chrome" /f
 
 **B5. Báo lại cho Claude:** phiên bản Windows + bảng B3 (Đạt / Không đạt từng dòng). Nếu tài khoản của con hiện là Administrator, cần tạo tài khoản Standard cho con — làm ở bước cấu hình chính thức (M3), Claude sẽ hướng dẫn.
 
-> Lưu ý: các khóa registry trên lấy theo tài liệu chính sách Chrome hiện hành mà Claude biết; mục đích của bài thử chính là xác nhận chúng chạy đúng trên máy thật. Edge có bộ khóa tương tự (`HKLM\SOFTWARE\Policies\Microsoft\Edge\...`) nhưng một số tên khác — vd ẩn danh của Edge là `InPrivateModeAvailability` — sẽ cấu hình ở M3. Không cần thử chính sách "trang chủ": trên máy không join domain Chrome bỏ qua nó; extension của mình sẽ tự mở Launcher ở tab mới.
+> Lưu ý: mục đích của bài thử là xác nhận các khóa registry chạy đúng trên máy thật. Tên khóa đã đối chiếu tài liệu ngày 12/11/2026 (nguồn ở cuối phần C). Edge dùng `HKLM\SOFTWARE\Policies\Microsoft\Edge\...` và một số tên khác (`InPrivateModeAvailability`, `BrowserAddProfileEnabled`) — cấu hình thật cho cả Chrome + Edge bằng script ở **C8**. Không cần thử chính sách "trang chủ": trên máy không join domain Chrome bỏ qua nó; extension của mình sẽ tự mở Launcher ở tab mới.
 
 ---
 
@@ -92,14 +92,151 @@ Khi có bản mới của extension: tải zip mới, giải nén **đè** lên 
 
 ---
 
-## C. Tài khoản phát hành extension (làm sớm vì có thể phải chờ duyệt)
+## C. Đăng extension lên cửa hàng + cài kiểu không gỡ được (S6, ~2 giờ + thời gian chờ duyệt)
 
-| # | Việc | Chi phí |
+Cập nhật: 12/11/2026. **Vì sao phải đăng cửa hàng:** laptop Windows ở nhà không "join domain" công ty, nên Chrome và Edge **chỉ chịu ép cài** (con không gỡ/tắt được) extension **lấy từ cửa hàng chính thức**. Google: cài tự động extension không có trên Chrome Web Store thì máy phải join domain Active Directory ([nguồn 3]). Microsoft ghi rõ với Edge: máy không join domain thì chỉ ép cài được extension có trên Edge Add-ons ([nguồn 7]). Bản cài tay hiện nay (B+) con có thể tắt — ép cài từ cửa hàng mới làm cho khóa máy là thật.
+
+Hồ sơ để copy–dán (mô tả, lý do từng quyền, câu trả lời tab Riêng tư, ảnh): **`docs/store/LISTING.md`** + thư mục **`docs/store/assets/`**. Chính sách riêng tư: **https://study-launcher-nine.vercel.app/chinh-sach-rieng-tu** (công khai, không cần đăng nhập).
+
+**Thứ tự:** C1–C2 làm ngay được (tạo tài khoản) · C3–C6 **sau khi PR #64 và PR "biểu tượng + manifest" (LISTING §7) đã merge** · C7–C10 sau khi cửa hàng duyệt xong.
+
+### C1. Tài khoản nhà phát triển Chrome Web Store (~15 phút, mất phí 1 lần)
+
+| # | Việc | Ghi chú |
 |---|---|---|
-| C1 | Đăng ký tài khoản nhà phát triển **Chrome Web Store** | Phí 1 lần ~5 USD |
-| C2 | Đăng ký **Microsoft Partner Center** (Edge Add-ons) | Miễn phí |
+| C1.1 | Chọn **một tài khoản Google** của bố hoặc mẹ (nên bật xác minh 2 bước). Có thể dùng một email riêng cho việc này | **Email tài khoản nhà phát triển không đổi được sau khi tạo** ([nguồn 1]). Email liên hệ hiện trên trang extension (kể cả khi Unlisted) — không dùng email có tên các con |
+| C1.2 | Mở **https://chrome.google.com/webstore/devconsole** → đăng nhập → đồng ý *Developer Agreement* → **trả phí đăng ký** bằng thẻ | Phí **một lần**. Google công bố **5 USD** (Chromium Blog 12/03/2020, [nguồn 2]); trang hướng dẫn hiện tại (xem 12/11/2026) chỉ ghi "one-time registration fee", không ghi số → **xem số tiền trên màn hình trước khi trả** |
+| C1.3 | Mục *Account*: tên nhà phát hành trung tính, vd **Study Launcher Family**. Nếu được hỏi *trader / non-trader* (người bán hàng?), chọn **non-trader** (gia đình, không kinh doanh) | Câu hỏi này Claude chưa kiểm chứng trên màn hình thật — chụp màn hình gửi Claude nếu chưa rõ |
+| C1.4 | Ghi lại: đã tạo xong | Tài khoản mới mặc định được đăng **2 extension** ([nguồn 4]) — đủ |
 
-Extension sẽ đăng ở chế độ **unlisted** (không ai tìm thấy, chỉ cài qua chính sách). Lần duyệt đầu có thể mất vài ngày.
+### C2. Tài khoản Microsoft Partner Center cho Edge (~15 phút, miễn phí)
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| C2.1 | Cần **tài khoản Microsoft cá nhân** (Outlook/Hotmail/Live). **Không** dùng tài khoản công ty/trường học | Microsoft: không nhận đăng ký bằng tài khoản work/school ([nguồn 5]) |
+| C2.2 | Mở **https://partner.microsoft.com/dashboard/microsoftedge/overview** → đăng nhập → form đăng ký hiện ra (nếu không: *Account settings › Programs* → *Get started* ở thẻ Microsoft Edge) | **Miễn phí**: "There is no registration fee" ([nguồn 5]) |
+| C2.3 | *Account country/region*: **Vietnam** · *Account type*: **Individual** · *Publisher display name*: vd **Study Launcher Family** → tick đồng ý điều khoản → **Finish** | Quốc gia và loại tài khoản **không đổi được** sau khi đăng ký. Individual duyệt nhanh hơn Company ([nguồn 5]). Chờ email xác nhận |
+
+### C3. Lấy gói zip để tải lên (~5 phút)
+
+1. Trên máy tính, tải **https://study-launcher-nine.vercel.app/downloads/study-launcher-extension.zip** (link chính thức; **không** lấy từ link preview của PR). Gói này do Vercel build tự động mỗi lần merge (`npm run build` → `scripts/build-extension.mjs`).
+2. **Không giải nén rồi nén lại** — tải nguyên file zip lên cửa hàng.
+3. Kiểm tra nhanh (mở zip bằng File Explorer, không cần giải nén): ngay trong zip (không có thư mục con) có `manifest.json`, `background.js`, `content.js`, `popup.html`, `popup.js` (+ các file `icon-*.png` sau PR biểu tượng). Mở `manifest.json` bằng Notepad: dòng `"matches"` phải là `https://study-launcher-nine.vercel.app/*` và `"version"` là bản mới nhất. Không có file `.map`, `.ts`, `.env` (đã kiểm tra 12/11/2026: gói 0.3.3 gồm đúng 5 file trên, mã không nén/không làm rối).
+
+### C4. Nộp lên Chrome Web Store (~30 phút)
+
+1. **devconsole** → **+ New item** → chọn file zip → *Upload*. Cửa hàng tự chạy thử cài đặt khi tải gói lên; nếu báo lỗi thì gửi Claude, sửa trước khi nộp ([nguồn 4]).
+2. Tab **Store listing**: dán mô tả, chọn danh mục, ngôn ngữ, tải icon 128, 3 ảnh 1280×800, small promo tile 440×280 — theo `LISTING.md` §1.
+3. Tab **Privacy practices**: *Single purpose* (§2), lý do từng quyền (§3), *Remote code* = **No**, *Data usage* tick đúng như §4 + 3 ô cam kết, *Privacy policy URL*.
+4. Tab **Distribution**: *Visibility* = **Unlisted** (§6). Khu vực: tất cả.
+5. Tab **Test instructions**: dán đoạn §5 (không đưa tài khoản của con).
+6. **Submit for review**.
+
+### C5. Nộp lên Edge Add-ons (~30 phút)
+
+1. Partner Center → **Microsoft Edge** → **Create new extension** → tải **cùng file zip** lên.
+2. **Availability**: *Visibility* = **Hidden** (chỉ ai có link mới thấy); *Markets*: tất cả.
+3. **Properties**: danh mục (LISTING §1); *Does your extension access, collect or transmit personal information?* = **Yes** → *Privacy policy URL*; *Website*.
+4. **Store listings** → ngôn ngữ **Vietnamese**: mô tả (§1, cần 250–10.000 ký tự — đoạn trong LISTING đủ), *Extension logo* = `edge-logo-300.png`, ảnh 1280×800, *Small promotional tile* 440×280 ([nguồn 6]).
+5. **Submit** → ô *Notes for certification*: dán đoạn §5 → **Publish**.
+
+### C6. Chờ duyệt
+
+| Cửa hàng | Thời gian (theo tài liệu chính thức) |
+|---|---|
+| Chrome | Phần lớn **vài ngày**, có thể **vài tuần**; quá 3 tuần thì liên hệ hỗ trợ. Có thể lâu hơn với *nhà phát triển mới, extension mới, quyền rộng* (`<all_urls>`) — mình có cả ba ([nguồn 8]) |
+| Edge | Tới **7 ngày làm việc** ([nguồn 6]) |
+
+Bị từ chối: chép nguyên email/lý do gửi Claude. Không tự sửa quyền trong manifest.
+
+### C7. Sau khi được duyệt: ghi lại ID extension (~5 phút)
+
+- **Chrome**: devconsole → mở item → **Item ID** (32 chữ cái a–p; cũng là đoạn cuối link trang cửa hàng).
+- **Edge**: Partner Center → mở extension → tìm dòng **Extension ID** (32 chữ cái a–p; cũng là đoạn cuối link trang Edge Add-ons `microsoftedge.microsoft.com/addons/detail/…/<ID>`). **Không** dùng *Store ID / Product ID* (dạng chữ hoa + số).
+- Ghi 2 ID vào ghi chú của bạn. **Vercel** (tùy chọn): thêm `NEXT_PUBLIC_EXTENSION_ID_CHROME`, `NEXT_PUBLIC_EXTENSION_ID_EDGE` để lưu cho đủ. Hiện app **chưa dùng** 2 biến này ở đâu (đã kiểm 12/11/2026 — ghép máy đi qua content script, không cần ID), nên **không cần Redeploy**.
+
+### C8. Cài kiểu bắt buộc trên laptop của con (~20 phút/máy)
+
+Điều kiện: tài khoản Windows của con là **Standard** (không phải Administrator); bạn biết mật khẩu một tài khoản Administrator trên máy đó.
+
+1. Trên laptop con, đăng nhập tài khoản **Administrator**. Lấy 2 file `cai-chinh-sach.ps1` và `go-chinh-sach.ps1` trong thư mục `docs/store/windows-policy/` của repo (GitHub → mở file → nút **Download raw file**), để vào một thư mục, vd `C:\StudyLauncher\policy`.
+2. Start → gõ **PowerShell** → chuột phải **Windows PowerShell** → **Run as administrator**, rồi gõ:
+   ```powershell
+   cd C:\StudyLauncher\policy
+   powershell -ExecutionPolicy Bypass -File .\cai-chinh-sach.ps1
+   ```
+   Dán **ID Chrome**, Enter, dán **ID Edge**, Enter. Script đặt (máy nào cũng như nhau, cho mọi tài khoản Windows):
+
+   | Trình duyệt | Khóa registry `HKLM\SOFTWARE\Policies\…` | Tác dụng |
+   |---|---|---|
+   | Chrome | `Google\Chrome\ExtensionInstallForcelist\N` = `<ID Chrome>;https://clients2.google.com/service/update2/crx` | Ép cài từ Chrome Web Store, con không gỡ/tắt được |
+   | Chrome | `IncognitoModeAvailability` = 1 · `BrowserGuestModeEnabled` = 0 · `BrowserAddPersonEnabled` = 0 · `DeveloperToolsAvailability` = 2 | Tắt ẩn danh · tắt khách · không thêm hồ sơ mới · tắt DevTools ([nguồn 9–12]) |
+   | Edge | `Microsoft\Edge\ExtensionInstallForcelist\N` = `<ID Edge>;https://edge.microsoft.com/extensionwebstorebase/v1/crx` | Ép cài từ Edge Add-ons; "Users can't uninstall or turn off" ([nguồn 7]) |
+   | Edge | `InPrivateModeAvailability` = 1 · `BrowserGuestModeEnabled` = 0 · `BrowserAddProfileEnabled` = 0 · `DeveloperToolsAvailability` = 2 | Tắt InPrivate · tắt khách · không thêm hồ sơ mới · tắt DevTools ([nguồn 13–15], [nguồn 7]) |
+
+   Lưu ý tên khác nhau: thêm hồ sơ là `BrowserAddPersonEnabled` (Chrome) nhưng `BrowserAddProfileEnabled` (Edge); ẩn danh là `IncognitoModeAvailability` (Chrome) nhưng `InPrivateModeAvailability` (Edge). Script không xóa chính sách khác đã có (vd của trường).
+3. **Đóng hết** cửa sổ Chrome và Edge, mở lại. Kiểm tra (đăng nhập tài khoản **của con**):
+
+   | Kiểm tra | Mong đợi | Chrome | Edge |
+   |---|---|---|---|
+   | `chrome://policy` / `edge://policy` → *Reload policies* | Các dòng ở bảng trên, trạng thái OK | | |
+   | `chrome://extensions` / `edge://extensions` | Study Launcher ghi "được quản trị viên cài đặt", **không** có nút Gỡ, **không** tắt được | | |
+   | Ctrl+Shift+N | Không mở được ẩn danh / InPrivate | | |
+   | Menu hồ sơ (ảnh đại diện góc trên) | Không có "Khách" / "Thêm hồ sơ" | | |
+   | F12 | Không mở được DevTools | | |
+   | Chi tiết extension → *Quyền truy cập trang web* | Thử đổi sang "Khi nhấp": nếu đổi được thì web vẫn **bị khóa** (extension 0.3.2+ fail-closed) — ghi lại kết quả cho Claude | | |
+
+4. **Ghép máy cho bản cửa hàng**: extension mới tự mở trang **Ghép máy** → đăng nhập tài khoản con → trên iPhone: Thiết bị → **Tạo mã ghép máy** → nhập 6 số. Bản cửa hàng là extension **khác** bản cài tay (ID khác, bộ nhớ khác) nên **phải ghép lại**, mỗi trình duyệt một mã.
+5. Thử như B+ bước 5 (youtube → trang chặn; Mở 15 phút; Về bình thường).
+
+### C9. Gỡ bản cài tay (B+) sau khi bản cửa hàng chạy
+
+1. Ở `edge://extensions` / `chrome://extensions` sẽ thấy 2 dòng "Study Launcher": bản cửa hàng (ghi "được quản trị viên cài đặt") và bản cài tay (có nút **Gỡ**). Bấm **Gỡ** ở **bản cài tay**. Tắt **Chế độ nhà phát triển**. (Chính sách tắt DevTools có thể đã tự vô hiệu bản cài tay — gỡ cho gọn.)
+2. Gỡ bản cài tay sẽ làm iPhone nhận thông báo "Extension trên laptop của … vừa bị gỡ" — **đúng như mong đợi**.
+3. Trang phụ huynh → **Thiết bị** → ở dòng laptop **cũ** (lần cuối hỏi máy chủ không còn cập nhật) bấm **Gỡ máy**. Dòng mới (vừa ghép ở C8.4) giữ lại.
+4. Có thể xóa thư mục `C:\StudyLauncher` của bản cài tay (giữ thư mục `policy`).
+
+### C10. Chặn trình duyệt khác (Firefox, Cốc Cốc, Opera, Brave…) bằng Microsoft Family Safety
+
+Chính sách ở C8 chỉ áp cho Chrome và Edge. Tài khoản Standard vẫn có thể tự cài một số trình duyệt **cho riêng mình** (không cần quyền quản trị) — kể cả **Cốc Cốc** (chạy được extension Chrome nhưng **không** nhận chính sách của Chrome). Phải chặn bằng **Microsoft Family Safety**:
+
+1. Tài khoản Windows của con phải là **tài khoản Microsoft của con** nằm trong nhóm gia đình (https://family.microsoft.com). Tài khoản cục bộ (local) không được Family Safety quản lý.
+2. Trong Family Safety → con → **Edge** → bật **Filter inappropriate websites**. Khi bật, Windows **chặn mọi trình duyệt khác Edge** theo mặc định (vì Family Safety chỉ lọc được trong Edge); con bấm "Ask to use" thì bố mẹ nhận yêu cầu ([nguồn 16]).
+3. Nhà dùng cả Chrome: Family Safety → con → **Windows › Apps & games** → **bỏ chặn Google Chrome**. Để nguyên chặn các trình duyệt khác ([nguồn 16]).
+4. Bật **Activity reporting** cho con — nếu tắt, cửa sổ trình duyệt bị đóng mà không hiện nút xin phép ([nguồn 16]).
+5. Thử: trên tài khoản con, mở/cài Firefox hoặc Cốc Cốc → phải bị chặn.
+
+> Bộ lọc web của Family Safety là của Microsoft, độc lập với Study Launcher (Study Launcher vẫn quyết định giờ học/giờ tự do). Từ 06/2025 có lỗi Family Safety chặn cả trình duyệt đã cho phép sau mỗi lần cập nhật; báo chí 02/2026 ghi Microsoft đã sửa ([nguồn 17]). Nếu Chrome tự nhiên bị chặn, kiểm tra lại bước 3.
+
+### C11. Khi có bản extension mới
+
+Mỗi lần extension đổi (PR có đụng `extension/`): sau khi merge, tải zip mới (C3) → devconsole: item → **Package › Upload new package** → Submit; Partner Center: extension → **Update** → tải zip → Publish. Số `version` phải tăng. Duyệt lại như C6. Laptop **tự cập nhật** từ cửa hàng, không phải làm gì trên máy con.
+
+### C12. Bỏ toàn bộ chính sách (trả máy về như cũ)
+
+PowerShell (Run as administrator) → `powershell -ExecutionPolicy Bypass -File .\go-chinh-sach.ps1` → dán 2 ID. Chỉ xóa đúng những gì `cai-chinh-sach.ps1` đặt. Đóng/mở lại trình duyệt: extension ép cài tự bị gỡ ([nguồn 7]) → iPhone nhận thông báo "bị gỡ" (bình thường).
+
+### Nguồn (tra ngày 12/11/2026)
+
+1. Chrome for Developers — *Register your developer account*: https://developer.chrome.com/docs/webstore/register
+2. Chromium Blog (12/03/2020) — "The Chrome Web Store charges a $5.00 fee to register": https://blog.chromium.org/2020/03/new-developer-dashboard-and.html
+3. Google Chrome Enterprise Help — *Set Chrome app and extension policies (Windows)*: https://support.google.com/chrome/a/answer/7532015
+4. Chrome for Developers Blog (20/08/2026) — *Chrome Web Store updates: Faster reviews, new publication limits…*: https://developer.chrome.com/blog/cws-review-updates-2026
+5. Microsoft Learn — *Register as a Microsoft Edge extension developer*: https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/create-dev-account
+6. Microsoft Learn — *Publish a Microsoft Edge extension* (review ≤ 7 business days, Hidden, image sizes): https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/publish-extension
+7. Microsoft Learn — Edge policy *ExtensionInstallForcelist*: https://learn.microsoft.com/en-my/deployEdge/microsoft-edge-policies/extensioninstallforcelist
+8. Chrome for Developers — *Chrome Web Store review process*: https://developer.chrome.com/docs/webstore/review-process
+9. Google Chrome Enterprise Help — *Allow private browsing* (`IncognitoModeAvailability`, 1 = tắt): https://support.google.com/chrome/a/answer/9302896
+10. DISA STIG (Chrome) — `BrowserGuestModeEnabled` = 0 tại `HKLM\Software\Policies\Google\Chrome`: https://stigviewer.com/stig/google_chrome_current_windows/2023-11-21/finding/V-226401
+11. DISA STIG (Chrome) — `DeveloperToolsAvailability` = 2: https://stigviewer.com/stig/google_chrome_current_windows/2023-11-21/finding/V-221599
+12. Geek Rewind — `BrowserAddPersonEnabled` (DWORD, 0 = không thêm hồ sơ): https://geekrewind.com/enable-or-disable-new-user-profiles-in-chrome/ *(nguồn phụ; danh sách chính sách chính thức chromeenterprise.google không mở được lúc tra)*
+13. Microsoft Learn — Edge *InPrivateModeAvailability* (1 = tắt): https://learn.microsoft.com/lb-lu/DeployEdge/microsoft-edge-browser-policies/inprivatemodeavailability
+14. Microsoft Learn — Edge *BrowserAddProfileEnabled*: https://learn.microsoft.com/is-is/deployedge/microsoft-edge-policies/browseraddprofileenabled
+15. Microsoft Learn — Edge *BrowserGuestModeEnabled*: https://learn.microsoft.com/en-ie/deployedge/microsoft-edge-browser-policies/browserguestmodeenabled
+16. Eric Lawrence (cựu kỹ sư Edge), *Family Safety Content Filtering* (12/06/2025): https://textslashplain.com/2025/06/12/family-safety-content-filtering/
+17. PC Perspective (13/02/2026), Family Safety chặn trình duyệt khác — đã sửa: https://pcper.com/2026/02/were-innocent-it-was-family-safety-parental-controls-that-blocked-other-browsers/
+
+**Chưa kiểm chứng trên máy thật:** Edge `DeveloperToolsAvailability` = 2 (cùng tên/giá trị với Chrome, tài liệu Edge chỉ nhắc tên); extension Unlisted/Hidden ép cài được trên Windows Home (đúng theo tài liệu, bảng C8 bước 3 là để xác nhận); có đổi được "Quyền truy cập trang web" của extension ép cài hay không; tên chính xác các ô trên màn hình đăng ký Chrome (trader/non-trader).
 
 ---
 
