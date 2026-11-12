@@ -5,6 +5,7 @@ import {
   isValidLocalDate,
   normalizeDomain,
   settingsSchema,
+  settingsToRow,
   slotDomains,
   slotSchema,
   slotToRow,
@@ -66,7 +67,19 @@ describe("settingsSchema", () => {
     ["down threshold above up threshold", { trustDownPct: 95 }],
     ["bad bedtime", { bedtimes: [{ childId: CHILD, bedtime: "25:00" }] }],
     ["bad child id", { bedtimes: [{ childId: "nope", bedtime: "21:00" }] }],
+    ["break tiers not ascending", { breakTiers: [[45, 10], [40, 30]] }],
+    ["break tiers with a zero", { breakTiers: [[45, 0], [90, 30]] }],
+    ["break tiers break minutes not ascending", { breakTiers: [[45, 30], [90, 30]] }],
+    ["empty break tiers", { breakTiers: [] }],
+    ["fractional break tier", { breakTiers: [[45.5, 10]] }],
+    ["13 breaks a day", { breakMaxPerDay: 13 }],
   ])("rejects %s", (_, patch) => expect(settingsSchema.safeParse({ ...ok, ...patch }).success).toBe(false));
+
+  it("R8b: accepts the break bank rules and writes them as columns", () => {
+    const r = settingsSchema.parse({ ...ok, breakTiers: [[45, 10], [90, 30], [120, 45], [180, 60]], breakMaxPerDay: 6 });
+    expect(settingsToRow(r)).toMatchObject({ break_tiers: [[45, 10], [90, 30], [120, 45], [180, 60]], break_max_per_day: 6 });
+    expect(settingsToRow(settingsSchema.parse(ok))).not.toHaveProperty("break_tiers");
+  });
 });
 
 describe("slotSchema", () => {

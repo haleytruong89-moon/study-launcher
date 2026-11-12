@@ -2,10 +2,10 @@
  * Wording and small calculations for the child's "Hôm nay" screen (mockup Main.dc.html).
  * Pure functions, safe to use in client components. Display only: every decision is the server's.
  */
-import type { DayState, TaskView, WeekResult } from "@/lib/dayState";
+import { MIN_BREAK_MINUTES, type DayState, type TaskView, type WeekResult } from "@/lib/dayState";
 import { addDays, isoWeekday } from "@/lib/time";
 import { minutesLabel } from "@/lib/today/focus";
-import { isExtraRun, runningItems } from "@/lib/today/rules";
+import { isExtraRun, runningItems, runningTimedTask } from "@/lib/today/rules";
 
 export interface Banner {
   title: string;
@@ -75,11 +75,25 @@ export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMi
       }
       return {
         title: `Còn ${remaining(state.part1)} bài tập · ${remaining(state.part2)} kỹ năng`,
-        sub: `Bài tập và kỹ năng làm song song, con chọn thứ tự.${rules.breakMinutes > 0 && (state.break.state === "not_yet" || state.break.state === "offer") ? " Xong một phần là được nghỉ." : ""}`,
+        sub: `Bài tập và kỹ năng làm song song, con chọn thứ tự.${
+          state.break.legacy
+            ? rules.breakMinutes > 0 && (state.break.state === "not_yet" || state.break.state === "offer")
+              ? " Xong một phần là được nghỉ."
+              : ""
+            : state.break.canStart
+              ? ` ${breakHint(state, rules)}`.trimEnd()
+              : ""
+        }`,
         tone: "lock",
       };
     case "BREAK":
-      return { title: "Đang nghỉ", sub: "Hết giờ nghỉ máy tự khóa lại. Bấm “Học tiếp” để làm tiếp ngay.", tone: "open" };
+      return {
+        title: "Đang nghỉ",
+        sub: state.break.legacy
+          ? "Hết giờ nghỉ máy tự khóa lại. Bấm “Học tiếp” để làm tiếp ngay."
+          : "Hết giờ nghỉ máy tự khóa lại. Bấm “Học tiếp” để làm tiếp ngay, phút nghỉ còn lại để dành.",
+        tone: "open",
+      };
     case "LOCK_P2":
       return {
         title: `Xong bài tập — còn ${remaining(state.part2)} kỹ năng`,
@@ -116,7 +130,51 @@ export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMi
 }
 
 function breakHint(state: DayState, rules: { breakMinutes: number }): string {
-  return state.break.canStart ? `Con được nghỉ ${rules.breakMinutes} phút nếu muốn. ` : "";
+  if (!state.break.canStart) return "";
+  // R8b: the bank (whole minutes); before 0014 the fixed break_minutes.
+  return `Con được nghỉ ${state.break.legacy ? rules.breakMinutes : state.break.bankMinutes} phút nếu muốn. `;
+}
+
+/**
+ * R8b: the break line of the status card and the Vui chơi card (minutes only, calm). null when
+ * there is nothing to say (free time started, open laptop, breaks off). Tier values come from the
+ * server (`nextTier`), never from constants here.
+ */
+export function breakLine(state: DayState, nowMs: number): { text: string; hint: string | null; button: string | null } | null {
+  const b = state.break;
+  if (b.state === "running") {
+    const left = b.endsAt ? Math.max(0, Math.ceil((new Date(b.endsAt).getTime() - nowMs) / 60_000)) : 0;
+    return { text: `Đang nghỉ · còn ${left} phút`, hint: null, button: null };
+  }
+  if (b.legacy) return null; // before 0014: the old "Nghỉ 10 phút" button stays as it was
+  if (state.free.startedAt !== null || b.maxPerDay === 0) return null;
+  if (b.takenToday >= b.maxPerDay) return { text: `Hôm nay con đã nghỉ đủ ${b.maxPerDay} lần`, hint: null, button: null };
+  const next = b.nextTier;
+  if (b.bankMinutes >= MIN_BREAK_MINUTES) {
+    const busy = !b.canStart && runningTimedTask(state) !== null;
+    return {
+      // Right after an early "Học tiếp" the block is 0: say the minutes were kept, not "0'".
+      text: b.blockFocusMinutes > 0 ? `Con đã tập trung ${b.blockFocusMinutes}' · nghỉ được ${b.bankMinutes}'` : `Con còn ${b.bankMinutes}' nghỉ để dành`,
+      hint: busy
+        ? "Bấm Xong việc đang làm rồi nghỉ nhé"
+        : next && next.minutes > b.bankMinutes
+          ? `Học thêm ${next.atFocus - b.blockFocusMinutes}' nữa (không nghỉ) để được nghỉ ${next.minutes}'`
+          : null,
+      button: b.canStart ? `Nghỉ ${b.bankMinutes}'` : null,
+    };
+  }
+  if (!next || next.minutes <= 0) return null;
+  const goal = `Tập trung đủ ${next.atFocus}' để được nghỉ ${next.minutes}'`;
+  // Parent 09/11/2026: a run adds focus only once it is finished, so say so while one runs.
+  const hint = runningTimedTask(state) !== null ? "Bấm Xong để tính giờ tập trung" : null;
+  return { text: b.blockFocusMinutes > 0 ? `Con đã tập trung ${b.blockFocusMinutes}' · ${goal[0]?.toLowerCase()}${goal.slice(1)}` : goal, hint, button: null };
+}
+
+/** R8b: "Giờ tự do 45' + 30' nghỉ chưa dùng = 75'" — only when unused break minutes are added. */
+export function freeBonusLine(state: DayState, freeMinutes: number): string | null {
+  const bonus = state.free.bonusMinutes;
+  if (bonus <= 0) return null;
+  return `Giờ tự do ${freeMinutes}' + ${bonus}' nghỉ chưa dùng = ${freeMinutes + bonus}'`;
 }
 
 /**
@@ -288,7 +346,8 @@ export function statusPill(state: DayState, nowMs: number): { label: string; ope
   const left = state.openUntil ? clock(new Date(state.openUntil).getTime() - nowMs) : "";
   switch (state.status) {
     case "BREAK":
-      return { label: `Giờ nghỉ · còn ${left}`, open: true };
+      // R8b: the break countdown in whole minutes only (no seconds).
+      return { label: `Giờ nghỉ · còn ${state.openUntil ? Math.max(0, Math.ceil((new Date(state.openUntil).getTime() - nowMs) / 60_000)) : 0} phút`, open: true };
     case "FREE":
       return { label: `Giờ tự do · còn ${left}`, open: true };
     case "OPEN_OVERRIDE":

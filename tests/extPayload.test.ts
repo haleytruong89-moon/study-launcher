@@ -42,6 +42,7 @@ describe("allowlist sent to the extension", () => {
       appSlots: [],
       runs: [],
       overrides: [],
+      breaks: [],
     };
     const s = computeDayState(input, now);
     const body = extStateBody(s, ["olm.vn"], "https://study-launcher-nine.vercel.app");

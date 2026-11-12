@@ -25,15 +25,19 @@
  *     of the day, in any order. A part with tasks is done when all of them are; free time
  *     needs BOTH parts. Status LOCK_P1 = Part 1 not done (whatever Part 2 is), LOCK_P2 =
  *     Part 1 done, Part 2 not done.
- *  2. Break (parent decision 07/11/2026): optional, once per day, `break.canStart` when
- *     Part 1 is done (an empty Part 1 counts, E5d) or Part 2 is really done (an empty Part 2
- *     alone does not count: on a day without skills the break still follows the homework),
- *     free time has not started,
- *     break_minutes > 0, the laptop is in a locked study status (LOCK_P1 / LOCK_P2 /
- *     FREE_READY; not a parent lock, trust, sick or a parent open) and no timed task is
- *     running, a "Làm thêm" run included (R8a), so the 10' are never counted as task
- *     minutes. BREAK (row 7) is open until break_started_at + break_minutes or "Học tiếp"
- *     (break_ended_at). A legacy break_skipped = true means the break of that day is used.
+ *  2. Break (R8b "ngân hàng giờ nghỉ", parent decision 08/11/2026; the bank itself is rule 19):
+ *     optional, `break.canStart` when the bank is >= 5 minutes, fewer than break_max_per_day
+ *     breaks were taken today, free time has not started, the laptop is in a locked study
+ *     status (LOCK_P1 / LOCK_P2 / FREE_READY; not a parent lock, trust, sick or a parent open)
+ *     and no timed task is running, a "Làm thêm" run included (R8a). The old "a part must be
+ *     done" condition is gone. Starting a break uses the WHOLE bank (day_breaks.planned_minutes
+ *     = bank); BREAK (row 7) is open until started_at + planned_minutes (clipped at 00:00),
+ *     "Học tiếp" (ended_at) or a parent LOCK override created during it (09/11/2026: the break ends
+ *     then and does not resume after the lock). A homework run may keep running during a break.
+ *     Before migration 0014 (`breaks: null`, e.g. a preview on the production database) the
+ *     OLD rule applies unchanged: once per day, after Part 1 (an empty Part 1 counts) or a really
+ *     done Part 2, break_minutes > 0, same status / timed-task / free-time conditions, BREAK
+ *     until break_started_at + break_minutes or break_ended_at; break_skipped = true uses it.
  *  3. OPEN_TRUST and OPEN_SICK: openUntil = next 00:00. Every locked status
  *     (LOCK_*): openUntil = null.
  *  4. Overrides (parent decision 14/10/2026): the NEWEST override of today (by
@@ -58,7 +62,8 @@
  *     parts writes only their milestones (free time is once per day). Whenever both
  *     part milestones are set and free_started_at is not, free time starts at the read
  *     (unless a parent lock is in effect, see 9). A running break ends when free time
- *     starts (FREE is above BREAK; the rest of the break is not added).
+ *     starts (FREE is above BREAK). R8b: its unused minutes stay in the bank, and free time
+ *     lasts free_minutes + the bank at free_started_at (rule 19). Before 0014 nothing is added.
  *  9. Milestones are computed from data in every status, including OPEN_TRUST,
  *     OPEN_SICK and overrides. Parent decision 14/10/2026: while a LOCK override is
  *     in effect, free time does NOT start; it starts at the first read after the
@@ -113,6 +118,40 @@
  *     days before its due date. `earlyThisWeek` counts such homework done since Monday
  *     (the caller passes homework done since Monday for this). Display only: it never
  *     changes status, Part 1/2 or trust progress (no points, SPEC section 15).
+ * 19. Break bank (R8b, parent decisions 08/11 and 09/11/2026, gold examples G1-G21 in
+ *     docs/superpowers/specs/2026-11-09-r8-design.md). All on the server clock, clipped to today
+ *     (00:00-24:00 VN):
+ *     - Focus = the union (overlaps once) of today's FINISHED counted run intervals [started_at,
+ *       min(done_at, started_at + break_run_cap_minutes)] (09/11: a running or forgotten run adds
+ *       nothing until it is finished; one run adds at most 180' by default): homework (the listed
+ *       item's run; done_at falls back to the homework's done_at), template required runs and
+ *       "Làm thêm" runs (an ignored double start never counts). Finishing a run later may add
+ *       earnings to the block(s) its interval falls in, deterministically from the data. NOT focus:
+ *       inside a break [started_at, its real end (below)], from free_started_at on, under a parent OPEN override (each override is
+ *       in effect from its created_at until its `until` or the next newer override), the whole day
+ *       while trust mode is on or the day is sick, and, in lock mode, the part of today before
+ *       trust_state.since when the mode was changed today (it may have been trust then; the
+ *       history is not stored, so this excludes more, never less). Time under a parent LOCK override counts. Limitation: a day
+ *       that WAS sick and is normal again is not excluded (day_type has no history).
+ *     - Block = focus since the start of the latest break (or 00:00). Each block earns
+ *       `earnBreak(floor(block minutes), break_tiers)`: the break minutes of the highest tier with
+ *       focusMinutes <= F; from the top tier on, the rest earns again as a new block.
+ *     - A break's real end = min(ended_at, started_at + planned, free_started_at, 00:00, the
+ *       created_at of the first parent LOCK override created after it started (09/11: the lock
+ *       ends the break for good; the unused minutes go back to the bank)).
+ *     - Bank = all blocks' earnings - minutes used in every break (floor((min(real end, now) -
+ *       started_at) / 1'), at least 0), never < 0.
+ *     - break_tiers that are not 1-8 strictly ascending [focus, break] pairs of positive
+ *       integers fall back to DEFAULT_BREAK_TIERS; a break_max_per_day outside 0-12 to 6; a
+ *       break_run_cap_minutes outside 30-600 to 180.
+ *     - Legacy: day_sessions.break_started_at counts as one break of break_minutes from then
+ *       (ended at break_ended_at); break_skipped alone counts as one taken break that used
+ *       break_minutes. The spec says "with no day_breaks rows"; it is counted even when rows exist
+ *       (the new route never writes these columns, so it is a different break, and dropping it
+ *       would give its minutes back).
+ *     - Free time = free_minutes + the bank at free_started_at (computed from data up to that
+ *       instant, so every read agrees); `break.bankMinutes` is 0 from then on (it moved to
+ *       `free.bonusMinutes`).
  */
 
 import { addDays, atLocalTime, isoWeekday, localDate, nextMidnight, startOfLocalDay, weekStart } from "./time";
@@ -152,6 +191,21 @@ export interface FamilySettingsInput {
   homeworkLookaheadDays: number;
   /** Interpretation 17: upcoming items required on a day with no due homework (0 = off). */
   homeworkMinUpcoming: number;
+  /** R8b (0014): `[focusMinutes, breakMinutes]` pairs (jsonb). Malformed or absent -> DEFAULT_BREAK_TIERS. */
+  breakTiers?: unknown;
+  /** R8b (0014): breaks per day. Absent or outside 0-12 -> DEFAULT_BREAK_MAX_PER_DAY. */
+  breakMaxPerDay?: number;
+  /** R8b (0014, parent 09/11): one finished run adds at most this much focus. Absent or outside 30-600 -> 180. */
+  breakRunCapMinutes?: number;
+}
+
+/** A day_breaks row (R8b, 0014). */
+export interface BreakRowInput {
+  id: string;
+  localDate: string;
+  startedAt: string;
+  plannedMinutes: number;
+  endedAt: string | null;
 }
 
 /** A day_sessions row. Instants are ISO strings, dates 'YYYY-MM-DD'. */
@@ -230,6 +284,11 @@ export interface DayInput {
   bedtime: string;
   /** trust_state.mode; use 'lock' when the row does not exist. */
   trustMode: TrustMode;
+  /**
+   * trust_state.since when the mode was last CHANGED (R8b focus, rule 19); null / absent when unknown
+   * or never changed (the loader passes it only when since > created_at).
+   */
+  trustSince?: string | null;
   /** day_sessions rows: today (if it exists) + history. */
   sessions: DaySessionInput[];
   homework: HomeworkItemInput[];
@@ -237,6 +296,11 @@ export interface DayInput {
   appSlots: AppSlotInput[];
   runs: TaskRunInput[];
   overrides: OverrideInput[];
+  /**
+   * R8b: day_breaks rows (any dates; only today's are used). null = the table does not exist yet
+   * (before migration 0014): the old single-break rule applies (interpretation 2).
+   */
+  breaks: BreakRowInput[] | null;
 }
 
 export interface TaskView {
@@ -310,17 +374,37 @@ export interface BreakView {
   state: "not_yet" | "offer" | "running" | "done" | "skipped";
   /** Interpretation 2: the break button is shown and /api/day/break start is allowed. */
   canStart: boolean;
+  /** The latest break's start (today). */
   startedAt: string | null;
-  /** break_started_at + break_minutes, clipped at 00:00. */
+  /** The latest break's started_at + planned minutes, clipped at 00:00. */
   endsAt: string | null;
+  /** true before migration 0014: the old single break of break_minutes (no bank). */
+  legacy: boolean;
+  /** R8b: break minutes the child may take now (rule 19). 0 once free time started (see free.bonusMinutes). */
+  bankMinutes: number;
+  /** R8b: focus minutes of the current block (since the latest break started). */
+  blockFocusMinutes: number;
+  /** R8b: the next step of the current block: at `atFocus` block minutes the bank becomes `minutes`. */
+  nextTier: { atFocus: number; minutes: number } | null;
+  /** Breaks taken today (a legacy break counts as one). */
+  takenToday: number;
+  /** break_max_per_day (1 before 0014). */
+  maxPerDay: number;
+  /** Minutes planned for the running break, else null. */
+  plannedMinutes: number | null;
 }
 
 export interface FreeView {
   /** Empty day (both parts have no task): the child may press "Bắt đầu giờ tự do". */
   canStart: boolean;
   startedAt: string | null;
-  /** free_started_at + free_minutes, clipped at 00:00. */
+  /** free_started_at + free_minutes + bonusMinutes, clipped at 00:00. */
   endsAt: string | null;
+  /**
+   * R8b: unused break minutes added to free time: the bank at free_started_at once free time has
+   * started, before that the current bank (what would be added now). 0 before 0014.
+   */
+  bonusMinutes: number;
 }
 
 /** Milestones the caller must persist (one transaction). Already applied to the state. */
@@ -485,6 +569,7 @@ function templateViews(
   disabled: Set<string>,
   runsToday: TaskRunInput[],
   nowMs: number,
+  focusRuns: FocusRun[],
 ): TaskView[] {
   const slots = new Map(input.appSlots.map((s) => [s.id, s]));
   const fallbackMin = part === "extra" ? input.settings.extraMinMinutes : input.settings.skillMinMinutes;
@@ -498,6 +583,7 @@ function templateViews(
         ? { run: null, extra: null, counted: [] }
         : templateRuns(runsToday.filter((r) => r.source === "template" && r.templateId === t.id));
       const run = runs.run;
+      for (const r of runs.counted) focusRuns.push(focusRun(r.startedAt, r.doneAt));
       const minMinutes = t.minMinutes ?? fallbackMin;
       const startedAt = run?.startedAt ?? null;
       const doneAt = run?.doneAt ?? null;
@@ -538,7 +624,7 @@ function isEarly(h: HomeworkItemInput): boolean {
   return localDate(new Date(toMs(h.doneAt, "homework_items.done_at"))) <= addDays(h.dueDate, -2);
 }
 
-function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[], nowMs: number): TaskView[] {
+function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[], nowMs: number, focusRuns: FocusRun[]): TaskView[] {
   const cutoff = addDays(today, input.settings.homeworkLookaheadDays);
   return input.homework
     .filter((h) => {
@@ -556,6 +642,7 @@ function homeworkViews(input: DayInput, today: string, runsToday: TaskRunInput[]
     .map((h) => {
       const run = pickRun(runsToday.filter((r) => r.source === "homework" && r.homeworkItemId === h.id));
       const startedAt = run?.startedAt ?? null;
+      if (run?.startedAt) focusRuns.push(focusRun(run.startedAt, run.doneAt ?? h.doneAt));
       return {
         key: `homework:${h.id}`,
         id: h.id,
@@ -657,6 +744,202 @@ function pickOverride(overrides: OverrideInput[], today: string, nowMs: number):
 }
 
 // ---------------------------------------------------------------------------
+// Break bank (R8b, interpretation 19). Pure, exported for tests.
+// ---------------------------------------------------------------------------
+
+/** `[focusMinutes, breakMinutes]`: from `focusMinutes` of focus in one block, `breakMinutes` of break. */
+export type BreakTier = readonly [number, number];
+
+/** family_settings.break_tiers default (0014). */
+export const DEFAULT_BREAK_TIERS: readonly BreakTier[] = [
+  [45, 10],
+  [90, 30],
+  [120, 45],
+  [180, 60],
+];
+/** family_settings.break_max_per_day default (0014). */
+export const DEFAULT_BREAK_MAX_PER_DAY = 6;
+/** family_settings.break_run_cap_minutes default (0014, parent decision 09/11/2026). */
+export const DEFAULT_BREAK_RUN_CAP_MINUTES = 180;
+/** A break may start only with at least this many minutes in the bank (rule 1). */
+export const MIN_BREAK_MINUTES = 5;
+/** At most this many tiers are accepted. */
+export const MAX_BREAK_TIERS = 8;
+
+/** 1-8 pairs of positive integers (<= 1440), both columns strictly ascending. */
+export function validBreakTiers(value: unknown): value is BreakTier[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_BREAK_TIERS) return false;
+  let prevFocus = 0;
+  let prevBreak = 0;
+  for (const t of value) {
+    if (!Array.isArray(t) || t.length !== 2) return false;
+    const [f, b] = t as unknown[];
+    if (!Number.isInteger(f) || !Number.isInteger(b)) return false;
+    const fi = f as number;
+    const bi = b as number;
+    if (fi <= prevFocus || bi <= prevBreak || fi > 1440 || bi > 1440) return false;
+    prevFocus = fi;
+    prevBreak = bi;
+  }
+  return true;
+}
+
+/** The tiers to use: `value` when valid, else the defaults (malformed data never crashes the day). */
+export function breakTiersOf(value: unknown): readonly BreakTier[] {
+  return validBreakTiers(value) ? value : DEFAULT_BREAK_TIERS;
+}
+
+function breakRunCapOf(value: unknown): number {
+  return Number.isInteger(value) && (value as number) >= 30 && (value as number) <= 600 ? (value as number) : DEFAULT_BREAK_RUN_CAP_MINUTES;
+}
+
+function breakMaxOf(value: unknown): number {
+  return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 12 ? (value as number) : DEFAULT_BREAK_MAX_PER_DAY;
+}
+
+/**
+ * Break minutes earned by `focusMinutes` of focus in ONE block: the highest tier with
+ * focusMinutes <= F; from the top tier on, the rest counts again as a new block
+ * (default tiers: 44 -> 0, 45 -> 10, 90 -> 30, 180 -> 60, 225 -> 70, 360 -> 120).
+ */
+export function earnBreak(focusMinutes: number, tiers: unknown = DEFAULT_BREAK_TIERS): number {
+  if (!Number.isFinite(focusMinutes) || focusMinutes <= 0) return 0;
+  const t = breakTiersOf(tiers);
+  const [topFocus, topBreak] = t[t.length - 1] as BreakTier;
+  let rest = Math.floor(focusMinutes);
+  let earned = Math.floor(rest / topFocus) * topBreak;
+  rest %= topFocus;
+  for (let i = t.length - 1; i >= 0; i--) {
+    const [f, b] = t[i] as BreakTier;
+    if (f <= rest) {
+      earned += b;
+      break;
+    }
+  }
+  return earned;
+}
+
+/** A half-open interval [start, end) in ms. */
+export type Interval = readonly [number, number];
+
+/** Sorted, merged, non-empty intervals. */
+function unionOf(list: readonly Interval[]): Interval[] {
+  const sorted = list.filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
+  const out: [number, number][] = [];
+  for (const [a, b] of sorted) {
+    const last = out[out.length - 1];
+    if (last && a <= last[1]) last[1] = Math.max(last[1], b);
+    else out.push([a, b]);
+  }
+  return out;
+}
+
+function lengthWithin(list: readonly Interval[], lo: number, hi: number): number {
+  let ms = 0;
+  for (const [a, b] of list) ms += Math.max(0, Math.min(b, hi) - Math.max(a, lo));
+  return ms;
+}
+
+/**
+ * Focus (rule 19): the union of the run intervals, clipped to [dayStartMs, untilMs), minus the
+ * union of the excluded intervals. Overlapping runs count once.
+ */
+export function focusIntervals(runs: readonly Interval[], excluded: readonly Interval[], dayStartMs: number, untilMs: number): Interval[] {
+  const base = unionOf(runs.map(([a, b]): Interval => [Math.max(a, dayStartMs), Math.min(b, untilMs)]));
+  const cut = unionOf(excluded);
+  const out: Interval[] = [];
+  for (const [a, b] of base) {
+    let start = a;
+    for (const [x, y] of cut) {
+      if (y <= start || x >= b) continue;
+      if (x > start) out.push([start, x]);
+      start = Math.max(start, y);
+      if (start >= b) break;
+    }
+    if (start < b) out.push([start, b]);
+  }
+  return out;
+}
+
+/** A break for the bank: its start and the instant it really ended (ended_at, planned end, free time). */
+export interface BankBreak {
+  startMs: number;
+  endMs: number;
+}
+
+export interface BankResult {
+  /** max(0, earned - used). */
+  bankMinutes: number;
+  /** Earned by every block (closed ones + the current one). */
+  earnedMinutes: number;
+  /** Used in the breaks started up to `atMs`. */
+  usedMinutes: number;
+  /** Focus minutes of the current block (since the latest break started). */
+  blockFocusMinutes: number;
+}
+
+/**
+ * The bank at `atMs` (rule 19): breaks started up to `atMs` close the blocks; each block earns
+ * earnBreak(floor(its focus minutes)); each break used floor((min(endMs, atMs) - startMs) / 1').
+ * `extraUsedMinutes` = a legacy break_skipped with no start.
+ */
+export function breakBank(focus: readonly Interval[], breaks: readonly BankBreak[], tiers: unknown, dayStartMs: number, atMs: number, extraUsedMinutes = 0): BankResult {
+  const started = breaks.filter((b) => b.startMs <= atMs).sort((x, y) => x.startMs - y.startMs);
+  let earned = 0;
+  let used = extraUsedMinutes;
+  let from = dayStartMs;
+  for (const b of started) {
+    earned += earnBreak(Math.floor(lengthWithin(focus, from, b.startMs) / MINUTE_MS), tiers);
+    used += Math.max(0, Math.floor((Math.min(b.endMs, atMs) - b.startMs) / MINUTE_MS));
+    from = Math.max(from, b.startMs);
+  }
+  const block = Math.floor(lengthWithin(focus, from, atMs) / MINUTE_MS);
+  earned += earnBreak(block, tiers);
+  return { bankMinutes: Math.max(0, earned - used), earnedMinutes: earned, usedMinutes: used, blockFocusMinutes: block };
+}
+
+/** The next block length (> blockMinutes) that earns more, and the bank then; null if none in a day. */
+function nextTierOf(blockMinutes: number, rawBankMinutes: number, tiers: unknown): { atFocus: number; minutes: number } | null {
+  const now = earnBreak(blockMinutes, tiers);
+  for (let f = blockMinutes + 1; f <= blockMinutes + 1440; f++) {
+    const e = earnBreak(f, tiers);
+    if (e > now) return { atFocus: f, minutes: Math.max(0, rawBankMinutes + e - now) };
+  }
+  return null;
+}
+
+/**
+ * Parent OPEN override windows of today: each override is in effect from its created_at until its
+ * `until` or the next newer override (on a tie the lock wins, as pickOverride), clipped at 00:00.
+ */
+function openOverrideIntervals(overrides: OverrideInput[], today: string, midnightMs: number): Interval[] {
+  const rows = overrides
+    .filter((o) => o.localDate === today)
+    .map((o) => ({ kind: o.kind, created: toMs(o.createdAt, "overrides.created_at"), until: toMs(o.until, "overrides.until") }))
+    .sort((a, b) => a.created - b.created || (a.kind === b.kind ? 0 : a.kind === "open_until" ? -1 : 1));
+  const out: Interval[] = [];
+  rows.forEach((o, i) => {
+    if (o.kind !== "open_until") return;
+    const next = rows[i + 1];
+    out.push([o.created, Math.min(o.until, next ? next.created : Infinity, midnightMs)]);
+  });
+  return out;
+}
+
+interface FocusRun {
+  startMs: number;
+  /** null while running. */
+  endMs: number | null;
+}
+
+function focusRun(startedAt: string | null, doneAt: string | null): FocusRun {
+  return {
+    startMs: startedAt === null ? NaN : toMs(startedAt, "task_runs.started_at"),
+    endMs: toMsOrNull(doneAt, "task_runs.done_at"),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // computeDayState
 // ---------------------------------------------------------------------------
 
@@ -676,11 +959,14 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const weekday = isoWeekday(today);
   const disabled = new Set(session.disabledTemplateIds);
 
+  // R8b: the runs that count as focus (interpretation 19), collected while listing the tasks.
+  const focusRuns: FocusRun[] = [];
+
   // --- Part 1: due homework + extra templates of today + upcoming homework (17) ---
-  const homework = homeworkViews(input, today, runsToday, nowMs);
+  const homework = homeworkViews(input, today, runsToday, nowMs, focusRuns);
   const part1Items = [
     ...homework.filter((i) => i.group === "due"),
-    ...templateViews(input, "extra", weekday, disabled, runsToday, nowMs),
+    ...templateViews(input, "extra", weekday, disabled, runsToday, nowMs, focusRuns),
     ...homework.filter((i) => i.group === "upcoming"),
   ];
   const pick = pickQuota(part1Items, settings.homeworkMinUpcoming);
@@ -689,7 +975,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const part1Empty = part1Count.total === 0;
 
   // --- Part 2: skill templates of today. Open in parallel with Part 1 (R1, 07/11/2026) ---
-  const part2Items = templateViews(input, "skill", weekday, disabled, runsToday, nowMs);
+  const part2Items = templateViews(input, "skill", weekday, disabled, runsToday, nowMs, focusRuns);
   const part2Count = countPart(part2Items);
   const part2Empty = part2Count.total === 0;
 
@@ -745,15 +1031,106 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     milestones.freeStartedAt = nowIso;
   }
 
-  // --- Free time ---
+  // --- Breaks of today (interpretations 2 and 19) ---
   const freeStartMs = toMsOrNull(session.freeStartedAt, "day_sessions.free_started_at");
-  const freeEndMs = freeStartMs === null ? null : freeStartMs + settings.freeMinutes * MINUTE_MS;
+  const dayStartMs = startOfLocalDayMs(today);
+  const bankMode = input.breaks !== null;
+  const tiers = breakTiersOf(settings.breakTiers);
+  const maxPerDay = bankMode ? breakMaxOf(settings.breakMaxPerDay) : 1;
+  const allBreaks: { startMs: number; plannedMinutes: number; endedMs: number | null }[] = [];
+  for (const b of input.breaks ?? []) {
+    // Validate every row (malformed input throws, interpretation 16).
+    const startMs = toMs(b.startedAt, "day_breaks.started_at");
+    const endedMs = toMsOrNull(b.endedAt, "day_breaks.ended_at");
+    if (!Number.isInteger(b.plannedMinutes) || b.plannedMinutes <= 0) {
+      throw new Error(`computeDayState: invalid day_breaks.planned_minutes: ${b.plannedMinutes}`);
+    }
+    if (b.localDate === today) allBreaks.push({ startMs, plannedMinutes: b.plannedMinutes, endedMs });
+  }
+  // Legacy: the day_sessions break of break_minutes (before 0014 the only one; after it, a day in
+  // flight). The new route never writes these columns, so it is never the same break as a
+  // day_breaks row and is always counted (never dropped once a day_breaks row exists, which would
+  // give its minutes back). break_skipped alone = a taken break that used break_minutes.
+  const legacyStartMs = toMsOrNull(session.breakStartedAt, "day_sessions.break_started_at");
+  const legacyEndedMs = toMsOrNull(session.breakEndedAt, "day_sessions.break_ended_at");
+  const legacySkipped = session.breakSkipped && legacyStartMs === null;
+  if (legacyStartMs !== null) allBreaks.push({ startMs: legacyStartMs, plannedMinutes: Math.max(0, settings.breakMinutes), endedMs: legacyEndedMs });
+  const legacySkippedMinutes = legacySkipped ? Math.max(0, settings.breakMinutes) : 0;
+  allBreaks.sort((a, b) => a.startMs - b.startMs);
+  // Parent decision 09/11/2026: a parent LOCK override created during a break ends it then (the
+  // unused minutes go back to the bank). Only real locks (until > created_at) count. Before 0014 the
+  // old rule is unchanged (the break resumes after the lock).
+  const lockStarts = input.overrides
+    .filter((o) => bankMode && o.localDate === today && o.kind === "lock_until")
+    .map((o) => ({ created: toMs(o.createdAt, "overrides.created_at"), until: toMs(o.until, "overrides.until") }))
+    .filter((o) => o.until > o.created)
+    .map((o) => o.created)
+    .sort((a, b) => a - b);
+  /**
+   * When a break really ended: "Học tiếp", its planned end, free time starting, 00:00, or the first
+   * parent LOCK override created after it started.
+   */
+  const realEnd = (b: (typeof allBreaks)[number]) =>
+    Math.min(
+      b.endedMs ?? Infinity,
+      b.startMs + b.plannedMinutes * MINUTE_MS,
+      freeStartMs ?? Infinity,
+      midnightMs,
+      lockStarts.find((c) => c >= b.startMs) ?? Infinity,
+    );
+  // A break can only start while none runs (BREAK is not a locked study status), so a row that starts
+  // before the previous break really ended is a duplicate of it (two "start" requests at once: a
+  // double tap, two devices). It is ignored: counted once, its minutes not used twice.
+  const dayBreaks: typeof allBreaks = [];
+  for (const b of allBreaks) {
+    const prev = dayBreaks[dayBreaks.length - 1];
+    if (prev === undefined || b.startMs >= realEnd(prev)) dayBreaks.push(b);
+  }
+  const takenToday = dayBreaks.length + (legacySkipped ? 1 : 0);
 
-  // --- Break (interpretation 2) ---
-  const breakStartMs = toMsOrNull(session.breakStartedAt, "day_sessions.break_started_at");
-  const breakEndMs = breakStartMs === null ? null : breakStartMs + settings.breakMinutes * MINUTE_MS;
+  // --- Focus and the bank (interpretation 19) ---
+  let bank: BankResult | null = null;
+  if (bankMode) {
+    const excluded: Interval[] = dayBreaks.map((b): Interval => [b.startMs, realEnd(b)]);
+    if (freeStartMs !== null) excluded.push([freeStartMs, Infinity]);
+    excluded.push(...openOverrideIntervals(input.overrides, today, midnightMs));
+    if (input.trustMode === "trust" || session.dayType === "sick") {
+      excluded.push([dayStartMs, Infinity]);
+    } else {
+      const since = toMsOrNull(input.trustSince ?? null, "trust_state.since");
+      if (since !== null && since > dayStartMs) excluded.push([dayStartMs, since]);
+    }
+    // Parent decision 09/11/2026: only FINISHED runs add focus (a running or forgotten run adds 0
+    // until Xong / the photo / the parent's confirmation), each at most break_run_cap_minutes.
+    const capMs = breakRunCapOf(settings.breakRunCapMinutes) * MINUTE_MS;
+    const runIntervals = focusRuns
+      .filter((r) => Number.isFinite(r.startMs) && r.endMs !== null)
+      .map((r): Interval => [r.startMs, Math.min(r.endMs as number, r.startMs + capMs)]);
+    const focus = focusIntervals(runIntervals, excluded, dayStartMs, Math.min(nowMs, midnightMs));
+    bank = breakBank(
+      focus,
+      dayBreaks.map((b) => ({ startMs: b.startMs, endMs: realEnd(b) })),
+      tiers,
+      dayStartMs,
+      freeStartMs ?? nowMs,
+      legacySkippedMinutes,
+    );
+  }
+  const bonusMinutes = bank?.bankMinutes ?? 0;
+
+  // --- Free time: free_minutes + the bank at free_started_at (R8b) ---
+  const freeEndMs = freeStartMs === null ? null : freeStartMs + (settings.freeMinutes + bonusMinutes) * MINUTE_MS;
+
+  // --- The running break (row 7): only the latest one can run ---
+  const latestBreak = dayBreaks[dayBreaks.length - 1];
+  const breakEndMs = latestBreak === undefined ? null : latestBreak.startMs + latestBreak.plannedMinutes * MINUTE_MS;
+  // realEnd: a parent lock created during the break ends it for good (it does not resume after the lock).
   const breakRunning =
-    breakStartMs !== null && session.breakEndedAt === null && nowMs < (breakEndMs as number) && freeStartMs === null;
+    latestBreak !== undefined &&
+    latestBreak.endedMs === null &&
+    latestBreak.startMs <= nowMs &&
+    nowMs < realEnd(latestBreak) &&
+    freeStartMs === null;
 
   // --- Status: DESIGN section 5 priority table, top-down, first match wins ---
   let status: Status;
@@ -793,18 +1170,33 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   const timedRunning = [...part1Items, ...part2Items].some(
     (i) => (i.state === "running" && i.source === "template" && i.minMinutes > 0) || i.extra !== null,
   );
-  const breakTaken = session.breakSkipped || breakStartMs !== null;
   const lockedStatus = status === "LOCK_P1" || status === "LOCK_P2" || status === "FREE_READY";
-  // "A part is done" for the break (parent 07/11/2026): Part 1 done (an empty Part 1 counts, as
-  // before R1, E5d) or Part 2 really finished. An empty Part 2 alone does not open the break:
-  // on a day without skills the break still comes after the homework, as before.
-  const partDoneForBreak = part1Done || session.part2DoneAt !== null;
-  const breakCanStart =
-    !breakTaken && settings.breakMinutes > 0 && session.freeStartedAt === null && partDoneForBreak && lockedStatus && !timedRunning;
+  let breakCanStart: boolean;
   let breakState: BreakView["state"];
-  if (breakStartMs !== null) breakState = breakRunning ? "running" : "done";
-  else if (session.breakSkipped) breakState = "skipped";
-  else breakState = breakCanStart ? "offer" : "not_yet";
+  if (bank !== null) {
+    // R8b rule 1: the bank decides; no "part done" condition any more (parent 08/11/2026).
+    breakCanStart =
+      bank.bankMinutes >= MIN_BREAK_MINUTES && takenToday < maxPerDay && session.freeStartedAt === null && lockedStatus && !timedRunning;
+    if (breakRunning) breakState = "running";
+    else if (breakCanStart) breakState = "offer";
+    else breakState = takenToday > 0 && takenToday >= maxPerDay ? "done" : "not_yet";
+  } else {
+    // Before 0014 (legacy, interpretation 2): once a day, after a part is done. Part 1 done (an
+    // empty Part 1 counts, E5d) or Part 2 really finished; an empty Part 2 alone does not count.
+    const breakTaken = session.breakSkipped || legacyStartMs !== null;
+    const partDoneForBreak = part1Done || session.part2DoneAt !== null;
+    breakCanStart =
+      !breakTaken && settings.breakMinutes > 0 && session.freeStartedAt === null && partDoneForBreak && lockedStatus && !timedRunning;
+    if (legacyStartMs !== null) breakState = breakRunning ? "running" : "done";
+    else if (session.breakSkipped) breakState = "skipped";
+    else breakState = breakCanStart ? "offer" : "not_yet";
+  }
+  // The "học thêm N' nữa" hint: only while focus can still earn a break today.
+  const earning = status === "LOCK_P1" || status === "LOCK_P2" || status === "FREE_READY" || status === "LOCK_OVERRIDE";
+  const nextTier =
+    bank !== null && earning && session.freeStartedAt === null && !breakRunning && takenToday < maxPerDay
+      ? nextTierOf(bank.blockFocusMinutes, bank.earnedMinutes - bank.usedMinutes, tiers)
+      : null;
   // Only where it means something: the locked empty day, or trust mode (to mark the day). Not
   // during a parent lock / open window or a sick day (it would spend the day's 45' for nothing).
   const freeCanStart = emptyDay && session.freeStartedAt === null && (status === "FREE_READY" || status === "OPEN_TRUST");
@@ -865,13 +1257,21 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     break: {
       state: breakState,
       canStart: breakCanStart,
-      startedAt: session.breakStartedAt,
+      startedAt: latestBreak === undefined ? null : iso(latestBreak.startMs),
       endsAt: breakEndMs === null ? null : iso(Math.min(breakEndMs, midnightMs)),
+      legacy: !bankMode,
+      bankMinutes: bank === null || session.freeStartedAt !== null ? 0 : bank.bankMinutes,
+      blockFocusMinutes: bank?.blockFocusMinutes ?? 0,
+      nextTier,
+      takenToday,
+      maxPerDay,
+      plannedMinutes: breakRunning && latestBreak !== undefined ? latestBreak.plannedMinutes : null,
     },
     free: {
       canStart: freeCanStart,
       startedAt: session.freeStartedAt,
       endsAt: freeEndMs === null ? null : iso(Math.min(freeEndMs, midnightMs)),
+      bonusMinutes,
     },
     passAvailable,
     passesLeft,

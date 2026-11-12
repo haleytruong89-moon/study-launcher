@@ -105,6 +105,7 @@ describe("special days: effect on the child's day (existing state machine)", () 
     appSlots: [],
     runs: [],
     overrides: [],
+    breaks: [],
   });
 
   it("sick: open until 00:00 and the day counts", () => {

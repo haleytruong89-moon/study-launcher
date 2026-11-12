@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   appLabelOf,
+  breakBank,
   computeDayState,
+  DEFAULT_BREAK_TIERS,
+  earnBreak,
+  focusIntervals,
+  validBreakTiers,
   type AppSlotInput,
+  type BreakRowInput,
   type DayInput,
   type DaySessionInput,
   type FamilySettingsInput,
@@ -122,8 +128,17 @@ function input(patch: Partial<DayInput> = {}): DayInput {
     appSlots: [],
     runs: [],
     overrides: [],
+    breaks: [],
     ...patch,
   };
+}
+
+/**
+ * R8b: the same day before migration 0014 (`breaks: null`): the old single-break rule (once a day,
+ * after a part is done, break_minutes long) still applies there, e.g. on a preview.
+ */
+function legacy(i: DayInput): DayInput {
+  return { ...i, breaks: null };
 }
 
 /** A normal day: 1 homework, 1 extra, 1 skill — nothing done yet. */
@@ -228,7 +243,7 @@ describe("priority table", () => {
     expect(s.status).toBe("FREE");
     expect(s.open).toBe(true);
     expect(s.openUntil).toBe(iso(`${TODAY} 19:45`));
-    expect(s.free).toEqual({ canStart: false, startedAt: iso(`${TODAY} 19:00`), endsAt: iso(`${TODAY} 19:45`) });
+    expect(s.free).toEqual({ canStart: false, startedAt: iso(`${TODAY} 19:00`), endsAt: iso(`${TODAY} 19:45`), bonusMinutes: 0 });
   });
 
   it("row 6: free time from a pass even though Part 1 is not done → FREE", () => {
@@ -251,23 +266,36 @@ describe("priority table", () => {
     expect(s.break.canStart).toBe(false);
   });
 
-  it("row 9: Part 1 done, Part 2 not done → LOCK_P2; the break may start (no break step in between)", () => {
-    const s = computeDayState(normalDay({ sessions: [session(TODAY, P1_DONE)] }), vn(`${TODAY} 16:05`));
+  it("row 9: Part 1 done, Part 2 not done → LOCK_P2; the break may start (no break step in between) [legacy before 0014]", () => {
+    expect(computeDayState(normalDay({ sessions: [session(TODAY, P1_DONE)] }), vn(`${TODAY} 16:05`)).break.canStart).toBe(false); // R8b: no focus, no bank
+    const s = computeDayState(legacy(normalDay({ sessions: [session(TODAY, P1_DONE)] })), vn(`${TODAY} 16:05`));
     expect(s.status).toBe("LOCK_P2");
     expect(s.open).toBe(false);
     expect(s.break.state).toBe("offer");
     expect(s.break.canStart).toBe(true);
   });
 
-  it("row 7: break running → BREAK until start + 10'", () => {
+  it("row 7: break running → BREAK until start + 10' [legacy before 0014]", () => {
     const s = computeDayState(
-      normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`) })] }),
+      legacy(normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`) })] })),
       vn(`${TODAY} 16:10`),
     );
     expect(s.status).toBe("BREAK");
     expect(s.open).toBe(true);
     expect(s.openUntil).toBe(iso(`${TODAY} 16:15`));
-    expect(s.break).toEqual({ state: "running", canStart: false, startedAt: iso(`${TODAY} 16:05`), endsAt: iso(`${TODAY} 16:15`) });
+    expect(s.break).toEqual({
+      state: "running",
+      canStart: false,
+      startedAt: iso(`${TODAY} 16:05`),
+      endsAt: iso(`${TODAY} 16:15`),
+      legacy: true,
+      bankMinutes: 0,
+      blockFocusMinutes: 0,
+      nextTier: null,
+      takenToday: 1,
+      maxPerDay: 1,
+      plannedMinutes: 10,
+    });
   });
 
   it("row 7 beats row 8: a break while Part 1 is not done (Part 2 done first) → BREAK", () => {
@@ -283,9 +311,9 @@ describe("priority table", () => {
     expect(s.part1.complete).toBe(false);
   });
 
-  it("a legacy break_skipped = true uses the break of the day → LOCK_P2, no break offer", () => {
+  it("a legacy break_skipped = true uses the break of the day → LOCK_P2, no break offer [legacy before 0014]", () => {
     const s = computeDayState(
-      normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true })] }),
+      legacy(normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakSkipped: true })] })),
       vn(`${TODAY} 16:05`),
     );
     expect(s.status).toBe("LOCK_P2");
@@ -293,13 +321,13 @@ describe("priority table", () => {
     expect(s.break.canStart).toBe(false);
   });
 
-  it("break ended early with 'Học tiếp' → back to the locked status, break used", () => {
+  it("break ended early with 'Học tiếp' → back to the locked status, break used [legacy before 0014]", () => {
     const s = computeDayState(
-      normalDay({
-        sessions: [
-          session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`), breakEndedAt: iso(`${TODAY} 16:08`) }),
-        ],
-      }),
+      legacy(
+        normalDay({
+          sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`), breakEndedAt: iso(`${TODAY} 16:08`) })],
+        }),
+      ),
       vn(`${TODAY} 16:09`),
     );
     expect(s.status).toBe("LOCK_P2");
@@ -313,7 +341,8 @@ describe("priority table", () => {
     expect(s.open).toBe(false);
     expect(s.free.canStart).toBe(true);
     expect(s.milestones).toEqual({});
-    expect(s.break.canStart).toBe(true);
+    expect(s.break.canStart).toBe(false); // R8b: no focus yet, so no bank
+    expect(computeDayState(legacy(input()), vn(`${TODAY} 00:00:30`)).break.canStart).toBe(true); // before 0014
   });
 });
 
@@ -322,9 +351,9 @@ describe("priority table", () => {
 // ---------------------------------------------------------------------------
 
 describe("boundaries at the exact second", () => {
-  const onBreak = normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:00`) })] });
+  const onBreak = legacy(normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:00`) })] }));
 
-  it("break: 1 second before +10:00 is BREAK, exactly +10:00 is LOCK_P2", () => {
+  it("break: 1 second before +10:00 is BREAK, exactly +10:00 is LOCK_P2 [legacy before 0014]", () => {
     expect(computeDayState(onBreak, vn(`${TODAY} 16:09:59`)).status).toBe("BREAK");
     const end = computeDayState(onBreak, vn(`${TODAY} 16:10:00`));
     expect(end.status).toBe("LOCK_P2");
@@ -470,7 +499,7 @@ describe("crossing 00:00", () => {
     expect(s.localDate).toBe(TOMORROW);
     expect(s.status).toBe("LOCK_P1");
     expect(s.open).toBe(false);
-    expect(s.free).toEqual({ canStart: false, startedAt: null, endsAt: null });
+    expect(s.free).toEqual({ canStart: false, startedAt: null, endsAt: null, bonusMinutes: 0 });
     expect(s.week.at(-2)).toEqual({ date: TODAY, result: "miss" }); // done 23:40 > bedtime 21:30
   });
 });
@@ -679,7 +708,8 @@ describe("empty parts and milestones", () => {
     expect(s.part1.complete).toBe(true);
     expect(s.part1.doneAt).toBeNull();
     expect(s.status).toBe("LOCK_P2");
-    expect(s.break.canStart).toBe(true); // E5d
+    expect(s.break.canStart).toBe(false); // R8b: no focus, no bank
+    expect(computeDayState(legacy(input({ templates: [tpl("s1", "skill")] })), vn(`${TODAY} 07:00`)).break.canStart).toBe(true); // E5d before 0014
   });
 
   it("E16: empty Part 1 at 06:00, homework assigned at 06:30 before Part 2 is done → LOCK_P1", () => {
@@ -775,7 +805,9 @@ describe("empty parts and milestones", () => {
     expect(s.status).toBe("LOCK_P1");
     expect(s.part2.complete).toBe(true);
     expect(s.free.startedAt).toBeNull();
-    expect(s.break.canStart).toBe(true); // E5b
+    expect(s.break).toMatchObject({ canStart: false, bankMinutes: 0, blockFocusMinutes: 23 }); // R8b: 23' of focus < 45'
+    const before = computeDayState(legacy(normalDay({ runs: [run({ templateId: "s1", startedAt: iso(`${TODAY} 17:15`), doneAt: iso(`${TODAY} 17:38`) })] })), now);
+    expect(before.break.canStart).toBe(true); // E5b before 0014
   });
 
   it("E4: Part 1 finished last → part1DoneAt + freeStartedAt in one read", () => {
@@ -793,7 +825,9 @@ describe("empty parts and milestones", () => {
     );
     expect(s.milestones).toEqual({ part1DoneAt: now.toISOString(), freeStartedAt: now.toISOString() });
     expect(s.status).toBe("FREE");
-    expect(s.openUntil).toBe(iso(`${TODAY} 19:45`));
+    // R8b: 23' + 25' = 48' of focus earned 10' of break, never taken: added to the 45'.
+    expect(s.openUntil).toBe(iso(`${TODAY} 19:55`));
+    expect(s.free.bonusMinutes).toBe(10);
   });
 
   it("Part 2 finished last → part2DoneAt + freeStartedAt", () => {
@@ -962,9 +996,9 @@ describe("parallel parts and the break (R1)", () => {
     expect(computeDayState(normalDay(), now).break).toMatchObject({ state: "not_yet", canStart: false });
   });
 
-  it("E5b: Part 2 done, Part 1 not → break may start; when running it opens until +10', then LOCK_P1", () => {
+  it("E5b: Part 2 done, Part 1 not → break may start; when running it opens until +10', then LOCK_P1 [legacy before 0014]", () => {
     const at = vn(`${TODAY} 17:40`);
-    const offer = computeDayState(normalDay({ runs: skillsDone, sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`) })] }), at);
+    const offer = computeDayState(legacy(normalDay({ runs: skillsDone, sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`) })] })), at);
     expect(offer.break.canStart).toBe(true);
     const running = normalDay({ runs: skillsDone, sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`), breakStartedAt: iso(`${TODAY} 17:40`) })] });
     expect(computeDayState(running, vn(`${TODAY} 17:49:59`)).status).toBe("BREAK");
@@ -976,9 +1010,9 @@ describe("parallel parts and the break (R1)", () => {
     expect(s.status).toBe("LOCK_P2");
   });
 
-  it("E6: once used, no second break", () => {
+  it("E6: once used, no second break [legacy before 0014]", () => {
     const s = computeDayState(
-      normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`) })] }),
+      legacy(normalDay({ sessions: [session(TODAY, { ...P1_DONE, breakStartedAt: iso(`${TODAY} 16:05`) })] })),
       vn(`${TODAY} 17:00`),
     );
     expect(s.break).toMatchObject({ state: "done", canStart: false });
@@ -995,13 +1029,26 @@ describe("parallel parts and the break (R1)", () => {
 
   it("a running homework (no timer) does not block the break", () => {
     const s = computeDayState(
-      normalDay({
-        sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:00`) })],
-        runs: [...skillsDone, run({ source: "homework", homeworkItemId: "h1", startedAt: iso(`${TODAY} 17:01`) })],
-      }),
+      legacy(
+        normalDay({
+          sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:00`) })],
+          runs: [...skillsDone, run({ source: "homework", homeworkItemId: "h1", startedAt: iso(`${TODAY} 17:01`) })],
+        }),
+      ),
       now,
     );
     expect(s.break.canStart).toBe(true);
+    // R8b: a running homework does not block the break either (65' of finished focus before it).
+    const bank = computeDayState(
+      normalDay({
+        runs: [
+          run({ templateId: "e1", startedAt: iso(`${TODAY} 15:55`), doneAt: iso(`${TODAY} 17:00`) }),
+          run({ source: "homework", homeworkItemId: "h1", startedAt: iso(`${TODAY} 17:01`) }),
+        ],
+      }),
+      now,
+    );
+    expect(bank.break).toMatchObject({ canStart: true, bankMinutes: 10, blockFocusMinutes: 65 });
   });
 
   it("E9 + E10: never taking the break is fine; no break once free time started", () => {
@@ -1043,14 +1090,14 @@ describe("parallel parts and the break (R1)", () => {
     expect(s.break.canStart).toBe(false);
   });
 
-  it("E22: free time starts during a break → FREE (the rest of the break is dropped)", () => {
+  it("E22: free time starts during a break → FREE (the rest of the break is dropped) [legacy before 0014]", () => {
     const at = vn(`${TODAY} 18:05`);
     const s = computeDayState(
-      normalDay({
+      legacy(normalDay({
         homework: [hw("h1", { doneAt: iso(`${TODAY} 18:04`) })],
         sessions: [session(TODAY, { part2DoneAt: iso(`${TODAY} 17:40`), breakStartedAt: iso(`${TODAY} 18:00`) })],
         runs: [...skillsDone, run({ templateId: "e1", startedAt: iso(`${TODAY} 17:00`), doneAt: iso(`${TODAY} 17:25`) })],
-      }),
+      })),
       at,
     );
     expect(s.status).toBe("FREE");
@@ -1223,7 +1270,7 @@ describe("R8a Làm thêm (extra runs)", () => {
     expect(s.milestones).toEqual({ part1DoneAt: now.toISOString() });
     // A timed (extra) run is running: no break (interpretation 2).
     expect(s.break.canStart).toBe(false);
-    expect(computeDayState(input({ templates: [tpl("e1", "extra"), tpl("s1", "skill")], runs: [required()] }), now).break.canStart).toBe(true);
+    expect(computeDayState(legacy(input({ templates: [tpl("e1", "extra"), tpl("s1", "skill")], runs: [required()] })), now).break.canStart).toBe(true);
   });
 
   it("the earliest done run is the required one, whatever the order; later runs are extra", () => {
@@ -1624,5 +1671,409 @@ describe("★ sớm (interpretation 18)", () => {
     const a = computeDayState(input({ homework: [hw("x", { dueDate: TODAY })] }), NOW);
     expect(a.earlyThisWeek).toBe(0);
     expect(a.status).toBe("LOCK_P1");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R8b "Ngân hàng giờ nghỉ" (parent decision 08/11/2026): gold examples G1-G18
+// (docs/superpowers/specs/2026-11-09-r8-design.md) + earn boundaries, union, midnight, legacy.
+// ---------------------------------------------------------------------------
+
+describe("R8b break bank", () => {
+  let brkSeq = 0;
+  /** A day_breaks row: started at `start`, planned minutes, ended early at `ended` ("Học tiếp"). */
+  function brk(start: string, planned: number, ended: string | null = null): BreakRowInput {
+    brkSeq += 1;
+    return { id: `brk-${brkSeq}`, localDate: TODAY, startedAt: iso(`${TODAY} ${start}`), plannedMinutes: planned, endedAt: ended === null ? null : iso(`${TODAY} ${ended}`) };
+  }
+  const t = (hhmm: string) => iso(`${TODAY} ${hhmm}`);
+  const at = (hhmm: string) => vn(`${TODAY} ${hhmm}`);
+  /** A finished template run of e1 (Part 1) or s1 (Part 2). */
+  const tplRun = (templateId: "e1" | "s1", from: string, to: string | null) => run({ templateId, startedAt: t(from), doneAt: to === null ? null : t(to) });
+  const hwRun = (from: string, to: string | null) => run({ source: "homework", homeworkItemId: "h1", startedAt: t(from), doneAt: to === null ? null : t(to) });
+  /** Homework h1 finished at `doneAt` (so Part 1 can complete). */
+  const hwDone = (doneAt: string) => [hw("h1", { doneAt: t(doneAt) })];
+
+  describe("earnBreak (default tiers [[45,10],[90,30],[120,45],[180,60]])", () => {
+    it.each([
+      [0, 0],
+      [44, 0],
+      [45, 10],
+      [89, 10],
+      [90, 30],
+      [119, 30],
+      [120, 45],
+      [179, 45],
+      [180, 60],
+      [224, 60],
+      [225, 70],
+      [270, 90],
+      [360, 120],
+    ])("%i' of focus → %i' of break", (f, b) => expect(earnBreak(f)).toBe(b));
+
+    it("fractions are floored; negative / NaN earn nothing", () => {
+      expect(earnBreak(44.99)).toBe(0);
+      expect(earnBreak(-5)).toBe(0);
+      expect(earnBreak(Number.NaN)).toBe(0);
+    });
+
+    it("custom tiers are data: [[30,5],[60,15]] → 65' earns 15 + earn(5) = 15, 90' earns 15 + 5", () => {
+      const custom = [
+        [30, 5],
+        [60, 15],
+      ];
+      expect(earnBreak(29, custom)).toBe(0);
+      expect(earnBreak(30, custom)).toBe(5);
+      expect(earnBreak(65, custom)).toBe(15);
+      expect(earnBreak(90, custom)).toBe(20);
+    });
+
+    it("malformed tiers fall back to the defaults", () => {
+      for (const bad of [null, undefined, "x", {}, [], [[45]], [[45, 10], [40, 30]], [[45, 30], [90, 30]], [[0, 10]], [[45, -1]], [[45.5, 10]], [["45", 10]], Array(9).fill([1, 1])]) {
+        expect(validBreakTiers(bad)).toBe(false);
+        expect(earnBreak(50, bad)).toBe(10);
+        expect(earnBreak(225, bad)).toBe(70);
+      }
+      expect(validBreakTiers(DEFAULT_BREAK_TIERS)).toBe(true);
+    });
+
+    it("malformed tiers in family_settings: the day uses the defaults (never crashes)", () => {
+      const d = normalDay({ settings: { ...SETTINGS, breakTiers: { nope: true } }, runs: [tplRun("e1", "15:00", "15:50")] });
+      expect(computeDayState(d, at("15:51")).break).toMatchObject({ bankMinutes: 10, canStart: true });
+    });
+  });
+
+  describe("focus = union of run intervals", () => {
+    const m = (hhmm: string) => vn(`${TODAY} ${hhmm}`).getTime();
+    const day0 = m("00:00");
+
+    it("overlapping runs count once; gaps do not count", () => {
+      const f = focusIntervals(
+        [
+          [m("15:00"), m("15:40")],
+          [m("15:10"), m("16:00")],
+          [m("17:00"), m("17:10")],
+        ],
+        [],
+        day0,
+        m("23:00"),
+      );
+      expect(f).toEqual([
+        [m("15:00"), m("16:00")],
+        [m("17:00"), m("17:10")],
+      ]);
+    });
+
+    it("excluded windows are cut out; the result is clipped to the day and to `until`", () => {
+      const f = focusIntervals([[m("15:00"), m("16:00")]], [[m("15:20"), m("15:30")], [m("15:50"), Infinity]], day0, m("23:00"));
+      expect(f).toEqual([
+        [m("15:00"), m("15:20")],
+        [m("15:30"), m("15:50")],
+      ]);
+      expect(focusIntervals([[day0 - 30 * 60_000, m("00:10")]], [], day0, m("23:00"))).toEqual([[day0, m("00:10")]]);
+      expect(focusIntervals([[m("22:00"), m("23:30")]], [], day0, m("23:00"))).toEqual([[m("22:00"), m("23:00")]]);
+    });
+
+    it("breakBank: blocks close at each break start; used = floored minutes", () => {
+      const focus = [[m("08:00"), m("09:40")] as const, [m("09:52"), m("10:22")] as const];
+      const r = breakBank(focus, [{ startMs: m("09:40"), endMs: m("09:52") + 30_000 }], DEFAULT_BREAK_TIERS, day0, m("10:23"));
+      expect(r).toEqual({ bankMinutes: 18, earnedMinutes: 30, usedMinutes: 12, blockFocusMinutes: 30 });
+    });
+  });
+
+  describe("gold examples", () => {
+    it("G1: 50' focus → bank 10 → canStart", () => {
+      const s = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:50")] }), at("15:51"));
+      expect(s.status).toBe("LOCK_P1");
+      expect(s.break).toMatchObject({ legacy: false, bankMinutes: 10, blockFocusMinutes: 50, canStart: true, state: "offer", takenToday: 0, maxPerDay: 6 });
+      expect(s.break.nextTier).toEqual({ atFocus: 90, minutes: 30 });
+    });
+
+    it("G2: 95' focus in one go → bank 30", () => {
+      const s = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "16:35")] }), at("16:36"));
+      expect(s.break).toMatchObject({ bankMinutes: 30, blockFocusMinutes: 95, canStart: true });
+      expect(s.break.nextTier).toEqual({ atFocus: 120, minutes: 45 });
+    });
+
+    it("G3: Math OS 20' then English OS 40' (one after the other) → block 60 → bank 10", () => {
+      const s = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:20"), tplRun("s1", "15:20", "16:00")] }), at("16:01"));
+      expect(s.break).toMatchObject({ bankMinutes: 10, blockFocusMinutes: 60 });
+    });
+
+    it("G4: 50' → break 10' (used fully) → 40' → bank 0 (new block of 40)", () => {
+      const s = computeDayState(
+        normalDay({ runs: [tplRun("e1", "15:00", "15:50"), tplRun("s1", "16:00", "16:40")], breaks: [brk("15:50", 10)] }),
+        at("16:41"),
+      );
+      expect(s.break).toMatchObject({ bankMinutes: 0, blockFocusMinutes: 40, canStart: false, takenToday: 1, state: "not_yet" });
+      expect(s.break.nextTier).toEqual({ atFocus: 45, minutes: 10 });
+    });
+
+    it("G5: 45' → break 10' → 45' → bank 10 (not 20: the block resets)", () => {
+      const s = computeDayState(
+        normalDay({ runs: [tplRun("e1", "15:00", "15:45"), tplRun("s1", "15:55", "16:40")], breaks: [brk("15:45", 10)] }),
+        at("16:41"),
+      );
+      expect(s.break).toMatchObject({ bankMinutes: 10, blockFocusMinutes: 45, canStart: true });
+    });
+
+    it.each([
+      [120, 45],
+      [180, 60],
+      [225, 70],
+      [270, 90],
+    ])("G6: %i' in one go (back-to-back finished runs, each ≤ 180') → bank %i", (minutes, bank) => {
+      const start = vn(`${TODAY} 08:00`).getTime();
+      const mid = new Date(start + Math.min(minutes, 120) * 60_000).toISOString();
+      const end = new Date(start + minutes * 60_000).toISOString();
+      const runs = [run({ templateId: "e1", startedAt: t("08:00"), doneAt: mid }), ...(minutes > 120 ? [run({ templateId: "s1", startedAt: mid, doneAt: end })] : [])];
+      const s = computeDayState(normalDay({ runs }), new Date(start + (minutes + 1) * 60_000));
+      expect(s.break).toMatchObject({ bankMinutes: bank, blockFocusMinutes: minutes });
+    });
+
+    it("G7: 100' → break (30') → “Học tiếp” after 12' → 30' focus → bank 18 → canStart (≥ 5)", () => {
+      const before = computeDayState(normalDay({ runs: [tplRun("e1", "08:00", "09:40")] }), at("09:40"));
+      expect(before.break.bankMinutes).toBe(30); // what the route plans at the start
+      const s = computeDayState(
+        normalDay({ runs: [tplRun("e1", "08:00", "09:40"), tplRun("s1", "09:52", "10:22")], breaks: [brk("09:40", 30, "09:52")] }),
+        at("10:23"),
+      );
+      expect(s.break).toMatchObject({ bankMinutes: 18, blockFocusMinutes: 30, canStart: true, takenToday: 1 });
+      // Right after "Học tiếp", the 18 unused minutes show as the bank.
+      expect(computeDayState(normalDay({ runs: [tplRun("e1", "08:00", "09:40")], breaks: [brk("09:40", 30, "09:52")] }), at("09:53")).break.bankMinutes).toBe(18);
+    });
+
+    it("G8: 120' in one go, then both parts done → free time = 45 + 45 = 90'", () => {
+      const now = at("10:00");
+      const d = normalDay({ homework: hwDone("09:00"), runs: [hwRun("08:00", "09:00"), tplRun("e1", "09:00", "09:40"), tplRun("s1", "09:40", "10:00")] });
+      const s = computeDayState(d, now);
+      expect(s.milestones.freeStartedAt).toBe(now.toISOString());
+      expect(s.status).toBe("FREE");
+      expect(s.free).toMatchObject({ bonusMinutes: 45, endsAt: t("11:30") });
+      expect(s.openUntil).toBe(t("11:30"));
+      expect(s.break.bankMinutes).toBe(0); // moved into free time
+      // Deterministic: a later read (free_started_at stored, a "Làm thêm" run after it) agrees.
+      const stored = [session(TODAY, { part1DoneAt: now.toISOString(), part2DoneAt: now.toISOString(), freeStartedAt: now.toISOString() })];
+      const later = computeDayState({ ...d, runs: [...d.runs, tplRun("e1", "10:05", "10:45")], sessions: stored }, at("10:50"));
+      expect(later.free).toMatchObject({ bonusMinutes: 45, endsAt: t("11:30") });
+      expect(computeDayState({ ...d, sessions: stored }, at("11:29:59")).status).toBe("FREE");
+      expect(computeDayState({ ...d, sessions: stored }, at("11:30")).status).toBe("LOCK_END");
+    });
+
+    it("G9: 50', break 10', 60' more, then both parts done → free time = 45 + 10 = 55'", () => {
+      const s = computeDayState(
+        normalDay({
+          homework: hwDone("08:50"),
+          runs: [hwRun("08:00", "08:50"), tplRun("e1", "09:00", "09:40"), tplRun("s1", "09:40", "10:00")],
+          breaks: [brk("08:50", 10)],
+        }),
+        at("10:00"),
+      );
+      expect(s.status).toBe("FREE");
+      expect(s.free).toMatchObject({ bonusMinutes: 10, endsAt: t("10:55") });
+    });
+
+    it("G10: homework 40' and skill 50' overlapping for 30' → focus = union (60'), not the sum (90')", () => {
+      const s = computeDayState(normalDay({ runs: [hwRun("15:00", "15:40"), tplRun("s1", "15:10", "16:00")] }), at("16:01"));
+      expect(s.break).toMatchObject({ blockFocusMinutes: 60, bankMinutes: 10 });
+    });
+
+    it("G11: 6 breaks taken, bank 30 → canStart false; the bank is added to free time later", () => {
+      const six = ["06:00", "06:01", "06:02", "06:03", "06:04", "06:05"].map((h) => brk(h, 5, h));
+      const s = computeDayState(normalDay({ runs: [tplRun("e1", "07:00", "08:35")], breaks: six }), at("08:36"));
+      expect(s.break).toMatchObject({ bankMinutes: 30, canStart: false, takenToday: 6, maxPerDay: 6, state: "done", nextTier: null });
+      const done = computeDayState(normalDay({ homework: hwDone("08:40"), runs: [tplRun("e1", "07:00", "08:35"), tplRun("s1", "08:35", "08:40")], breaks: six }), at("08:41"));
+      expect(done.status).toBe("FREE");
+      expect(done.free.bonusMinutes).toBe(30); // 100' block → 30
+    });
+
+    it("G12: parent LOCK override in effect, bank 30 → canStart false; focus during the lock still counts", () => {
+      const s = computeDayState(
+        normalDay({ runs: [tplRun("e1", "15:00", "16:35")], overrides: [ov("lock_until", `${TODAY} 17:00`, `${TODAY} 15:30`)] }),
+        at("16:36"),
+      );
+      expect(s.status).toBe("LOCK_OVERRIDE");
+      expect(s.break).toMatchObject({ bankMinutes: 30, blockFocusMinutes: 95, canStart: false });
+      // A parent OPEN window is not focus (the laptop was open anyway): 95' - 30' = 65' → 10.
+      const open = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "16:35")], overrides: [ov("open_until", `${TODAY} 16:00`, `${TODAY} 15:30`)] }), at("16:36"));
+      expect(open.break).toMatchObject({ blockFocusMinutes: 65, bankMinutes: 10 });
+      // An open window superseded early by a newer lock: only 15:30-15:40 is cut.
+      const cut = computeDayState(
+        normalDay({ runs: [tplRun("e1", "15:00", "16:35")], overrides: [ov("open_until", `${TODAY} 16:00`, `${TODAY} 15:30`), ov("lock_until", `${TODAY} 15:45`, `${TODAY} 15:40`)] }),
+        at("16:36"),
+      );
+      expect(cut.break.blockFocusMinutes).toBe(85);
+    });
+
+    it("G13: free time started → canStart false; later runs add no focus", () => {
+      const pass = session(TODAY, { passUsedAt: t("15:00"), freeStartedAt: t("15:00") });
+      const s = computeDayState(normalDay({ sessions: [pass], runs: [tplRun("e1", "14:00", "14:50"), tplRun("s1", "15:10", "16:40")] }), at("15:30"));
+      expect(s.status).toBe("FREE");
+      expect(s.break).toMatchObject({ canStart: false, bankMinutes: 0, nextTier: null });
+      expect(s.free).toMatchObject({ bonusMinutes: 10, endsAt: t("15:55") }); // only the 50' before 15:00
+    });
+
+    it("G14: break running, the homework run continues during it → the break minutes are not focus", () => {
+      const during = computeDayState(normalDay({ runs: [hwRun("15:00", null)], breaks: [brk("15:50", 10)] }), at("15:55"));
+      expect(during.status).toBe("BREAK");
+      expect(during.break).toMatchObject({ state: "running", plannedMinutes: 10, blockFocusMinutes: 0 });
+      // The homework is finished at 16:10 (09/11: it counts once finished): 15:00-15:50 + 16:00-16:10.
+      const after = computeDayState(normalDay({ runs: [hwRun("15:00", "16:10")], breaks: [brk("15:50", 10)] }), at("16:11"));
+      expect(after.status).toBe("LOCK_P1");
+      expect(after.break).toMatchObject({ blockFocusMinutes: 10, bankMinutes: 0 }); // not 20': earn(50) 10 - used 10
+    });
+
+    it("G15: a break started 23:50 with planned 30 → open until 00:00", () => {
+      const s = computeDayState(normalDay({ breaks: [brk("23:50", 30)] }), at("23:55"));
+      expect(s.status).toBe("BREAK");
+      expect(s.openUntil).toBe(MIDNIGHT);
+      expect(s.break.endsAt).toBe(MIDNIGHT);
+    });
+
+    it("G16: a timed run running for 99' → bank 0 until Xong (09/11); then 30", () => {
+      const s = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", null)] }), at("16:39"));
+      expect(s.break).toMatchObject({ bankMinutes: 0, blockFocusMinutes: 0, canStart: false });
+      const done = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "16:39")] }), at("16:39"));
+      expect(done.break).toMatchObject({ bankMinutes: 30, blockFocusMinutes: 99, canStart: true });
+      // A bank of 30 from finished work, then another timed run starts: no break (“bấm Xong trước”).
+      const busy = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "16:35"), tplRun("s1", "16:36", null)] }), at("16:40"));
+      expect(busy.break).toMatchObject({ bankMinutes: 30, canStart: false });
+    });
+
+    it("G17: legacy break_started_at, no day_breaks → counts as 1 break of break_minutes", () => {
+      const d = normalDay({ sessions: [session(TODAY, { breakStartedAt: t("15:50") })], runs: [tplRun("e1", "15:00", "15:50")], breaks: [] });
+      const during = computeDayState(d, at("15:55"));
+      expect(during.status).toBe("BREAK");
+      expect(during.openUntil).toBe(t("16:00"));
+      expect(during.break).toMatchObject({ legacy: false, takenToday: 1, plannedMinutes: 10 });
+      expect(computeDayState(d, at("16:05")).break).toMatchObject({ bankMinutes: 0, takenToday: 1, state: "not_yet" });
+      // A legacy break_skipped alone: one taken break that used break_minutes.
+      const skipped = computeDayState(normalDay({ sessions: [session(TODAY, { breakSkipped: true })], runs: [tplRun("e1", "15:00", "16:35")] }), at("16:36"));
+      expect(skipped.break).toMatchObject({ takenToday: 1, bankMinutes: 20 });
+    });
+
+    it("G18: 4' left in the bank after “Học tiếp” → canStart false (< 5); the 4' is added to free time", () => {
+      const base = { runs: [tplRun("e1", "15:00", "15:50")], breaks: [brk("15:50", 10, "15:56")] };
+      const s = computeDayState(normalDay(base), at("15:57"));
+      expect(s.break).toMatchObject({ bankMinutes: 4, canStart: false });
+      const done = computeDayState(
+        normalDay({ homework: hwDone("16:10"), runs: [...base.runs, hwRun("16:00", "16:10"), tplRun("s1", "16:10", "16:30")], breaks: base.breaks }),
+        at("16:30"),
+      );
+      expect(done.status).toBe("FREE");
+      expect(done.free).toMatchObject({ bonusMinutes: 4, endsAt: t("17:19") });
+    });
+
+    it("G19: homework started 08:00 and never finished → at 12:00 bank 0 (09/11)", () => {
+      const s = computeDayState(normalDay({ runs: [hwRun("08:00", null)] }), at("12:00"));
+      expect(s.break).toMatchObject({ bankMinutes: 0, blockFocusMinutes: 0, canStart: false });
+      expect(s.part1.items.find((i) => i.id === "h1")?.state).toBe("running");
+    });
+
+    it("G20: one run 08:00-13:00, finished → counts 180' → bank 60 (09/11)", () => {
+      const s = computeDayState(normalDay({ runs: [tplRun("e1", "08:00", "13:00")] }), at("13:01"));
+      expect(s.break).toMatchObject({ blockFocusMinutes: 180, bankMinutes: 60 });
+      // The cap is data (family_settings.break_run_cap_minutes); out of range (30-600) → 180.
+      expect(computeDayState(normalDay({ settings: { ...SETTINGS, breakRunCapMinutes: 300 }, runs: [tplRun("e1", "08:00", "13:00")] }), at("13:01")).break.blockFocusMinutes).toBe(300);
+      expect(computeDayState(normalDay({ settings: { ...SETTINGS, breakRunCapMinutes: 5 }, runs: [tplRun("e1", "08:00", "13:00")] }), at("13:01")).break.blockFocusMinutes).toBe(180);
+      // The cap is per run: a second run after it still counts.
+      expect(computeDayState(normalDay({ runs: [tplRun("e1", "08:00", "13:00"), tplRun("s1", "13:00", "13:45")] }), at("13:46")).break.blockFocusMinutes).toBe(225);
+    });
+
+    it("G21: break planned 30 at 15:00; parent LOCK at 15:10 → used 10, 20 back in the bank (09/11)", () => {
+      // 95' of focus (13:25-15:00) → 30; the break of 30 starts at 15:00; the parent locks at 15:10.
+      const d = (now: string) =>
+        computeDayState(
+          normalDay({ runs: [tplRun("e1", "13:25", "15:00")], breaks: [brk("15:00", 30)], overrides: [ov("lock_until", `${TODAY} 15:20`, `${TODAY} 15:10`)] }),
+          at(now),
+        );
+      const locked = d("15:12");
+      expect(locked.status).toBe("LOCK_OVERRIDE");
+      expect(locked.break).toMatchObject({ state: "not_yet", bankMinutes: 20, takenToday: 1, canStart: false });
+      // After the lock the break does not come back; the 20' wait in the bank.
+      const after = d("15:21");
+      expect(after.status).toBe("LOCK_P1");
+      expect(after.open).toBe(false);
+      expect(after.break).toMatchObject({ bankMinutes: 20, canStart: true });
+      // A lock created before the break started does not cut it.
+      const older = computeDayState(
+        normalDay({ runs: [tplRun("e1", "13:25", "15:00")], breaks: [brk("15:00", 30)], overrides: [ov("lock_until", `${TODAY} 14:55`, `${TODAY} 14:50`)] }),
+        at("15:12"),
+      );
+      expect(older.status).toBe("BREAK");
+    });
+  });
+
+  describe("more rules", () => {
+    it("the old “a part must be done” condition is gone: 50' of focus, no part finished → canStart", () => {
+      const s = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:50")] }), at("15:50"));
+      expect(s.part1.complete).toBe(false);
+      expect(s.part2.complete).toBe(false);
+      expect(s.break.canStart).toBe(true);
+    });
+
+    it("a running break ends when free time starts: its unused minutes are added to free time", () => {
+      // 95' → bank 30; break from 09:35 (planned 30); the parent's proof finishes the day at 09:45.
+      const s = computeDayState(
+        normalDay({ homework: hwDone("09:45"), runs: [hwRun("08:00", "09:00"), tplRun("e1", "09:00", "09:20"), tplRun("s1", "09:20", "09:35")], breaks: [brk("09:35", 30)] }),
+        at("09:45"),
+      );
+      expect(s.status).toBe("FREE");
+      expect(s.free).toMatchObject({ bonusMinutes: 20, endsAt: t("10:50") }); // 30 - 10 used, 45 + 20
+    });
+
+    it("trust mode or a sick day: no focus (the laptop is open); lock mode since today: earlier time is not focus", () => {
+      const runs = [tplRun("e1", "08:00", "09:35")];
+      expect(computeDayState(normalDay({ runs, trustMode: "trust" }), at("10:00")).break.bankMinutes).toBe(0);
+      expect(computeDayState(normalDay({ runs, sessions: [session(TODAY, { dayType: "sick" })] }), at("10:00")).break.bankMinutes).toBe(0);
+      expect(computeDayState(normalDay({ runs, trustSince: t("09:00") }), at("10:00")).break.blockFocusMinutes).toBe(35);
+      expect(computeDayState(normalDay({ runs, trustSince: iso(`${YESTERDAY} 09:00`) }), at("10:00")).break.blockFocusMinutes).toBe(95);
+    });
+
+    it("break_max_per_day is data (0 = no break); out of range → 6", () => {
+      const d = normalDay({ runs: [tplRun("e1", "15:00", "15:50")] });
+      expect(computeDayState({ ...d, settings: { ...SETTINGS, breakMaxPerDay: 0 } }, at("15:51")).break).toMatchObject({ canStart: false, maxPerDay: 0, state: "not_yet" });
+      expect(computeDayState({ ...d, settings: { ...SETTINGS, breakMaxPerDay: 99 } }, at("15:51")).break).toMatchObject({ canStart: true, maxPerDay: 6 });
+    });
+
+    it("only one running break: BREAK until started_at + planned; “Học tiếp” (ended_at) ends it", () => {
+      const s = computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:50")], breaks: [brk("15:50", 10)] }), at("15:59:59"));
+      expect(s.status).toBe("BREAK");
+      expect(s.break).toMatchObject({ state: "running", startedAt: t("15:50"), endsAt: t("16:00"), plannedMinutes: 10, nextTier: null, canStart: false });
+      expect(computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:50")], breaks: [brk("15:50", 10)] }), at("16:00")).status).toBe("LOCK_P1");
+      expect(computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:50")], breaks: [brk("15:50", 10, "15:52")] }), at("15:53")).status).toBe("LOCK_P1");
+    });
+
+    it("two “start” requests at once (double tap): the duplicate row counts once and its minutes are not used twice", () => {
+      const runs = [tplRun("e1", "15:00", "15:50"), tplRun("s1", "16:00", "16:50")];
+      const dup = [brk("15:50", 10), { ...brk("15:50", 10), startedAt: new Date(vn(`${TODAY} 15:50`).getTime() + 300).toISOString() }];
+      const during = computeDayState(normalDay({ runs: runs.slice(0, 1), breaks: dup }), at("15:55"));
+      expect(during.status).toBe("BREAK");
+      expect(during.openUntil).toBe(t("16:00"));
+      expect(during.break).toMatchObject({ takenToday: 1, plannedMinutes: 10 });
+      // 50' → 10, break used 10, then 50' → 10: bank 10 (not 0 from a doubled use).
+      expect(computeDayState(normalDay({ runs, breaks: dup }), at("16:51")).break).toMatchObject({ takenToday: 1, bankMinutes: 10, canStart: true });
+    });
+
+    it("breaks of other days are ignored; malformed day_breaks rows throw (fail-closed)", () => {
+      const old = { ...brk("15:50", 10), localDate: YESTERDAY, startedAt: iso(`${YESTERDAY} 15:50`) };
+      expect(computeDayState(normalDay({ runs: [tplRun("e1", "15:00", "15:50")], breaks: [old] }), at("15:55")).break).toMatchObject({ takenToday: 0, bankMinutes: 10 });
+      expect(() => computeDayState(normalDay({ breaks: [{ ...brk("15:50", 10), startedAt: "nope" }] }), at("16:00"))).toThrow();
+      expect(() => computeDayState(normalDay({ breaks: [{ ...brk("15:50", 10), plannedMinutes: 0 }] }), at("16:00"))).toThrow();
+      expect(() => computeDayState(normalDay({ breaks: [{ ...brk("15:50", 10), endedAt: "nope" }] }), at("16:00"))).toThrow();
+    });
+
+    it("midnight: a run finished at 23:58 counts; the next day starts with an empty bank", () => {
+      const late = normalDay({ runs: [tplRun("e1", "23:00", "23:58")] });
+      expect(computeDayState(late, at("23:59")).break.blockFocusMinutes).toBe(58);
+      expect(computeDayState(late, vn(`${TOMORROW} 00:01`)).break).toMatchObject({ bankMinutes: 0, blockFocusMinutes: 0, takenToday: 0 });
+    });
+
+    it("before 0014 (breaks: null): no bank, no bonus — the old rule (see the [legacy] tests above)", () => {
+      const s = computeDayState(legacy(normalDay({ runs: [tplRun("e1", "08:00", "10:00")] })), at("10:01"));
+      expect(s.break).toMatchObject({ legacy: true, bankMinutes: 0, canStart: false, maxPerDay: 1, nextTier: null });
+      const free = computeDayState(legacy(normalDay({ sessions: [session(TODAY, { passUsedAt: t("10:00"), freeStartedAt: t("10:00") })], runs: [tplRun("e1", "08:00", "10:00")] })), at("10:01"));
+      expect(free.free).toMatchObject({ bonusMinutes: 0, endsAt: t("10:45") });
+    });
   });
 });

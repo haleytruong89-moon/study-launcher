@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_BREAK_TIERS, validBreakTiers } from "@/lib/dayState";
 import { MAX_HOMEWORK_FILES } from "@/lib/files";
 
 /**
@@ -126,6 +127,14 @@ export const settingsSchema = z
     byEnabled: z.boolean().optional(),
     byStudyMinutes: int(5, 60).optional(),
     byIdleLockMinutes: int(2, 15).optional(),
+    /** 0014 (R8b): [[focus, break], ...] strictly ascending, positive. Optional (absent before 0014). */
+    breakTiers: z
+      .array(z.tuple([int(1, 1440), int(1, 1440)]))
+      .min(1)
+      .max(MAX_BREAK_TIERS)
+      .refine((t) => validBreakTiers(t), "Các bậc nghỉ phải tăng dần: phút tập trung và phút nghỉ của bậc sau lớn hơn bậc trước")
+      .optional(),
+    breakMaxPerDay: int(0, 12).optional(),
     bedtimes: z.array(z.object({ childId: z.uuid(), bedtime: timeOfDay })).max(10).default([]),
   })
   .refine((s) => s.trustDownPct <= s.trustUpPct, {
@@ -152,6 +161,8 @@ export function settingsToRow(s: SettingsInput) {
     ...(s.byEnabled === undefined ? {} : { by_enabled: s.byEnabled }),
     ...(s.byStudyMinutes === undefined ? {} : { by_study_minutes: s.byStudyMinutes }),
     ...(s.byIdleLockMinutes === undefined ? {} : { by_idle_lock_minutes: s.byIdleLockMinutes }),
+    ...(s.breakTiers === undefined ? {} : { break_tiers: s.breakTiers }),
+    ...(s.breakMaxPerDay === undefined ? {} : { break_max_per_day: s.breakMaxPerDay }),
   };
 }
 

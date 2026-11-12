@@ -5,6 +5,7 @@ import { useState } from "react";
 import { sendJson } from "@/lib/api-client";
 
 export interface SettingsValues {
+  /** Legacy (before R8b): no longer shown, sent back unchanged (the column stays). */
   breakMinutes: number;
   freeMinutes: number;
   extraMinMinutes: number;
@@ -22,9 +23,12 @@ export interface SettingsValues {
   /** Góc bình yên (0008). Absent until that migration has run (then the section is hidden). */
   byEnabled?: boolean;
   byStudyMinutes?: number;
+  /** R8b break bank (0014). Absent until that migration has run (then the section is hidden). */
+  breakTiers?: [number, number][];
+  breakMaxPerDay?: number;
 }
 
-type Group = "time" | "homework" | "trust" | "photos" | "by";
+type Group = "time" | "homework" | "trust" | "photos" | "by" | "break";
 const GROUPS: { group: Group; title: string }[] = [
   { group: "time", title: "Giờ học, nghỉ, giờ tự do" },
   { group: "homework", title: "Bài tập" },
@@ -33,7 +37,6 @@ const GROUPS: { group: Group; title: string }[] = [
 ];
 
 const FIELDS: { key: keyof SettingsValues; group: Group; label: string; hint?: string; min: number; max: number }[] = [
-  { key: "breakMinutes", group: "time", label: "Nghỉ giữa 2 phần (phút)", hint: "0 = không có nghỉ", min: 0, max: 60 },
   { key: "freeMinutes", group: "time", label: "Giờ tự do sau khi xong (phút)", min: 0, max: 240 },
   { key: "extraMinMinutes", group: "time", label: "Tối thiểu mỗi bài bổ sung (phút)", hint: "Từng việc có thể đặt riêng", min: 0, max: 180 },
   { key: "skillMinMinutes", group: "time", label: "Tối thiểu mỗi kỹ năng (phút)", hint: "Từng việc có thể đặt riêng", min: 0, max: 180 },
@@ -56,6 +59,7 @@ const FIELDS: { key: keyof SettingsValues; group: Group; label: string; hint?: s
   { key: "trustUpWeeks", group: "trust", label: "Lên Tin tưởng: số tuần liên tiếp", min: 1, max: 12 },
   { key: "trustDownPct", group: "trust", label: "Gợi ý quay về Khóa khi tuần dưới (%)", min: 0, max: 100 },
   { key: "photoRetentionDays", group: "photos", label: "Giữ ảnh bài (ngày)", min: 7, max: 365 },
+  { key: "breakMaxPerDay", group: "break", label: "Số lần nghỉ tối đa mỗi ngày", hint: "0 = không có nghỉ giữa giờ", min: 0, max: 12 },
   { key: "byStudyMinutes", group: "by", label: "Trong giờ học: mỗi lần tối đa (phút)", hint: "Ít nhất 5 phút · tính bằng giờ máy chủ; hết giờ con về màn Hôm nay, vào lại ngay được", min: 5, max: 60 },
 ];
 
@@ -69,8 +73,13 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
   const router = useRouter();
   const [values, setValues] = useState<Record<keyof SettingsValues, string>>(
     () =>
-      Object.fromEntries(Object.entries(initial).filter(([k]) => k !== "allowLocalFiles" && k !== "byEnabled").map(([k, v]) => [k, String(v)])) as Record<keyof SettingsValues, string>,
+      Object.fromEntries(
+        Object.entries(initial)
+          .filter(([k]) => k !== "allowLocalFiles" && k !== "byEnabled" && k !== "breakTiers")
+          .map(([k, v]) => [k, String(v)]),
+      ) as Record<keyof SettingsValues, string>,
   );
+  const [tiers, setTiers] = useState<[string, string][]>(() => (initial.breakTiers ?? []).map(([f, b]) => [String(f), String(b)]));
   const [localFiles, setLocalFiles] = useState(initial.allowLocalFiles === true);
   const [byOn, setByOn] = useState(initial.byEnabled === true);
   const [bedtimes, setBedtimes] = useState<Record<string, string>>(() => Object.fromEntries(kids.map((k) => [k.id, k.bedtime])));
@@ -84,11 +93,19 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
     setSaved(false);
     const numbers = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, Number(v)]));
     if (Object.values(numbers).some((n) => !Number.isInteger(n))) return setError("Các ô phải là số nguyên.");
+    const breakTiers = tiers.map(([f, b]): [number, number] => [Number(f), Number(b)]);
+    if (initial.breakTiers !== undefined) {
+      if (breakTiers.some(([f, b]) => !Number.isInteger(f) || !Number.isInteger(b) || f < 1 || b < 1)) return setError("Bậc nghỉ: các ô phải là số nguyên dương.");
+      if (breakTiers.some(([f, b], i) => i > 0 && (f <= (breakTiers[i - 1] as [number, number])[0] || b <= (breakTiers[i - 1] as [number, number])[1]))) {
+        return setError("Bậc nghỉ phải tăng dần: bậc sau cần nhiều phút tập trung hơn và được nghỉ nhiều hơn bậc trước.");
+      }
+    }
     setBusy(true);
     const err = await sendJson("PUT", "/api/admin/settings", {
       ...numbers,
       ...(initial.allowLocalFiles === undefined ? {} : { allowLocalFiles: localFiles }),
       ...(initial.byEnabled === undefined ? {} : { byEnabled: byOn }),
+      ...(initial.breakTiers === undefined ? {} : { breakTiers }),
       bedtimes: kids.map((k) => ({ childId: k.id, bedtime: bedtimes[k.id] })),
     });
     setBusy(false);
@@ -120,6 +137,64 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
           ))}
         </fieldset>
       ))}
+
+      {initial.breakTiers !== undefined && (
+        <fieldset aria-label="Nghỉ giữa giờ" className="flex flex-col gap-4 rounded-2xl bg-white p-4">
+          <legend className="float-left mb-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">Nghỉ giữa giờ</legend>
+          <p className="text-xs text-ink/70">
+            Con tập trung liền (không nghỉ) đủ số phút ở cột trái thì được nghỉ số phút ở cột phải; từ bậc cuối, phần học thêm tính lại từ bậc đầu. Nghỉ thì dùng hết số phút đang có; bấm “Học tiếp” sớm thì phút còn lại để dành. Phút nghỉ chưa dùng được cộng vào giờ tự do.
+          </p>
+          {tiers.map(([f, b], i) => (
+            <div key={i} className="flex flex-wrap items-end gap-2 text-sm font-semibold">
+              <label className="flex flex-col gap-1">
+                Tập trung (phút)
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  required
+                  min={1}
+                  max={1440}
+                  value={f}
+                  aria-label={`Bậc ${i + 1}: phút tập trung`}
+                  onChange={(e) => setTiers((t) => t.map((row, j): [string, string] => (j === i ? [e.target.value, row[1]] : row)))}
+                  className="min-h-11 w-28 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal"
+                />
+              </label>
+              <span aria-hidden className="pb-3">→</span>
+              <label className="flex flex-col gap-1">
+                Được nghỉ (phút)
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  required
+                  min={1}
+                  max={1440}
+                  value={b}
+                  aria-label={`Bậc ${i + 1}: phút nghỉ`}
+                  onChange={(e) => setTiers((t) => t.map((row, j): [string, string] => (j === i ? [row[0], e.target.value] : row)))}
+                  className="min-h-11 w-28 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal"
+                />
+              </label>
+            </div>
+          ))}
+          {FIELDS.filter((f) => f.group === "break" && initial[f.key] !== undefined).map((f) => (
+            <label key={f.key} className="flex flex-col gap-1 text-sm font-semibold">
+              {f.label}
+              <input
+                type="number"
+                inputMode="numeric"
+                required
+                min={f.min}
+                max={f.max}
+                value={values[f.key]}
+                onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                className="min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal"
+              />
+              {f.hint && <span className="text-xs font-normal text-ink/60">{f.hint}</span>}
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       {initial.allowLocalFiles !== undefined && (
         <fieldset className="flex flex-col gap-2 rounded-2xl bg-white p-4">

@@ -1032,6 +1032,104 @@ end $$;
 reset role;
 delete from public.world_items;
 
+-- 0014 (R8b): day_breaks — browsers read only (child own rows, parent own family); server writes.
+reset role;
+insert into public.day_breaks (family_id, child_id, local_date, started_at, planned_minutes) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, now(), 10),
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c2', current_date, now(), 30),
+  ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', current_date, now(), 45);
+select test_helpers.expect_count('family_settings break defaults (tiers + 6 per day + 180'' per run)',
+  (select count(*) from public.family_settings
+     where break_tiers = '[[45,10],[90,30],[120,45],[180,60]]'::jsonb and break_max_per_day = 6 and break_run_cap_minutes = 180), 2);
+do $$
+begin
+  begin
+    insert into public.day_breaks (family_id, child_id, local_date, started_at, planned_minutes)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, now(), 0);
+    raise exception 'FAIL: a break of 0 minutes was stored';
+  exception when check_violation then raise notice 'ok: day_breaks.planned_minutes > 0';
+  end;
+  begin
+    insert into public.day_breaks (family_id, child_id, local_date, started_at, planned_minutes)
+    values ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000c1', current_date, now(), 10);
+    raise exception 'FAIL: day_breaks row with a child of another family';
+  exception when foreign_key_violation then raise notice 'ok: day_breaks row must match the child family';
+  end;
+  begin
+    update public.family_settings set break_tiers = '{"a": 1}'::jsonb where family_id = '10000000-0000-0000-0000-00000000000a';
+    raise exception 'FAIL: non-array break_tiers stored';
+  exception when check_violation then raise notice 'ok: break_tiers must be a JSON array';
+  end;
+  begin
+    update public.family_settings set break_max_per_day = 13 where family_id = '10000000-0000-0000-0000-00000000000a';
+    raise exception 'FAIL: break_max_per_day 13 stored';
+  exception when check_violation then raise notice 'ok: break_max_per_day between 0 and 12';
+  end;
+  begin
+    update public.family_settings set break_run_cap_minutes = 29 where family_id = '10000000-0000-0000-0000-00000000000a';
+    raise exception 'FAIL: break_run_cap_minutes 29 stored';
+  exception when check_violation then raise notice 'ok: break_run_cap_minutes between 30 and 600';
+  end;
+end $$;
+select test_helpers.expect_count('day_breaks has RLS on',
+  (select count(*) from pg_class where oid = 'public.day_breaks'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('browsers may only select day_breaks',
+  (select count(*) from (values ('authenticated'), ('anon')) r(rl), (values ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE')) p(priv)
+    where has_table_privilege(r.rl, 'public.day_breaks', p.priv)), 0);
+select test_helpers.expect_count('anon cannot select day_breaks', (select case when has_table_privilege('anon', 'public.day_breaks', 'SELECT') then 1 else 0 end), 0);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees own day_breaks only', (select count(*) from public.day_breaks), 1);
+select test_helpers.expect_count('child1 day_break is its own', (select count(*) from public.day_breaks where child_id = '00000000-0000-0000-0000-0000000000c1'), 1);
+do $$
+begin
+  begin
+    insert into public.day_breaks (family_id, child_id, local_date, started_at, planned_minutes)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, now(), 60);
+    raise exception 'FAIL: child inserted into day_breaks';
+  exception when insufficient_privilege then raise notice 'ok: child cannot insert day_breaks';
+  end;
+  begin
+    update public.day_breaks set planned_minutes = 120;
+    raise exception 'FAIL: child updated day_breaks';
+  exception when insufficient_privilege then raise notice 'ok: child cannot update day_breaks';
+  end;
+  begin
+    delete from public.day_breaks;
+    raise exception 'FAIL: child deleted day_breaks';
+  exception when insufficient_privilege then raise notice 'ok: child cannot delete day_breaks';
+  end;
+  begin
+    update public.family_settings set break_max_per_day = 12;
+    if found then raise exception 'FAIL: child changed break_max_per_day'; end if;
+    raise notice 'ok: child cannot change the break rules';
+  exception when insufficient_privilege then raise notice 'ok: child cannot change the break rules';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees the family day_breaks (2)', (select count(*) from public.day_breaks), 2);
+do $$
+begin
+  begin
+    insert into public.day_breaks (family_id, child_id, local_date, started_at, planned_minutes)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, now(), 60);
+    raise exception 'FAIL: parent inserted into day_breaks';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot insert day_breaks (server only)';
+  end;
+  begin
+    update public.day_breaks set ended_at = now();
+    raise exception 'FAIL: parent updated day_breaks';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot update day_breaks';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees no family A day_breaks', (select count(*) from public.day_breaks where family_id = '10000000-0000-0000-0000-00000000000a'), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d1', false);
+select test_helpers.expect_count('child of family B sees only its own day_break', (select count(*) from public.day_breaks), 1);
+reset role;
+delete from public.day_breaks;
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;
