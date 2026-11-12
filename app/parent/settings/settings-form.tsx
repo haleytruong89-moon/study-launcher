@@ -26,6 +26,8 @@ export interface SettingsValues {
   /** R8b break bank (0014). Absent until that migration has run (then the section is hidden). */
   breakTiers?: [number, number][];
   breakMaxPerDay?: number;
+  /** 0014: each finished run counts at most this many minutes towards the break bank. */
+  breakRunCapMinutes?: number;
 }
 
 type Group = "time" | "homework" | "trust" | "photos" | "by" | "break";
@@ -60,6 +62,7 @@ const FIELDS: { key: keyof SettingsValues; group: Group; label: string; hint?: s
   { key: "trustDownPct", group: "trust", label: "Gợi ý quay về Khóa khi tuần dưới (%)", min: 0, max: 100 },
   { key: "photoRetentionDays", group: "photos", label: "Giữ ảnh bài (ngày)", min: 7, max: 365 },
   { key: "breakMaxPerDay", group: "break", label: "Số lần nghỉ tối đa mỗi ngày", hint: "0 = không có nghỉ giữa giờ", min: 0, max: 12 },
+  { key: "breakRunCapMinutes", group: "break", label: "Mỗi lượt học tính tối đa (phút)", hint: "Lượt học dài hơn chỉ tính đến mức này khi tính giờ nghỉ", min: 30, max: 600 },
   { key: "byStudyMinutes", group: "by", label: "Trong giờ học: mỗi lần tối đa (phút)", hint: "Ít nhất 5 phút · tính bằng giờ máy chủ; hết giờ con về màn Hôm nay, vào lại ngay được", min: 5, max: 60 },
 ];
 

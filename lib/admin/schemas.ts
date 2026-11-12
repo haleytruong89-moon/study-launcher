@@ -135,6 +135,8 @@ export const settingsSchema = z
       .refine((t) => validBreakTiers(t), "Các bậc nghỉ phải tăng dần: phút tập trung và phút nghỉ của bậc sau lớn hơn bậc trước")
       .optional(),
     breakMaxPerDay: int(0, 12).optional(),
+    /** 0014: minutes one finished run counts at most (same range as the DB check). */
+    breakRunCapMinutes: int(30, 600).optional(),
     bedtimes: z.array(z.object({ childId: z.uuid(), bedtime: timeOfDay })).max(10).default([]),
   })
   .refine((s) => s.trustDownPct <= s.trustUpPct, {
@@ -163,6 +165,7 @@ export function settingsToRow(s: SettingsInput) {
     ...(s.byIdleLockMinutes === undefined ? {} : { by_idle_lock_minutes: s.byIdleLockMinutes }),
     ...(s.breakTiers === undefined ? {} : { break_tiers: s.breakTiers }),
     ...(s.breakMaxPerDay === undefined ? {} : { break_max_per_day: s.breakMaxPerDay }),
+    ...(s.breakRunCapMinutes === undefined ? {} : { break_run_cap_minutes: s.breakRunCapMinutes }),
   };
 }
 
