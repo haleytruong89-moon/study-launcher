@@ -42,6 +42,8 @@ export interface NotebookStore<T extends string> {
   read(): NotebookEntry[];
   has(key: string): boolean;
   add(date: string, key: string): NotebookEntry[];
+  /** Store a whole notebook (cleaned like `parse`); false if this browser could not keep it. */
+  replace(entries: readonly NotebookEntry[]): boolean;
   readTopic(): T | null;
   writeTopic(t: T): void;
 }
@@ -107,13 +109,31 @@ export function createNotebook<T extends string>(cfg: NotebookConfig<T>): Notebo
     } catch {
       return before;
     }
+    fire();
+    return next;
+  }
+
+  function fire() {
     try {
       const w = win();
       if (w && typeof w.dispatchEvent === "function") w.dispatchEvent(new Event(cfg.event));
     } catch {
       /* no listener: fine */
     }
-    return next;
+  }
+
+  /** Store a whole notebook (Đợt 4 "Nạp lại sổ tay"), cleaned like `parse`. Fires the event on success. */
+  function replace(entries: readonly NotebookEntry[]): boolean {
+    const st = storage();
+    if (!st) return false;
+    const next = parse(JSON.stringify(entries));
+    try {
+      st.setItem(cfg.storageKey, JSON.stringify(next));
+    } catch {
+      return false;
+    }
+    fire();
+    return true;
   }
 
   return {
@@ -124,6 +144,7 @@ export function createNotebook<T extends string>(cfg: NotebookConfig<T>): Notebo
     read,
     has: (key) => read().some((e) => e.key === key),
     add,
+    replace,
     /** The last topic picked on this device, or null. */
     readTopic() {
       try {

@@ -132,28 +132,39 @@ function WorldLookBack({ firstName, color, notebook }: { firstName: string; colo
   }, [load.state]);
   const head = useId();
 
-  // R7d: An's notebook sits under the 7-day list; it is on this device, so it shows even when the list cannot load.
-  if (load.state === "loading")
-    return (
-      <div className="flex flex-col gap-4">
-        <Skeleton />
-        {notebook ?? null}
-      </div>
-    );
-  if (load.state === "error")
-    return (
-      <div className="flex flex-col gap-4">
-        <p className="text-sm text-ink/75">{load.text}</p>
-        {notebook ?? null}
-      </div>
-    );
+  // R7d: An's notebook sits under the 7-day list; it is on this device, so it shows even when the
+  // list cannot load. It stays at the same place in the tree whatever the list does, so it is never
+  // remounted (Đợt 4: a refetch must not wipe the "Giữ sổ tay" message or its file picker).
+  return (
+    <div className="flex flex-col gap-4">
+      <WorldRecent load={load} marks={marks} head={head} firstName={firstName} color={color} />
+      {notebook ?? null}
+    </div>
+  );
+}
+
+function WorldRecent({
+  load,
+  marks,
+  head,
+  firstName,
+  color,
+}: {
+  load: Load<RecentView>;
+  marks: { quests: Set<string>; teach: Set<string> } | null;
+  head: string;
+  firstName: string;
+  color: string;
+}) {
+  if (load.state === "loading") return <Skeleton />;
+  if (load.state === "error") return <p className="text-sm text-ink/75">{load.text}</p>;
   const { view, days, today } = load.data;
   // The quest mark is per month: shown once, on the newest row of that thing.
   const questShown = new Set<string>();
   const taughtShown = new Set<string>();
 
   return (
-    <div className="flex flex-col gap-4">
+    <>
       <section aria-labelledby={head} className="flex flex-col gap-2">
         <h3 id={head} className="text-base font-bold">
           {view ? `${view.world.emoji} ${view.world.name} của ${firstName}` : `🌍 Thế giới của ${firstName}`}
@@ -211,8 +222,7 @@ function WorldLookBack({ firstName, color, notebook }: { firstName: string; colo
           Xem cả {view.world.name} →
         </Link>
       )}
-      {notebook ?? null}
-    </div>
+    </>
   );
 }
 
