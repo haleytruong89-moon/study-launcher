@@ -323,3 +323,105 @@ Merge PR **không** tự bật cho con (`by_enabled = false`). Bật khi cả nh
 | G2 | Trên **iPhone của bố và của mẹ**: Thêm › **Thông báo** → bật, bấm **Gửi thử** | Chưa có điện thoại nào bật → con **không thấy** nút "Muốn nói chuyện" (để con không tưởng là đã báo) |
 | G3 | Thêm › **Luật trong nhà** › mục **Góc bình yên** → tích **Bật Góc bình yên cho các con** → Lưu | Trong giờ học mỗi lần tối đa 10' (≥ 5). Tắt lúc nào cũng được: khu này ẩn, dữ liệu của con giữ nguyên, nút "Muốn nói chuyện" vẫn còn |
 | G4 | Ngồi cùng con: con mở **🌿 Góc bình yên** trên màn Hôm nay → vào thẳng (**không có PIN riêng** từ 07/11/2026 — các con thấy gõ mã mỗi lần là phiền) → mở **🔒 Ai thấy gì?** đọc cùng con | Ai dùng máy đang đăng nhập tài khoản con cũng vào được: nhắc con đăng xuất / khóa máy khi cho người khác mượn |
+
+---
+
+## H. Database riêng cho link preview (Đợt 4, ~30 phút, làm 1 lần)
+
+**Vì sao:** đến nay link preview của mỗi PR dùng **database thật** → thử một PR là đụng dữ liệu thật của 2 con, và tính năng có SQL mới (vd R8b ngân hàng giờ nghỉ) không thử được trước khi merge. Sau mục này, link preview dùng một **project Supabase thứ hai chỉ có dữ liệu giả** (gia đình "Gia đình thử (preview)", 2 con "Con A", "Con B"). Link chính thức không đổi gì. Quyết định 12/11/2026.
+
+Chưa làm mục này thì mọi thứ chạy như cũ: workflow mới tự bỏ qua (báo "chưa có secret PREVIEW_DB_URL").
+
+### H0. Kiểm tra trước: còn suất project miễn phí không? ⚠️
+
+Theo Supabase (tra ngày 12/11/2026): gói Free **tối đa 2 project đang chạy**, tính **gộp mọi tổ chức mà bạn là Owner/Administrator**; project **đã tạm dừng (paused) không tính**; project Free **tự tạm dừng sau 1 tuần không dùng**. Nguồn: [supabase.com/pricing](https://supabase.com/pricing), [Billing on Supabase](https://supabase.com/docs/guides/platform/billing-on-supabase).
+
+Bạn đang chạy **App Toán + study-launcher = 2 project** → rất có thể **đã hết suất**. Cách gỡ (bạn chọn, Claude không tự làm):
+- App Toán không cần chạy nữa → **Pause** nó (Project Settings › General) rồi tạo project preview;
+- một người khác trong nhà dùng **tài khoản Supabase riêng** tạo project preview (nên đọc điều khoản của Supabase trước);
+- nâng gói trả phí → **không** làm khi chưa quyết (CLAUDE.md: không thêm dịch vụ trả phí).
+
+Không có suất → dừng ở đây; link preview vẫn dùng database thật như trước.
+
+### H1. Tạo project preview (trên supabase.com)
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| H1.1 | **New project**, tên `study-launcher-preview`, region **Southeast Asia (Singapore)** (như project thật). Mật khẩu DB: dài, **chỉ chữ + số** (khỏi phải mã hóa ký tự đặc biệt), lưu vào trình quản lý mật khẩu | Nếu màn tạo có ô **"Automatically expose new tables"** (Data API): **bỏ tick**, giống project thật. Không thấy ô này cũng không sao: bước H3 xóa–dựng lại sẽ bỏ quyền mặc định |
+| H1.2 | **Không** nối GitHub cho project này (Integrations › GitHub để trống) | SQL vào preview do workflow của repo làm (H3, H5). Chỉ project **thật** nối GitHub (A6) |
+| H1.3 | **Authentication › Sign In / Providers**: tắt **"Allow new users to sign up"** | Như A7 |
+| H1.4 | Ghi lại của project **preview**: Project URL, `anon` key, `service_role` key (như A3) | Nếu trang API Keys chỉ hiện "Publishable / Secret", mở tab **Legacy API Keys** để lấy `anon` + `service_role` giống project thật |
+| H1.5 | Nút **Connect** › **Session pooler** › chép chuỗi kết nối, thay `[YOUR-PASSWORD]` bằng mật khẩu DB | Dạng `postgresql://postgres.<mã>:<mật khẩu>@aws-…pooler.supabase.com:5432/postgres`. **Phải** là Session pooler: máy GitHub chỉ có IPv4, còn "Direct connection" là IPv6 ([Supabase: Connecting to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres)); Transaction pooler (cổng 6543) không hợp cho chạy SQL dài. Dán **nguyên dạng** (chỉ được thêm `?sslmode=require`): chuỗi có tham số khác, nhiều máy chủ, hay ký tự `@` chưa mã hóa trong mật khẩu sẽ bị workflow từ chối |
+| H1.6 | Mở project **THẬT** › Project Settings › General › **Project ID** (20 chữ thường, cũng là phần đầu link `https://<mã>.supabase.co`) → ghi lại | Đây là "mã project thật" để workflow **từ chối** mọi thao tác nhắm vào nó |
+
+### H2. GitHub: 4 secret
+
+GitHub › repo › Settings › Secrets and variables › Actions:
+
+| Tab | Tên | Giá trị |
+|---|---|---|
+| Secrets | `PREVIEW_DB_URL` | chuỗi kết nối **preview** ở H1.5 |
+| Secrets | `PREVIEW_SERVICE_ROLE_KEY` | `service_role` key của **preview** (H1.4) |
+| Secrets | `PREVIEW_PARENT_PASSWORD` | mật khẩu đăng nhập thử, ≥ 12 ký tự, **khác** mọi mật khẩu thật |
+| Secrets | `PRODUCTION_PROJECT_REF` | mã project **THẬT** (H1.6). Đặt ở tab **Secrets**, không phải Variables: repo công khai, giá trị Variables hiện rõ trong log Actions |
+
+Kiểm tra secret `SUPABASE_DB_URL` và/hoặc `SUPABASE_URL` của bước A9 vẫn còn: workflow dùng chúng để **đối chiếu** mã project thật (thiếu cả hai → workflow từ chối chạy).
+
+### H3. Dựng database preview lần đầu (sau khi PR Đợt 4 đã merge)
+
+GitHub › **Actions** › **Preview database (reset — XÓA dữ liệu thử)** › **Run workflow** › *Use workflow from*: `main` › ô xác nhận gõ **`XOA-PREVIEW`** › để tick "Thêm lại dữ liệu thử" › **Run**. Xanh = xong (~3 phút). Trang kết quả ghi tên đăng nhập thử.
+
+Workflow này **chỉ xóa project preview**. Trước khi xóa bất cứ gì, nó tự kiểm 5 lớp, lớp nào thấy sai cũng dừng:
+1. phải gõ đúng `XOA-PREVIEW` và chạy từ `main`;
+2. mã project trong `PREVIEW_DB_URL` **khác** mã project thật (`PRODUCTION_PROJECT_REF`), và mã thật này phải **khớp** với `SUPABASE_DB_URL`/`SUPABASE_URL` (biến gõ sai cũng bị phát hiện); `PREVIEW_DB_URL` không được trùng `SUPABASE_DB_URL`;
+3. nhìn vào database (chỉ đọc): nếu có **bất kỳ tài khoản email thật** nào (database thật luôn có email của bố mẹ) → dừng. Preview chỉ có email `@example.com` và `@study-launcher.local`;
+4. khóa `PREVIEW_SERVICE_ROLE_KEY` phải thuộc project preview; kiểm lại email từng tài khoản trước khi xóa;
+5. lệnh xóa bảng kiểm lại lớp 3 **trong cùng một giao dịch** → sai là hoàn tác hết.
+
+Không bước nào in ra chuỗi kết nối, khóa hay mã project. **Claude có thể gợi ý chạy workflow này, nhưng không tự chạy, và không bao giờ nhắm vào project thật.**
+
+### H4. Vercel: biến môi trường **chỉ cho Preview**
+
+Vercel › project › Settings › **Environment Variables**. Mỗi biến hiện đang áp cho cả Production + Preview. Với 3 biến đầu trong bảng: bấm **Edit** biến cũ → **bỏ tick Preview** (giữ Production) → Save; rồi **Add** biến **cùng tên**, giá trị của preview, **chỉ tick Preview**.
+
+| Biến | Preview dùng | Vì sao |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL **preview** | trỏ preview sang database giả |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` key **preview** | như trên |
+| `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key **preview** | như trên — **quan trọng nhất**: thiếu biến này thì máy chủ preview vẫn ghi vào database thật |
+| `FIRST_PARENT_EMAIL` | `phu-huynh-thu@example.com` (chỉ Preview) | để `/api/health/ready` của preview không báo thiếu; gia đình thử đã có sẵn nên không cần "Thiết lập lần đầu" |
+| `NEXT_PUBLIC_APP_URL` | **giữ nguyên** link chính thức | xem "Extension và link preview" bên dưới |
+| `CHILD_EMAIL_DOMAIN` | không đặt (mặc định `study-launcher.local`) | tài khoản con tạo thêm trên preview phải mang đuôi này, nếu không lớp kiểm 3 sẽ coi là "email thật" và chặn workflow |
+| `VAPID_*`, `CRON_SECRET` | để nguyên | lịch Vercel Cron **chỉ chạy trên bản Production** ([Vercel](https://vercel.com/kb/guide/troubleshooting-vercel-cron-jobs)); các job GitHub gọi `APP_URL` = link chính thức. Preview chỉ gửi thông báo tới máy đã bật thông báo **trên chính link preview** (lưu trong database preview) — không làm phiền điện thoại thật |
+
+Biến mới chỉ có hiệu lực cho **bản build mới**: Deployments › chọn một bản Preview › **Redeploy** (hoặc chờ PR kế tiếp).
+
+Kho ảnh (`homework`, `proofs`, `avatars`) do chính các file SQL tạo (0001, 0012) → **không** phải tạo tay.
+
+**Extension và link preview.** Mỗi lần build, `scripts/build-extension.mjs` gói địa chỉ `NEXT_PUBLIC_APP_URL` vào extension (`public/downloads/study-launcher-extension.zip`), và extension **chỉ ghép máy / chỉ nói chuyện** với đúng địa chỉ đó. Với Preview giữ link chính thức:
+- extension **không thể** ghép với link preview (trang preview không có content script) → dữ liệu thật và giả **không trộn**; trang "con chưa cài extension" trên preview cũng không gửi báo động (khác địa chỉ chính thức);
+- nhưng file zip tải **từ link preview** là extension chứa **code chưa merge** mà vẫn nói chuyện với **máy chủ + database thật**. → **Chỉ tải extension từ link chính thức** để cài cho máy con (như mục B+).
+- Không đặt `NEXT_PUBLIC_APP_URL` = link preview: mỗi PR có một địa chỉ khác nhau nên giá trị nào cũng sai; để trống thì máy chủ báo lỗi (biến bắt buộc).
+
+### H5. Kiểm tra
+
+1. Mở `https://<link-preview>/api/health/ready` → `"ok": true`. Cảnh báo `app_url_matches_host` là **bình thường** với preview.
+2. Mở link preview → đăng nhập `phu-huynh-thu@example.com` + `PREVIEW_PARENT_PASSWORD` → thấy **Con A, Con B** (mỗi con 2 bài tập, 1 việc bổ sung, 1 kỹ năng). **Thấy tên thật của con = sai**: xem lại H4 rồi Redeploy.
+3. Xem màn của con: đăng xuất → đăng nhập `con-a@study-launcher.local` (hoặc `con-b@…`), cùng mật khẩu. Đặt PIN cho con thử ở trang phụ huynh nếu muốn.
+4. Mở link **chính thức** → vẫn là 2 con thật, không có Con A/Con B.
+
+### H6. Từ giờ, khi thử một PR
+
+- Link preview hiện **dữ liệu giả**. Bấm gì, xóa gì cũng được — không đụng dữ liệu thật.
+- PR **có SQL**: workflow **Preview database (apply migrations)** tự chạy khi PR mở/cập nhật → đợi nó **xanh** rồi mới thử preview. SQL của PR chạy trên database preview **trước** khi merge; database thật vẫn chỉ nhận SQL **lúc bạn merge** (như cũ).
+- Nếu một PR **sửa lại** file SQL của chính nó sau khi đã chạy trên preview, PR có SQL bị **đóng không merge**, hoặc dữ liệu thử rối quá → chạy lại H3 (reset).
+- Hai PR có SQL cùng mở thì dùng chung một database preview (SQL của cả hai đều có ở đó).
+- Muốn thử với **dữ liệu thật của 2 con** (vd xem số liệu tuần thật) → vẫn phải **merge** rồi xem trên link chính thức.
+- Project preview **tự ngủ sau 1 tuần** không dùng: link preview báo lỗi database, workflow báo "không đọc được database preview". Vào Supabase › project preview › **Restore** (cần còn suất, xem H0).
+- Workflow từ chối với lỗi "có N tài khoản không phải tài khoản thử": ai đó đã tạo tài khoản email thật trong project preview → xóa tài khoản đó ở Supabase preview › Authentication › Users rồi chạy lại.
+
+### H7. Quay về như cũ
+
+1. Vercel: xóa các biến **chỉ-Preview** đã thêm ở H4; ở 3 biến Production (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) bấm Edit → **tick lại Preview** → Redeploy một bản preview. Từ đó preview lại dùng database thật.
+2. GitHub: xóa secret `PREVIEW_DB_URL` → các workflow preview tự bỏ qua.
+3. (Tùy) xóa hoặc Pause project `study-launcher-preview` để trả suất miễn phí.

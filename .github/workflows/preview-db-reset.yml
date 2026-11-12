@@ -1,0 +1,129 @@
+name: Preview database (reset — XÓA dữ liệu thử)
+
+# DESTRUCTIVE, PREVIEW PROJECT ONLY. Run by hand: Actions › this workflow › Run workflow, type
+# XOA-PREVIEW. Deletes every account and file of the PREVIEW Supabase project, empties its app
+# schema, rebuilds it from supabase/migrations and (by default) adds the fake family again.
+# Use it the first time, or when a PR edited its own unmerged migration, or when test data is
+# a mess. The REAL project is never a target; these guards make sure of it, each one able to
+# stop the run on its own, all BEFORE anything is deleted:
+#
+#   0. Typed confirmation "XOA-PREVIEW", and "Use workflow from" must be main, so the reviewed
+#      guards on main run. (This check lives in the workflow file itself: a branch whose copy
+#      removed it could still be dispatched by someone with write access. To enforce it
+#      outside the repo, put these secrets in a GitHub Environment limited to main.)
+#   1. scripts/preview-db/guard.sh reset (no database contact): PREVIEW_DB_URL must be a Supabase
+#      URL whose project ref is NOT PRODUCTION_PROJECT_REF and does not contain it; the production
+#      ref is cross-checked against SUPABASE_DB_URL / SUPABASE_URL (at least one required, and
+#      they must agree with PRODUCTION_PROJECT_REF); PREVIEW_DB_URL must not equal SUPABASE_DB_URL
+#      (sha256). Missing PREVIEW_DB_URL = failure, not a skip.
+#   2. scripts/preview-db/db-guard.sh (read-only transaction): refuses if the database holds ANY
+#      login that is not a test account (@example.com / @study-launcher.local). The real project
+#      always holds the parents' real e-mails, so it can never pass this.
+#   3. preview-db.mjs wipe (Auth/Storage API of https://<preview ref>.supabase.co): repeats check 1
+#      in Node, refuses a service key whose JWT "ref" is another project, and re-checks every
+#      account's e-mail before deleting any of them.
+#   4. scripts/preview-db/reset.sql: repeats check 2 inside the same transaction as the DROP, so a
+#      refusal rolls everything back.
+# Nothing prints a URL, key or project ref (guard.sh masks the refs).
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Gõ XOA-PREVIEW để xóa và dựng lại database PREVIEW (không bao giờ đụng database thật)"
+        type: string
+        required: true
+      seed:
+        description: "Thêm lại dữ liệu thử (Con A / Con B) sau khi xóa"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-db # shared with preview-db.yml
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PREVIEW_DB_URL: ${{ secrets.PREVIEW_DB_URL }}
+      # Same value in several steps; a secret (not a variable) so it never shows in env headers.
+      PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_PROJECT_REF || vars.PRODUCTION_PROJECT_REF }}
+    # Keys and production values are given only to the steps that need them (never to `npm ci`
+    # or the Supabase CLI); SUPABASE_DB_URL (REAL database password) only to guard 1.
+    steps:
+      - name: Guard 0 — typed confirmation, workflow from main
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          SEED: ${{ inputs.seed }}
+          PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
+          PREVIEW_PARENT_PASSWORD: ${{ secrets.PREVIEW_PARENT_PASSWORD }}
+        run: |
+          if [ "$CONFIRM" != "XOA-PREVIEW" ]; then
+            echo "::error title=Preview reset — DỪNG::Chưa gõ đúng XOA-PREVIEW. Không làm gì."; exit 1
+          fi
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error title=Preview reset — DỪNG::Chỉ chạy từ nhánh main (Use workflow from: main)."; exit 1
+          fi
+          if [ -z "$PREVIEW_SERVICE_ROLE_KEY" ]; then
+            echo "::error title=Preview reset — DỪNG::Thiếu secret PREVIEW_SERVICE_ROLE_KEY (SETUP mục H)."; exit 1
+          fi
+          if [ "$SEED" = "true" ] && [ ${#PREVIEW_PARENT_PASSWORD} -lt 12 ]; then
+            echo "::error title=Preview reset — DỪNG::Thiếu secret PREVIEW_PARENT_PASSWORD (≥ 12 ký tự)."; exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Guard 1 — is this the preview project? (no database contact)
+        env:
+          PROD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PROD_API_URL: ${{ secrets.SUPABASE_URL }}
+        run: bash scripts/preview-db/guard.sh reset
+
+      - name: Guard 2 — only test accounts inside? (read-only)
+        run: |
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client; }
+          bash scripts/preview-db/db-guard.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      - name: Delete preview accounts and files (guard 3 inside)
+        env:
+          PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
+        run: node scripts/preview-db/preview-db.mjs wipe
+
+      - name: Empty the app schema (guard 4 inside, one transaction)
+        run: psql "$PREVIEW_DB_URL" -X -q -v ON_ERROR_STOP=1 -f scripts/preview-db/reset.sql
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+
+      - name: Rebuild from supabase/migrations
+        run: supabase db push --db-url "$PREVIEW_DB_URL" --include-all --skip-vault --yes
+
+      - name: Add fake test data (Con A / Con B)
+        if: inputs.seed
+        env:
+          PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
+          PREVIEW_PARENT_PASSWORD: ${{ secrets.PREVIEW_PARENT_PASSWORD }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: node scripts/preview-db/preview-db.mjs seed
+
+      - name: Summary
+        run: |
+          {
+            echo "### Database preview đã được làm mới"
+            echo "- Đã xóa tài khoản + ảnh thử, dựng lại bảng từ \`supabase/migrations\`."
+            if [ "${{ inputs.seed }}" = "true" ]; then
+              echo "- Dữ liệu thử: phụ huynh \`phu-huynh-thu@example.com\`, con \`con-a@study-launcher.local\` (Con A), \`con-b@study-launcher.local\` (Con B). Mật khẩu = secret \`PREVIEW_PARENT_PASSWORD\`."
+            fi
+            echo "- Database **thật** không bị đụng tới."
+          } >> "$GITHUB_STEP_SUMMARY"

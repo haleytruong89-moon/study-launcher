@@ -55,6 +55,7 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
   - Project tắt "Automatically expose new tables": mọi bảng mới phải `grant` rõ ràng và bật RLS + policy trong cùng file.
   - Mô tả PR phải nói rõ PR có đụng database hay không. Không sửa tay trong SQL Editor (làm lệch với repo).
 - Không chạy `supabase db reset --linked`. Không xóa dữ liệu thật.
+- *(Đợt 4, 12/11/2026)* Khi phụ huynh đã cấu hình `docs/SETUP.md` mục H, link preview dùng **project Supabase riêng, dữ liệu giả**; `preview-db.yml` tự áp SQL của PR lên đó. Claude chỉ được **gợi ý** phụ huynh chạy `preview-db-reset.yml`, không tự chạy, và không bao giờ nhắm vào project thật.
 - Không đổi hành vi khóa/mở, thứ tự ưu tiên trạng thái (DESIGN §5), allowlist mặc định, hay quyền ghi của con. Thấy spec thiếu hoặc mâu thuẫn → **dừng lại, ghi vào PR / PROGRESS.md, hỏi phụ huynh** (DESIGN §15).
 - Không thêm streak, bảng xếp hạng, điểm đổi giờ chơi (SPEC §15).
 - Không thêm dịch vụ trả phí hoặc dịch vụ bên thứ ba nhận dữ liệu của con.

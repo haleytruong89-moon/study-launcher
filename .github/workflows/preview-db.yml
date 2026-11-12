@@ -1,0 +1,104 @@
+name: Preview database (apply migrations)
+
+# Keeps the SEPARATE preview Supabase project (the one Vercel PREVIEW links use, docs/SETUP.md
+# section H) in step with a pull request's SQL, so a feature with new SQL can be tried on the
+# preview link BEFORE merge. The REAL project is untouched: it still gets SQL only when the parent
+# merges into main (Supabase GitHub integration).
+#
+# Safety, before any SQL runs:
+#   1. scripts/preview-db/guard.sh (no database contact): skips cleanly while PREVIEW_DB_URL is not
+#      set; REFUSES when PREVIEW_DB_URL names the production project (PRODUCTION_PROJECT_REF,
+#      cross-checked against SUPABASE_DB_URL / SUPABASE_URL, compared as refs and sha256 hashes).
+#   2. scripts/preview-db/db-guard.sh (read-only transaction): REFUSES when the target database
+#      holds any login that is not a test account (@example.com / @study-launcher.local).
+#      The real project always holds the parents' real e-mails.
+# No step prints a URL, key or project ref (guard.sh also masks the refs).
+#
+# Migrations are idempotent, so applying them again is safe. `db push` remembers what it applied:
+# if a PR EDITS its own not-yet-merged migration after it was applied here, the change is NOT
+# re-applied — run "Preview database (reset)" (preview-db-reset.yml) to rebuild the preview data.
+# Two open PRs with SQL share this one preview database.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ["supabase/migrations/**"]
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Thêm dữ liệu thử (Con A / Con B) nếu chưa có"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-db # shared with preview-db-reset.yml: never two at once
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PREVIEW_DB_URL: ${{ secrets.PREVIEW_DB_URL }}
+    # Production values (SUPABASE_DB_URL holds the REAL database password) are given ONLY to the
+    # guard step, never to `npm ci`, the Supabase CLI or the seed script. PRODUCTION_PROJECT_REF
+    # should be a secret: a GitHub *variable* is printed in clear in each step's env header.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Safety check 1 — is this the preview project? (no database contact)
+        id: guard
+        env:
+          PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_PROJECT_REF || vars.PRODUCTION_PROJECT_REF }}
+          PROD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PROD_API_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          set +e
+          bash scripts/preview-db/guard.sh push
+          code=$?
+          set -e
+          if [ "$code" -eq 10 ]; then echo "run=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$code" -ne 0 ]; then exit 1; fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - name: Safety check 2 — only test accounts inside? (read-only)
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client; }
+          bash scripts/preview-db/db-guard.sh
+
+      - uses: supabase/setup-cli@v1
+        if: steps.guard.outputs.run == 'true'
+        with:
+          version: 2.120.0
+
+      - name: Apply supabase/migrations to the PREVIEW project
+        if: steps.guard.outputs.run == 'true'
+        run: supabase db push --db-url "$PREVIEW_DB_URL" --include-all --skip-vault --yes
+
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.run == 'true' && github.event_name == 'workflow_dispatch' && inputs.seed
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Add fake test data (Con A / Con B)
+        if: steps.guard.outputs.run == 'true' && github.event_name == 'workflow_dispatch' && inputs.seed
+        env:
+          PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_PROJECT_REF || vars.PRODUCTION_PROJECT_REF }}
+          PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
+          PREVIEW_PARENT_PASSWORD: ${{ secrets.PREVIEW_PARENT_PASSWORD }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/preview-db/preview-db.mjs seed
+
+      - name: Summary
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          {
+            echo "### Database preview đã cập nhật"
+            echo "SQL của nhánh này đã chạy trên database **preview** (dữ liệu thử). Database **thật** không bị đụng tới; nó chỉ nhận SQL khi bạn merge."
+          } >> "$GITHUB_STEP_SUMMARY"
