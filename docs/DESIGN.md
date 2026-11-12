@@ -144,7 +144,7 @@ Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đún
 
 Quy tắc phụ:
 - **Mọi `openUntil` bị cắt ở 00:00** giờ VN của ngày hiện tại (nghỉ, giờ tự do, override).
-- **Phần không có việc nào** (vd ngày thi tắt hết mẫu việc, ngày không có kỹ năng) = coi như đã xong (nghỉ được, phần kia xong là xong ngày).
+- **Phần không có việc nào** (vd ngày thi tắt hết mẫu việc, ngày không có kỹ năng) = coi như đã xong (nghỉ được — *thay bằng ngân hàng giờ nghỉ, R8b*; phần kia xong là xong ngày).
   - *Chốt 14/10 + 07/11/2026:* phần rỗng **chưa ghi** mốc cho đến khi **phần kia có mốc**; lúc đó ghi luôn (kể cả đang bị khóa tay, để "ngày đạt" không bị trễ). Bài / kỹ năng giao trước lúc đó vẫn khóa lại.
   - **Cả hai phần rỗng** → FREE_READY: không tự ghi gì (extension hỏi cả lúc 00:00). Con bấm "Bắt đầu giờ tự do" (`POST /api/day/free`, nút chỉ có ở FREE_READY và chế độ Tin tưởng) thì mới ghi 2 mốc + `free_started_at`. Ngày đó không mời dùng thẻ. Dùng thẻ không bao giờ ghi mốc phần.
 - **Hai phần mở song song** (R1): bắt đầu / xong việc của phần nào cũng được, bất kể status. Mỗi lúc vẫn chỉ 1 việc có giờ tối thiểu (chốt 15/10).
