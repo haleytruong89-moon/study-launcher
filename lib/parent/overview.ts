@@ -77,10 +77,12 @@ function taskMetaText(item: TaskView, today: string): string {
 export function taskTag(item: TaskView, verdict: Verdict, nowMs: number, asked = false): { label: string; tone: Tone } {
   const star = item.early ? " ★" : "";
   if (item.state === "done") {
-    if (verdict === "ok") return { label: `Đạt${star}`, tone: "ok" };
-    if (verdict === "not_ok") return { label: `Chưa đạt${star}`, tone: "bad" };
-    if (item.proofCount > 0) return { label: `Chờ xem${star}`, tone: "wait" };
-    return { label: `Xong${item.doneAt ? ` ${vnTime(item.doneAt)}` : ""}${star}`, tone: "ok" };
+    // D2 A5: a "Làm thêm" run (R8a) is running on a done task. Display only; the task stays done.
+    const more = item.extra ? ` · đang làm thêm ${Math.max(0, Math.floor((nowMs - Date.parse(item.extra.startedAt)) / 60_000))}′` : "";
+    if (verdict === "ok") return { label: `Đạt${star}${more}`, tone: "ok" };
+    if (verdict === "not_ok") return { label: `Chưa đạt${star}${more}`, tone: "bad" };
+    if (item.proofCount > 0) return { label: `Chờ xem${star}${more}`, tone: "wait" };
+    return { label: `Xong${item.doneAt ? ` ${vnTime(item.doneAt)}` : ""}${star}${more}`, tone: more ? "run" : "ok" };
   }
   if (item.state === "running" && asked) return { label: "Nhờ bố mẹ xem", tone: "wait" };
   if (item.state === "running" && item.startedAt) {

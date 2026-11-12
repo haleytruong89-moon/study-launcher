@@ -510,6 +510,8 @@ interface TemplateRuns {
   extra: TaskRunInput | null;
   /** Runs counted in todayMinutes / sessions. */
   counted: TaskRunInput[];
+  /** Every run started at or after the required run's done_at ("Làm thêm"), finished or not. */
+  later: TaskRunInput[];
 }
 
 function templateRuns(runs: TaskRunInput[]): TemplateRuns {
@@ -525,12 +527,23 @@ function templateRuns(runs: TaskRunInput[]): TemplateRuns {
   }
   if (required === null) {
     const run = pickRun(runs);
-    return { run, extra: null, counted: run?.startedAt ? [run] : [] };
+    return { run, extra: null, counted: run?.startedAt ? [run] : [], later: [] };
   }
   const later = runs.filter((r) => r !== required && r.startedAt !== null && toMs(r.startedAt, "task_runs.started_at") >= requiredDone);
   const finished = later.filter((r) => r.doneAt !== null);
   const extra = pickRun(later.filter((r) => r.doneAt === null));
-  return { run: required, extra, counted: [required, ...finished, ...(extra ? [extra] : [])].filter((r) => r.startedAt !== null) };
+  return { run: required, extra, counted: [required, ...finished, ...(extra ? [extra] : [])].filter((r) => r.startedAt !== null), later };
+}
+
+/**
+ * R8a (interpretation 10), exported for the parent's review and reminders (D2 A5). Among the runs
+ * of ONE template on ONE day (any order): the required run (the earliest finished one; null while
+ * none is finished) and the "Làm thêm" runs (every run started at or after its done_at, finished
+ * or not). Same rule as the day state. Malformed instants throw, as in computeDayState.
+ */
+export function splitTemplateRuns(runs: readonly TaskRunInput[]): { requiredId: string | null; extraIds: string[] } {
+  const r = templateRuns([...runs]);
+  return { requiredId: r.run !== null && r.run.doneAt !== null ? r.run.id : null, extraIds: r.later.map((x) => x.id) };
 }
 
 /** R8a: whole minutes worked in these runs (a running run counts up to now). */
@@ -580,7 +593,7 @@ function templateViews(
       const slot = t.appSlotId !== null ? slots.get(t.appSlotId) : undefined;
       const placeholder = slot?.kind === "placeholder";
       const runs = placeholder
-        ? { run: null, extra: null, counted: [] }
+        ? { run: null, extra: null, counted: [], later: [] }
         : templateRuns(runsToday.filter((r) => r.source === "template" && r.templateId === t.id));
       const run = runs.run;
       for (const r of runs.counted) focusRuns.push(focusRun(r.startedAt, r.doneAt));

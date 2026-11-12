@@ -170,6 +170,28 @@ export function breakLine(state: DayState, nowMs: number): { text: string; hint:
   return { text: b.blockFocusMinutes > 0 ? `Con đã tập trung ${b.blockFocusMinutes}' · ${goal[0]?.toLowerCase()}${goal.slice(1)}` : goal, hint, button: null };
 }
 
+/** D2 A2: how long before the end of a break / free time the child is warned. */
+export const LOCK_WARN_MINUTES = 5;
+
+/**
+ * D2 A2: whole minutes (rounded up) before the laptop locks again, only in the last
+ * LOCK_WARN_MINUTES of a break (`break.endsAt`) or free time (`free.endsAt`); null otherwise.
+ * Server timestamps only, never moved: the earlier of that end and the server's `openUntil`.
+ * `nowMs` is the server clock (Date.now() + offset). Display only.
+ */
+export function lockSoonMinutes(state: DayState, nowMs: number): number | null {
+  const end = state.status === "BREAK" ? state.break.endsAt : state.status === "FREE" ? state.free.endsAt : null;
+  if (!end || !state.openUntil) return null;
+  const left = Math.min(Date.parse(end), Date.parse(state.openUntil)) - nowMs;
+  if (!(left > 0) || left > LOCK_WARN_MINUTES * 60_000) return null;
+  return Math.ceil(left / 60_000);
+}
+
+/** D2 A2: the calm status-card line and the tab title while lockSoonMinutes is set. */
+export function lockSoonText(minutes: number): { line: string; title: string } {
+  return { line: `Còn ${minutes} phút nữa máy khóa lại`, title: `⏰ Còn ${minutes}' — Study Launcher` };
+}
+
 /** R8b: "Giờ tự do 45' + 30' nghỉ chưa dùng = 75'" — only when unused break minutes are added. */
 export function freeBonusLine(state: DayState, freeMinutes: number): string | null {
   const bonus = state.free.bonusMinutes;

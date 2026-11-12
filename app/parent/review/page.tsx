@@ -2,6 +2,7 @@ import Link from "next/link";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { addDays } from "@/lib/admin/dates";
 import { photosExpiredOn, retentionDays } from "@/lib/cleanup/rules";
+import { extraLine, splitExtraRuns, type ExtraSummary } from "@/lib/parent/extraRuns";
 import { loadChildrenToday } from "@/lib/parent/load";
 import { localDate, weekStart } from "@/lib/time";
 import { isOkResult, longDate, vnTime } from "@/lib/today/view";
@@ -20,7 +21,9 @@ const MAX_DAYS_BACK = 30;
 interface RunRow {
   id: string;
   child_id: string;
+  local_date: string;
   source: "homework" | "template";
+  template_id: string | null;
   started_at: string | null;
   done_at: string;
   proof_paths: string[];
@@ -55,7 +58,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
   const [{ data }, live, { data: settings }] = await Promise.all([
     db
       .from("task_runs")
-      .select("id, child_id, source, started_at, done_at, proof_paths, parent_verdict, task_templates(title, part), homework_items(subject, note, due_date)")
+      .select("id, child_id, local_date, source, template_id, started_at, done_at, proof_paths, parent_verdict, task_templates(title, part), homework_items(subject, note, due_date)")
       .eq("child_id", child.id)
       .eq("local_date", day)
       .not("done_at", "is", null)
@@ -89,8 +92,11 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
     console.error("review weekly failed", e instanceof Error ? e.message : e);
   }
 
-  const waiting = runs.filter((r) => r.parent_verdict === null);
-  const marked = runs.filter((r) => r.parent_verdict !== null);
+  // D2 A5: "Làm thêm" runs (R8a) never need a verdict: shown as one line under their task.
+  const { extra, byRequired } = splitExtraRuns(runs);
+  const tasks = runs.filter((r) => !extra.has(r.id));
+  const waiting = tasks.filter((r) => r.parent_verdict === null);
+  const marked = tasks.filter((r) => r.parent_verdict !== null);
   const minutes = runs.reduce((sum, r) => sum + minutesOf(r), 0);
   const result = state?.week.find((d) => d.date === day)?.result;
   const dayOk = day === today ? (result ? (isOkResult(result) ? "Đạt" : "Chưa") : "—") : "—";
@@ -145,7 +151,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
             )}
           </div>
           <dl className="grid grid-cols-3 gap-2 text-center">
-            <Stat label="việc xong" value={o && day === today ? `${o.done}/${o.total}` : String(runs.length)} />
+            <Stat label="việc xong" value={o && day === today ? `${o.done}/${o.total}` : String(tasks.length)} />
             <Stat label="thời gian học" value={`${minutes}′`} />
             <Stat label="ngày đạt" value={dayOk} />
           </dl>
@@ -160,11 +166,11 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
             Chờ bố mẹ xem ({waiting.length})
           </h2>
           {waiting.length === 0 ? (
-            <p className="rounded-2xl bg-white px-4 py-3 text-sm text-ink/70">{runs.length === 0 ? "Chưa có việc nào xong." : "Đã xem hết."}</p>
+            <p className="rounded-2xl bg-white px-4 py-3 text-sm text-ink/70">{tasks.length === 0 ? "Chưa có việc nào xong." : "Đã xem hết."}</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {waiting.map((r) => (
-                <RunCard key={r.id} run={r} signed={signed} photoNote={photoNote} big />
+                <RunCard key={r.id} run={r} signed={signed} photoNote={photoNote} extra={byRequired.get(r.id)} big />
               ))}
             </ul>
           )}
@@ -188,7 +194,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
             </h2>
             <ul className="flex flex-col gap-2">
               {marked.map((r) => (
-                <RunCard key={r.id} run={r} signed={signed} photoNote={photoNote} />
+                <RunCard key={r.id} run={r} signed={signed} photoNote={photoNote} extra={byRequired.get(r.id)} />
               ))}
             </ul>
           </section>
@@ -241,7 +247,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 type PhotoNote = { expired: true; days: number } | { expired: false };
 
-function RunCard({ run: r, signed, photoNote, big = false }: { run: RunRow; signed: Map<string, string>; photoNote: PhotoNote; big?: boolean }) {
+function RunCard({ run: r, signed, photoNote, extra, big = false }: { run: RunRow; signed: Map<string, string>; photoNote: PhotoNote; extra?: ExtraSummary; big?: boolean }) {
   const title = r.source === "homework" ? `${r.homework_items?.subject ?? "Bài"} · bài trên lớp` : (r.task_templates?.title ?? "Việc");
   const early = r.source === "homework" && !!r.homework_items && localDate(new Date(r.done_at)) <= addDays(r.homework_items.due_date, -2);
   const kind = r.source === "homework" ? (early ? " · ★ sớm" : "") : r.task_templates?.part === "skill" ? " · kỹ năng" : " · bài bổ sung";
@@ -267,6 +273,7 @@ function RunCard({ run: r, signed, photoNote, big = false }: { run: RunRow; sign
             {minutesOf(r)} phút{kind} · xong {vnTime(r.done_at)}
             {photos.length > 1 ? ` · ${photos.length} ảnh` : ""}
           </span>
+          {extra && <span className="text-[13px] font-semibold text-accent">{extraLine(extra)}</span>}
           {missing && (
             <span className="self-start rounded-md bg-ink/6 px-2 py-0.5 text-[13px] font-semibold text-ink/65">
               {photoNote.expired ? `Ảnh đã xóa sau ${photoNote.days} ngày` : "Không mở được ảnh"}

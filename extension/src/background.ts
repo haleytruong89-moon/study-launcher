@@ -14,7 +14,9 @@
  */
 import { EXT_SOURCE, LAUNCHER_URL, TOKEN_RE } from "./config";
 import {
+  badgeFor,
   buildRules,
+  currentWarning,
   effectiveState,
   frameReport,
   initialSyncState,
@@ -23,9 +25,12 @@ import {
   planAlarms,
   planRuleUpdate,
   planTabSweep,
+  planWarning,
   reduceSync,
   tokenProof,
   uninstallUrl,
+  warningAfterPoll,
+  warningAtAlarm,
   withHostAccess,
   type EffectiveState,
   type SyncEvent,
@@ -34,6 +39,8 @@ import {
 
 const ALARM_POLL = "poll";
 const ALARM_OPEN = "openUntil|";
+/** D2 A2: one-shot heads-up 5 minutes before openUntil (display only, never locks or opens). */
+const ALARM_WARN = "warn|";
 /** A poll that does not answer within this time counts as FAILED (never leaves us open). */
 const POLL_TIMEOUT_MS = 10_000;
 /** While open, a navigation also triggers a poll at most this often (alarms follow the laptop clock). */
@@ -92,9 +99,33 @@ async function enforce(sync: SyncState): Promise<EffectiveState> {
     for (const t of planTabSweep(tabs, eff)) await chrome.tabs.update(t.tabId, { url: t.url }).catch(() => undefined);
   }
   await chrome.storage.local.set({ lastEffective: eff });
-  await chrome.action.setBadgeText({ text: eff.locked ? "" : "MỞ" }).catch(() => undefined);
-  await chrome.action.setBadgeBackgroundColor({ color: "#B85A1C" }).catch(() => undefined);
+  await showBadge(eff);
   return eff;
+}
+
+/** Badge: "" locked, "5'" in the last minutes of an open window (D2 A2), else "MỞ". Never throws. */
+async function showBadge(eff: EffectiveState): Promise<void> {
+  const r = await chrome.storage.local.get("warn").catch(() => ({}) as Record<string, unknown>);
+  const badge = badgeFor(eff, currentWarning((r as { warn?: unknown }).warn, eff));
+  await chrome.action.setBadgeText({ text: badge.text }).catch(() => undefined);
+  await chrome.action.setBadgeBackgroundColor({ color: badge.color }).catch(() => undefined);
+}
+
+/**
+ * D2 A2: the heads-up 5 minutes before openUntil, re-planned with the same server-clock anchor.
+ * Display only and best effort: it never throws, so enforce() always runs after it.
+ */
+async function planWarningAlarm(next: SyncState): Promise<void> {
+  try {
+    const warn = planWarning(next);
+    for (const a of await chrome.alarms.getAll()) if (a.name.startsWith(ALARM_WARN)) await chrome.alarms.clear(a.name);
+    if (warn.alarm) await chrome.alarms.create(ALARM_WARN + warn.alarm.openUntil, { delayInMinutes: warn.alarm.delayInMinutes });
+    const eff = effectiveState(next, LAUNCHER_URL); // the badge re-checks against what enforce() really applies
+    const prev = (await chrome.storage.local.get("warn")) as { warn?: unknown };
+    await chrome.storage.local.set({ warn: warningAfterPoll(prev.warn, warn, eff) });
+  } catch {
+    /* no heads-up this time; locking is unaffected */
+  }
 }
 
 async function apply(event: SyncEvent | null, replanAlarms: boolean): Promise<SyncState> {
@@ -107,6 +138,7 @@ async function apply(event: SyncEvent | null, replanAlarms: boolean): Promise<Sy
     for (const a of await chrome.alarms.getAll()) if (a.name.startsWith(ALARM_OPEN)) await chrome.alarms.clear(a.name);
     // Chrome may fire a few seconds late (minimum ~30 s); the next poll is never later than 30-60 s anyway.
     if (plan.openUntil) await chrome.alarms.create(ALARM_OPEN + plan.openUntil.openUntil, { delayInMinutes: Math.max(plan.openUntil.delayInMinutes, 0.5) });
+    await planWarningAlarm(next);
   }
   await enforce(next);
   return next;
@@ -182,7 +214,17 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_POLL) void serial(poll);
-  else if (alarm.name.startsWith(ALARM_OPEN)) {
+  else if (alarm.name.startsWith(ALARM_WARN)) {
+    const openUntil = alarm.name.slice(ALARM_WARN.length);
+    // Display only: no event, no rules, no tab sweep. A stale alarm (window changed) shows nothing.
+    void serial(async () => {
+      const r = await chrome.storage.local.get("lastEffective").catch(() => ({}) as Record<string, unknown>);
+      const eff = (r as { lastEffective?: EffectiveState }).lastEffective;
+      if (!eff) return;
+      await chrome.storage.local.set({ warn: warningAtAlarm(openUntil, eff) }).catch(() => undefined);
+      await showBadge(eff);
+    });
+  } else if (alarm.name.startsWith(ALARM_OPEN)) {
     const openUntil = alarm.name.slice(ALARM_OPEN.length);
     void serial(async () => {
       await apply({ type: "openUntilReached", openUntil }, false);

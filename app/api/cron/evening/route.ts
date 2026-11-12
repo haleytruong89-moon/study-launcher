@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { countUnreviewed, type RunRowLite } from "@/lib/parent/extraRuns";
 import { eveningMessage } from "@/lib/push/messages";
 import { notifyParents, vapidConfig } from "@/lib/push/send";
 import { inEveningWindow } from "@/lib/push/window";
@@ -34,11 +35,13 @@ export async function GET(request: Request) {
     for (const f of families.data ?? []) {
       const familyId = f.id as string;
       const [unreviewed, unlock, confirm] = await Promise.all([
-        admin.from("task_runs").select("id", { count: "exact", head: true }).eq("family_id", familyId).eq("local_date", date).not("done_at", "is", null).is("parent_verdict", null),
+        // D2 A5: every finished run of today (verdict or not), so "Làm thêm" runs can be told apart.
+        admin.from("task_runs").select("id, child_id, local_date, source, template_id, started_at, done_at, parent_verdict").eq("family_id", familyId).eq("local_date", date).not("done_at", "is", null),
         admin.from("unlock_requests").select("id", { count: "exact", head: true }).eq("family_id", familyId).eq("status", "pending"),
         admin.from("task_runs").select("id", { count: "exact", head: true }).eq("family_id", familyId).eq("local_date", date).not("confirm_requested_at", "is", null).is("done_at", null),
       ]);
-      const message = eveningMessage(unreviewed.count ?? 0, (unlock.count ?? 0) + (confirm.error ? 0 : (confirm.count ?? 0)));
+      const runs = (unreviewed.error ? [] : (unreviewed.data ?? [])) as (RunRowLite & { parent_verdict: string | null })[];
+      const message = eveningMessage(countUnreviewed(runs), (unlock.count ?? 0) + (confirm.error ? 0 : (confirm.count ?? 0)));
       if (!message) continue;
       sent += (await notifyParents(familyId, message)).sent;
     }
