@@ -26,10 +26,25 @@ const BY_CSP = [
   "form-action 'self'",
 ].join("; ");
 
+// App-wide hardening (review 12/11/2026). Nothing frames the app (no iframe here, the extension
+// opens it top-level), so framing is refused. Camera stays allowed: proof photos use a plain
+// file input today, and a future in-page camera must not break silently. The app-wide CSP
+// only refuses framing (no resource rules); Góc bình yên has the full one (below).
+const APP_HEADERS = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+  { key: "Permissions-Policy", value: "geolocation=(), microphone=(), payment=(), usb=()" },
+];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   async headers() {
+    // Order matters: when several rules match and set the same key, the LAST one wins, so the
+    // app-wide rule comes first and the stricter Góc bình yên rule keeps its own values.
     return [
+      { source: "/:path*", headers: APP_HEADERS },
       {
         // Service worker must never be cached by the browser, so updates ship immediately.
         source: "/sw.js",

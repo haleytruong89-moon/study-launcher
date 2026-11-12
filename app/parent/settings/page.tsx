@@ -1,5 +1,5 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
-import { breakTiersOf, DEFAULT_BREAK_MAX_PER_DAY } from "@/lib/dayState";
+import { breakTiersOf, DEFAULT_BREAK_MAX_PER_DAY, DEFAULT_BREAK_RUN_CAP_MINUTES } from "@/lib/dayState";
 import { talkRecipients } from "@/lib/binhYen/talk";
 import { ParentHeader } from "../parent-header";
 import { PhotoCleanup } from "./photo-cleanup";
@@ -40,6 +40,8 @@ export default async function SettingsPage() {
                   ? {
                       breakTiers: breakTiersOf(s.break_tiers).map(([f, b]): [number, number] => [f, b]),
                       breakMaxPerDay: typeof s.break_max_per_day === "number" ? s.break_max_per_day : DEFAULT_BREAK_MAX_PER_DAY,
+                      breakRunCapMinutes:
+                        typeof s.break_run_cap_minutes === "number" ? s.break_run_cap_minutes : DEFAULT_BREAK_RUN_CAP_MINUTES,
                     }
                   : {}),
                 ...(typeof s.by_enabled === "boolean"

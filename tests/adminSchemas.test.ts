@@ -80,6 +80,17 @@ describe("settingsSchema", () => {
     expect(settingsToRow(r)).toMatchObject({ break_tiers: [[45, 10], [90, 30], [120, 45], [180, 60]], break_max_per_day: 6 });
     expect(settingsToRow(settingsSchema.parse(ok))).not.toHaveProperty("break_tiers");
   });
+
+  it.each([30, 180, 600])("A7: accepts a run cap of %i minutes and writes the column", (cap) => {
+    expect(settingsToRow(settingsSchema.parse({ ...ok, breakRunCapMinutes: cap }))).toMatchObject({ break_run_cap_minutes: cap });
+  });
+
+  it.each([29, 601, 90.5])("A7: rejects a run cap of %s minutes", (cap) =>
+    expect(settingsSchema.safeParse({ ...ok, breakRunCapMinutes: cap }).success).toBe(false),
+  );
+
+  it("A7: leaves the run cap untouched when the form does not send it (before 0014)", () =>
+    expect(settingsToRow(settingsSchema.parse(ok))).not.toHaveProperty("break_run_cap_minutes"));
 });
 
 describe("slotSchema", () => {
