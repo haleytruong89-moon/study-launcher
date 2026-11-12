@@ -198,10 +198,10 @@ Không có suất → dừng ở đây; link preview vẫn dùng database thật
 | H1.2 | **Không** nối GitHub cho project này (Integrations › GitHub để trống) | SQL vào preview do workflow của repo làm (H3, H5). Chỉ project **thật** nối GitHub (A6) |
 | H1.3 | **Authentication › Sign In / Providers**: tắt **"Allow new users to sign up"** | Như A7 |
 | H1.4 | Ghi lại của project **preview**: Project URL, `anon` key, `service_role` key (như A3) | Nếu trang API Keys chỉ hiện "Publishable / Secret", mở tab **Legacy API Keys** để lấy `anon` + `service_role` giống project thật |
-| H1.5 | Nút **Connect** › **Session pooler** › chép chuỗi kết nối, thay `[YOUR-PASSWORD]` bằng mật khẩu DB | Dạng `postgresql://postgres.<mã>:<mật khẩu>@aws-…pooler.supabase.com:5432/postgres`. **Phải** là Session pooler: máy GitHub chỉ có IPv4, còn "Direct connection" là IPv6 ([Supabase: Connecting to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres)); Transaction pooler (cổng 6543) không hợp cho chạy SQL dài |
+| H1.5 | Nút **Connect** › **Session pooler** › chép chuỗi kết nối, thay `[YOUR-PASSWORD]` bằng mật khẩu DB | Dạng `postgresql://postgres.<mã>:<mật khẩu>@aws-…pooler.supabase.com:5432/postgres`. **Phải** là Session pooler: máy GitHub chỉ có IPv4, còn "Direct connection" là IPv6 ([Supabase: Connecting to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres)); Transaction pooler (cổng 6543) không hợp cho chạy SQL dài. Dán **nguyên dạng** (chỉ được thêm `?sslmode=require`): chuỗi có tham số khác, nhiều máy chủ, hay ký tự `@` chưa mã hóa trong mật khẩu sẽ bị workflow từ chối |
 | H1.6 | Mở project **THẬT** › Project Settings › General › **Project ID** (20 chữ thường, cũng là phần đầu link `https://<mã>.supabase.co`) → ghi lại | Đây là "mã project thật" để workflow **từ chối** mọi thao tác nhắm vào nó |
 
-### H2. GitHub: 3 secret + 1 biến
+### H2. GitHub: 4 secret
 
 GitHub › repo › Settings › Secrets and variables › Actions:
 
@@ -210,7 +210,7 @@ GitHub › repo › Settings › Secrets and variables › Actions:
 | Secrets | `PREVIEW_DB_URL` | chuỗi kết nối **preview** ở H1.5 |
 | Secrets | `PREVIEW_SERVICE_ROLE_KEY` | `service_role` key của **preview** (H1.4) |
 | Secrets | `PREVIEW_PARENT_PASSWORD` | mật khẩu đăng nhập thử, ≥ 12 ký tự, **khác** mọi mật khẩu thật |
-| **Variables** | `PRODUCTION_PROJECT_REF` | mã project **THẬT** (H1.6) |
+| Secrets | `PRODUCTION_PROJECT_REF` | mã project **THẬT** (H1.6). Đặt ở tab **Secrets**, không phải Variables: repo công khai, giá trị Variables hiện rõ trong log Actions |
 
 Kiểm tra secret `SUPABASE_DB_URL` và/hoặc `SUPABASE_URL` của bước A9 vẫn còn: workflow dùng chúng để **đối chiếu** mã project thật (thiếu cả hai → workflow từ chối chạy).
 

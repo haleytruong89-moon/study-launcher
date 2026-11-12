@@ -14,8 +14,8 @@
 #
 # Refuses when:
 #   1. PRODUCTION_PROJECT_REF is missing or not 20 lowercase letters;
-#   2. the preview ref cannot be read from PREVIEW_DB_URL (not a Supabase direct/pooler URL,
-#      or two different refs inside it);
+#   2. the preview ref cannot be read from PREVIEW_DB_URL (not exactly a Supabase direct/pooler
+#      URL — see DB_URL_RE — or two different refs inside it);
 #   3. the preview ref equals PRODUCTION_PROJECT_REF, or PREVIEW_DB_URL contains it anywhere;
 #   4. neither SUPABASE_DB_URL nor SUPABASE_URL is set (and readable) to cross-check the production ref;
 #   5. SUPABASE_DB_URL / SUPABASE_URL name a project other than PRODUCTION_PROJECT_REF
@@ -38,19 +38,17 @@ refuse() {
 }
 
 # Prints the project ref of a Supabase Postgres URL, or nothing. Never prints the password.
+# Only the exact shape Supabase's Connect button gives is accepted:
+#   postgres[ql]://postgres[.<ref>][:<password>]@<one host>[:<port>][/<db>][?sslmode=<mode>]
+# so libpq / pgx cannot be sent elsewhere by something this parser does not see: a second '@'
+# (libpq splits at the first one), several hosts (h1,h2), %-encoded hosts, IP literals, or
+# query parameters such as host= / hostaddr= / user= / service= that override the host.
+DB_URL_RE='^postgres(ql)?://(postgres(\.[a-z]{20})?)(:[^@/?#[:space:]]*)?@([A-Za-z0-9.-]+)(:[0-9]{1,5})?(/[A-Za-z0-9_]*)?(\?sslmode=[a-z-]+)?$'
 ref_from_db_url() {
-  local url="$1" rest userinfo hostpart host user user_ref="" direct_ref=""
-  [[ "$url" =~ ^postgres(ql)?://(.+)$ ]] || return 0
-  rest="${BASH_REMATCH[2]}"
-  [[ "$rest" == *@* ]] || return 0
-  userinfo="${rest%@*}"
-  hostpart="${rest##*@}"
-  host="${hostpart%%[/?#]*}"
-  host="${host%%:*}"
-  host="$(printf '%s' "$host" | tr '[:upper:]' '[:lower:]')"
-  user="${userinfo%%:*}"
-  [ -n "$userinfo" ] || return 0
-  if [[ "$user" =~ ^postgres\.([a-z]{20})$ ]]; then user_ref="${BASH_REMATCH[1]}"; fi
+  local url="$1" host user_ref="" direct_ref=""
+  [[ "$url" =~ $DB_URL_RE ]] || return 0
+  user_ref="${BASH_REMATCH[3]#.}"
+  host="$(printf '%s' "${BASH_REMATCH[5]}" | tr '[:upper:]' '[:lower:]')"
   if [[ "$host" =~ ^db\.([a-z]{20})\.supabase\.co$ ]]; then
     direct_ref="${BASH_REMATCH[1]}"
     if [ -n "$user_ref" ] && [ "$user_ref" != "$direct_ref" ]; then return 0; fi

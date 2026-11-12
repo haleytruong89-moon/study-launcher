@@ -21,22 +21,25 @@ export function isTestEmail(email) {
 }
 
 /**
+ * Exact shape of a Supabase connection string (same as DB_URL_RE in guard.sh):
+ *   postgres[ql]://postgres[.<ref>][:<password>]@<one host>[:<port>][/<db>][?sslmode=<mode>]
+ * Anything looser could make libpq / pgx connect somewhere this parser does not see (a second
+ * "@", several hosts, %-encoded host, IP literal, host= / hostaddr= / user= query parameters).
+ */
+const DB_URL_RE =
+  /^postgres(?:ql)?:\/\/(postgres(?:\.([a-z]{20}))?)(?::[^@/?#\s]*)?@([A-Za-z0-9.-]+)(?::[0-9]{1,5})?(?:\/[A-Za-z0-9_]*)?(?:\?sslmode=[a-z-]+)?$/;
+
+/**
  * Finds the project ref inside a Supabase Postgres connection string, without ever returning the
  * password. Accepts the direct host (db.<ref>.supabase.co) and the shared pooler
  * (user postgres.<ref> @ *.pooler.supabase.com). Anything else, or two different refs, -> null.
  */
 export function refFromDbUrl(dbUrl) {
   if (typeof dbUrl !== "string") return null;
-  const m = /^postgres(?:ql)?:\/\/(.+)$/.exec(dbUrl.trim());
+  const m = DB_URL_RE.exec(dbUrl);
   if (!m) return null;
-  const rest = m[1];
-  const at = rest.lastIndexOf("@");
-  if (at < 1) return null;
-  const userinfo = rest.slice(0, at);
-  const host = rest.slice(at + 1).split(/[/?#]/)[0].split(":")[0].toLowerCase();
-  const user = userinfo.split(":")[0];
-
-  const userRef = /^postgres\.([a-z]{20})$/.exec(user)?.[1] ?? null;
+  const host = m[3].toLowerCase();
+  const userRef = m[2] ?? null;
   const directRef = /^db\.([a-z]{20})\.supabase\.co$/.exec(host)?.[1] ?? null;
   const pooler = /^[a-z0-9-]+\.pooler\.supabase\.com$/.test(host);
 

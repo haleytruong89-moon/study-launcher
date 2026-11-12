@@ -54,6 +54,20 @@ expect 1  "wrong PRODUCTION_PROJECT_REF vs SUPABASE_URL"          push  PREVIEW_
 expect 1  "wrong ref var AND preview = SUPABASE_DB_URL (hash)"    reset PREVIEW_DB_URL="$(pooler $PROD)" PRODUCTION_PROJECT_REF=$OTHER PROD_DB_URL="$(pooler $PROD)"
 expect 1  "PREVIEW_DB_URL == SUPABASE_DB_URL (hash match)"        reset PREVIEW_DB_URL="$(pooler $PREV)" PRODUCTION_PROJECT_REF=$PROD PROD_DB_URL="$(pooler $PREV)"
 expect 1  "SUPABASE_URL names the preview project"                reset PREVIEW_DB_URL="$(direct $PREV)" PRODUCTION_PROJECT_REF=$PROD PROD_API_URL="https://$PREV.supabase.co"
+# Parser differentials: libpq / pgx would connect to the production host although the text
+# never contains the production ref (ENC = %-encoded first letter). Only the exact Supabase shape passes.
+ENC="%70${PROD:1}"
+P=(PRODUCTION_PROJECT_REF=$PROD "${OKPROD[@]}")
+expect 1  "second '@' (libpq splits at the first one)"            reset PREVIEW_DB_URL="postgresql://postgres:pw@db.$ENC.supabase.co:5432/x@db.$PREV.supabase.co:5432/postgres" "${P[@]}"
+expect 1  "query host= overrides the host"                        reset PREVIEW_DB_URL="$(pooler $PREV)?host=db.$ENC.supabase.co&user=postgres" "${P[@]}"
+expect 1  "query hostaddr= overrides the address"                 reset PREVIEW_DB_URL="$(direct $PREV)?hostaddr=2406:da18::1" "${P[@]}"
+expect 1  "several hosts (fallback to the second)"                reset PREVIEW_DB_URL="postgresql://postgres:pw@db.$PREV.supabase.co:5432,db.$ENC.supabase.co:5432/postgres" "${P[@]}"
+expect 1  "%-encoded host"                                        reset PREVIEW_DB_URL="postgresql://postgres:pw@db.%70$PREV.supabase.co:5432/postgres" "${P[@]}"
+expect 1  "IPv6 literal host"                                     reset PREVIEW_DB_URL="postgresql://postgres:pw@[2406:da18::1]:5432/postgres" "${P[@]}"
+expect 1  "unexpected user name"                                  reset PREVIEW_DB_URL="postgresql://admin.$PREV:pw@aws-0-x.pooler.supabase.com:5432/postgres" "${P[@]}"
+expect 0  "?sslmode=require is fine"                              reset PREVIEW_DB_URL="$(direct $PREV)?sslmode=require" "${P[@]}"
+expect 0  "uppercase host is fine"                                reset PREVIEW_DB_URL="postgresql://postgres:$PW@DB.$PREV.SUPABASE.CO:5432/postgres" "${P[@]}"
+expect 1  "uppercase production host is refused"                  reset PREVIEW_DB_URL="postgresql://postgres:$PW@DB.${PROD^^}.SUPABASE.CO:5432/postgres" "${P[@]}"
 
 if [ "$fails" -ne 0 ]; then echo "$fails guard test(s) FAILED" >&2; exit 1; fi
 echo "guard.sh: all tests passed"

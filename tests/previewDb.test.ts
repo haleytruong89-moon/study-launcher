@@ -30,6 +30,23 @@ describe("refFromDbUrl", () => {
     expect(refFromDbUrl(`https://${PREV}.supabase.co`)).toBeNull();
     expect(refFromDbUrl(undefined)).toBeNull();
   });
+  it("refuses URLs that libpq / pgx could route elsewhere (same cases as test-guard.sh)", () => {
+    const enc = `%70${PROD.slice(1)}`;
+    for (const url of [
+      `postgresql://postgres:pw@db.${enc}.supabase.co:5432/x@db.${PREV}.supabase.co:5432/postgres`,
+      `${pooler(PREV)}?host=db.${enc}.supabase.co&user=postgres`,
+      `${direct(PREV)}?hostaddr=2406:da18::1`,
+      `postgresql://postgres:pw@db.${PREV}.supabase.co:5432,db.${enc}.supabase.co:5432/postgres`,
+      `postgresql://postgres:pw@db.%70${PREV}.supabase.co:5432/postgres`,
+      "postgresql://postgres:pw@[2406:da18::1]:5432/postgres",
+      `postgresql://admin.${PREV}:pw@aws-0-x.pooler.supabase.com:5432/postgres`,
+      ` ${pooler(PREV)}`,
+    ]) {
+      expect(refFromDbUrl(url)).toBeNull();
+    }
+    expect(refFromDbUrl(`${direct(PREV)}?sslmode=require`)).toBe(PREV);
+    expect(refFromDbUrl(`postgresql://postgres:pw@DB.${PREV}.SUPABASE.CO:5432/postgres`)).toBe(PREV);
+  });
 });
 
 describe("refFromApiUrl / refFromJwtKey", () => {
@@ -96,6 +113,7 @@ describe("isTestEmail + seed data", () => {
     expect(isTestEmail("x@example.com.evil.org")).toBe(false);
     expect(isTestEmail(null)).toBe(false);
     expect(isTestEmail("@example.com")).toBe(false);
+    expect(isTestEmail("x@example.com@gmail.com")).toBe(false); // same rule as db-guard.sh / reset.sql
   });
   it("seeds only fake people whose accounts pass the test-account rule", () => {
     expect(isTestEmail(SEED.parent.email)).toBe(true);

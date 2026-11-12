@@ -7,8 +7,10 @@ name: Preview database (reset — XÓA dữ liệu thử)
 # a mess. The REAL project is never a target; these guards make sure of it, each one able to
 # stop the run on its own, all BEFORE anything is deleted:
 #
-#   0. Typed confirmation "XOA-PREVIEW", and the workflow file must come from main (a branch
-#      cannot weaken these guards for a run).
+#   0. Typed confirmation "XOA-PREVIEW", and "Use workflow from" must be main, so the reviewed
+#      guards on main run. (This check lives in the workflow file itself: a branch whose copy
+#      removed it could still be dispatched by someone with write access. To enforce it
+#      outside the repo, put these secrets in a GitHub Environment limited to main.)
 #   1. scripts/preview-db/guard.sh reset (no database contact): PREVIEW_DB_URL must be a Supabase
 #      URL whose project ref is NOT PRODUCTION_PROJECT_REF and does not contain it; the production
 #      ref is cross-checked against SUPABASE_DB_URL / SUPABASE_URL (at least one required, and
@@ -48,17 +50,17 @@ jobs:
     timeout-minutes: 15
     env:
       PREVIEW_DB_URL: ${{ secrets.PREVIEW_DB_URL }}
-      PRODUCTION_PROJECT_REF: ${{ vars.PRODUCTION_PROJECT_REF || secrets.PRODUCTION_PROJECT_REF }}
-      PROD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      PROD_API_URL: ${{ secrets.SUPABASE_URL }}
-      PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
-      PREVIEW_PARENT_PASSWORD: ${{ secrets.PREVIEW_PARENT_PASSWORD }}
-      APP_URL: ${{ secrets.APP_URL }}
+      # Same value in several steps; a secret (not a variable) so it never shows in env headers.
+      PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_PROJECT_REF || vars.PRODUCTION_PROJECT_REF }}
+    # Keys and production values are given only to the steps that need them (never to `npm ci`
+    # or the Supabase CLI); SUPABASE_DB_URL (REAL database password) only to guard 1.
     steps:
       - name: Guard 0 — typed confirmation, workflow from main
         env:
           CONFIRM: ${{ inputs.confirm }}
           SEED: ${{ inputs.seed }}
+          PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
+          PREVIEW_PARENT_PASSWORD: ${{ secrets.PREVIEW_PARENT_PASSWORD }}
         run: |
           if [ "$CONFIRM" != "XOA-PREVIEW" ]; then
             echo "::error title=Preview reset — DỪNG::Chưa gõ đúng XOA-PREVIEW. Không làm gì."; exit 1
@@ -76,6 +78,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Guard 1 — is this the preview project? (no database contact)
+        env:
+          PROD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PROD_API_URL: ${{ secrets.SUPABASE_URL }}
         run: bash scripts/preview-db/guard.sh reset
 
       - name: Guard 2 — only test accounts inside? (read-only)
@@ -90,6 +95,8 @@ jobs:
       - run: npm ci --no-audit --no-fund
 
       - name: Delete preview accounts and files (guard 3 inside)
+        env:
+          PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
         run: node scripts/preview-db/preview-db.mjs wipe
 
       - name: Empty the app schema (guard 4 inside, one transaction)
@@ -104,6 +111,10 @@ jobs:
 
       - name: Add fake test data (Con A / Con B)
         if: inputs.seed
+        env:
+          PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
+          PREVIEW_PARENT_PASSWORD: ${{ secrets.PREVIEW_PARENT_PASSWORD }}
+          APP_URL: ${{ secrets.APP_URL }}
         run: node scripts/preview-db/preview-db.mjs seed
 
       - name: Summary

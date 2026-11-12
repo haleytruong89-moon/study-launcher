@@ -51,6 +51,9 @@ q "insert into auth.users (id, email) values ('55555555-5555-4555-8555-555555555
 q "delete from auth.users where id = '44444444-4444-4444-8444-444444444444'" >/dev/null
 if PREVIEW_DB_URL="$url" bash scripts/preview-db/db-guard.sh >/dev/null; then die "db-guard accepted an account without e-mail"; fi
 pass "db-guard refuses an account without e-mail"
+q "update auth.users set email = 'x@example.com@gmail.com' where id = '55555555-5555-4555-8555-555555555555'" >/dev/null
+if PREVIEW_DB_URL="$url" bash scripts/preview-db/db-guard.sh >/dev/null; then die "db-guard judged an address by its first '@'"; fi
+pass "db-guard reads the domain after the last '@'"
 q "update auth.users set email = 'Me@Example.ORG' where id = '55555555-5555-4555-8555-555555555555'" >/dev/null
 if "${PSQL[@]}" -d "$DB" -f scripts/preview-db/reset.sql >/dev/null 2>&1; then die "reset.sql ran on a database with a real e-mail"; fi
 [ "$(q "select count(*) from public.families")" = "1" ] || die "reset.sql dropped data although it refused"

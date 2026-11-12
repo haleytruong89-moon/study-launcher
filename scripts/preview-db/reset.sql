@@ -20,7 +20,7 @@ begin
   if exists (
     select 1 from auth.users
      where email is null
-        or lower(split_part(email, '@', 2)) not in ('example.com', 'study-launcher.local')
+        or email !~* '^.+@(example\.com|study-launcher\.local)$' -- domain after the LAST '@', like lib.mjs
   ) then
     raise exception 'preview reset refused: this database has a non-test account (production?)';
   end if;

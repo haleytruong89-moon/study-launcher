@@ -20,7 +20,7 @@ out="$(psql "$PREVIEW_DB_URL" -X -q -At -v ON_ERROR_STOP=1 2>/dev/null <<'SQL'
 begin transaction read only;
 select count(*) from auth.users
  where email is null
-    or lower(split_part(email, '@', 2)) not in ('example.com', 'study-launcher.local');
+    or email !~* '^.+@(example\.com|study-launcher\.local)$'; -- domain after the LAST '@', like lib.mjs
 rollback;
 SQL
 )"

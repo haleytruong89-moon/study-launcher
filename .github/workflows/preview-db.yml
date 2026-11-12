@@ -42,14 +42,18 @@ jobs:
     timeout-minutes: 15
     env:
       PREVIEW_DB_URL: ${{ secrets.PREVIEW_DB_URL }}
-      PRODUCTION_PROJECT_REF: ${{ vars.PRODUCTION_PROJECT_REF || secrets.PRODUCTION_PROJECT_REF }}
-      PROD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      PROD_API_URL: ${{ secrets.SUPABASE_URL }}
+    # Production values (SUPABASE_DB_URL holds the REAL database password) are given ONLY to the
+    # guard step, never to `npm ci`, the Supabase CLI or the seed script. PRODUCTION_PROJECT_REF
+    # should be a secret: a GitHub *variable* is printed in clear in each step's env header.
     steps:
       - uses: actions/checkout@v4
 
       - name: Safety check 1 — is this the preview project? (no database contact)
         id: guard
+        env:
+          PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_PROJECT_REF || vars.PRODUCTION_PROJECT_REF }}
+          PROD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PROD_API_URL: ${{ secrets.SUPABASE_URL }}
         run: |
           set +e
           bash scripts/preview-db/guard.sh push
@@ -83,6 +87,7 @@ jobs:
       - name: Add fake test data (Con A / Con B)
         if: steps.guard.outputs.run == 'true' && github.event_name == 'workflow_dispatch' && inputs.seed
         env:
+          PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_PROJECT_REF || vars.PRODUCTION_PROJECT_REF }}
           PREVIEW_SERVICE_ROLE_KEY: ${{ secrets.PREVIEW_SERVICE_ROLE_KEY }}
           PREVIEW_PARENT_PASSWORD: ${{ secrets.PREVIEW_PARENT_PASSWORD }}
           APP_URL: ${{ secrets.APP_URL }}
