@@ -17,8 +17,10 @@
 # Refuses any PGHOST other than localhost / a socket directory: it never touches Supabase.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
 file="${1:?usage: restore-drill.sh <backup .tar.gpg>}"
+# Resolve the path before leaving the caller's directory (a relative path stays valid).
+file="$(realpath -m -- "$file")"
+cd "$(dirname "$0")/.."
 : "${BACKUP_PASSPHRASE:?BACKUP_PASSPHRASE is not set}"
 DB="${RESTORE_DB_NAME:-restore_drill}"
 MAX_AGE_DAYS="${MAX_AGE_DAYS:-8}"
