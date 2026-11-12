@@ -106,7 +106,7 @@ select test_helpers.expect_count('child1 sees only own homework',        (select
 select test_helpers.expect_count('child1 cannot see sibling day_session', (select count(*) from public.day_sessions where child_id = '00000000-0000-0000-0000-0000000000c2'), 0);
 select test_helpers.expect_count('child1 sees only own profile',          (select count(*) from public.profiles), 1);
 select test_helpers.expect_count('child1 sees only own app slot',         (select count(*) from public.app_slots), 1);
-select test_helpers.expect_count('child1 sees family allowlist (6)',      (select count(*) from public.allowlist_entries), 6);
+select test_helpers.expect_count('child1 sees family allowlist (17, 0016)', (select count(*) from public.allowlist_entries), 17);
 select test_helpers.expect_count('child1 sees family_settings',           (select count(*) from public.family_settings), 1);
 select test_helpers.expect_count('child1 sees no extension devices',      (select count(*) from public.extension_devices), 0);
 select test_helpers.expect_count('child1 sees no audit log',              (select count(*) from public.audit_log), 0);
@@ -453,17 +453,22 @@ begin
 end $$;
 reset role;
 
--- 0007: saved-files setting, off by default; the child can read but not change it -----
+-- 0007: saved-files setting (on by default since 0016); the child can read but not change it
 reset role;
-select test_helpers.expect_count('allow_local_files defaults to off',
-  (select count(*) from public.family_settings where allow_local_files = false and family_id = '10000000-0000-0000-0000-00000000000a'), 1);
+select test_helpers.expect_count('allow_local_files on by default (0016)',
+  (select count(*) from public.family_settings where allow_local_files = true and family_id = '10000000-0000-0000-0000-00000000000a'), 1);
+select test_helpers.expect_count('0016 seed opens Meet, NotebookLM, Docs and Zalo family-wide',
+  (select count(*) from public.allowlist_entries where family_id = '10000000-0000-0000-0000-00000000000a' and child_id is null
+     and domain in ('meet.google.com', 'notebooklm.google.com', 'docs.google.com', 'zalo.me')), 4);
+select test_helpers.expect_count('0016 never opens Google Search or YouTube',
+  (select count(*) from public.allowlist_entries where domain in ('google.com', 'www.google.com', 'youtube.com', 'www.youtube.com')), 0);
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
 do $$
 begin
-  update public.family_settings set allow_local_files = true;
+  update public.family_settings set allow_local_files = false;
   if found then raise exception 'FAIL: child changed allow_local_files'; end if;
-  raise notice 'ok: child cannot turn on saved files (0 rows)';
+  raise notice 'ok: child cannot change saved files (0 rows)';
 end $$;
 reset role;
 
