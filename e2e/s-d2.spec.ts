@@ -4,8 +4,8 @@ import { e2eEnv } from "./env";
 import { localDate } from "../lib/time";
 
 /**
- * D2 A5 — the parent's "Ngày của con" shows a task's "Làm thêm" runs as one line under it, with no
- * verdict buttons of their own. Self-contained; named "s-…" so it runs after flow.spec.ts (which
+ * Đợt 2. A5 — the parent's "Ngày của con" shows a task's "Làm thêm" runs as one line under it, with
+ * no verdict buttons of their own. C2 — the daily self-check route. Self-contained; named "s-…" so it runs after flow.spec.ts (which
  * creates the family and the child). Every row added here is removed in `finally`.
  */
 
@@ -60,4 +60,14 @@ test("D2 A5: extra runs are grouped under their task on the review page", async 
     if (before) await db.from("day_sessions").upsert(before, { onConflict: "child_id,local_date" });
     else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", today);
   }
+});
+
+test("C2: the daily self-check needs the cron secret and reads the database", async ({ request }) => {
+  expect((await request.get("/api/cron/health")).status()).toBe(401);
+  expect((await request.get("/api/cron/health", { headers: { Authorization: "Bearer wrong" } })).status()).toBe(401);
+  const res = await request.get("/api/cron/health", { headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ""}` } });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body).toMatchObject({ ok: true, checks: { database: "ok", photoCleanup: "not_checked", backup: "not_checked" } });
+  expect(typeof body.checks.silentLaptops).toBe("number");
 });
