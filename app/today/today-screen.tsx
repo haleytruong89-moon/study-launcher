@@ -1,37 +1,38 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TaskView } from "@/lib/dayState";
 import { compressImage } from "@/lib/images";
 import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
 import { MAX_PROOFS, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
-import { bannerFor, breakLine, clock, dayProgress, daySteps, lockSoonMinutes, lockSoonText, longDate, nextTask, statusPill } from "@/lib/today/view";
-import { Character } from "../avatar-face";
-import { SignOutButton } from "../sign-out-button";
-import { TalkPanel } from "../binh-yen/talk-panel";
-import { FeedbackForm } from "./feedback";
-import { NextTask, ProgressRing, type Act, type TaskCtx } from "./today-parts";
+import { bannerFor, breakLine, dayProgress, daySteps, lockSoonMinutes, nextTask, statusPill } from "@/lib/today/view";
+import { NextTask, type Act, type TaskCtx } from "./today-parts";
 import { FocusView } from "./focus-view";
-import { RunningChip } from "./running-chip";
 import { StartSheet } from "./start-sheet";
 import { Breadcrumb, ChildNav } from "../child-nav";
-import { isChildTab, tabHref, tabLabel, type ChildTab } from "@/lib/childTabs";
+import { tabLabel } from "@/lib/childTabs";
 import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { PillarCards } from "./pillars";
-import { FeelInvite, FeelWeek, WeekAreas, WeekProgress } from "./tabs";
+import { FeelInvite, FeelWeek } from "./tabs";
 import { StudyCorner } from "./study-corner";
-import { WorldMini, WorldTab } from "./world";
-import { ComicToday, ComicVolume } from "./comic";
-import type { WeekDaysView } from "@/lib/today/weekDays";
+import { WorldMini } from "./world";
+import { ComicToday } from "./comic";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
 import { nextFromPlan, plannable, planProgress } from "@/lib/today/week";
+import { noStore, readFocusOpen, readPlanLater, subscribeStorage, writeFocusOpen } from "./today-storage";
+import { useChildTabs, type Tab } from "./use-child-tabs";
+import { useServerClock } from "./use-server-clock";
+import { useWeekDays } from "./use-week-days";
+import { useFastPoll, useTodaySync } from "./use-today-sync";
+import { useLockSoonTitle } from "./use-lock-soon-title";
+import { DayControls, StatusTop } from "./status-card";
+import { TodayHeader } from "./today-header";
+import { GopYTab, TuanTab } from "./tab-tuan";
 
 interface Child {
   id: string;
@@ -44,95 +45,10 @@ interface Child {
   pics: AvatarPics;
 }
 
-const POLL_MS = 30_000;
-
-function subscribeStorage(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  return () => window.removeEventListener("storage", onChange);
-}
-
-// R7a: the focus screen the child opened stays open after a reload (this tab only), and never
-// opens by itself. Value = the task key.
-const FOCUS_OPEN = "focus-open";
-const noStore = () => () => {};
-function readFocusOpen(): string | null {
-  try {
-    return window.sessionStorage.getItem(FOCUS_OPEN);
-  } catch {
-    return null;
-  }
-}
-function writeFocusOpen(key: string | null) {
-  try {
-    if (key) window.sessionStorage.setItem(FOCUS_OPEN, key);
-    else window.sessionStorage.removeItem(FOCUS_OPEN);
-  } catch {
-    /* not remembered: fine */
-  }
-}
-
-function readPlanLater(): string | null {
-  try {
-    return window.localStorage.getItem("plan-later");
-  } catch {
-    return null; // storage blocked: the nudge just shows again
-  }
-}
-
-type Tab = Exclude<ChildTab, "binh-yen">;
-
-function tabFromUrl(): Tab {
-  const t = new URLSearchParams(window.location.search).get("tab");
-  return isChildTab(t) ? t : "hom-nay";
-}
-
 export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: Child; initial: TodayView | null; initialTab: Tab; byEnabled: boolean }) {
   const [view, setView] = useState<TodayView | null>(initial);
-  // R2: the 5 tabs. Hôm nay / Góc học tập / Tuần / Góp ý share this screen (and its state).
-  const [tab, setTab] = useState<Tab>(initialTab);
-  const tabRef = useRef<Tab>(initialTab);
-  // R6c: "Chỉ hiện bài này" of Góc học tập (off again whenever the tab changes).
-  const [studyFocus, setStudyFocus] = useState(false);
-  // R6c "← Quay lại": the tabs the child came from (last 10), falling back to Hôm nay.
-  const [tabHistory, setTabHistory] = useState<Tab[]>([]);
-  const loadWeekRef = useRef<() => Promise<void>>(async () => {});
-  const selectTab = useCallback((t: Tab, opts?: { back?: boolean }) => {
-    if (t === tabRef.current) return;
-    if (!opts?.back) {
-      const from = tabRef.current;
-      setTabHistory((h) => [...h, from].slice(-10));
-    }
-    tabRef.current = t;
-    setTab(t);
-    setStudyFocus(false);
-    window.history.pushState(null, "", tabHref(t));
-    window.scrollTo({ top: 0 });
-    void loadWeekRef.current();
-  }, []);
-  useEffect(() => {
-    const onPop = () => {
-      tabRef.current = tabFromUrl();
-      setTab(tabRef.current);
-      setStudyFocus(false);
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-  // The child's own week (feelings + 4 areas): a child-only route, never part of TodayView.
-  const [week, setWeek] = useState<WeekDaysView | null>(null);
-  const weekAt = useRef(0);
-  // Fetched only where it is shown (Hôm nay, Tuần), at most once a minute unless forced.
-  const loadWeek = useCallback(async (force = false) => {
-    if (tabRef.current !== "hom-nay" && tabRef.current !== "tuan") return;
-    if (!force && Date.now() - weekAt.current < 60_000) return;
-    weekAt.current = Date.now();
-    try {
-      const res = await fetch("/api/week/days", { cache: "no-store" });
-      if (res.ok) setWeek((await res.json()) as WeekDaysView);
-    } catch {
-      /* the chart just waits for the next try */
-    }
-  }, []);
+  // R2: the 5 tabs (use-child-tabs.ts).
+  const { tab, tabRef, studyFocus, setStudyFocus, tabHistory, setTabHistory, loadWeekRef, selectTab } = useChildTabs(initialTab);
   const [error, setError] = useState<string | null>(initial ? null : "Chưa tải được việc hôm nay. Đang thử lại…");
   const [busy, setBusy] = useState<string | null>(null);
   // R7a: the focus screen opens ONLY when the child taps for it. The key of that task, from
@@ -154,86 +70,11 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const [laterNow, setPlanLater] = useState<string | null>(null);
   const planLater = laterNow ?? storedLater;
   // Server clock offset: countdowns use server time, never the laptop clock alone.
-  const router = useRouter();
-  const offsetRef = useRef(0);
-  const [nowMs, setNowMs] = useState(() => (initial ? new Date(initial.state.serverNow).getTime() : 0));
-  useEffect(() => {
-    if (initial) offsetRef.current = new Date(initial.state.serverNow).getTime() - Date.now();
-  }, [initial]);
-
-  const accept = useCallback((v: TodayView) => {
-    offsetRef.current = new Date(v.state.serverNow).getTime() - Date.now();
-    setView(v);
-    setNowMs(Date.now() + offsetRef.current);
-  }, []);
-
-  const refresh = useCallback(async () => {
-    try {
-      const res = await fetch("/api/today", { cache: "no-store" });
-      if (res.status === 401 || res.status === 403) {
-        router.replace("/login");
-        return;
-      }
-      if (!res.ok) throw new Error(String(res.status));
-      accept((await res.json()) as TodayView);
-      setError(null);
-      void loadWeek();
-    } catch {
-      setError("Mất kết nối với máy chủ. Đang thử lại…");
-    }
-  }, [accept, router, loadWeek]);
-
-  useEffect(() => {
-    loadWeekRef.current = () => loadWeek();
-  }, [loadWeek]);
-
-  useEffect(() => {
-    let alive = true;
-    weekAt.current = Date.now();
-    fetch("/api/week/days", { cache: "no-store" })
-      .then((res) => (res.ok ? (res.json() as Promise<WeekDaysView>) : null))
-      .then((w) => {
-        if (alive && w) setWeek(w);
-      })
-      .catch(() => null);
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  // Remember this browser for the PIN sign-in (once per page load; best effort).
-  useEffect(() => {
-    void fetch("/api/pin/remember", { method: "POST" }).catch(() => null);
-  }, []);
-
-  // Poll every 30 s while visible, and right away when the tab comes back (DESIGN section 6).
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void refresh();
-    };
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, POLL_MS);
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      window.clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-    };
-  }, [refresh]);
-
-  // 1-second tick for timers; re-read the server when a deadline passes.
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      const t = Date.now() + offsetRef.current;
-      setNowMs(t);
-      const s = view?.state;
-      const deadlines = [s?.openUntil, s?.break.endsAt, s?.free.endsAt].filter((x): x is string => !!x).map((x) => new Date(x).getTime());
-      if (deadlines.some((d) => d <= t && d > t - 1000)) void refresh();
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [view, refresh]);
+  const { offsetRef, nowMs, setNowMs, accept } = useServerClock(initial, setView);
+  // The child's own week (feelings + 4 areas), fetched only where it is shown.
+  const { week, loadWeek } = useWeekDays(tabRef, loadWeekRef);
+  // /api/today: refresh, 30 s poll, 1-second tick (use-today-sync.ts).
+  const refresh = useTodaySync({ view, accept, loadWeek, setError, offsetRef, setNowMs });
 
   /**
    * POSTs a child action; true when the server accepted it (the new view is shown). A start
@@ -343,25 +184,11 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const sheetOpen = !!proofKey && !!view?.state.part1.items.some((i) => i.key === proofKey && i.state === "running");
   const anyRunning = !!view && runningItems(view.state).length > 0;
   const fastMs = sheetOpen ? 4000 : anyRunning ? 10_000 : 0;
-  useEffect(() => {
-    if (!fastMs) return;
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, fastMs);
-    return () => window.clearInterval(id);
-  }, [fastMs, refresh]);
+  useFastPoll(fastMs, refresh);
 
-  // D2 A2: in the last 5 minutes of a break / free time the tab title says so (the child may be
-  // on another tab); the original title comes back afterwards. Minutes only, server clock.
+  // D2 A2: the tab title in the last 5 minutes of a break / free time (use-lock-soon-title.ts).
   const soonMinutes = view ? lockSoonMinutes(view.state, nowMs) : null;
-  useEffect(() => {
-    if (soonMinutes === null) return;
-    const before = document.title;
-    document.title = lockSoonText(soonMinutes).title;
-    return () => {
-      document.title = before;
-    };
-  }, [soonMinutes]);
+  useLockSoonTitle(soonMinutes);
 
   const color = child.color ?? "#2b5d4f";
   // R4: An (scientist voice) has her world of the month in the 4th tab.
@@ -438,53 +265,8 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
   const firstName = child.name.trim().split(/\s+/).pop() ?? child.name;
 
   // Shared by Hôm nay and Góc học tập (R2): the status line and the break / free-time buttons.
-  const statusTop = (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex min-w-0 grow basis-60 flex-col gap-0.5">
-        <strong className="text-lg">{banner.title}</strong>
-        <span className="text-sm text-ink/75">{banner.sub}</span>
-        {soonMinutes !== null && (
-          <span className="text-sm font-semibold" style={{ color: "#2B5D4F" }}>
-            {lockSoonText(soonMinutes).line}
-          </span>
-        )}
-      </div>
-      {countdownTo && (
-        <span className="text-3xl font-bold tabular-nums" style={{ color }} aria-label="Thời gian còn lại">
-          {clock(new Date(countdownTo).getTime() - nowMs)}
-        </span>
-      )}
-    </div>
-  );
-  const controls = (
-    <>
-      {brk && (
-        <div className="flex flex-col gap-0.5">
-          <span className="font-semibold">{brk.text}</span>
-          {brk.hint && <span className="text-[13px] text-ink/70">{brk.hint}</span>}
-        </div>
-      )}
-      {(s.break.canStart || s.free.canStart) && (
-        <div className="flex flex-wrap gap-2">
-          {s.free.canStart && (
-            <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/free" })} className="btn text-white disabled:opacity-60" style={{ background: color }}>
-              Bắt đầu giờ tự do
-            </button>
-          )}
-          {s.break.canStart && (
-            <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "start" } })} className="btn border-[1.5px] bg-white disabled:opacity-60" style={{ borderColor: color, color }}>
-              {s.break.legacy ? `☕ Nghỉ ${view.rules.breakMinutes} phút (1 lần/ngày)` : (brk?.button ?? `Nghỉ ${s.break.bankMinutes}'`)}
-            </button>
-          )}
-        </div>
-      )}
-      {s.break.state === "running" && (
-        <button type="button" disabled={!!busy} onClick={() => void act({ url: "/api/day/break", body: { action: "end" } })} className="btn self-start text-white disabled:opacity-60" style={{ background: color }}>
-          Học tiếp
-        </button>
-      )}
-    </>
-  );
+  const statusTop = <StatusTop banner={banner} soonMinutes={soonMinutes} countdownTo={countdownTo} nowMs={nowMs} color={color} />;
+  const controls = <DayControls s={s} brk={brk} breakMinutes={view.rules.breakMinutes} busy={busy} color={color} onAct={act} />;
 
   return (
     <div className="min-h-dvh pb-24 lg:pb-0 lg:pl-52">
@@ -523,65 +305,26 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
         />
       )}
 
-      <header className="text-white" style={{ background: color }}>
-        <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 pt-5 pb-4">
-          <div className="flex items-center gap-3">
-            {child.look && (
-              // R6b (artifact, item J): the child's own character greets them; a tap opens the creator.
-              <Link href="/nhan-vat" aria-label="Nhân vật của con" className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
-                <Character look={child.look} pics={child.pics} expr="smile" className="size-full" />
-              </Link>
-            )}
-            <button
-              type="button"
-              aria-label="Đổi biểu tượng"
-              onClick={() => {
-                setError(null);
-                setDialog("icon");
-              }}
-              className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-white/55 bg-white/15 text-2xl font-bold"
-            >
-              {view.icon ?? firstName[0]?.toUpperCase() ?? "?"}
-            </button>
-            <div className="flex min-w-0 grow flex-col">
-              <h1 className="text-[21px] font-bold">Chào {child.name}</h1>
-              <span className="text-sm opacity-90">
-                {child.grade ? `Lớp ${child.grade} · ` : ""}
-                {longDate(s.localDate)}
-              </span>
-            </div>
-            <ProgressRing done={progress.done} total={progress.total} />
-          </div>
-          <RunningChip running={running} nowMs={nowMs} paused={paused} onOpen={openFocus} />
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/20 px-3 text-[13px] font-semibold">
-              <span aria-hidden className={`size-2 rounded-full ${pill.open ? "bg-[#FBD38D]" : "bg-white"}`} />
-              {pill.label}
-            </span>
-            {dayNote && (
-              <span className="inline-flex min-h-9 items-center rounded-full bg-white px-3 text-[13px] font-bold" style={{ color }}>
-                {dayNote}
-              </span>
-            )}
-            <span className="ml-auto flex flex-wrap items-center gap-2">
-              {/* Góc bình yên (S-BY0): hidden unless a parent phone can receive it. */}
-              <TalkPanel variant="header" color={color} />
-              <SignOutButton onDark />
-            </span>
-          </div>
-          <ol aria-label="Tiến trình hôm nay" className="grid grid-cols-3 gap-1.5">
-            {steps.map((st, i) => (
-              <li key={st.label} aria-current={i === currentStep ? "step" : undefined} className="flex flex-col gap-1.5">
-                <span className="h-1.5 rounded-full" style={{ background: st.done ? "#FFFFFF" : "rgba(255,255,255,0.3)" }} />
-                <span className={`text-xs ${st.done ? "font-bold" : "opacity-85"}`}>
-                  {st.done ? "✓ " : ""}
-                  {st.label}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </header>
+      <TodayHeader
+        child={child}
+        color={color}
+        icon={view.icon}
+        firstName={firstName}
+        s={s}
+        progress={progress}
+        running={running}
+        nowMs={nowMs}
+        paused={paused}
+        pill={pill}
+        dayNote={dayNote}
+        steps={steps}
+        currentStep={currentStep}
+        onOpen={openFocus}
+        onIcon={() => {
+          setError(null);
+          setDialog("icon");
+        }}
+      />
 
       <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
         <Breadcrumb
@@ -750,46 +493,9 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
           </>
         )}
 
-        {tab === "tuan" && (
-          <>
-            {hasWorld && <WorldTab color={color} onWorld={setWorldKey} />}
-            {voice === "detective" && (
-              <section aria-labelledby="comic-volume" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
-                {week ? (
-                  <ComicVolume key={week.weekStart} week={week} s={s} look={child.look} pics={child.pics} name={child.name} icon={view.icon} freeMinutes={view.rules.freeMinutes} color={color} />
-                ) : (
-                  <p id="comic-volume" className="text-sm text-ink/70">
-                    Đang tải tập truyện…
-                  </p>
-                )}
-              </section>
-            )}
-            <section aria-labelledby="wk-own" className="flex flex-col gap-4 rounded-2xl border border-ink/10 bg-white p-4">
-              <h2 id="wk-own" className="text-lg font-bold">
-                Tuần này của con
-              </h2>
-              {week ? (
-                <>
-                  {week.byEnabled && <FeelWeek week={week} color={color} big feelLook={feelLook} />}
-                  <WeekAreas week={week} color={color} feelLook={feelLook} />
-                </>
-              ) : (
-                <p className="text-sm text-ink/70">Đang tải…</p>
-              )}
-            </section>
-            <WeekProgress s={s} view={view} color={color} />
-          </>
-        )}
+        {tab === "tuan" && <TuanTab s={s} view={view} week={week} child={child} voice={voice} hasWorld={hasWorld} feelLook={feelLook} color={color} onWorld={setWorldKey} />}
 
-        {tab === "gop-y" && (
-          <section aria-labelledby="gy" className="flex flex-col gap-3 rounded-2xl border border-ink/10 bg-white p-4">
-            <h2 id="gy" className="text-lg font-bold">
-              Góp ý cho app
-            </h2>
-            <p className="text-sm text-ink/75">Con thích gì, chưa thích gì, hay có ý tưởng gì cho app? Bố mẹ đọc hết.</p>
-            <FeedbackForm color={color} />
-          </section>
-        )}
+        {tab === "gop-y" && <GopYTab color={color} />}
       </main>
       <ChildNav active={tab} byEnabled={byEnabled} color={color} voice={voice} onSelect={selectTab} />
     </div>
