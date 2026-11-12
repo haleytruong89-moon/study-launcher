@@ -1,0 +1,98 @@
+name: Restore drill
+
+# Proves the latest weekly backup can really be restored (docs/SETUP.md, "Diễn tập khôi phục sao lưu").
+# Downloads the newest encrypted artifact of "Weekly database backup", decrypts it with
+# BACKUP_PASSPHRASE and restores it into a THROWAWAY PostgreSQL 17 that lives only inside this job.
+# Prints only row counts per table and the newest task_runs day, never row contents.
+# Never connects to the real database: SUPABASE_DB_URL is not used here.
+# Fails if there is no backup, if it is older than 8 days, or if anything does not restore.
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secret
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::error::BACKUP_PASSPHRASE secret is not set: the backup cannot be decrypted."
+            exit 1
+          fi
+
+      - name: Find the latest backup
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=db-backup-encrypted&per_page=100")"
+          latest="$(jq -c '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last // empty' <<<"$json")"
+          if [ -z "$latest" ]; then
+            echo "::error::No backup found (artifact db-backup-encrypted). Run \"Weekly database backup\" first."
+            exit 1
+          fi
+          created="$(jq -r .created_at <<<"$latest")"
+          run_id="$(jq -r .workflow_run.id <<<"$latest")"
+          age_days=$(( ($(date -u +%s) - $(date -u -d "$created" +%s)) / 86400 ))
+          echo "Latest backup: ${created} (run ${run_id}, ${age_days} day(s) old)"
+          if [ "$age_days" -gt 8 ]; then
+            echo "::error::The newest backup is ${age_days} days old (more than 8): the weekly backup is not running."
+            exit 1
+          fi
+          echo "run_id=${run_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Download the encrypted backup
+        uses: actions/download-artifact@v4
+        with:
+          name: db-backup-encrypted
+          run-id: ${{ steps.find.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: backup
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          # pg_restore must match the pg_dump that wrote the backup (Supabase runs PostgreSQL 17).
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Restore into a throwaway database and count rows
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(backup/*.tar.gpg)
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "::error::Expected one .tar.gpg file in the artifact, found ${#files[@]}."
+            exit 1
+          fi
+          bash scripts/restore-drill.sh "${files[0]}"

@@ -143,6 +143,22 @@ Cách khôi phục (Claude làm giúp, cần máy có `psql` + `pg_restore` bả
    ```
 4. Đăng nhập lại bằng tài khoản phụ huynh để kiểm tra.
 
+### E+. Diễn tập khôi phục sao lưu (~5 phút, nên làm mỗi tháng 1 lần)
+
+Mục đích: chắc chắn bản sao lưu **mở ra được thật** trước khi có ngày cần dùng. Diễn tập chạy hoàn toàn trên GitHub, nạp bản sao lưu vào một cơ sở dữ liệu **tạm** (bị xóa khi chạy xong). **Không đụng** dữ liệu thật trên Supabase.
+
+1. GitHub → repo → tab **Actions** → bên trái chọn **Restore drill** → nút **Run workflow** → **Run workflow**.
+2. Chờ ~3 phút. Dấu ✅ xanh = khôi phục được. Bấm vào lần chạy để xem bảng **"Diễn tập khôi phục: OK"**: số dòng của từng bảng và **ngày học mới nhất** trong `task_runs`.
+3. Cách đọc kết quả:
+   - `families` = 1, `profiles` = số người trong nhà, `auth.users` ≥ số tài khoản → bình thường.
+   - Ngày học mới nhất nên là ngày con dùng app gần với lần sao lưu (sao lưu chạy sáng thứ Hai).
+   - Các bảng `by_*` (Góc bình yên) luôn là 0: bản sao lưu cố ý không giữ dữ liệu này.
+   - Bảng chỉ có **số đếm**, không có tên, bài hay nội dung gì của con.
+4. Dấu ❌ đỏ — đọc dòng lỗi đầu tiên:
+   - *No backup found* hoặc *older than 8 days*: sao lưu hằng tuần không chạy → mở workflow *Weekly database backup*, bấm **Run workflow**, rồi diễn tập lại.
+   - *could not decrypt*: secret `BACKUP_PASSPHRASE` trên GitHub không khớp mật khẩu lúc sao lưu → kiểm tra trong quản lý mật khẩu.
+   - Lỗi khác (*did not restore*, *looks empty*): nhờ Claude xem (chỉ cần gửi link lần chạy; nhật ký không chứa dữ liệu của con).
+
 
 ---
 

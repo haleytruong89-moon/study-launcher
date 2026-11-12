@@ -1130,6 +1130,73 @@ select test_helpers.expect_count('child of family B sees only its own day_break'
 reset role;
 delete from public.day_breaks;
 
+-- 0015 (Đợt 3, B1): one UNFINISHED run per child / day / item, from the migration day on.
+-- The cutoff in this throwaway DB is today (Asia/Ho_Chi_Minh): there were no duplicates before.
+reset role;
+select test_helpers.expect_count('task_runs_one_open_idx exists, unique, partial on a date literal',
+  (select count(*) from pg_indexes where indexname = 'task_runs_one_open_idx'
+     and indexdef like 'CREATE UNIQUE INDEX%' and indexdef like '%done_at IS NULL%' and indexdef like '%local_date >= ''____-__-__''::date%'), 1);
+insert into public.homework_items (id, family_id, child_id, subject, due_date) values
+  ('20000000-0000-0000-0000-000000000015', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'Lý', current_date)
+on conflict do nothing;
+insert into public.task_templates (id, family_id, child_id, part, title, weekdays, min_minutes) values
+  ('30000000-0000-0000-0000-000000000015', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'skill', 'B1 skill', '{1,2,3,4,5,6,7}', 20)
+on conflict do nothing;
+do $$
+declare
+  fam constant uuid := '10000000-0000-0000-0000-00000000000a';
+  c1 constant uuid := '00000000-0000-0000-0000-0000000000c1';
+  c2 constant uuid := '00000000-0000-0000-0000-0000000000c2';
+  hw1 constant uuid := '20000000-0000-0000-0000-000000000001';
+  hw2 constant uuid := '20000000-0000-0000-0000-000000000015';
+  tpl constant uuid := '30000000-0000-0000-0000-000000000015';
+  today date := (now() at time zone 'Asia/Ho_Chi_Minh')::date;
+begin
+  -- Homework: a second open run of the same item, same child, same day is refused.
+  insert into public.task_runs (family_id, child_id, local_date, source, homework_item_id, started_at)
+  values (fam, c1, today, 'homework', hw1, now());
+  begin
+    insert into public.task_runs (family_id, child_id, local_date, source, homework_item_id, started_at)
+    values (fam, c1, today, 'homework', hw1, now());
+    raise exception 'FAIL: two unfinished runs of the same homework';
+  exception when unique_violation then raise notice 'ok: second unfinished homework run refused (23505)';
+  end;
+  -- Template, the same; a finished run next to an open one is fine (R8a "Làm thêm").
+  insert into public.task_runs (family_id, child_id, local_date, source, template_id, started_at, done_at)
+  values (fam, c1, today, 'template', tpl, now() - interval '30 minutes', now() - interval '5 minutes');
+  insert into public.task_runs (family_id, child_id, local_date, source, template_id, started_at)
+  values (fam, c1, today, 'template', tpl, now());
+  begin
+    insert into public.task_runs (family_id, child_id, local_date, source, template_id, started_at)
+    values (fam, c1, today, 'template', tpl, now());
+    raise exception 'FAIL: two unfinished runs of the same template';
+  exception when unique_violation then raise notice 'ok: finished + one unfinished template run allowed; a second unfinished one refused';
+  end;
+  -- Once the open one is finished, a new open run is allowed again.
+  update public.task_runs set done_at = now() where template_id = tpl and done_at is null;
+  insert into public.task_runs (family_id, child_id, local_date, source, template_id, started_at)
+  values (fam, c1, today, 'template', tpl, now());
+  -- Different item, other child, other day: all fine.
+  insert into public.task_runs (family_id, child_id, local_date, source, homework_item_id, started_at)
+  values (fam, c1, today, 'homework', hw2, now());
+  insert into public.task_runs (family_id, child_id, local_date, source, homework_item_id, started_at)
+  values (fam, c2, today, 'homework', hw1, now());
+  insert into public.task_runs (family_id, child_id, local_date, source, homework_item_id, started_at)
+  values (fam, c1, today + 1, 'homework', hw1, now());
+  -- Days before the cutoff are not covered (old duplicates stay possible and untouched).
+  insert into public.task_runs (family_id, child_id, local_date, source, homework_item_id, started_at)
+  values (fam, c1, today - 1, 'homework', hw1, now()), (fam, c1, today - 1, 'homework', hw1, now());
+  raise notice 'ok: different items / children / days allowed; days before the cutoff unaffected';
+end $$;
+select test_helpers.expect_count('0015 fixture runs', (select count(*) from public.task_runs
+  where homework_item_id in ('20000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000015')
+     or template_id = '30000000-0000-0000-0000-000000000015'), 9);
+delete from public.task_runs
+  where homework_item_id in ('20000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000015')
+     or template_id = '30000000-0000-0000-0000-000000000015';
+delete from public.task_templates where id = '30000000-0000-0000-0000-000000000015';
+delete from public.homework_items where id = '20000000-0000-0000-0000-000000000015';
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

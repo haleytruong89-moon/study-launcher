@@ -36,7 +36,9 @@ export async function POST(request: Request) {
           template_id: parsed.data.source === "template" ? parsed.data.id : null,
           started_at: now.toISOString(),
         });
-      if (error) throw new Error(error.message);
+      // 23505: another request (double tap, second device) opened this run first; the unique
+      // index from migration 0015 refused ours. Same answer as "already running".
+      if (error && error.code !== "23505") throw new Error(error.message);
     }
     return NextResponse.json(await todayView(ctx));
   } catch (e) {
