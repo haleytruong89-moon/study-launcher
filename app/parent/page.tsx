@@ -17,9 +17,27 @@ export const dynamic = "force-dynamic";
 /** Parent home "Hôm nay" (UI review 19/10/2026): what needs me, then each child's day. */
 export default async function ParentHome() {
   const { me, db } = await requireParentPage();
-  const children = await loadChildren(db);
   const now = new Date();
   const today = localDate(now);
+  const range = specialDayWindow(now);
+  // These reads do not depend on the children list: start them together with it (one round
+  // trip instead of two). Awaited below, so an error behaves as before.
+  const familyReads = Promise.all([
+    db.from("unlock_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    db.from("task_templates").select("id, child_id, part, title, weekdays, sort, active").eq("active", true),
+    db
+      .from("day_sessions")
+      .select("child_id, local_date, day_type, disabled_template_ids")
+      .gte("local_date", range.from)
+      .lte("local_date", range.to)
+      .neq("day_type", "normal")
+      .order("local_date"),
+    db.from("family_settings").select("trust_up_pct, trust_down_pct").maybeSingle(),
+    // Trust decisions already made this week (switch or "Để sau") hide the suggestion until Monday.
+    db.from("audit_log").select("action, payload, created_at").in("action", [TRUST_SET, TRUST_DISMISSED]).gte("created_at", weekStartIso(today)),
+  ]);
+  familyReads.catch(() => {}); // not awaited when there is no child yet
+  const children = await loadChildren(db);
 
   if (children.length === 0) {
     return (
@@ -36,21 +54,9 @@ export default async function ParentHome() {
     );
   }
 
-  const range = specialDayWindow(now);
-  const [kids, { count: pending }, templateRes, specialRes, rulesRes, decisionsRes] = await Promise.all([
+  const [kids, [{ count: pending }, templateRes, specialRes, rulesRes, decisionsRes]] = await Promise.all([
     loadChildrenToday(db, me.profile.family_id, children, today, now),
-    db.from("unlock_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    db.from("task_templates").select("id, child_id, part, title, weekdays, sort, active").eq("active", true),
-    db
-      .from("day_sessions")
-      .select("child_id, local_date, day_type, disabled_template_ids")
-      .gte("local_date", range.from)
-      .lte("local_date", range.to)
-      .neq("day_type", "normal")
-      .order("local_date"),
-    db.from("family_settings").select("trust_up_pct, trust_down_pct").maybeSingle(),
-    // Trust decisions already made this week (switch or "Để sau") hide the suggestion until Monday.
-    db.from("audit_log").select("action, payload, created_at").in("action", [TRUST_SET, TRUST_DISMISSED]).gte("created_at", weekStartIso(today)),
+    familyReads,
   ]);
   const trustRules = {
     trustUpPct: (rulesRes.data?.trust_up_pct as number | undefined) ?? 90,
