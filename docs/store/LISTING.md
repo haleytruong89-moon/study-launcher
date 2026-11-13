@@ -133,7 +133,7 @@ Privacy policy: https://study-launcher-nine.vercel.app/chinh-sach-rieng-tu
 - **Hidden** (Edge): tương đương Unlisted — gỡ khỏi tìm kiếm/duyệt, chỉ mở được bằng đường link.
 - Cả hai vẫn được **duyệt đầy đủ** như bản công khai.
 
-## 7. Việc phải làm trong `extension/` SAU KHI #64 merge (không làm ở nhánh này)
+## 7. Việc trong `extension/` sau khi #64 merge — **đã làm ở bản 0.3.5 (13/11/2026)**: mục 1–4 xong; 5–8 giữ nguyên ghi chú
 
 Nhánh `feature/d4-cua-hang` **không sửa** `extension/` vì PR #64 đang đổi `extension/src/*`, `manifest.json` (0.3.3 → 0.3.4) và `extension/README.md`. Sau khi #64 merge, một PR nhỏ (vd `feature/s6-manifest-cua-hang`):
 

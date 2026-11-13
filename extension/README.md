@@ -39,6 +39,7 @@ cannot be loaded yet.
   #2B5D4F and the popup line "Còn N phút nữa máy khóa lại — lưu bài nhé". Display only: no new
   permission, openUntil / locking unchanged. Follow-up (not done, needs the `notifications`
   permission, which disables manual installs until re-approved): a system notification.
+- S6 (0.3.5, 13/11/2026): icons 16/32/48/128 (`static/icon-*.png`, from `docs/store/assets/icons/`), `short_name`, store description, `homepage_url` set at build from `NEXT_PUBLIC_APP_URL`. No behaviour change; first version for the Chrome Web Store / Edge Add-ons.
 - Still later: store packaging (unlisted) + force-install policy (S6), icons.
 
 ## Checked in a real browser (S4b, Chromium + mock server)
