@@ -43,6 +43,7 @@ for (const f of readdirSync(join(src, "static"))) copyFileSync(join(src, "static
 
 const manifest = JSON.parse(readFileSync(join(src, "manifest.json"), "utf8"));
 manifest.content_scripts[0].matches = [`${launcher}/*`];
+manifest.homepage_url = launcher; // store listing link (S6): the same server the extension talks to
 writeFileSync(join(dist, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 
 const files = {};
