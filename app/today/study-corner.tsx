@@ -8,6 +8,7 @@ import { studyTimerLabel } from "@/lib/today/focus";
 import { extraRunView, isExtraRun, runningItems } from "@/lib/today/rules";
 import { dayMonth, dueLabel, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
 import { plannable } from "@/lib/today/week";
+import { CalendarCard } from "./calendar-card";
 import { FilesFold, LamThem, TaskActions, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
 /**
@@ -282,9 +283,20 @@ export function StudyCorner({
         </section>
       )}
 
-      <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px] lg:sticky lg:top-4">
-        <WorkPanel item={current} ctx={ctx} />
-      </section>
+      {focus ? (
+        <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
+          <WorkPanel item={current} ctx={ctx} />
+        </section>
+      ) : (
+        // The right column: the work panel, then "Lịch của con" (read only, 14/11/2026). The column
+        // is sticky as a whole; below lg it stacks under the list like before.
+        <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4">
+          <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
+            <WorkPanel item={current} ctx={ctx} />
+          </section>
+          <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
+        </div>
+      )}
     </div>
   );
 }

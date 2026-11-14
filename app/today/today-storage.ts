@@ -34,3 +34,22 @@ export function readPlanLater(): string | null {
     return null; // storage blocked: the nudge just shows again
   }
 }
+
+// "Lịch của con": the view the child last chose (Tuần / Tháng) on this laptop. A convenience only.
+const CALENDAR_MODE = "calendar-mode";
+export type CalendarMode = "week" | "month";
+export function readCalendarMode(): CalendarMode | null {
+  try {
+    const v = window.localStorage.getItem(CALENDAR_MODE);
+    return v === "week" || v === "month" ? v : null;
+  } catch {
+    return null; // storage blocked: the week view
+  }
+}
+export function writeCalendarMode(mode: CalendarMode) {
+  try {
+    window.localStorage.setItem(CALENDAR_MODE, mode);
+  } catch {
+    /* not remembered: fine */
+  }
+}
