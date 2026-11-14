@@ -10,6 +10,8 @@ export async function proxy(request: NextRequest) {
 // the extension's /api/ext/* calls carry a device token, not a session. Running the refresh here
 // too cost one extra Supabase Auth round trip on every 30-second poll and every tap.
 // Pages still go through it: Server Components cannot write cookies.
+// /gia-su/* is the tutor app (D20, rewritten in next.config.ts): it refreshes the same cookie in
+// its own proxy, so running ours too would add an Auth round trip to every turn of the tutor.
 export const config = {
-  matcher: ["/((?!api/|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|downloads/).*)"],
+  matcher: ["/((?!api/|gia-su|_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|downloads/).*)"],
 };

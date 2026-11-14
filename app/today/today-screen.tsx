@@ -18,7 +18,7 @@ import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { PillarCards } from "./pillars";
 import { FeelInvite, FeelWeek } from "./tabs";
-import { StudyCorner } from "./study-corner";
+import { StudyCorner, TutorCard } from "./study-corner";
 import { WorldMini } from "./world";
 import { ComicToday } from "./comic";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
@@ -45,7 +45,20 @@ interface Child {
   pics: AvatarPics;
 }
 
-export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: Child; initial: TodayView | null; initialTab: Tab; byEnabled: boolean }) {
+export function TodayScreen({
+  child,
+  initial,
+  initialTab,
+  byEnabled,
+  tutor = false,
+}: {
+  child: Child;
+  initial: TodayView | null;
+  initialTab: Tab;
+  byEnabled: boolean;
+  /** Gia sư AI Toán is reachable for this child (lib/tutor/entry.ts): the two doors in Góc học tập. */
+  tutor?: boolean;
+}) {
   const [view, setView] = useState<TodayView | null>(initial);
   // R2: the 5 tabs (use-child-tabs.ts).
   const { tab, tabRef, studyFocus, setStudyFocus, tabHistory, setTabHistory, loadWeekRef, selectTab } = useChildTabs(initialTab);
@@ -479,6 +492,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               {statusTop}
               {controls}
             </section>
+            {tutor && !studyFocus && <TutorCard color={color} />}
             <StudyCorner
               s={s}
               view={view}
@@ -489,6 +503,7 @@ export function TodayScreen({ child, initial, initialTab, byEnabled }: { child: 
               onSavePlan={(keys) => act({ url: "/api/day/plan", body: { keys } })}
               suggested={next}
               focus={studyFocus}
+              tutor={tutor}
             />
           </>
         )}

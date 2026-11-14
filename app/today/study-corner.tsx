@@ -8,6 +8,7 @@ import { studyTimerLabel } from "@/lib/today/focus";
 import { extraRunView, isExtraRun, runningItems } from "@/lib/today/rules";
 import { dayMonth, dueLabel, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
 import { plannable } from "@/lib/today/week";
+import { TUTOR_HOME, isMathSubject, tutorTaskHref } from "@/lib/tutor/entry";
 import { CalendarCard } from "./calendar-card";
 import { FilesFold, LamThem, TaskActions, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
@@ -62,6 +63,7 @@ export function StudyCorner({
   onSavePlan,
   suggested,
   focus,
+  tutor = false,
 }: {
   s: DayState;
   view: TodayView;
@@ -74,6 +76,8 @@ export function StudyCorner({
   onSavePlan: (keys: string[]) => Promise<boolean>;
   /** "Chỉ hiện bài này" (toggled in the page header): only the work panel, centred. */
   focus: boolean;
+  /** Gia sư AI Toán is on for this child: "Em kẹt bài này? Hỏi cô" in the work panel (Maths tasks). */
+  tutor?: boolean;
 }) {
   // The order the child just made, shown at once while the server saves it. It belongs to the
   // plan it was made from: a new view from the server (saved, or polled) replaces it.
@@ -285,14 +289,14 @@ export function StudyCorner({
 
       {focus ? (
         <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
-          <WorkPanel item={current} ctx={ctx} />
+          <WorkPanel item={current} ctx={ctx} tutor={tutor} />
         </section>
       ) : (
         // The right column: the work panel, then "Lịch của con" (read only, 14/11/2026). The column
         // is sticky as a whole; below lg it stacks under the list like before.
         <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4">
           <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
-            <WorkPanel item={current} ctx={ctx} />
+            <WorkPanel item={current} ctx={ctx} tutor={tutor} />
           </section>
           <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
         </div>
@@ -303,8 +307,26 @@ export function StudyCorner({
 
 const EYEBROW = "text-xs font-bold tracking-[0.07em] uppercase";
 
+/** Door ① to Gia sư AI Toán (parent decision 14/11/2026): always on top of Góc học tập. */
+export function TutorCard({ color }: { color: string }) {
+  return (
+    <section aria-labelledby="ht-tutor" className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-ink/10 bg-white px-4 py-3">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <h3 id="ht-tutor" className="text-[17px] font-bold">
+          Cô gia sư Toán
+        </h3>
+        <p className="text-[13px] text-ink/70">Kẹt bài Toán? Cô hỏi gợi ý từng bước để con tự làm, cô không làm hộ.</p>
+      </div>
+      {/* Another app under this address (D20): a plain link, not next/link. */}
+      <a href={TUTOR_HOME} className="btn shrink-0 text-white no-underline" style={{ background: color }}>
+        Hỏi cô
+      </a>
+    </section>
+  );
+}
+
 /** The work panel (artifact workPanel): what the child works on, a big timer, the buttons. */
-function WorkPanel({ item, ctx }: { item: TaskView | null; ctx: TaskCtx }) {
+function WorkPanel({ item, ctx, tutor }: { item: TaskView | null; ctx: TaskCtx; tutor: boolean }) {
   if (!item) {
     return (
       <>
@@ -344,6 +366,16 @@ function WorkPanel({ item, ctx }: { item: TaskView | null; ctx: TaskCtx }) {
       <StudyTimer item={item} ctx={ctx} />
       {isWaiting(item, ctx) && <p className="text-sm font-semibold text-ink/80">Làm xong “{ctx.runningTimed?.title}” rồi bắt đầu việc này.</p>}
       <TaskActions item={item} ctx={ctx} />
+      {tutor && isMathSubject(item.subject) && (
+        // Another app under this address (D20): a plain link, not next/link.
+        <a
+          href={tutorTaskHref(item.title)}
+          className="inline-flex min-h-11 items-center gap-2 self-start rounded-xl border-[1.5px] px-3 text-sm font-semibold no-underline"
+          style={{ borderColor: ctx.color, color: ctx.color }}
+        >
+          Em kẹt bài này? Hỏi cô
+        </a>
+      )}
       {(item.deepLink || files.length > 0) && (
         <div className="flex flex-wrap items-start gap-2">
           {item.deepLink && (
