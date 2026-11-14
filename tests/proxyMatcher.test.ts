@@ -1,0 +1,15 @@
+import { describe, expect, it } from "vitest";
+import { config } from "@/proxy";
+
+// Next.js applies the matcher as a full-path regular expression.
+const re = new RegExp(`^${config.matcher[0]}$`);
+
+describe("proxy matcher", () => {
+  it("refreshes the session for pages", () => {
+    for (const p of ["/", "/today", "/parent", "/binh-yen", "/login", "/blocked"]) expect(re.test(p), p).toBe(true);
+  });
+  it("skips API routes, static files and the extension download", () => {
+    for (const p of ["/api/today", "/api/ext/state", "/api/tasks/start", "/_next/static/x.js", "/sw.js", "/downloads/study-launcher-extension.zip"])
+      expect(re.test(p), p).toBe(false);
+  });
+});
