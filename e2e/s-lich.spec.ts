@@ -68,7 +68,8 @@ test("Lịch của con: Tuần / Tháng, tap a day to see the homework due and �
 
     const card = page.getByRole("region", { name: "Lịch của con" });
     await expect(card).toBeVisible();
-    await expect(card).toContainText("Hạn nộp bài · Kiểm tra · Kỹ năng theo lịch");
+    // The legend is three separate chips (no spaces between them in textContent).
+    for (const label of ["Hạn nộp bài", "Kiểm tra", "Kỹ năng theo lịch"]) await expect(card).toContainText(label);
     await expect(card.getByRole("button", { name: "Tuần", exact: true })).toHaveAttribute("aria-pressed", "true");
     const week = card.getByRole("group", { name: "Tuần này" });
     await expect(week.getByRole("button")).toHaveCount(7);
