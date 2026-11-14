@@ -31,3 +31,13 @@ if ! PGOPTIONS="-c client_min_messages=notice" "${PSQL[@]}" -d "${DB}" -f supaba
 fi
 grep -E "NOTICE:  ok|RLS OK" "$out" | sed 's/^.*NOTICE:  //'
 grep -q "RLS OK" "$out" || { echo "RLS test did not finish" >&2; exit 1; }
+
+echo "== RLS test: schema tutor (gia-su-ai)"
+out2="$(mktemp)"
+if ! PGOPTIONS="-c client_min_messages=notice" "${PSQL[@]}" -d "${DB}" -f supabase/tests/rls_tutor_test.sql >"$out2" 2>&1; then
+  cat "$out2"
+  echo "tutor RLS test FAILED" >&2
+  exit 1
+fi
+grep -E "NOTICE:  ok|TUTOR RLS OK" "$out2" | sed 's/^.*NOTICE:  //'
+grep -q "TUTOR RLS OK" "$out2" || { echo "tutor RLS test did not finish" >&2; exit 1; }
