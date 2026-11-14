@@ -182,7 +182,7 @@ export type {
   WeekResult,
 } from "./dayState/types";
 export { splitTemplateRuns } from "./dayState/runs";
-export { appLabelOf } from "./dayState/tasks";
+export { appLabelOf, scheduledTemplates } from "./dayState/tasks";
 export { isDayOk } from "./dayState/week";
 export type { BankBreak, BankResult, BreakTier, Interval } from "./dayState/breakBank";
 export {

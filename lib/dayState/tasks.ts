@@ -11,6 +11,15 @@ export function compareTemplates(a: TaskTemplateInput, b: TaskTemplateInput): nu
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
+/**
+ * The templates of one part a child gets on a weekday: active, scheduled that ISO weekday
+ * (1 = Monday ... 7 = Sunday) and not turned off for that date (day_sessions.disabled_template_ids),
+ * in the list order. Shared by today's lists and the read-only "Lịch của con".
+ */
+export function scheduledTemplates(templates: readonly TaskTemplateInput[], part: "extra" | "skill", weekday: number, disabled: ReadonlySet<string>): TaskTemplateInput[] {
+  return templates.filter((t) => t.part === part && t.active && t.weekdays.includes(weekday) && !disabled.has(t.id)).sort(compareTemplates);
+}
+
 export function templateViews(
   input: DayInput,
   part: "extra" | "skill",
@@ -22,9 +31,7 @@ export function templateViews(
 ): TaskView[] {
   const slots = new Map(input.appSlots.map((s) => [s.id, s]));
   const fallbackMin = part === "extra" ? input.settings.extraMinMinutes : input.settings.skillMinMinutes;
-  return input.templates
-    .filter((t) => t.part === part && t.active && t.weekdays.includes(weekday) && !disabled.has(t.id))
-    .sort(compareTemplates)
+  return scheduledTemplates(input.templates, part, weekday, disabled)
     .map((t) => {
       const slot = t.appSlotId !== null ? slots.get(t.appSlotId) : undefined;
       const placeholder = slot?.kind === "placeholder";
