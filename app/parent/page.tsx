@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { loadChildrenToday, type ChildToday } from "@/lib/parent/load";
+import { buildLearningTiles, homeLine } from "@/lib/parent/learning";
+import { loadLearning } from "@/lib/parent/learningLoad";
 import { DAY_TYPE_INFO, specialDayWindow, type TemplateForDay } from "@/lib/admin/specialDay";
 import { suggestionText, TRUST_DISMISSED, TRUST_SET, trustSuggestion, weekStartIso, type TrustDecisionRow } from "@/lib/admin/trust";
 import { localDate } from "@/lib/time";
@@ -54,10 +56,13 @@ export default async function ParentHome() {
     );
   }
 
-  const [kids, [{ count: pending }, templateRes, specialRes, rulesRes, decisionsRes]] = await Promise.all([
+  const [kids, [{ count: pending }, templateRes, specialRes, rulesRes, decisionsRes], learning] = await Promise.all([
     loadChildrenToday(db, me.profile.family_id, children, today, now),
     familyReads,
+    loadLearning(db, children.map((c) => c.id), today),
   ]);
+  // L-3: one line per child about the learning apps (the tutor's own numbers; links to Ngày của con).
+  const learningLine = (childId: string) => homeLine(buildLearningTiles(childId, today, learning.cards, learning.attention, learning.pendingRules, false));
   const trustRules = {
     trustUpPct: (rulesRes.data?.trust_up_pct as number | undefined) ?? 90,
     trustDownPct: (rulesRes.data?.trust_down_pct as number | undefined) ?? 70,
@@ -118,7 +123,7 @@ export default async function ParentHome() {
         </section>
 
         {kids.map((k) => (
-          <ChildCard key={k.child.id} kid={k} special={special} />
+          <ChildCard key={k.child.id} kid={k} special={special} learning={learningLine(k.child.id)} />
         ))}
       </main>
     </>
@@ -134,7 +139,7 @@ interface SpecialData {
   decisions: TrustDecisionRow[];
 }
 
-function ChildCard({ kid, special }: { kid: ChildToday; special: SpecialData }) {
+function ChildCard({ kid, special, learning }: { kid: ChildToday; special: SpecialData; learning: string | null }) {
   const { child, state, overview: o } = kid;
   const templates: TemplateForDay[] = special.templateRows.filter((t) => t.child_id === child.id);
   const days: SpecialDayRow[] = special.specialRows
@@ -207,6 +212,12 @@ function ChildCard({ kid, special }: { kid: ChildToday; special: SpecialData }) 
         )}
       </div>
       {suggestion && suggestionCopy && <TrustCard childId={child.id} suggestion={suggestion} {...suggestionCopy} />}
+      {learning && (
+        <Link href={`/parent/review?con=${child.id}#dv-apps`} className="mx-4 mt-3 flex min-h-11 items-center justify-between gap-2 rounded-xl bg-bg px-3 text-sm font-bold">
+          <span>{learning}</span>
+          <span aria-hidden>›</span>
+        </Link>
+      )}
       {o && (
         <div className="px-4 pb-3">
           <TaskGroup title="Quá hạn" rows={o.overdue} danger />

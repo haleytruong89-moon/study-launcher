@@ -3,11 +3,15 @@ import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { addDays } from "@/lib/admin/dates";
 import { photosExpiredOn, retentionDays } from "@/lib/cleanup/rules";
 import { extraLine, splitExtraRuns, type ExtraSummary } from "@/lib/parent/extraRuns";
+import { buildLearningTiles } from "@/lib/parent/learning";
+import { loadLearning } from "@/lib/parent/learningLoad";
 import { loadChildrenToday } from "@/lib/parent/load";
 import { localDate } from "@/lib/time";
+import { tutorOrigin } from "@/lib/tutor/entry";
 import { isOkResult, longDate, vnTime } from "@/lib/today/view";
 import { hoursMinutes, latestReviewWeek, REVIEW_QUESTIONS, reviewPeriod, reviewWeek, type WeekStats } from "@/lib/today/week";
 import { loadWeekStats, loadWeeklyReview, type WeeklyReview } from "@/lib/today/week-load";
+import { LearningSection } from "../learning-tiles";
 import { OverrideSheet } from "../override-sheet";
 import { ParentTabs } from "../parent-header";
 import { TaskGroup } from "../task-rows";
@@ -55,7 +59,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
     );
   }
 
-  const [{ data }, live, { data: settings }] = await Promise.all([
+  const [{ data }, live, { data: settings }, learning] = await Promise.all([
     db
       .from("task_runs")
       .select("id, child_id, local_date, source, template_id, started_at, done_at, proof_paths, parent_verdict, task_templates(title, part), homework_items(subject, note, due_date)")
@@ -65,7 +69,9 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
       .order("done_at"),
     day === today ? loadChildrenToday(db, me.profile.family_id, [child], today, now) : Promise.resolve([]),
     db.from("family_settings").select("photo_retention_days").eq("family_id", me.profile.family_id).maybeSingle(),
+    loadLearning(db, [child.id], day),
   ]);
+  const tiles = buildLearningTiles(child.id, day, learning.cards, learning.attention, learning.pendingRules, tutorOrigin(process.env.TUTOR_APP_ORIGIN) !== null);
   const runs = (data ?? []) as unknown as RunRow[];
   const state = live[0]?.state ?? null;
   const o = live[0]?.overview ?? null;
@@ -186,6 +192,8 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
             <TaskGroup title="Sắp tới" rows={o.upcoming} />
           </section>
         )}
+
+        <LearningSection tiles={tiles} />
 
         {marked.length > 0 && (
           <section aria-labelledby="dv-marked" className="flex flex-col gap-2">

@@ -10,8 +10,9 @@ import { localDate } from "@/lib/time";
 export const dynamic = "force-dynamic";
 
 /**
- * Evening reminder (S5; only when something waits). Parent decision 07/11/2026: called once a
- * day by Vercel Cron (vercel.json, 14:00 UTC → fires within 21:00–21:59 Vietnam), which sends
+ * Evening reminder (S5; only when something waits). Parent decision 07/11/2026, moved to 20:00 on
+ * 15/11/2026 (L-3): called once a day by Vercel Cron (vercel.json, 13:00 UTC → fires within
+ * 20:00–20:59 Vietnam), which sends
  * `Authorization: Bearer $CRON_SECRET` by itself. GitHub's schedule ran ~6 hours late, so it is
  * no longer used (the workflow stays for manual runs). Outside 20:00–23:00 Vietnam time nothing
  * is sent, whoever calls.
@@ -34,14 +35,18 @@ export async function GET(request: Request) {
     let sent = 0;
     for (const f of families.data ?? []) {
       const familyId = f.id as string;
-      const [unreviewed, unlock, confirm] = await Promise.all([
+      const [unreviewed, unlock, confirm, attention, rules] = await Promise.all([
         // D2 A5: every finished run of today (verdict or not), so "Làm thêm" runs can be told apart.
         admin.from("task_runs").select("id, child_id, local_date, source, template_id, started_at, done_at, parent_verdict").eq("family_id", familyId).eq("local_date", date).not("done_at", "is", null),
         admin.from("unlock_requests").select("id", { count: "exact", head: true }).eq("family_id", familyId).eq("status", "pending"),
         admin.from("task_runs").select("id", { count: "exact", head: true }).eq("family_id", familyId).eq("local_date", date).not("confirm_requested_at", "is", null).is("done_at", null),
+        // L-3 (SQL 0021): what the tutor app asks the parents to look at.
+        admin.from("learning_attention").select("id", { count: "exact", head: true }).eq("family_id", familyId).eq("local_date", date),
+        admin.from("learning_pending_rules").select("pending").eq("family_id", familyId),
       ]);
+      const tutorLook = (attention.error ? 0 : (attention.count ?? 0)) + (rules.error ? 0 : (rules.data ?? []).reduce((n, r) => n + ((r.pending as number) ?? 0), 0));
       const runs = (unreviewed.error ? [] : (unreviewed.data ?? [])) as (RunRowLite & { parent_verdict: string | null })[];
-      const message = eveningMessage(countUnreviewed(runs), (unlock.count ?? 0) + (confirm.error ? 0 : (confirm.count ?? 0)));
+      const message = eveningMessage(countUnreviewed(runs), (unlock.count ?? 0) + (confirm.error ? 0 : (confirm.count ?? 0)), tutorLook);
       if (!message) continue;
       sent += (await notifyParents(familyId, message)).sent;
     }

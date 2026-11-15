@@ -12,7 +12,7 @@ describe("vercel.json", () => {
 
   it("keeps the crons", () => {
     expect(config.crons).toEqual([
-      { path: "/api/cron/evening", schedule: "0 14 * * *" },
+      { path: "/api/cron/evening", schedule: "0 13 * * *" },
       { path: "/api/cron/health", schedule: "43 11 * * *" },
     ]);
   });

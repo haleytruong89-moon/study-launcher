@@ -210,4 +210,90 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1
 select test_helpers.expect_count('tutor: parent cannot list photo files directly either',
   (select count(*) from storage.objects where bucket_id = 'tutor-images'), 0);
 reset role;
+-- L-3 (0021): learning cards (view over tutor rows), pending rules, "cần chú ý" lines (parents only).
+insert into tutor.teaching_rules (family_id, child_id, text, status, source) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'Gợi ý ngắn hơn', 'proposed', 'parent_feedback'),
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'Đã duyệt', 'approved', 'manual'),
+  ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', 'Nhà B', 'proposed', 'manual');
+insert into public.learning_attention (family_id, child_id, local_date, source, slot, body) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'tutor:toan', 1, 'An thấy bài này dài, khó hiểu'),
+  ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', current_date, 'tutor:toan', 1, 'Nhà B');
+do $$
+begin
+  perform 1 from information_schema.columns
+    where table_schema = 'tutor' and table_name = 'study_sessions' and column_name = 'subject' and column_default like '''toan''%';
+  if not found then raise exception 'FAIL: study_sessions.subject missing or wrong default'; end if;
+  -- A third line for the same child / day / source cannot exist (slot 1 or 2 only, one row each).
+  begin
+    insert into public.learning_attention (family_id, child_id, local_date, source, slot, body)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'tutor:toan', 3, 'x');
+    raise exception 'FAIL: slot 3 accepted';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.learning_attention (family_id, child_id, local_date, source, slot, body)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'tutor:toan', 1, 'again');
+    raise exception 'FAIL: two rows in one slot';
+  exception when unique_violation then null;
+  end;
+  -- The child must belong to the row's family.
+  begin
+    insert into public.learning_attention (family_id, child_id, local_date, source, slot, body)
+      values ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000c1', current_date, 'tutor:toan', 2, 'x');
+    raise exception 'FAIL: cross-family attention row accepted';
+  exception when foreign_key_violation then null;
+  end;
+  raise notice 'ok: L-3 column and attention constraints';
+end $$;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('L-3: child1 sees own learning card', (select count(*) from public.learning_cards), 1);
+select test_helpers.expect_count('L-3: child1 card is tutor:toan', (select count(*) from public.learning_cards where source = 'tutor:toan' and child_id = '00000000-0000-0000-0000-0000000000c1'), 1);
+select test_helpers.expect_count('L-3: child1 reads NO attention line (Q5)', (select count(*) from public.learning_attention), 0);
+select test_helpers.expect_count('L-3: child1 sees no pending rules', (select count(*) from public.learning_pending_rules), 0);
+do $$
+begin
+  begin
+    insert into public.learning_attention (family_id, child_id, local_date, source, slot, body)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, 'tutor:toan', 2, 'tự viết');
+    raise exception 'FAIL: child wrote learning_attention';
+  exception when insufficient_privilege then raise notice 'ok: L-3: child cannot write attention';
+  end;
+end $$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('L-3: parentA sees both children cards', (select count(*) from public.learning_cards), 2);
+select test_helpers.expect_count('L-3: parentA reads own family attention', (select count(*) from public.learning_attention), 1);
+select test_helpers.expect_count('L-3: parentA pending rules = 1 (proposed only)', (select coalesce(sum(pending), 0) from public.learning_pending_rules), 1);
+do $$
+begin
+  begin
+    update public.learning_attention set body = 'sửa';
+    raise exception 'FAIL: parent updated learning_attention';
+  exception when insufficient_privilege then raise notice 'ok: L-3: parent cannot write attention (server only)';
+  end;
+end $$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('L-3: parentB sees only family B card', (select count(*) from public.learning_cards), 1);
+select test_helpers.expect_count('L-3: parentB attention only family B', (select count(*) from public.learning_attention where family_id = '10000000-0000-0000-0000-00000000000a'), 0);
+select test_helpers.expect_count('L-3: parentB pending rules only family B', (select coalesce(sum(pending), 0) from public.learning_pending_rules), 1);
+
+reset role;
+set role anon;
+do $$
+begin
+  begin
+    perform 1 from public.learning_cards;
+    raise exception 'FAIL: anon read learning_cards';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform 1 from public.learning_attention;
+    raise exception 'FAIL: anon read learning_attention';
+  exception when insufficient_privilege then raise notice 'ok: L-3: anon has no access';
+  end;
+end $$;
+reset role;
 do $$ begin raise notice 'TUTOR RLS OK'; end $$;

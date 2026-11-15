@@ -1,6 +1,6 @@
 /**
  * Evening reminder window (parent decision 07/11/2026). Vercel Cron fires once a day somewhere
- * in 14:00–14:59 UTC = 21:00–21:59 Vietnam. Whatever calls /api/cron/evening (Vercel, a late
+ * in 13:00–13:59 UTC = 20:00–20:59 Vietnam (moved from 21:00 on 15/11/2026, L-3). Whatever calls /api/cron/evening (Vercel, a late
  * GitHub run, a manual run), nothing is sent outside 20:00–23:00 Vietnam time, so a parent is
  * never pinged at 3–4 a.m. again. PURE: the server passes its own clock.
  */
