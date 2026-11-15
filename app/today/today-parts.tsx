@@ -4,6 +4,7 @@ import type { DayState, TaskView } from "@/lib/dayState";
 import { KIND_LABEL, type AttachmentView } from "@/lib/files";
 import { addDays } from "@/lib/time";
 import { elapsedMs, minutesLabel, todayLine } from "@/lib/today/focus";
+import { canReport, reportNote, type RunReport } from "@/lib/today/report";
 import { appLinkMode, extraRunView, isExtraRun } from "@/lib/today/rules";
 import { dayLabel, dayMonth, dueLabel, dueTone, earlyUntil, isOkResult, taskMeta } from "@/lib/today/view";
 
@@ -36,6 +37,10 @@ export interface TaskCtx {
   reviewed: ReadonlySet<string>;
   /** Run ids waiting for "Nhờ bố mẹ xem trực tiếp". */
   asked: ReadonlySet<string>;
+  /** "Con quên bấm Bắt đầu?" (0020): today's reports of this child (display only). */
+  reports: readonly RunReport[];
+  /** Opens the "Con quên bấm Bắt đầu?" sheet for a task. */
+  onReport: (item: TaskView) => void;
 }
 
 export const isAsked = (item: TaskView, ctx: TaskCtx) => item.state === "running" && !!item.runId && ctx.asked.has(item.runId);
@@ -404,6 +409,7 @@ export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
             Làm xong trong vở rồi · nộp ảnh
           </button>
         )}
+        <ForgotStart item={item} ctx={ctx} />
       </div>
     );
   }
@@ -452,6 +458,27 @@ export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
       </button>
       {focus}
     </div>
+  );
+}
+
+/**
+ * "Con quên bấm Bắt đầu?" (parent decision 15/11/2026): a small link under a supplementary task or
+ * skill that is not started, and the calm line about a report already sent. A pending report
+ * counts for nothing (display only); the server decides everything (POST /api/tasks/report).
+ */
+export function ForgotStart({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
+  if (item.source !== "template") return null;
+  const note = reportNote(item, ctx.reports);
+  return (
+    <>
+      {note?.kind === "pending" && <p className="rounded-xl bg-[#FBE9D3] px-3 py-2 text-sm font-semibold text-[#6B3A0A]">Đang chờ bố mẹ xác nhận lượt {note.range}</p>}
+      {note?.kind === "rejected" && <p className="rounded-xl bg-[#EEF0EC] px-3 py-2 text-sm text-ink/80">Bố mẹ chưa xác nhận lượt {note.range}. Con hỏi bố mẹ nhé.</p>}
+      {canReport(item, ctx.reports) && (
+        <button type="button" disabled={!!ctx.busy} onClick={() => ctx.onReport(item)} className="min-h-11 self-start px-1 text-sm font-semibold text-ink/75 underline disabled:opacity-50">
+          Con quên bấm Bắt đầu?
+        </button>
+      )}
+    </>
   );
 }
 

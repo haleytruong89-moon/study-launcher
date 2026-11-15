@@ -2,12 +2,13 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth";
-import { computeDayState, type DayMilestones, type DayState } from "@/lib/dayState";
+import { breakRunCapOf, computeDayState, type DayMilestones, type DayState } from "@/lib/dayState";
 import { attachmentViews, type AttachmentView } from "@/lib/files";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { localDate } from "@/lib/time";
 import { loadDay } from "./load";
+import type { RunReport } from "./report";
 import { reviewWeek, type WeekStats } from "./week";
 import { loadWeekStats, loadWeeklyReview, type WeeklyReview } from "./week-load";
 
@@ -40,6 +41,8 @@ export interface TodayView {
   reviewed: string[];
   /** Running homework the child asked a parent to look at ("Nhờ bố mẹ xem trực tiếp"). */
   asked: string[];
+  /** "Con quên bấm Bắt đầu?" (0020): today's reports of this child, any answer. Display only. */
+  reports: RunReport[];
 }
 
 export interface TodayRules {
@@ -129,7 +132,7 @@ async function persistMilestones(ctx: ChildContext, date: string, m: DayMileston
 export async function readToday(
   ctx: ChildContext,
   now = new Date(),
-): Promise<{ state: DayState; homeworkPhotos: Record<string, string[]>; rules: TodayRules; bedtime: string }> {
+): Promise<{ state: DayState; homeworkPhotos: Record<string, string[]>; rules: TodayRules; bedtime: string; runCapMinutes: number }> {
   const today = localDate(now);
   let loaded = await loadDay(ctx.db, ctx.childId, ctx.familyId, today);
   let state = computeDayState(loaded.input, now);
@@ -139,7 +142,14 @@ export async function readToday(
     state = computeDayState(loaded.input, now);
   }
   const { breakMinutes, freeMinutes, trustUpPct } = loaded.input.settings;
-  return { state, homeworkPhotos: loaded.homeworkPhotos, rules: { breakMinutes, freeMinutes, trustUpPct }, bedtime: loaded.input.bedtime };
+  return {
+    state,
+    homeworkPhotos: loaded.homeworkPhotos,
+    rules: { breakMinutes, freeMinutes, trustUpPct },
+    bedtime: loaded.input.bedtime,
+    // The most one run may be (family_settings.break_run_cap_minutes, 0014; default 180).
+    runCapMinutes: breakRunCapOf(loaded.input.settings.breakRunCapMinutes),
+  };
 }
 
 /**
@@ -149,18 +159,19 @@ export async function readToday(
  */
 export async function todayView(ctx: ChildContext, now = new Date()): Promise<TodayView> {
   const date = localDate(now);
-  const [{ state, homeworkPhotos, rules, weekly }, first, plan, icon, reviewed, asked] = await Promise.all([
+  const [{ state, homeworkPhotos, rules, weekly }, first, plan, icon, reviewed, asked, reports] = await Promise.all([
     readToday(ctx, now).then(async (read) => ({ ...read, weekly: await readWeekly(ctx, now, read.bedtime) })),
     ctx.db.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date").limit(1).maybeSingle(),
     readPlan(ctx, date),
     readIcon(ctx),
     readReviewed(ctx, date),
     readAsked(ctx, date),
+    readReports(ctx.db, ctx.childId, date).then((r) => r ?? []),
   ]);
   const files: Record<string, AttachmentView[]> = {};
   for (const i of state.part1.items) if (i.source === "homework") files[i.id] = attachmentViews(homeworkPhotos[i.id] ?? []);
   const firstDay = (first.data?.local_date as string | undefined) ?? state.localDate;
-  return { state, homeworkFiles: files, rules, firstDay, plan, icon, weekly, reviewed, asked };
+  return { state, homeworkFiles: files, rules, firstDay, plan, icon, weekly, reviewed, asked, reports };
 }
 
 // S2e extras are display only: if one cannot be read (e.g. a preview before migration
@@ -188,6 +199,32 @@ async function readAsked(ctx: ChildContext, date: string): Promise<string[]> {
     .is("done_at", null);
   if (error || !data) return []; // before migration 0006: no requests
   return data.map((r) => r.id as string);
+}
+
+/**
+ * "Con quên bấm Bắt đầu?" (0020): today's reports of one child (RLS: a child reads only its own).
+ * null before migration 0020 (the table is missing: 42P01 / PGRST205); any other error throws
+ * (the routes that decide on reports must not guess).
+ */
+export async function readReports(db: SupabaseClient, childId: string, date: string): Promise<RunReport[] | null> {
+  const { data, error } = await db
+    .from("task_run_reports")
+    .select("id, template_id, local_date, started_at, ended_at, status")
+    .eq("child_id", childId)
+    .eq("local_date", date)
+    .order("requested_at");
+  if (error) {
+    if (error.code === "42P01" || error.code === "PGRST205") return null;
+    throw new Error(`task_run_reports: ${error.message}`);
+  }
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    templateId: r.template_id as string,
+    localDate: r.local_date as string,
+    startedAt: r.started_at as string,
+    endedAt: r.ended_at as string,
+    status: r.status as RunReport["status"],
+  }));
 }
 
 async function readIcon(ctx: ChildContext): Promise<string | null> {
