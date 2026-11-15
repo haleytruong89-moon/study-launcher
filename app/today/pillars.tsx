@@ -10,7 +10,8 @@ import { readPlayPlan, writePlayPlan } from "@/lib/today/playPlan";
 import type { TodayView } from "@/lib/today/service";
 import { breakLine, clock, dayMonth, dueLabel, freeBonusLine, groupLabel, leftCount, nextPart1, taskMeta, vnTime } from "@/lib/today/view";
 import type { WeekDay } from "@/lib/today/weekDays";
-import { LamThem, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
+import { appLinkMode } from "@/lib/today/rules";
+import { LamThem, StartAndOpen, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
 /**
  * R6d (artifact vHome, audit item I): the four areas of Hôm nay — Cảm xúc, Học tập, Kỹ năng,
@@ -58,7 +59,10 @@ function TaskLine({ item, ctx, eyebrow, sub }: { item: TaskView; ctx: TaskCtx; e
         <b className="break-words">{item.title}</b>
         {line && <span className="text-[13px] text-ink/75">{line}</span>}
       </div>
-      {item.state === "todo" ? (
+      {item.state === "todo" && appLinkMode(item, { paused: ctx.paused, waiting }) === "startAndOpen" ? (
+        // 15/11/2026: opening the app starts the task too (one tap, server clock).
+        <StartAndOpen item={item} ctx={ctx} label={`Bắt đầu · Mở ${item.appLabel ?? "app"}: ${item.title}`} className="inline-flex min-h-11 max-w-[55%] shrink-0 items-center rounded-full border-[1.5px] bg-white px-4 text-center text-sm font-bold" style={{ borderColor: ctx.color, color: ctx.color }} />
+      ) : item.state === "todo" ? (
         <button
           type="button"
           aria-label={`Bắt đầu: ${item.title}`}

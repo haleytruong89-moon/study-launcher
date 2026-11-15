@@ -5,12 +5,12 @@ import type { DayState, TaskView } from "@/lib/dayState";
 import { dropOrder } from "@/lib/today/reorder";
 import type { TodayView } from "@/lib/today/service";
 import { studyTimerLabel } from "@/lib/today/focus";
-import { extraRunView, isExtraRun, runningItems } from "@/lib/today/rules";
+import { appLinkMode, extraRunView, isExtraRun, runningItems } from "@/lib/today/rules";
 import { dayMonth, dueLabel, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
 import { plannable } from "@/lib/today/week";
 import { TUTOR_HOME, isMathSubject, tutorTaskHref } from "@/lib/tutor/entry";
 import { CalendarCard } from "./calendar-card";
-import { FilesFold, LamThem, TaskActions, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
+import { FilesFold, LamThem, OpenAppLink, TaskActions, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
 /**
  * Góc học tập (R2 §3, R6c: artifact vStudy / workPanel, audit items K and L). The child puts
@@ -354,6 +354,8 @@ function WorkPanel({ item, ctx, tutor }: { item: TaskView | null; ctx: TaskCtx; 
   }
   const files = ctx.files(item);
   const sub = [whereLine(item) || item.note, dueText(item, ctx.today)].filter(Boolean).join(" · ");
+  // 15/11/2026: a task that can start opens its app from "Bắt đầu · Mở …" (TaskActions) instead.
+  const plainLink = appLinkMode(item, { paused: ctx.paused, waiting: isWaiting(item, ctx) }) === "open";
   return (
     <>
       <div className="flex flex-col gap-1">
@@ -376,13 +378,9 @@ function WorkPanel({ item, ctx, tutor }: { item: TaskView | null; ctx: TaskCtx; 
           Em kẹt bài này? Hỏi cô
         </a>
       )}
-      {(item.deepLink || files.length > 0) && (
+      {(plainLink || files.length > 0) && (
         <div className="flex flex-wrap items-start gap-2">
-          {item.deepLink && (
-            <a href={item.deepLink} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#ECEEE8] px-3 text-sm font-semibold text-ink no-underline">
-              Mở {item.appLabel ?? "app"} ↗
-            </a>
-          )}
+          {plainLink && <OpenAppLink item={item} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#ECEEE8] px-3 text-sm font-semibold text-ink" />}
           <FilesFold files={files} />
         </div>
       )}

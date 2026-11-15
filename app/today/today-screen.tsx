@@ -93,7 +93,7 @@ export function TodayScreen({
    * POSTs a child action; true when the server accepted it (the new view is shown). A start
    * shows the small "Bắt đầu rồi ✓" card (R7a), unless `sheet` is false.
    */
-  async function act({ url, body, confirm }: Act, opts?: { sheet?: boolean }): Promise<boolean> {
+  async function act({ url, body, confirm, keepalive, sheet }: Act, opts?: { sheet?: boolean }): Promise<boolean> {
     if (confirm && !window.confirm(confirm)) return false;
     const opener = document.activeElement;
     setBusy(url);
@@ -103,6 +103,7 @@ export function TodayScreen({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body ?? {}),
+        keepalive: keepalive === true,
       });
       const data = (await res.json().catch(() => null)) as (TodayView & { error?: string }) | null;
       if (!res.ok || !data?.state) {
@@ -111,7 +112,7 @@ export function TodayScreen({
       }
       accept(data);
       void loadWeek(true);
-      if (url === "/api/tasks/start" && opts?.sheet !== false) {
+      if (url === "/api/tasks/start" && (opts?.sheet ?? sheet) !== false) {
         const b = (body ?? {}) as { source?: string; id?: string };
         // R8a: "Làm thêm" on a done task shows the same card, for its extra run.
         const item = runningItems(data.state).find((i) => i.source === b.source && i.id === b.id);

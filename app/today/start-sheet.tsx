@@ -51,6 +51,8 @@ export function StartSheet({
     : item.source === "homework"
       ? "Làm xong trong vở thì chụp ảnh nộp."
       : [subject, isTimed(item) ? `ít nhất ${item.minMinutes} phút` : "không giới hạn thời gian", item.appLabel ? `trên ${item.appLabel}` : null].filter(Boolean).join(" · ");
+  // The task is already running here (the card shows after a start), so this is the plain
+  // "Mở {app} ↗" link (15/11/2026: never a second start). "Bắt đầu · Mở {app} ↗" opens no card.
   const link = item.source === "template" ? item.deepLink : null;
 
   return (
