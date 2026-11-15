@@ -27,11 +27,15 @@ export function tutorEnabled(origin: string | null, grade: number | null): boole
   return origin !== null && (grade === 6 || grade === 9);
 }
 
-/** "Toán", "toán", "Toan", "Toán học", "Toán 9"… (subject is free text, lib/subjects.ts). */
+/**
+ * "Toán", "toán", "Toan", "Toán học", "Toán 9"… and, since L-2 (15/11/2026), "Math", "Maths",
+ * "Math 9", "Math OS" (subject is free text, lib/subjects.ts). Matched from the start as a whole
+ * word, so "Mathlab" / "Mathematica" are not maths.
+ */
 export function isMathSubject(subject: string | null | undefined): boolean {
   if (!subject) return false;
   const plain = subject.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").trim().toLowerCase();
-  return /^toan(?![a-z])/.test(plain);
+  return /^(toan|maths?)(?![a-z])/.test(plain);
 }
 
 export const TUTOR_HOME = "/gia-su?from=hoc-tap";
