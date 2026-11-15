@@ -55,6 +55,7 @@ export function LearningSection({ tiles }: { tiles: readonly LearningTile[] }) {
           </li>
         ))}
       </ul>
+      <p className="text-xs text-ink/65">Giờ học với gia sư AI chỉ để bố mẹ xem, chưa tính vào khóa/mở máy hay giờ nghỉ.</p>
     </section>
   );
 }

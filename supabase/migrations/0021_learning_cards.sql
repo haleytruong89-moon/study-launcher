@@ -11,7 +11,8 @@
 --    existing session is the maths tutor. The tutor app sets it when a second subject exists (T-b).
 -- 2. tutor.daily_summary_by_subject: tutor.daily_summary (0017) split by subject. Same rights
 --    (security_invoker: the caller's RLS on tutor.problems / study_sessions decides the rows).
--- 3. public.learning_cards: the one place the Launcher reads cards from (view over 2.).
+-- 3. public.learning_cards: the one place the Launcher reads cards from (view over 2.), with
+--    the app's report path (NULL for now: the tutor has no parents' report page before G7).
 -- 4. public.learning_pending_rules: teaching rules waiting for the parents (Q4: approved in the
 --    tutor app; the Launcher only counts and links). tutor.teaching_rules is parent-only, so a
 --    child gets no row.
@@ -35,6 +36,7 @@ select
   count(distinct s.id)                                              as sessions,
   coalesce(sum(extract(epoch from (coalesce(s.ended_at, s.last_seen_at) - s.started_at)) / 60)
            filter (where p.id = first_p.id), 0)::integer            as minutes,
+  count(*)                                                          as problems,
   count(*) filter (where p.status = 'self_solved')                  as self_solved,
   count(*) filter (where p.status = 'saved_for_later')              as saved_for_later,
   count(*) filter (where p.status = 'pending_review')               as pending_review,
@@ -58,10 +60,15 @@ select
   'tutor:' || subject          as source,
   sessions::integer            as sessions,
   minutes,
+  problems::integer            as problems,
   self_solved::integer         as self_solved,
   saved_for_later::integer     as saved_for_later,
   abandoned::integer           as abandoned,
-  pending_review::integer      as pending_review
+  pending_review::integer      as pending_review,
+  -- Where the app's own report for that day is (a path on this site, starting with "/"). NULL
+  -- until the tutor app has a parents' report page (its slice G7): a later migration fills it,
+  -- and the Launcher shows "Xem báo cáo ›" only when it is set.
+  null::text                   as report_path
 from tutor.daily_summary_by_subject;
 revoke all on public.learning_cards from public, anon, authenticated;
 grant select on public.learning_cards to authenticated, service_role;

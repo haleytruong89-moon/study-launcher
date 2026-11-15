@@ -12,10 +12,13 @@ export interface LearningCardRow {
   source: string;
   sessions: number;
   minutes: number;
+  problems: number;
   self_solved: number;
   saved_for_later: number;
   abandoned: number;
   pending_review: number;
+  /** The app's own report for that day (a path on this site); null until the app has one. */
+  report_path: string | null;
 }
 
 export interface LearningAttentionRow {
@@ -36,7 +39,7 @@ export interface LearningTile {
   source: string;
   label: string;
   /** null when the app wrote no card that day (only attention lines or pending rules). */
-  stats: { minutes: number; sessions: number; selfSolved: number; savedForLater: number; abandoned: number; pendingReview: number } | null;
+  stats: { minutes: number; sessions: number; problems: number; selfSolved: number; savedForLater: number; abandoned: number; pendingReview: number } | null;
   /** At most 2, in slot order (parents only: the child never reads them, Q5). */
   attention: string[];
   /** Teaching rules waiting for the parents (Q4: approved in the tutor app). */
@@ -49,19 +52,24 @@ export interface LearningTile {
 
 const SUBJECTS: Record<string, string> = { toan: "Toán", anh: "Anh", van: "Văn", khtn: "KHTN" };
 
-/** "tutor:toan" → "Gia sư Toán"; an unknown source keeps a readable name. */
+/** "tutor:toan" → "Gia sư AI Toán"; an unknown source keeps a readable name. */
 export function sourceLabel(source: string): string {
   const [app, key = ""] = source.split(":");
-  if (app === "tutor") return `Gia sư ${SUBJECTS[key] ?? key.toUpperCase()}`.trim();
+  if (app === "tutor") return `Gia sư AI ${SUBJECTS[key] ?? key.toUpperCase()}`.trim();
   return key ? `${app} ${key}` : source;
 }
 
 const isTutor = (source: string) => source === "tutor" || source.startsWith("tutor:");
 
-/** The tutor's parent page for that day; only when the tutor app is reachable (TUTOR_APP_ORIGIN). */
-export function reportHref(source: string, day: string, tutorOn: boolean): string | null {
-  if (!isTutor(source) || !tutorOn) return null;
-  return `/gia-su/bo-me?ngay=${day}`;
+/**
+ * "Xem báo cáo ›": the path the APP gives on its card (learning_cards.report_path), only when it
+ * is a path on this site and the tutor zone is reachable. The tutor app has no parents' report
+ * page before its slice G7, so the view sends NULL until then and no link shows.
+ */
+export function reportHref(source: string, path: string | null | undefined, tutorOn: boolean): string | null {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) return null;
+  if (isTutor(source) && !tutorOn) return null;
+  return path;
 }
 
 /** Where "N luật chờ duyệt ›" goes (the tutor app approves them, Q4). */
@@ -84,7 +92,7 @@ export function buildLearningTiles(
   const tile = (source: string): LearningTile => {
     let t = tiles.get(source);
     if (!t) {
-      t = { source, label: sourceLabel(source), stats: null, attention: [], pendingRules: 0, rulesHref: null, reportHref: reportHref(source, day, tutorOn) };
+      t = { source, label: sourceLabel(source), stats: null, attention: [], pendingRules: 0, rulesHref: null, reportHref: null };
       tiles.set(source, t);
     }
     return t;
@@ -92,10 +100,12 @@ export function buildLearningTiles(
   for (const c of cards) {
     if (c.child_id !== childId || c.local_date !== day) continue;
     const t = tile(c.source);
-    const s = t.stats ?? { minutes: 0, sessions: 0, selfSolved: 0, savedForLater: 0, abandoned: 0, pendingReview: 0 };
+    t.reportHref ??= reportHref(c.source, c.report_path, tutorOn);
+    const s = t.stats ?? { minutes: 0, sessions: 0, problems: 0, selfSolved: 0, savedForLater: 0, abandoned: 0, pendingReview: 0 };
     t.stats = {
       minutes: s.minutes + Math.max(0, c.minutes),
       sessions: s.sessions + c.sessions,
+      problems: s.problems + c.problems,
       selfSolved: s.selfSolved + c.self_solved,
       savedForLater: s.savedForLater + c.saved_for_later,
       abandoned: s.abandoned + c.abandoned,
@@ -119,15 +129,16 @@ export function buildLearningTiles(
   return ordered;
 }
 
-/** The tile's numbers in one line: "3 bài tự làm xong · 1 để dành · 1 bỏ dở" (zeros left out). */
+/** The tile's numbers in one line: "4 bài hỏi cô · 1 tự làm xong · 1 để dành" (zeros left out). */
 export function tileCounts(stats: NonNullable<LearningTile["stats"]>): string {
   const parts = [
-    stats.selfSolved > 0 ? `${stats.selfSolved} bài tự làm xong` : null,
+    stats.problems > 0 ? `${stats.problems} bài hỏi cô` : null,
+    stats.selfSolved > 0 ? `${stats.selfSolved} tự làm xong` : null,
     stats.savedForLater > 0 ? `${stats.savedForLater} để dành` : null,
     stats.abandoned > 0 ? `${stats.abandoned} bỏ dở` : null,
     stats.pendingReview > 0 ? `${stats.pendingReview} chờ thầy xem` : null,
   ].filter((p) => p !== null);
-  return parts.length > 0 ? parts.join(" · ") : "Chưa có bài nào xong";
+  return parts.length > 0 ? parts.join(" · ") : "Chưa có bài nào";
 }
 
 /** "N chỗ cần bố mẹ xem" = attention lines + pending rules (parent decision 15/11/2026). */
@@ -135,7 +146,7 @@ export function needsLook(tiles: readonly LearningTile[]): number {
   return tiles.reduce((n, t) => n + t.attention.length + t.pendingRules, 0);
 }
 
-/** The one line on Hôm nay under a child: "Gia sư: 35′ · 1 chỗ cần xem"; null when nothing. */
+/** The one line on Hôm nay under a child: "Gia sư AI: 35′ · 1 chỗ cần xem"; null when nothing. */
 export function homeLine(tiles: readonly LearningTile[]): string | null {
   if (tiles.length === 0) return null;
   const minutes = tiles.reduce((n, t) => n + (t.stats?.minutes ?? 0), 0);
@@ -143,5 +154,5 @@ export function homeLine(tiles: readonly LearningTile[]): string | null {
   const parts = [minutes > 0 ? `${minutes}′` : null, look > 0 ? `${look} chỗ cần xem` : null].filter((p) => p !== null);
   if (parts.length === 0) return null;
   const allTutor = tiles.every((t) => isTutor(t.source));
-  return `${allTutor ? "Gia sư" : "Học với app"}: ${parts.join(" · ")}`;
+  return `${allTutor ? "Gia sư AI" : "Học với app"}: ${parts.join(" · ")}`;
 }

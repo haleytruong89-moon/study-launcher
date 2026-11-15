@@ -62,7 +62,7 @@ export function eveningMessage(unreviewed: number, waiting: number, tutorLook = 
   const parts: string[] = [];
   if (unreviewed > 0) parts.push(`${unreviewed} bài chưa xem`);
   if (waiting > 0) parts.push(`${waiting} việc con đang nhờ`);
-  if (tutorLook > 0) parts.push(`Gia sư: ${tutorLook} chỗ cần bố mẹ xem`);
+  if (tutorLook > 0) parts.push(`Gia sư AI: ${tutorLook} chỗ cần bố mẹ xem`);
   return {
     title: "Xem lại ngày của con",
     body: `${parts.join(" · ")} · chạm để mở`,

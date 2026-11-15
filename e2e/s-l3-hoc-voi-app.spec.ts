@@ -49,11 +49,11 @@ test("L-3: the tutor's 'cần chú ý' line reaches the parent (Hôm nay + Ngày
     await login(page, env.parentEmail, env.parentPassword);
     await page.goto("/parent");
     const card = page.getByRole("region", { name: kid?.display_name as string });
-    const lineLink = card.getByRole("link", { name: /Gia sư: 1 chỗ cần xem/ });
+    const lineLink = card.getByRole("link", { name: /Gia sư AI: 1 chỗ cần xem/ });
     await expect(lineLink).toBeVisible();
     await lineLink.click();
     await page.waitForURL(/\/parent\/review\?con=/);
-    const tile = page.getByRole("article", { name: "Gia sư Toán" });
+    const tile = page.getByRole("article", { name: "Gia sư AI Toán" });
     await expect(page.getByRole("heading", { name: "Học với app" })).toBeVisible();
     await expect(tile.getByRole("list", { name: "Cần chú ý" })).toContainText(body);
   } finally {

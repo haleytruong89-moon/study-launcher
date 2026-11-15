@@ -19,7 +19,7 @@ export async function loadLearning(db: SupabaseClient, childIds: readonly string
   try {
     const ids = [...childIds];
     const [cards, attention, rules] = await Promise.all([
-      db.from("learning_cards").select("child_id, local_date, source, sessions, minutes, self_solved, saved_for_later, abandoned, pending_review").in("child_id", ids).eq("local_date", day),
+      db.from("learning_cards").select("child_id, local_date, source, sessions, minutes, problems, self_solved, saved_for_later, abandoned, pending_review, report_path").in("child_id", ids).eq("local_date", day),
       db.from("learning_attention").select("child_id, local_date, source, slot, body").in("child_id", ids).eq("local_date", day),
       db.from("learning_pending_rules").select("child_id, app, pending").in("child_id", ids),
     ]);
