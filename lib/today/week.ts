@@ -70,21 +70,41 @@ export function planProgress(state: DayState, plan: string[]): { done: number; t
 }
 
 // ---------------------------------------------------------------------------
-// Weekly review ("Tổng kết tuần", Sunday 17:00 -> end of Monday)
+// Weekly review ("Tổng kết tuần", Friday 17:00 -> end of Saturday)
 // ---------------------------------------------------------------------------
 
 export const REVIEW_OPENS_AT = "17:00";
 
 /**
- * Monday of the week under review while the review is open, else null:
- * Sunday from 17:00 (this week) and all of Monday (the week that just ended).
+ * Parent decision 15/11/2026: the review moves from Sunday evening to Friday (the parents
+ * read it at 20:00 Friday and have the weekend to sit with the children). A review is still
+ * keyed by the Monday of its week (`weekly_reviews.week_start`), but it now covers the 7 days
+ * ending that Friday: the Saturday before → Friday (`reviewPeriod`), so weekend work counts in
+ * the next review.
+ */
+export function reviewPeriod(weekStartDate: string): { from: string; to: string } {
+  return { from: addDays(weekStartDate, -2), to: addDays(weekStartDate, 4) };
+}
+
+/**
+ * Monday key of the week under review while the review is open, else null:
+ * Friday from 17:00 and all of Saturday.
  */
 export function reviewWeek(now: Date): string | null {
   const today = localDate(now);
   const wd = isoWeekday(today);
-  if (wd === 7) return now.getTime() >= atLocalTime(today, REVIEW_OPENS_AT).getTime() ? weekStart(today) : null;
-  if (wd === 1) return weekStart(addDays(today, -1));
+  if (wd === 5) return now.getTime() >= atLocalTime(today, REVIEW_OPENS_AT).getTime() ? weekStart(today) : null;
+  if (wd === 6) return weekStart(today);
   return null;
+}
+
+/** The latest review the parents can read: the open one, else the one of the last Friday. */
+export function latestReviewWeek(now: Date): string {
+  const open = reviewWeek(now);
+  if (open) return open;
+  const today = localDate(now);
+  // Sunday: last Friday is in this Monday-week; Monday … Friday before 17:00: in last week.
+  return isoWeekday(today) === 7 ? weekStart(today) : addDays(weekStart(today), -7);
 }
 
 /** What the weekly review shows (no points, no ranking: information only). */
@@ -113,7 +133,8 @@ export interface WeekStatsInput {
 }
 
 export function weekStats(input: WeekStatsInput): WeekStats {
-  const days = Array.from({ length: 7 }, (_, i) => addDays(input.weekStart, i));
+  const { from } = reviewPeriod(input.weekStart);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(from, i));
   const inWeek = (d: string) => d >= days[0]! && d <= days[6]!;
 
   const okDays = input.sessions.filter((s) => inWeek(s.localDate) && isDayOk(s, input.bedtime)).length;

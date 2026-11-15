@@ -61,7 +61,8 @@ const { GET: extState } = await import("@/app/api/ext/state/route");
 // Wednesday 12/11/2026 10:00 VN: no weekly review card.
 const WEDNESDAY = new Date("2026-11-12T03:00:00Z");
 // Sunday 15/11/2026 18:00 VN: the weekly review card is open (Sunday 17:00 -> end of Monday).
-const SUNDAY_EVENING = new Date("2026-11-15T11:00:00Z");
+// The weekly review is open Friday 17:00 -> end of Saturday (15/11/2026): Friday 18:00 VN.
+const REVIEW_OPEN = new Date("2026-11-20T11:00:00Z");
 
 describe("round trips per request", () => {
   beforeEach(() => vi.useFakeTimers({ toFake: ["Date"], now: WEDNESDAY }));
@@ -76,7 +77,7 @@ describe("round trips per request", () => {
   });
 
   it("GET /api/today with the weekly review open: 5 trips", async () => {
-    vi.setSystemTime(SUNDAY_EVENING);
+    vi.setSystemTime(REVIEW_OPEN);
     const res = await today();
     expect(res.status).toBe(200);
     expect((await res.json()).weekly).not.toBeNull();

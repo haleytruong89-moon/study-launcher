@@ -13,7 +13,7 @@ const bodySchema = z.object({ wentWell: answer, changeNext: answer });
 
 /**
  * Child saves "Tổng kết tuần" (2 short answers; parents can read them). Only while the
- * review is open on the SERVER clock: Sunday from 17:00 until the end of Monday.
+ * review is open on the SERVER clock: Friday from 17:00 until the end of Saturday (15/11/2026).
  */
 export async function POST(request: Request) {
   const guard = await requireChild();
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
   const now = new Date();
   const week = reviewWeek(now);
-  if (!week) return jsonError("Tổng kết tuần mở từ 17:00 Chủ nhật đến hết Thứ Hai.", 409);
+  if (!week) return jsonError("Tổng kết tuần mở từ 17:00 Thứ Sáu đến hết Thứ Bảy.", 409);
 
   try {
     const { error } = await createAdminClient()

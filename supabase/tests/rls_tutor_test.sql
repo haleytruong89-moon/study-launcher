@@ -154,4 +154,60 @@ begin
 end $$;
 
 reset role;
+-- G2 (0018): new columns exist with their defaults, and their CHECK constraints are in place.
+do $$
+begin
+  perform 1 from information_schema.columns
+    where table_schema = 'tutor' and table_name = 'model_calls' and column_name = 'route_reason';
+  if not found then raise exception 'FAIL: model_calls.route_reason missing'; end if;
+  perform 1 from information_schema.columns
+    where table_schema = 'tutor' and table_name = 'messages' and column_name = 'input_kind' and column_default like '''text''%';
+  if not found then raise exception 'FAIL: messages.input_kind missing or wrong default'; end if;
+  perform 1 from information_schema.columns
+    where table_schema = 'tutor' and table_name = 'problems' and column_name = 'offtopic_count' and column_default = '0';
+  if not found then raise exception 'FAIL: problems.offtopic_count missing or wrong default'; end if;
+  perform 1 from pg_constraint
+    where conname in ('model_calls_route_reason_check', 'messages_input_kind_check', 'problems_offtopic_count_check')
+    having count(*) = 3;
+  if not found then raise exception 'FAIL: G2 check constraints missing'; end if;
+  raise notice 'ok: tutor: G2 columns';
+end $$;
+-- A child still cannot write the new column.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+set role authenticated;
+do $$
+begin
+  begin
+    update tutor.problems set offtopic_count = 1;
+    raise exception 'FAIL: child updated tutor.problems';
+  exception when insufficient_privilege then raise notice 'ok: tutor: child cannot write offtopic_count';
+  end;
+end $$;
+
+reset role;
+
+-- G3 (0019): private photo bucket with no browser policy; attachments.message_id.
+do $$
+begin
+  perform 1 from storage.buckets
+    where id = 'tutor-images' and public = false and file_size_limit = 3145728 and allowed_mime_types = array['image/jpeg'];
+  if not found then raise exception 'FAIL: tutor-images bucket missing or not private / 3 MB / jpeg'; end if;
+  perform 1 from pg_policies where schemaname = 'storage' and tablename = 'objects'
+    and (coalesce(qual, '') ilike '%tutor-images%' or coalesce(with_check, '') ilike '%tutor-images%');
+  if found then raise exception 'FAIL: a storage policy opens tutor-images to browsers'; end if;
+  perform 1 from information_schema.columns
+    where table_schema = 'tutor' and table_name = 'attachments' and column_name = 'message_id';
+  if not found then raise exception 'FAIL: attachments.message_id missing'; end if;
+  raise notice 'ok: tutor: G3 bucket and column';
+end $$;
+insert into storage.objects (bucket_id, name) values
+  ('tutor-images', '00000000-0000-0000-0000-0000000000c1/31000000-0000-0000-0000-000000000001/a0000000-0000-0000-0000-000000000001.jpg');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+set role authenticated;
+select test_helpers.expect_count('tutor: child1 cannot list own photo files directly (server-only bucket)',
+  (select count(*) from storage.objects where bucket_id = 'tutor-images'), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('tutor: parent cannot list photo files directly either',
+  (select count(*) from storage.objects where bucket_id = 'tutor-images'), 0);
+reset role;
 do $$ begin raise notice 'TUTOR RLS OK'; end $$;
