@@ -34,6 +34,8 @@ describe("tutorEnabled", () => {
 describe("isMathSubject (subject is free text the parent typed)", () => {
   it.each(["Toán", "toán", "TOÁN", "Toan", " Toán học", "Toán 9", "toán-hình"])("%s is maths", (s) => expect(isMathSubject(s)).toBe(true));
   it.each(["Tin học", "Ngữ văn", "Tiếng Anh", "KHTN", "", null, undefined])("%s is not maths", (s) => expect(isMathSubject(s)).toBe(false));
+  it.each(["Math", "maths", "Math 9", "MATH", "Math OS", " math-9"])("%s is maths (L-2)", (s) => expect(isMathSubject(s)).toBe(true));
+  it.each(["Mathlab", "Mathematica", "Tin học"])("%s is not maths (L-2)", (s) => expect(isMathSubject(s)).toBe(false));
 });
 
 describe("links", () => {
