@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DaySessionInput } from "@/lib/dayState";
 import { addDays, startOfLocalDay } from "@/lib/time";
-import { weekStats, type WeekStats } from "./week";
+import { reviewPeriod, weekStats, type WeekStats } from "./week";
 
 export interface WeeklyReview {
   wentWell: string | null;
@@ -16,13 +16,14 @@ function check<T>(res: { data: T | null; error: { message: string } | null }, wh
 }
 
 /**
- * Loads one child's week (Monday `weekStart`) and computes the review numbers. `db` is
+ * Loads one child's review week (keyed by its Monday; covers Saturday before -> Friday) and computes the numbers. `db` is
  * the viewer's own session (child: own rows; parent: the family), so RLS bounds it.
  */
-export async function loadWeekStats(db: SupabaseClient, childId: string, weekStart: string, bedtime: string): Promise<WeekStats> {
-  const weekEnd = addDays(weekStart, 6);
+export async function loadWeekStats(db: SupabaseClient, childId: string, weekKey: string, bedtime: string): Promise<WeekStats> {
+  // 15/11/2026: the review covers the Saturday before -> Friday of the week keyed by `weekKey`.
+  const { from: weekStart, to: weekEnd } = reviewPeriod(weekKey);
   const from = startOfLocalDay(weekStart).toISOString();
-  const to = startOfLocalDay(addDays(weekStart, 7)).toISOString();
+  const to = startOfLocalDay(addDays(weekEnd, 1)).toISOString();
 
   const [sessions, runs, plans, doneHomework] = await Promise.all([
     db
@@ -47,7 +48,7 @@ export async function loadWeekStats(db: SupabaseClient, childId: string, weekSta
   }
 
   return weekStats({
-    weekStart,
+    weekStart: weekKey,
     bedtime,
     sessions: (check(sessions, "day_sessions") as Record<string, unknown>[]).map(
       (s): DaySessionInput => ({

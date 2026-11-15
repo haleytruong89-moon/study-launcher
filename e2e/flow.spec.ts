@@ -897,7 +897,7 @@ test("S2e: the child picks an icon and plans today; the plan only reorders 'Vi�
   expect(icon).toBe(400);
 });
 
-test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Monday; parents read it", async ({ page }) => {
+test("S2e: the weekly review is accepted only from Friday 17:00 to the end of Saturday; parents read it", async ({ page }) => {
   const db = admin();
   const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
   await login(page, childEmail, childPassword);
@@ -905,9 +905,9 @@ test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Mo
     const r = await fetch("/api/week/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wentWell: "Làm sớm 2 bài", changeNext: "Đọc sách sớm hơn" }) });
     return r.status;
   });
-  // Server window, Vietnam time: Sunday from 17:00, all of Monday.
+  // Server window, Vietnam time (15/11/2026): Friday from 17:00, all of Saturday.
   const vn = new Date(Date.now() + 7 * 3600_000);
-  const open = vn.getUTCDay() === 1 || (vn.getUTCDay() === 0 && vn.getUTCHours() >= 17);
+  const open = vn.getUTCDay() === 6 || (vn.getUTCDay() === 5 && vn.getUTCHours() >= 17);
   expect(res).toBe(open ? 200 : 409);
 
   // Outside the window, seed last week's answers so the parent view is always checked.
@@ -916,7 +916,8 @@ test("S2e: the weekly review is accepted only from Sunday 17:00 to the end of Mo
     await db.from("weekly_reviews").upsert({
       child_id: kid?.id,
       family_id: kid?.family_id,
-      week_start: addDays(weekStart(today), -7),
+      // The parents see the review of the last Friday: this Monday-week on Sunday, else last week.
+      week_start: vn.getUTCDay() === 0 ? weekStart(today) : addDays(weekStart(today), -7),
       went_well: "Làm sớm 2 bài",
       change_next: "Đọc sách sớm hơn",
     });

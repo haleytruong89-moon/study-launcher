@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { TaskView } from "@/lib/dayState";
 import type { WeekStats } from "@/lib/today/week";
-import { hoursMinutes, ICONS, REVIEW_QUESTIONS } from "@/lib/today/week";
+import { hoursMinutes, ICONS, REVIEW_QUESTIONS, reviewPeriod } from "@/lib/today/week";
 import type { WeeklyReview } from "@/lib/today/week-load";
 
 /** Small modal shell (real dialog semantics, Esc / backdrop close, 44px controls). */
@@ -227,7 +227,7 @@ function Tile({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** "Tổng kết tuần" (Sunday 17:00 -> end of Monday): numbers + 2 short answers parents read. */
+/** "Tổng kết tuần" (Friday 17:00 -> end of Saturday; Saturday before -> Friday): numbers + 2 short answers parents read. */
 export function WeeklyReviewCard({
   stats,
   review,
@@ -244,12 +244,8 @@ export function WeeklyReviewCard({
   const [editing, setEditing] = useState(review === null);
   const [wentWell, setWentWell] = useState(review?.wentWell ?? "");
   const [changeNext, setChangeNext] = useState(review?.changeNext ?? "");
-  const end = (() => {
-    const d = new Date(`${stats.weekStart}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + 6);
-    return d.toISOString().slice(0, 10);
-  })();
-  const range = `${stats.weekStart.slice(8, 10)}/${stats.weekStart.slice(5, 7)} – ${end.slice(8, 10)}/${end.slice(5, 7)}`;
+  const { from: startDay, to: end } = reviewPeriod(stats.weekStart);
+  const range = `${startDay.slice(8, 10)}/${startDay.slice(5, 7)} – ${end.slice(8, 10)}/${end.slice(5, 7)}`;
 
   return (
     <section aria-labelledby="wr-h" className="flex flex-col gap-3.5 rounded-[20px] bg-white p-4" style={{ border: `2px solid ${color}` }}>
