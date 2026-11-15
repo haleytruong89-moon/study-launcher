@@ -45,6 +45,8 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
 - *(12/11/2026)* Mặc định mở thêm: Google Meet, NotebookLM, Google Docs/Drive/Forms, Zalo (`zalo.me`) và file .html/.pdf trên máy (SQL 0016; bố mẹ vẫn gỡ được từng dòng).
 - Chế độ Tin tưởng: hệ thống **chỉ gợi ý**, phụ huynh xác nhận mới chuyển.
 - Mọi luật gia đình là dữ liệu trong `family_settings` / allowlist / mẫu việc — **không hard-code**.
+- *(D20, 14/11/2026)* **Gia sư AI Toán chạy dưới địa chỉ Launcher:** `next.config.ts` rewrite `/gia-su` + `/gia-su/:path*` → `TUTOR_APP_ORIGIN` (`lib/tutor/entry.ts`); chung cookie phiên Supabase nên con không đăng nhập lại; `proxy.ts` bỏ qua `/gia-su` (app gia sư tự làm mới phiên). Không có biến → không rewrite, không cửa vào. Hai cửa vào trong **Góc học tập**: thẻ "Cô gia sư Toán" (luôn hiện, con lớp 6/9) và nút "Em kẹt bài này? Hỏi cô" trong Khung làm bài khi môn là Toán. Link sang gia sư là `<a>` thường (zone khác), không `next/link`.
+- *(D21, 14/11/2026)* SQL schema `tutor` của gia sư nằm **trong repo này** (`0017_tutor_schema.sql` trở đi), theo đúng luật migration bên dưới.
 
 ## Warnings — KHÔNG được làm
 
@@ -59,7 +61,7 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
 - *(Đợt 4, 12/11/2026)* Khi phụ huynh đã cấu hình `docs/SETUP.md` mục H, link preview dùng **project Supabase riêng, dữ liệu giả**; `preview-db.yml` tự áp SQL của PR lên đó. Claude chỉ được **gợi ý** phụ huynh chạy `preview-db-reset.yml`, không tự chạy, và không bao giờ nhắm vào project thật.
 - Không đổi hành vi khóa/mở, thứ tự ưu tiên trạng thái (DESIGN §5), allowlist mặc định, hay quyền ghi của con. Thấy spec thiếu hoặc mâu thuẫn → **dừng lại, ghi vào PR / PROGRESS.md, hỏi phụ huynh** (DESIGN §15).
 - Không thêm streak, bảng xếp hạng, điểm đổi giờ chơi (SPEC §15).
-- Không thêm dịch vụ trả phí hoặc dịch vụ bên thứ ba nhận dữ liệu của con.
+- Không thêm dịch vụ trả phí hoặc dịch vụ bên thứ ba nhận dữ liệu của con. *Ngoại lệ đã duyệt — T1 (14/11/2026):* Gia sư AI Toán (repo `gia-su-ai-math`, chạy ở `/gia-su`) gửi đề/bài làm/câu trả lời của con sang Anthropic API; **không** gửi họ tên, trường (chỉ mã HS-9A, HS-6A). Repo Launcher không gọi Anthropic.
 - Không commit secret (`.env*` trừ `.env.example`).
 
 ## Quy trình mỗi lát
@@ -84,7 +86,7 @@ npx supabase db push --dry-run   # phụ huynh chạy, không phải Claude
 
 ## Biến môi trường (`.env.example`)
 
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, `NEXT_PUBLIC_EXTENSION_ID_CHROME`, `NEXT_PUBLIC_EXTENSION_ID_EDGE`, `NEXT_PUBLIC_APP_URL`, `CHILD_EMAIL_DOMAIN` (tùy chọn, mặc định `study-launcher.local`)
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, `NEXT_PUBLIC_EXTENSION_ID_CHROME`, `NEXT_PUBLIC_EXTENSION_ID_EDGE`, `NEXT_PUBLIC_APP_URL`, `CHILD_EMAIL_DOMAIN` (tùy chọn, mặc định `study-launcher.local`), `TUTOR_APP_ORIGIN` (tùy chọn: địa chỉ production của app gia sư, vd `https://gia-su-ai-math.vercel.app`; để trống = tắt gia sư)
 
 ## Current status
 

@@ -12,4 +12,8 @@ describe("proxy matcher", () => {
     for (const p of ["/api/today", "/api/ext/state", "/api/tasks/start", "/_next/static/x.js", "/sw.js", "/downloads/study-launcher-extension.zip"])
       expect(re.test(p), p).toBe(false);
   });
+  it("skips the tutor app under /gia-su (it refreshes the session itself, D20)", () => {
+    for (const p of ["/gia-su", "/gia-su/", "/gia-su/hoi/abc", "/gia-su/api/turn", "/gia-su/_next/static/x.js"]) expect(re.test(p), p).toBe(false);
+    expect(re.test("/giasu")).toBe(true);
+  });
 });

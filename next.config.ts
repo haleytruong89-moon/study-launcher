@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { tutorOrigin, tutorRewrites } from "./lib/tutor/entry";
 
 // Our own Supabase (R6a review): the CSP of the page loaded first stays for pages opened from it
 // without a reload, so leaving Góc bình yên for Hôm nay must still allow photo uploads there.
@@ -40,6 +41,11 @@ const APP_HEADERS = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Gia sư AI Toán (D20): /gia-su/* is served by the tutor app under this address, so the session
+  // cookie is shared. No TUTOR_APP_ORIGIN → no rewrite (lib/tutor/entry.ts).
+  async rewrites() {
+    return tutorRewrites(tutorOrigin(process.env.TUTOR_APP_ORIGIN));
+  },
   async headers() {
     // Order matters: when several rules match and set the same key, the LAST one wins, so the
     // app-wide rule comes first and the stricter Góc bình yên rule keeps its own values.
