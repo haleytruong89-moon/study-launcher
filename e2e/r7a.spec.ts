@@ -68,7 +68,7 @@ test("R7a: Bắt đầu shows a small card, never the focus screen; the header c
     const work = page.getByRole("region", { name: "Khung làm bài" });
     await expect(work.getByRole("heading", { name: "R7a Luyện đề" })).toBeVisible();
     await expect(work.getByRole("timer")).toHaveText("20 phút");
-    await work.getByRole("button", { name: "Bắt đầu" }).click();
+    await work.getByRole("button", { name: "Bắt đầu", exact: true }).click();
 
     // The small card: the goal and how long, not a full-screen timer.
     const sheet = page.getByRole("dialog", { name: "Mục tiêu nhỏ: R7a Luyện đề" });

@@ -492,7 +492,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await skill.getByRole("button").first().click();
   await expect(skill.getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
   await expect(work.getByRole("heading", { name: "Đọc sách e2e" })).toBeVisible();
-  await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
+  await expect(work.getByRole("button", { name: "Bắt đầu", exact: true })).toBeEnabled();
 
   // The server refuses a break before 45' of focus (R8b), and an early finish, whatever the browser does.
   const today1 = await page.evaluate(async () => (await (await fetch("/api/today")).json()) as { state: { part1: { items: { id: string; title: string }[] }; part2: { items: { id: string; title: string }[] } } });
@@ -512,7 +512,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const focus = page.getByRole("dialog", { name: /^Màn tập trung/ });
   const homeworkId = today1.state.part1.items.find((i) => i.title === "Ngữ văn")?.id ?? "";
   await tabs.getByRole("link", { name: "Hôm nay" }).click();
-  await study.getByRole("button", { name: "Bắt đầu" }).click();
+  await study.getByRole("button", { name: "Bắt đầu", exact: true }).click();
   const hwStart = page.getByRole("dialog", { name: "Mục tiêu nhỏ: Ngữ văn" });
   await expect(hwStart).toBeVisible();
   await expect(hwStart).toContainText("Làm xong trong vở thì chụp ảnh nộp.");
@@ -543,7 +543,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const extra = page.getByRole("listitem", { name: "Luyện đề e2e" });
   await extra.getByRole("button").first().click();
   await expect(work.getByRole("timer")).toHaveText("20 phút"); // the minimum, before starting (R7a: minutes only)
-  await work.getByRole("button", { name: "Bắt đầu" }).click();
+  await work.getByRole("button", { name: "Bắt đầu", exact: true }).click();
   const exStart = page.getByRole("dialog", { name: "Mục tiêu nhỏ: Luyện đề e2e" });
   await expect(exStart).toContainText("Toán · ít nhất 20 phút");
   await expect(focus).toHaveCount(0);
@@ -587,13 +587,13 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(banner).toContainText(/Đang nghỉ · còn (9|10) phút/);
   await expect(page.getByText(/Giờ nghỉ · còn (9|10) phút/)).toBeVisible();
   await skill.getByRole("button").first().click();
-  await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
+  await expect(work.getByRole("button", { name: "Bắt đầu", exact: true })).toBeDisabled();
   const duringBreak = await page.evaluate(async (id) => (await fetch("/api/tasks/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: "template", id }) })).status, skillId);
   expect(duringBreak).toBe(409);
   await banner.getByRole("button", { name: "Học tiếp" }).click();
   await expect(banner).toContainText("Xong bài tập — còn 1 kỹ năng");
   await expect(banner).toContainText(/Con còn (9|10)' nghỉ để dành/); // "Học tiếp" at once: the minutes stay in the bank
-  await work.getByRole("button", { name: "Bắt đầu" }).click();
+  await work.getByRole("button", { name: "Bắt đầu", exact: true }).click();
   await page.getByRole("dialog", { name: "Mục tiêu nhỏ: Đọc sách e2e" }).getByRole("button", { name: "Để sau" }).click();
   await work.getByRole("button", { name: "Xong", exact: true }).click(); // R7a: no minimum, so Xong is right in the panel
 

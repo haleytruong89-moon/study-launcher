@@ -92,7 +92,7 @@ test("Quên bấm Bắt đầu: the child reports 25'; nothing counts while it w
     // Pending: shown, but nothing counts (no run, still "Bắt đầu").
     await expect(work).toContainText(`Đang chờ bố mẹ xác nhận lượt ${from}–${to}`);
     await expect(work.getByRole("button", { name: "Con quên bấm Bắt đầu?" })).toHaveCount(0);
-    await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
+    await expect(work.getByRole("button", { name: "Bắt đầu", exact: true })).toBeEnabled();
     const { data: pending } = await db.from("task_run_reports").select("id, status, run_id").eq("template_id", first.id);
     expect(pending).toEqual([expect.objectContaining({ status: "pending", run_id: null })]);
     expect((await db.from("task_runs").select("id").eq("template_id", first.id)).data).toHaveLength(0);
