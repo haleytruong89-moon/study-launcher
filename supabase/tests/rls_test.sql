@@ -1202,6 +1202,115 @@ delete from public.task_runs
 delete from public.task_templates where id = '30000000-0000-0000-0000-000000000015';
 delete from public.homework_items where id = '20000000-0000-0000-0000-000000000015';
 
+-- 0020 "Con quên bấm Bắt đầu?": task_run_reports — browsers read only (child own rows, parent own
+-- family); the server writes. Times must be ordered; one pending report per child / day / task.
+reset role;
+insert into public.task_templates (id, family_id, child_id, part, title, weekdays, min_minutes) values
+  ('30000000-0000-0000-0000-000000000020', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'skill', 'Report skill', '{1,2,3,4,5,6,7}', 20),
+  ('30000000-0000-0000-0000-000000000021', '10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', 'skill', 'Report skill B', '{1,2,3,4,5,6,7}', 20)
+on conflict do nothing;
+insert into public.task_run_reports (family_id, child_id, local_date, template_id, started_at, ended_at) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date, '30000000-0000-0000-0000-000000000020', now() - interval '30 minutes', now()),
+  ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', current_date, '30000000-0000-0000-0000-000000000021', now() - interval '30 minutes', now());
+select test_helpers.expect_count('task_run_reports default status pending',
+  (select count(*) from public.task_run_reports where status = 'pending' and decided_at is null and run_id is null), 2);
+do $$
+declare
+  fam constant uuid := '10000000-0000-0000-0000-00000000000a';
+  c1 constant uuid := '00000000-0000-0000-0000-0000000000c1';
+  tpl constant uuid := '30000000-0000-0000-0000-000000000020';
+  r uuid;
+begin
+  begin
+    insert into public.task_run_reports (family_id, child_id, local_date, template_id, started_at, ended_at)
+    values (fam, c1, current_date - 1, tpl, now(), now() - interval '1 minute');
+    raise exception 'FAIL: a report ending before it starts was stored';
+  exception when check_violation then raise notice 'ok: task_run_reports.ended_at > started_at';
+  end;
+  begin
+    insert into public.task_run_reports (family_id, child_id, local_date, template_id, started_at, ended_at, status)
+    values (fam, c1, current_date - 1, tpl, now() - interval '1 minute', now(), 'maybe');
+    raise exception 'FAIL: unknown report status stored';
+  exception when check_violation then raise notice 'ok: task_run_reports.status in (pending, approved, rejected)';
+  end;
+  begin
+    insert into public.task_run_reports (family_id, child_id, local_date, template_id, started_at, ended_at)
+    values ('10000000-0000-0000-0000-00000000000b', c1, current_date - 1, tpl, now() - interval '1 minute', now());
+    raise exception 'FAIL: task_run_reports row with a child of another family';
+  exception when foreign_key_violation then raise notice 'ok: task_run_reports row must match the child family';
+  end;
+  begin
+    insert into public.task_run_reports (family_id, child_id, local_date, template_id, started_at, ended_at)
+    values (fam, c1, current_date, tpl, now() - interval '50 minutes', now() - interval '40 minutes');
+    raise exception 'FAIL: two pending reports for the same task and day';
+  exception when unique_violation then raise notice 'ok: one pending report per child / day / task';
+  end;
+  -- A decided one next to a pending one is fine; approving links the server-made run.
+  insert into public.task_runs (family_id, child_id, local_date, source, template_id, started_at, done_at)
+  values (fam, c1, current_date, 'template', tpl, now() - interval '30 minutes', now()) returning id into r;
+  update public.task_run_reports set status = 'approved', decided_at = now(), run_id = r where template_id = tpl;
+  insert into public.task_run_reports (family_id, child_id, local_date, template_id, started_at, ended_at)
+  values (fam, c1, current_date, tpl, now() - interval '90 minutes', now() - interval '60 minutes');
+  -- Deleting the run keeps the report (run_id set null).
+  delete from public.task_runs where id = r;
+  if (select count(*) from public.task_run_reports where template_id = tpl and status = 'approved' and run_id is null) <> 1 then
+    raise exception 'FAIL: run_id not set null when the run is deleted';
+  end if;
+  raise notice 'ok: decided + pending side by side; run_id on delete set null';
+end $$;
+select test_helpers.expect_count('task_run_reports has RLS on',
+  (select count(*) from pg_class where oid = 'public.task_run_reports'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('browsers may only select task_run_reports',
+  (select count(*) from (values ('authenticated'), ('anon')) r(rl), (values ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE')) p(priv)
+    where has_table_privilege(r.rl, 'public.task_run_reports', p.priv)), 0);
+select test_helpers.expect_count('anon cannot select task_run_reports', (select case when has_table_privilege('anon', 'public.task_run_reports', 'SELECT') then 1 else 0 end), 0);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees own task_run_reports only (2)', (select count(*) from public.task_run_reports), 2);
+do $$
+begin
+  begin
+    insert into public.task_run_reports (family_id, child_id, local_date, template_id, started_at, ended_at)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date + 1, '30000000-0000-0000-0000-000000000020', now() - interval '1 minute', now());
+    raise exception 'FAIL: child inserted into task_run_reports';
+  exception when insufficient_privilege then raise notice 'ok: child cannot insert task_run_reports';
+  end;
+  begin
+    update public.task_run_reports set status = 'approved';
+    raise exception 'FAIL: child updated task_run_reports';
+  exception when insufficient_privilege then raise notice 'ok: child cannot approve its own report';
+  end;
+  begin
+    delete from public.task_run_reports;
+    raise exception 'FAIL: child deleted task_run_reports';
+  exception when insufficient_privilege then raise notice 'ok: child cannot delete task_run_reports';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c2', false);
+select test_helpers.expect_count('child2 sees no sibling task_run_reports', (select count(*) from public.task_run_reports), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees the family task_run_reports (2)', (select count(*) from public.task_run_reports), 2);
+do $$
+begin
+  begin
+    update public.task_run_reports set status = 'approved', decided_at = now();
+    raise exception 'FAIL: parent updated task_run_reports directly';
+  exception when insufficient_privilege then raise notice 'ok: parent decides only through the server';
+  end;
+  begin
+    insert into public.task_run_reports (family_id, child_id, local_date, template_id, started_at, ended_at)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', current_date + 1, '30000000-0000-0000-0000-000000000020', now() - interval '1 minute', now());
+    raise exception 'FAIL: parent inserted into task_run_reports';
+  exception when insufficient_privilege then raise notice 'ok: parent cannot insert task_run_reports';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees no family A task_run_reports', (select count(*) from public.task_run_reports where family_id = '10000000-0000-0000-0000-00000000000a'), 0);
+reset role;
+delete from public.task_run_reports;
+delete from public.task_templates where id in ('30000000-0000-0000-0000-000000000020', '30000000-0000-0000-0000-000000000021');
+
 -- Service role bypasses RLS ----------------------------------------------------
 reset role;
 set role service_role;

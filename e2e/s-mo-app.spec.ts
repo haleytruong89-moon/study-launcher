@@ -73,7 +73,7 @@ test("Mở app = bắt đầu: “Bắt đầu · Mở …” opens the app and 
     await expect(both).toBeVisible();
     await expect(both).toHaveAttribute("target", "_blank");
     await expect(both).toHaveAttribute("href", link);
-    await expect(work.getByRole("button", { name: "Bắt đầu" })).toHaveCount(0);
+    await expect(work.getByRole("button", { name: "Bắt đầu", exact: true })).toHaveCount(0);
     await expect(work.getByRole("link", { name: /^Mở .+ ↗$/ })).toHaveCount(0);
     expect(await openRuns(first.id)).toBe(0);
 
@@ -101,7 +101,7 @@ test("Mở app = bắt đầu: “Bắt đầu · Mở …” opens the app and 
     await page.getByRole("listitem", { name: "Mở app Nghe" }).getByRole("button").first().click();
     await expect(work.getByRole("heading", { name: "Mở app Nghe" })).toBeVisible();
     await expect(work).toContainText("Làm xong “Mở app Tiếng Anh” rồi bắt đầu việc này.");
-    await expect(work.getByRole("button", { name: "Bắt đầu" })).toBeDisabled();
+    await expect(work.getByRole("button", { name: "Bắt đầu", exact: true })).toBeDisabled();
     await expect(work.getByRole("link", { name: /^Bắt đầu · Mở/ })).toHaveCount(0);
     await expect(work.getByRole("link", { name: /^Mở .+ ↗$/ })).toBeVisible();
     expect(await openRuns(second.id)).toBe(0);

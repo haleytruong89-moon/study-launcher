@@ -37,6 +37,20 @@ export function confirmRequestMessage(childName: string): PushMessage {
 }
 
 /**
+ * "Con quên bấm Bắt đầu?" (15/11/2026): the child asks a parent to confirm a session done without
+ * Bắt đầu. The task title is the parent's own wording (never the child's words); the times are
+ * the child's report. Opens the "Con nhờ" page at its section.
+ */
+export function runReportMessage(childName: string, taskTitle: string, range: string, minutes: number): PushMessage {
+  return {
+    title: `${childName} nhờ xác nhận: ${taskTitle} ${range} (${minutes} phút)`,
+    body: "Con quên bấm Bắt đầu · chạm để xác nhận",
+    url: "/parent/requests#quen-bam",
+    tag: "run-report",
+  };
+}
+
+/**
  * Evening reminder (21:00–21:59, Vercel Cron): only when something still waits for the parent. `unreviewed` =
  * today's finished tasks with no Đạt / Chưa đạt yet; `waiting` = open requests from the children.
  * Returns null when there is nothing to do, so no push is sent.

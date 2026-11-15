@@ -187,6 +187,7 @@ export { isDayOk } from "./dayState/week";
 export type { BankBreak, BankResult, BreakTier, Interval } from "./dayState/breakBank";
 export {
   breakBank,
+  breakRunCapOf,
   breakTiersOf,
   DEFAULT_BREAK_MAX_PER_DAY,
   DEFAULT_BREAK_RUN_CAP_MINUTES,

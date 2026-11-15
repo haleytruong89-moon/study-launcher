@@ -40,6 +40,8 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "run.verdict": "homework",
   "run.confirm_ok": "homework",
   "run.confirm_reject": "homework",
+  "run_report.approve": "homework",
+  "run_report.reject": "homework",
   "template.create": "homework",
   "template.update": "homework",
 
@@ -214,6 +216,10 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
       return say(`Xem bài trực tiếp và cho xong một bài của ${kid}`);
     case "run.confirm_reject":
       return say(`Xem bài trực tiếp: một bài của ${kid} chưa được`);
+    case "run_report.approve":
+      return say(`Xác nhận một lượt làm ${kid} quên bấm Bắt đầu`);
+    case "run_report.reject":
+      return say(`Không xác nhận một lượt làm ${kid} quên bấm Bắt đầu`);
     case "template.create":
       return say(`Thêm việc${quoted(short(p.title, 40))} vào lịch tuần của ${kid}`);
     case "template.update":

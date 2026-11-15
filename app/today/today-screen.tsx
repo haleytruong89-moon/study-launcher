@@ -23,6 +23,7 @@ import { WorldMini } from "./world";
 import { ComicToday } from "./comic";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
+import { ReportSheet } from "./report-sheet";
 import { nextFromPlan, plannable, planProgress } from "@/lib/today/week";
 import { noStore, readFocusOpen, readPlanLater, subscribeStorage, writeFocusOpen } from "./today-storage";
 import { useChildTabs, type Tab } from "./use-child-tabs";
@@ -75,6 +76,8 @@ export function TodayScreen({
   // An's world key (for the focus background), from the world card's own fetch when it ran.
   const [worldKey, setWorldKey] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"plan" | "icon" | null>(null);
+  // "Con quên bấm Bắt đầu?" (15/11/2026): the task key the sheet is open for.
+  const [reportKey, setReportKey] = useState<string | null>(null);
   // "Nộp ảnh bài" sheet: the homework key it is open for, and upload progress.
   const [proofKey, setProofKey] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
@@ -275,7 +278,13 @@ export function TodayScreen({
     onFocus: (item) => openFocus(item ?? next),
     reviewed: new Set(view.reviewed ?? []),
     asked: new Set(view.asked ?? []),
+    reports: view.reports ?? [],
+    onReport: (item) => {
+      setError(null);
+      setReportKey(item.key);
+    },
   };
+  const reportItem = reportKey ? ([...s.part1.items, ...s.part2.items].find((i) => i.key === reportKey && i.source === "template") ?? null) : null;
   const firstName = child.name.trim().split(/\s+/).pop() ?? child.name;
 
   // Shared by Hôm nay and Góc học tập (R2): the status line and the break / free-time buttons.
@@ -293,6 +302,18 @@ export function TodayScreen({
           error={error}
           onSave={(keys) => act({ url: "/api/day/plan", body: { keys } })}
           onClose={() => setDialog(null)}
+        />
+      )}
+      {reportItem && (
+        <ReportSheet
+          key={`report:${reportItem.key}`}
+          item={reportItem}
+          color={color}
+          nowMs={nowMs}
+          busy={!!busy}
+          error={error}
+          onSend={(from, to) => act({ url: "/api/tasks/report", body: { templateId: reportItem.id, from, to } })}
+          onClose={() => setReportKey(null)}
         />
       )}
       {dialog === "icon" && (
