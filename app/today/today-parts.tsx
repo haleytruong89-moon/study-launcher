@@ -4,10 +4,15 @@ import type { DayState, TaskView } from "@/lib/dayState";
 import { KIND_LABEL, type AttachmentView } from "@/lib/files";
 import { addDays } from "@/lib/time";
 import { elapsedMs, minutesLabel, todayLine } from "@/lib/today/focus";
-import { extraRunView, isExtraRun } from "@/lib/today/rules";
+import { appLinkMode, extraRunView, isExtraRun } from "@/lib/today/rules";
 import { dayLabel, dayMonth, dueLabel, dueTone, earlyUntil, isOkResult, taskMeta } from "@/lib/today/view";
 
-export type Act = { url: string; body?: unknown; confirm?: string };
+/**
+ * A child action for the screen's `act`. `keepalive`: the request survives the page losing focus
+ * or closing (the "Bắt đầu · Mở app" link opens another tab at the same moment). `sheet: false`:
+ * no "Bắt đầu rồi ✓" card after a start (the app is already open in front).
+ */
+export type Act = { url: string; body?: unknown; confirm?: string; keepalive?: boolean; sheet?: boolean };
 
 /** Everything a task control needs (passed down from the screen). */
 export interface TaskCtx {
@@ -198,6 +203,52 @@ export function LamThem({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
   );
 }
 
+/** The body of POST /api/tasks/start for a task (one place, so every start sends the same). */
+const startAct = (item: TaskView): Act => ({ url: "/api/tasks/start", body: { source: item.source, id: item.id } });
+
+/**
+ * "Bắt đầu · Mở {app} ↗" (parent decision 15/11/2026, appLinkMode "startAndOpen"): a real link,
+ * so the browser opens the app in a new tab on the click itself (no popup blocker), and the same
+ * click starts the task on the server (keepalive: it survives the tab switch). Never
+ * preventDefault on a normal click; while a request is in flight the link is inert (no second tab,
+ * no second start — the server is idempotent too). A refused start shows the usual error and the
+ * task stays "not started" on the screen (the view only changes with the server's answer).
+ */
+export function StartAndOpen({ item, ctx, className, style, label }: { item: TaskView; ctx: TaskCtx; className: string; style?: React.CSSProperties; label?: string }) {
+  const off = !!ctx.busy;
+  if (!item.deepLink) return null;
+  return (
+    <a
+      href={item.deepLink}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      aria-disabled={off || undefined}
+      onClick={(e) => {
+        if (off) {
+          e.preventDefault();
+          return;
+        }
+        void ctx.onAct({ ...startAct(item), keepalive: true, sheet: false });
+      }}
+      className={`${className} no-underline ${off ? "pointer-events-none opacity-60" : ""}`}
+      style={style}
+    >
+      Bắt đầu · Mở {item.appLabel ?? "app"} ↗
+    </a>
+  );
+}
+
+/** The plain "Mở {app} ↗" link (no start): running, done, homework, or a task that cannot start now. */
+export function OpenAppLink({ item, className }: { item: TaskView; className: string }) {
+  if (!item.deepLink) return null;
+  return (
+    <a href={item.deepLink} target="_blank" rel="noreferrer" className={`${className} no-underline`}>
+      Mở {item.appLabel ?? "app"} ↗
+    </a>
+  );
+}
+
 /** One row of a task list (homework, extra, upcoming or skill). */
 export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: TaskCtx; locked?: boolean }) {
   const done = item.state === "done";
@@ -315,10 +366,9 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
         </span>
       </div>
       <FilesFold files={files} />
-      {item.deepLink && (
-        <a href={item.deepLink} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-bg px-3 text-sm font-semibold text-ink no-underline">
-          Mở {item.appLabel ?? "app"} ↗
-        </a>
+      {/* 15/11/2026: a task that can start opens its app from "Bắt đầu · Mở …" below instead. */}
+      {appLinkMode(item, { paused: ctx.paused, waiting: isWaiting(item, ctx) }) === "open" && (
+        <OpenAppLink item={item} className="inline-flex min-h-11 items-center gap-2 self-start rounded-xl bg-bg px-3 text-sm font-semibold text-ink" />
       )}
       <TaskActions item={item} ctx={ctx} />
     </div>
@@ -336,15 +386,19 @@ export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
   if (item.state === "todo") {
     return (
       <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          disabled={(!!ctx.busy || ctx.paused) || waiting || item.placeholder}
-          onClick={() => void ctx.onAct({ url: "/api/tasks/start", body: { source: item.source, id: item.id } })}
-          className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50"
-          style={{ background: ctx.color }}
-        >
-          Bắt đầu
-        </button>
+        {appLinkMode(item, { paused: ctx.paused, waiting }) === "startAndOpen" ? (
+          <StartAndOpen item={item} ctx={ctx} className="flex min-h-14 items-center justify-center rounded-2xl px-3 text-center text-[17px] font-bold text-white" style={{ background: ctx.color }} />
+        ) : (
+          <button
+            type="button"
+            disabled={(!!ctx.busy || ctx.paused) || waiting || item.placeholder}
+            onClick={() => void ctx.onAct(startAct(item))}
+            className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50"
+            style={{ background: ctx.color }}
+          >
+            Bắt đầu
+          </button>
+        )}
         {item.requiresProof && (
           <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onDoneNow(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">
             Làm xong trong vở rồi · nộp ảnh

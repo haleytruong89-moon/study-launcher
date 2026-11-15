@@ -45,6 +45,23 @@ export function runningTimedTask(state: DayState): TaskView | null {
   return runningItems(state).find((i) => isTimed(i) || isExtraRun(i)) ?? null;
 }
 
+/**
+ * "Mở app = bắt đầu luôn" (parent decision 15/11/2026): how a task's app link is shown.
+ * - "startAndOpen": a supplementary task or skill with an app that is not started, not done and
+ *   can start now (not on break, no other timed task running): ONE action "Bắt đầu · Mở {app} ↗"
+ *   opens the app and starts the task (server route, server clock; the server still decides).
+ * - "open": a plain "Mở {app} ↗" link (running, done, homework, or cannot start right now).
+ * - null: no app link.
+ * Display only: `busy` (a request in flight) is not part of it, the button is just inert then.
+ */
+export type AppLinkMode = "startAndOpen" | "open" | null;
+
+export function appLinkMode(item: TaskView, now: { paused: boolean; waiting: boolean }): AppLinkMode {
+  if (!item.deepLink) return null;
+  const canStart = item.source === "template" && item.state === "todo" && !item.placeholder && !item.requiresProof && !now.paused && !now.waiting;
+  return canStart ? "startAndOpen" : "open";
+}
+
 /** Whether the pass button should be offered (refused while a parent lock is in effect). */
 export function passOffered(state: DayState): boolean {
   // An empty day has its own "Bắt đầu giờ tự do" button: the weekly pass is not spent on it.
