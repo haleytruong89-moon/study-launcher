@@ -512,7 +512,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   const focus = page.getByRole("dialog", { name: /^Màn tập trung/ });
   const homeworkId = today1.state.part1.items.find((i) => i.title === "Ngữ văn")?.id ?? "";
   await tabs.getByRole("link", { name: "Hôm nay" }).click();
-  await study.getByRole("button", { name: "Bắt đầu", exact: true }).click();
+  await study.getByRole("button", { name: "Bắt đầu" }).click();
   const hwStart = page.getByRole("dialog", { name: "Mục tiêu nhỏ: Ngữ văn" });
   await expect(hwStart).toBeVisible();
   await expect(hwStart).toContainText("Làm xong trong vở thì chụp ảnh nộp.");
