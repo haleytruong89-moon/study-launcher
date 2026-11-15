@@ -51,19 +51,22 @@ export function runReportMessage(childName: string, taskTitle: string, range: st
 }
 
 /**
- * Evening reminder (21:00–21:59, Vercel Cron): only when something still waits for the parent. `unreviewed` =
- * today's finished tasks with no Đạt / Chưa đạt yet; `waiting` = open requests from the children.
+ * Evening reminder (20:00–20:59, Vercel Cron; parent decision 15/11/2026): only when something still
+ * waits for the parent. `unreviewed` = today's finished tasks with no Đạt / Chưa đạt yet; `waiting`
+ * = open requests from the children; `tutorLook` (L-3) = today's "cần chú ý" lines + teaching rules
+ * waiting, written by the tutor app. One push for everything (never one per app).
  * Returns null when there is nothing to do, so no push is sent.
  */
-export function eveningMessage(unreviewed: number, waiting: number): PushMessage | null {
-  if (unreviewed <= 0 && waiting <= 0) return null;
+export function eveningMessage(unreviewed: number, waiting: number, tutorLook = 0): PushMessage | null {
+  if (unreviewed <= 0 && waiting <= 0 && tutorLook <= 0) return null;
   const parts: string[] = [];
   if (unreviewed > 0) parts.push(`${unreviewed} bài chưa xem`);
   if (waiting > 0) parts.push(`${waiting} việc con đang nhờ`);
+  if (tutorLook > 0) parts.push(`Gia sư AI: ${tutorLook} chỗ cần bố mẹ xem`);
   return {
     title: "Xem lại ngày của con",
     body: `${parts.join(" · ")} · chạm để mở`,
-    url: unreviewed > 0 ? "/parent/review" : "/parent/requests",
+    url: unreviewed > 0 || (waiting <= 0 && tutorLook > 0) ? "/parent/review" : "/parent/requests",
     tag: "evening",
   };
 }

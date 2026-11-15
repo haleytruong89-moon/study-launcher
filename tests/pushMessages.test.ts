@@ -34,6 +34,19 @@ describe("push messages", () => {
     expect(m?.url).toBe("/parent/requests");
   });
 
+  it("evening: only tutor lines (L-3) open Ngày của con", () => {
+    const m = eveningMessage(0, 0, 3);
+    expect(m?.body).toBe("Gia sư AI: 3 chỗ cần bố mẹ xem · chạm để mở");
+    expect(m?.url).toBe("/parent/review");
+  });
+
+  it("evening: requests win the link over tutor lines; all counts in one push", () => {
+    const m = eveningMessage(0, 1, 2);
+    expect(m?.body).toBe("1 việc con đang nhờ · Gia sư AI: 2 chỗ cần bố mẹ xem · chạm để mở");
+    expect(m?.url).toBe("/parent/requests");
+    expect(eveningMessage(2, 1, 1)?.url).toBe("/parent/review");
+  });
+
   it("evening: both counts in one push", () => {
     expect(eveningMessage(1, 1)?.body).toBe("1 bài chưa xem · 1 việc con đang nhờ · chạm để mở");
   });
