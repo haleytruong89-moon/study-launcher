@@ -32,7 +32,7 @@ export interface TodayView {
   plan: string[] | null;
   /** S2e: the icon the child picked, or null. */
   icon: string | null;
-  /** S2e: the weekly review while it is open (Sunday 17:00 -> end of Monday), else null. */
+  /** S2e: the weekly review while it is open (Friday 17:00 -> end of Saturday, 15/11/2026), else null. */
   weekly: { stats: WeekStats; review: WeeklyReview | null } | null;
   /** Family rules the screen needs for its wording (minutes, thresholds). */
   rules: TodayRules;

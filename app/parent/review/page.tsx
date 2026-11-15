@@ -4,9 +4,9 @@ import { addDays } from "@/lib/admin/dates";
 import { photosExpiredOn, retentionDays } from "@/lib/cleanup/rules";
 import { extraLine, splitExtraRuns, type ExtraSummary } from "@/lib/parent/extraRuns";
 import { loadChildrenToday } from "@/lib/parent/load";
-import { localDate, weekStart } from "@/lib/time";
+import { localDate } from "@/lib/time";
 import { isOkResult, longDate, vnTime } from "@/lib/today/view";
-import { hoursMinutes, REVIEW_QUESTIONS, reviewWeek, type WeekStats } from "@/lib/today/week";
+import { hoursMinutes, latestReviewWeek, REVIEW_QUESTIONS, reviewPeriod, reviewWeek, type WeekStats } from "@/lib/today/week";
 import { loadWeekStats, loadWeeklyReview, type WeeklyReview } from "@/lib/today/week-load";
 import { OverrideSheet } from "../override-sheet";
 import { ParentTabs } from "../parent-header";
@@ -83,7 +83,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
 
   // The weekly review of the week under review (or last week), with the child's answers.
   const reviewOpen = reviewWeek(now);
-  const week = reviewOpen ?? addDays(weekStart(today), -7);
+  const week = latestReviewWeek(now);
   let weekly: { stats: WeekStats; review: WeeklyReview | null } | null = null;
   try {
     const [stats, review] = await Promise.all([loadWeekStats(db, child.id, week, child.bedtime), loadWeeklyReview(db, child.id, week)]);
@@ -288,12 +288,12 @@ function RunCard({ run: r, signed, photoNote, extra, big = false }: { run: RunRo
 }
 
 function WeeklyBlock({ stats, review, open }: { stats: WeekStats; review: WeeklyReview | null; open: boolean }) {
-  const end = addDays(stats.weekStart, 6);
+  const { from: startDay, to: end } = reviewPeriod(stats.weekStart);
   return (
     <details open={open} className="rounded-2xl bg-white px-4" aria-label="Tổng kết tuần">
       <summary className="flex min-h-13 cursor-pointer list-none items-center justify-between gap-2 font-extrabold">
         <span>
-          Tổng kết tuần {stats.weekStart.slice(8, 10)}/{stats.weekStart.slice(5, 7)} – {end.slice(8, 10)}/{end.slice(5, 7)}
+          Tổng kết tuần {startDay.slice(8, 10)}/{startDay.slice(5, 7)} – {end.slice(8, 10)}/{end.slice(5, 7)}
         </span>
         <span className="text-sm font-semibold text-ink/70">{stats.okDays}/7 ngày đạt ›</span>
       </summary>
@@ -311,7 +311,7 @@ function WeeklyBlock({ stats, review, open }: { stats: WeekStats; review: Weekly
             </span>
           </>
         ) : (
-          <span className="text-ink/60">Con chưa viết tổng kết (mở từ 17:00 Chủ nhật đến hết Thứ Hai).</span>
+          <span className="text-ink/60">Con chưa viết tổng kết (mở từ 17:00 Thứ Sáu đến hết Thứ Bảy).</span>
         )}
       </div>
     </details>

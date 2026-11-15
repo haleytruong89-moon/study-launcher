@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
-import { cleanPlan, hoursMinutes, isIcon, nextFromPlan, planProgress, reviewWeek, weekStats } from "@/lib/today/week";
+import { cleanPlan, hoursMinutes, isIcon, nextFromPlan, planProgress, latestReviewWeek, reviewPeriod, reviewWeek, weekStats } from "@/lib/today/week";
 
 const at = (d: string, t: string) => new Date(`${d}T${t}+07:00`);
 const iso = (d: string, t: string) => at(d, t).toISOString();
@@ -82,13 +82,41 @@ describe("day plan (display only)", () => {
   });
 });
 
-describe("weekly review window (Sunday 17:00 -> end of Monday)", () => {
-  it("opens Sunday 17:00 for this week, stays open Monday for the week that ended", () => {
-    expect(reviewWeek(at("2026-10-18", "16:59"))).toBeNull();
-    expect(reviewWeek(at("2026-10-18", "17:00"))).toBe("2026-10-12");
-    expect(reviewWeek(at("2026-10-19", "23:59"))).toBe("2026-10-12");
-    expect(reviewWeek(at("2026-10-20", "00:00"))).toBeNull();
-    expect(reviewWeek(at(TODAY, "20:00"))).toBeNull();
+describe("weekly review window (Friday 17:00 -> end of Saturday, 15/11/2026)", () => {
+  it("opens Friday 17:00 and stays open all Saturday, keyed by that week's Monday", () => {
+    expect(reviewWeek(at("2026-11-20", "16:59"))).toBeNull();
+    expect(reviewWeek(at("2026-11-20", "17:00"))).toBe("2026-11-16");
+    expect(reviewWeek(at("2026-11-21", "23:59"))).toBe("2026-11-16");
+    expect(reviewWeek(at("2026-11-22", "18:00"))).toBeNull(); // Sunday: closed now
+    expect(reviewWeek(at("2026-11-23", "10:00"))).toBeNull(); // Monday: closed now
+  });
+  it("covers the Saturday before -> Friday", () => {
+    expect(reviewPeriod("2026-11-16")).toEqual({ from: "2026-11-14", to: "2026-11-20" });
+  });
+  it("parents read the open review, else the one of the last Friday", () => {
+    expect(latestReviewWeek(at("2026-11-21", "09:00"))).toBe("2026-11-16"); // Saturday (open)
+    expect(latestReviewWeek(at("2026-11-22", "09:00"))).toBe("2026-11-16"); // Sunday
+    expect(latestReviewWeek(at("2026-11-23", "09:00"))).toBe("2026-11-16"); // Monday
+    expect(latestReviewWeek(at("2026-11-27", "16:00"))).toBe("2026-11-16"); // Friday before 17:00
+    expect(latestReviewWeek(at("2026-11-27", "17:00"))).toBe("2026-11-23"); // Friday 17:00 (open)
+  });
+});
+
+describe("week stats over Saturday before -> Friday (15/11/2026)", () => {
+  it("counts the Saturday before and stops at Friday", () => {
+    const stats = weekStats({
+      weekStart: "2026-10-12",
+      bedtime: "21:30",
+      sessions: [
+        session("2026-10-10", { dayType: "sick" }), // Saturday before: counted
+        session("2026-10-16", { dayType: "sick" }), // Friday: counted
+        session("2026-10-17", { dayType: "sick" }), // Saturday after: next review
+      ],
+      runs: [],
+      homework: [],
+      plans: [],
+    });
+    expect(stats.okDays).toBe(2);
   });
 });
 
