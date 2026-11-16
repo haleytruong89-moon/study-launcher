@@ -6,7 +6,8 @@ import { dropOrder } from "@/lib/today/reorder";
 import type { TodayView } from "@/lib/today/service";
 import { studyTimerLabel } from "@/lib/today/focus";
 import { appLinkMode, extraRunView, isExtraRun, runningItems } from "@/lib/today/rules";
-import { dayMonth, dueLabel, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
+import { dayMonth, dueLabel, freeMeter, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
+import { FreeMeterBox } from "./free-meter";
 import { plannable } from "@/lib/today/week";
 import { TUTOR_HOME, isMathSubject, tutorTaskHref } from "@/lib/tutor/entry";
 import { CalendarCard } from "./calendar-card";
@@ -64,6 +65,7 @@ export function StudyCorner({
   suggested,
   focus,
   tutor = false,
+  freeMinutes,
 }: {
   s: DayState;
   view: TodayView;
@@ -78,7 +80,11 @@ export function StudyCorner({
   focus: boolean;
   /** Gia sư AI Toán is on for this child: "Em kẹt bài này? Hỏi cô" in the work panel (Maths tasks). */
   tutor?: boolean;
+  /** The family's free time (minutes) for "Giờ tự do tối nay" (16/11/2026). */
+  freeMinutes: number;
 }) {
+  // 16/11/2026: the saved-up free minutes, visible where the child works.
+  const meter = freeMeter(s, freeMinutes, ctx.nowMs);
   // The order the child just made, shown at once while the server saves it. It belongs to the
   // plan it was made from: a new view from the server (saved, or polled) replaces it.
   const [draft, setDraft] = useState<{ base: string[] | null; keys: string[] } | null>(null);
@@ -298,6 +304,7 @@ export function StudyCorner({
           <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
             <WorkPanel item={current} ctx={ctx} tutor={tutor} />
           </section>
+          {meter && <FreeMeterBox m={meter} color={color} />}
           <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
         </div>
       )}

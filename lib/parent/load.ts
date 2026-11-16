@@ -9,6 +9,8 @@ export interface ChildToday {
   child: ChildSummary;
   state: DayState | null;
   overview: ChildOverview | null;
+  /** The family's free time in minutes (for "Giờ tự do tối nay", 16/11/2026); 0 when unknown. */
+  freeMinutes: number;
 }
 
 /** Parent's verdicts on today's runs, and the open "Nhờ bố mẹ xem" requests (RLS: this family only). */
@@ -39,10 +41,10 @@ export async function loadChildrenToday(db: SupabaseClient, familyId: string, ch
       const day = loaded[i]!;
       if (!day.ok) throw day.e;
       const state = computeDayState(day.input, now);
-      return { child, state, overview: childOverview(state, verdicts, now, asked) };
+      return { child, state, overview: childOverview(state, verdicts, now, asked), freeMinutes: day.input.settings.freeMinutes };
     } catch (e) {
       console.error("parent overview failed", e instanceof Error ? e.message : e);
-      return { child, state: null, overview: null };
+      return { child, state: null, overview: null, freeMinutes: 0 };
     }
   });
 }
