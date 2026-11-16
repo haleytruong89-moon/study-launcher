@@ -58,9 +58,19 @@ export function minutesTaken(item: Pick<TaskView, "startedAt" | "doneAt">): numb
   return Math.max(0, Math.round((Date.parse(item.doneAt) - Date.parse(item.startedAt)) / 60_000));
 }
 
+/**
+ * A template's name with its subject when the title alone does not say it (parent report
+ * 16/11/2026: two "Practice" tasks, one English, one Maths, looked the same): "Tiếng Anh ·
+ * Practice". No subject, or the subject is the title → the title alone.
+ */
+export function templateName(title: string, subject: string | null | undefined): string {
+  const s = subject?.trim();
+  return s && s.toLowerCase() !== title.trim().toLowerCase() ? `${s} · ${title}` : title;
+}
+
 export function taskTitle(item: TaskView): string {
   if (item.source === "homework") return item.title;
-  return `${item.part === 1 ? "Bổ sung" : "Kỹ năng"} · ${item.title}`;
+  return `${item.part === 1 ? "Bổ sung" : "Kỹ năng"} · ${templateName(item.title, item.subject)}`;
 }
 
 function taskMetaText(item: TaskView, today: string): string {
@@ -70,7 +80,9 @@ function taskMetaText(item: TaskView, today: string): string {
     const short = note.length > 40 ? `${note.slice(0, 40)}…` : note;
     return [due, short].filter(Boolean).join(" · ");
   }
-  return item.minMinutes > 0 ? `Tối thiểu ${item.minMinutes}′` : "Không giới hạn thời gian";
+  const min = item.minMinutes > 0 ? `Tối thiểu ${item.minMinutes}′` : "Không giới hạn thời gian";
+  // Which app the task opens (English OS, Math OS…): tells two same-named tasks apart too.
+  return item.appLabel ? `${min} · ${item.appLabel}` : min;
 }
 
 /** The tag on the right of a task row: words first, colour second. */

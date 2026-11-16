@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type DaySessionInput } from "@/lib/dayState";
 import { decideBreak, decideConfirmRequest, decideFinish, decideFreeStart, decidePass, decideProof, decideStart, extraRunView, isExtraRun, isProofPath, ON_BREAK_TEXT, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
-import { bannerFor, breakLine, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, freeBonusLine, groupLabel, leftCount, lockSoonMinutes, lockSoonText, longDate, nextPart1, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
+import { bannerFor, breakLine, clock, dayLabel, dayProgress, daySteps, dueTone, earlyUntil, freeBonusLine, freeMeter, freeMeterParentLine, groupLabel, leftCount, lockSoonMinutes, lockSoonText, longDate, nextPart1, nextTask, shade, statusPill, taskMeta, vnTime, weekSummary } from "@/lib/today/view";
 
 // Wednesday 2026-10-14, Vietnam time.
 const TODAY = "2026-10-14";
@@ -491,6 +491,29 @@ describe("R8b break bank wording (minutes only, tier values from the server)", (
     expect(freeBonusLine(free, 45)).toBe("Giờ tự do 45' + 30' nghỉ chưa dùng = 75'");
     expect(breakLine(free, vn("16:10").getTime())).toBeNull();
     expect(freeBonusLine(computeDayState(day(), vn("15:00")), 45)).toBeNull();
+  });
+
+  it("free meter (16/11): base + saved minutes, the next step, the parent's line", () => {
+    const empty = freeMeter(computeDayState(day(), vn("15:00")), 45, vn("15:00").getTime());
+    expect(empty).toMatchObject({ base: 45, bonus: 0, total: 45, started: false, progress: { focus: 0, atFocus: 45, more: 45, gain: 10 } });
+    expect(freeMeterParentLine(empty)).toBe("Giờ tự do tối nay: 45′");
+
+    const s = computeDayState(day({ runs: [ex("15:00", "15:55")] }), vn("16:00"));
+    const m = freeMeter(s, 45, vn("16:00").getTime());
+    expect(m).toMatchObject({ bonus: 10, total: 55, progress: { focus: 55, atFocus: 90, more: 35, gain: 20 }, countsOnXong: false });
+    expect(freeMeterParentLine(m)).toBe("Giờ tự do tối nay: 55′ (+10′ để dành)");
+
+    const running = computeDayState(day({ runs: [ex("15:00", null)] }), vn("15:30"));
+    expect(freeMeter(running, 45, vn("15:30").getTime())?.countsOnXong).toBe(true);
+  });
+
+  it("free meter: fixed once free time started, gone once it ended", () => {
+    const free = computeDayState(day({ sessions: [session({ passUsedAt: at("16:00"), freeStartedAt: at("16:00") })], runs: [ex("14:00", "15:35")] }), vn("16:10"));
+    const m = freeMeter(free, 45, vn("16:10").getTime());
+    expect(m).toMatchObject({ base: 45, bonus: 30, total: 75, started: true, progress: null });
+    expect(freeMeterParentLine(m)).toBe("Giờ tự do hôm nay: 75′ (+30′ để dành)");
+    const ended = computeDayState(day({ sessions: [session({ passUsedAt: at("16:00"), freeStartedAt: at("16:00") })], runs: [ex("14:00", "15:35")] }), vn("17:30"));
+    expect(freeMeter(ended, 45, vn("17:30").getTime())).toBeNull();
   });
 
   it("before 0014 the old button stays (no bank line)", () => {

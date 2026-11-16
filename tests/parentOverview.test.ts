@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeDayState, type DayInput, type HomeworkItemInput, type TaskTemplateInput } from "@/lib/dayState";
-import { childOverview, dueText, machineText, parentPill, type Verdict } from "@/lib/parent/overview";
+import { childOverview, dueText, machineText, parentPill, templateName, type Verdict } from "@/lib/parent/overview";
 
 // Reference day: Wednesday 2026-10-14, 20:00 VN.
 const TODAY = "2026-10-14";
@@ -113,5 +113,24 @@ describe("parent overview", () => {
     expect(machineText({ open: true, openUntil: vn("2026-10-14T22:10:00").toISOString() })).toBe("Máy: mở mọi trang đến 22:10");
     expect(dueText(TODAY, TODAY)).toBe("Nộp hôm nay");
     expect(dueText("2026-10-22", TODAY)).toBe("Nộp 22/10");
+  });
+});
+
+describe("parent overview: which subject / app a task is (16/11/2026)", () => {
+  it("templateName: subject first when the title does not say it", () => {
+    expect(templateName("Practice", "Tiếng Anh")).toBe("Tiếng Anh · Practice");
+    expect(templateName("Practice", null)).toBe("Practice");
+    expect(templateName("Toán", " toán ")).toBe("Toán");
+    expect(templateName("Practice", "  ")).toBe("Practice");
+  });
+
+  it("two 'Practice' tasks tell their subject and app apart on the parent's rows", () => {
+    const en = { ...tpl("t-en", "extra"), title: "Practice", subject: "Tiếng Anh", deepLink: "https://english-os.example/app" };
+    const ma = { ...tpl("t-ma", "extra"), title: "Practice", subject: "Toán" };
+    const o = childOverview(computeDayState(day({ templates: [en, ma] }), NOW), new Map(), NOW);
+    const rows = [...o.overdue, ...o.today, ...o.upcoming];
+    expect(rows.map((r) => r.title).sort()).toEqual(["Bổ sung · Tiếng Anh · Practice", "Bổ sung · Toán · Practice"]);
+    expect(rows.find((r) => r.title.includes("Tiếng Anh"))?.meta).toBe("Tối thiểu 20′ · english-os.example");
+    expect(rows.find((r) => r.title.includes("Toán"))?.meta).toBe("Tối thiểu 20′");
   });
 });

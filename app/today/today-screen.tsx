@@ -526,6 +526,7 @@ export function TodayScreen({
               suggested={next}
               focus={studyFocus}
               tutor={tutor}
+              freeMinutes={view.rules.freeMinutes}
             />
           </>
         )}

@@ -8,7 +8,7 @@ import { latestReviewWeek } from "@/lib/today/week";
 import { DAY_TYPE_INFO, specialDayWindow, type TemplateForDay } from "@/lib/admin/specialDay";
 import { suggestionText, TRUST_DISMISSED, TRUST_SET, trustSuggestion, weekStartIso, type TrustDecisionRow } from "@/lib/admin/trust";
 import { localDate } from "@/lib/time";
-import { dayMonth, longDate, vnTime } from "@/lib/today/view";
+import { dayMonth, freeMeter, freeMeterParentLine, longDate, vnTime } from "@/lib/today/view";
 import { OverrideSheet } from "./override-sheet";
 import { ParentHeader } from "./parent-header";
 import { RefreshEvery } from "./refresh-every";
@@ -134,7 +134,7 @@ export default async function ParentHome() {
         )}
 
         {kids.map((k) => (
-          <ChildCard key={k.child.id} kid={k} special={special} learning={learningLine(k.child.id)} />
+          <ChildCard key={k.child.id} kid={k} special={special} learning={learningLine(k.child.id)} nowMs={now.getTime()} />
         ))}
       </main>
     </>
@@ -150,8 +150,10 @@ interface SpecialData {
   decisions: TrustDecisionRow[];
 }
 
-function ChildCard({ kid, special, learning }: { kid: ChildToday; special: SpecialData; learning: string | null }) {
+function ChildCard({ kid, special, learning, nowMs }: { kid: ChildToday; special: SpecialData; learning: string | null; nowMs: number }) {
   const { child, state, overview: o } = kid;
+  // 16/11/2026: what the child has saved up for tonight's free time (same numbers as the child sees).
+  const freeLine = state && kid.freeMinutes > 0 ? freeMeterParentLine(freeMeter(state, kid.freeMinutes, nowMs)) : null;
   const templates: TemplateForDay[] = special.templateRows.filter((t) => t.child_id === child.id);
   const days: SpecialDayRow[] = special.specialRows
     .filter((d) => d.child_id === child.id)
@@ -185,6 +187,7 @@ function ChildCard({ kid, special, learning }: { kid: ChildToday; special: Speci
             <div aria-hidden className="h-2 rounded-full bg-white/25">
               <div className="h-2 rounded-full bg-white" style={{ width: `${o.pct}%` }} />
             </div>
+            {freeLine && <p className="text-sm font-semibold">{freeLine}</p>}
             <div className="grid grid-cols-2 gap-2">
               <OverrideSheet
                 childId={child.id}

@@ -8,7 +8,8 @@ import type { DayState, TaskView } from "@/lib/dayState";
 import { PLAY_IDEAS } from "@/lib/today/playIdeas";
 import { readPlayPlan, writePlayPlan } from "@/lib/today/playPlan";
 import type { TodayView } from "@/lib/today/service";
-import { breakLine, clock, dayMonth, dueLabel, freeBonusLine, groupLabel, leftCount, nextPart1, taskMeta, vnTime } from "@/lib/today/view";
+import { breakLine, clock, dayMonth, dueLabel, freeMeter, groupLabel, leftCount, nextPart1, taskMeta, vnTime } from "@/lib/today/view";
+import { FreeMeterBox } from "./free-meter";
 import type { WeekDay } from "@/lib/today/weekDays";
 import { appLinkMode } from "@/lib/today/rules";
 import { LamThem, StartAndOpen, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
@@ -177,7 +178,8 @@ export function PillarCards({
   const freeRunning = s.status === "FREE" && freeEnds !== null && nowMs < freeEnds;
   // R8b: the break bank (text only here; the button is on the status card) and the minutes it adds.
   const brk = breakLine(s, nowMs);
-  const bonus = freeBonusLine(s, freeMinutes);
+  // 16/11/2026: the saved-up free minutes and the next step, in place of the old bonus line.
+  const meter = freeMeter(s, freeMinutes, nowMs);
 
   return (
     <div role="list" aria-label="Bốn mảng hôm nay" className="grid gap-3.5 sm:grid-cols-2">
@@ -252,14 +254,14 @@ export function PillarCards({
         )}
       </Card>
 
-      <Card n={4} name="Vui chơi" tag={`Giờ tự do ${freeMinutes}'`} top="#7A4FA0">
+      <Card n={4} name="Vui chơi" tag={`Giờ tự do ${meter?.total ?? freeMinutes}'`} top="#7A4FA0">
         {brk && (
           <div className="flex flex-col gap-0.5 rounded-[14px] bg-[#ECEEE8] px-3 py-2.5 text-sm">
             <b>{brk.text}</b>
             {brk.hint && <span className="text-[13px] text-ink/75">{brk.hint}</span>}
           </div>
         )}
-        {bonus && <p className="text-sm font-semibold">{bonus}</p>}
+        {meter && <FreeMeterBox m={meter} color="#7A4FA0" compact />}
         {s.free.startedAt === null ? (
           <>
             <p className="text-sm text-ink/75">

@@ -8,6 +8,7 @@ import { loadLearning } from "@/lib/parent/learningLoad";
 import { loadChildrenToday } from "@/lib/parent/load";
 import { localDate } from "@/lib/time";
 import { tutorOrigin } from "@/lib/tutor/entry";
+import { templateName } from "@/lib/parent/overview";
 import { isOkResult, longDate, vnTime } from "@/lib/today/view";
 import { hoursMinutes, latestReviewWeek, REVIEW_QUESTIONS, reviewPeriod, reviewWeek, type WeekStats } from "@/lib/today/week";
 import { loadWeekStats, loadWeeklyReview, type WeeklyReview } from "@/lib/today/week-load";
@@ -32,7 +33,7 @@ interface RunRow {
   done_at: string;
   proof_paths: string[];
   parent_verdict: "ok" | "not_ok" | null;
-  task_templates: { title: string; part: "extra" | "skill" } | null;
+  task_templates: { title: string; subject: string | null; part: "extra" | "skill" } | null;
   homework_items: { subject: string; note: string | null; due_date: string } | null;
 }
 
@@ -62,7 +63,7 @@ export default async function ChildDayPage({ searchParams }: { searchParams: Pro
   const [{ data }, live, { data: settings }, learning] = await Promise.all([
     db
       .from("task_runs")
-      .select("id, child_id, local_date, source, template_id, started_at, done_at, proof_paths, parent_verdict, task_templates(title, part), homework_items(subject, note, due_date)")
+      .select("id, child_id, local_date, source, template_id, started_at, done_at, proof_paths, parent_verdict, task_templates(title, subject, part), homework_items(subject, note, due_date)")
       .eq("child_id", child.id)
       .eq("local_date", day)
       .not("done_at", "is", null)
@@ -256,7 +257,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 type PhotoNote = { expired: true; days: number } | { expired: false };
 
 function RunCard({ run: r, signed, photoNote, extra, big = false }: { run: RunRow; signed: Map<string, string>; photoNote: PhotoNote; extra?: ExtraSummary; big?: boolean }) {
-  const title = r.source === "homework" ? `${r.homework_items?.subject ?? "Bài"} · bài trên lớp` : (r.task_templates?.title ?? "Việc");
+  const title = r.source === "homework" ? `${r.homework_items?.subject ?? "Bài"} · bài trên lớp` : (r.task_templates ? templateName(r.task_templates.title, r.task_templates.subject) : "Việc");
   const early = r.source === "homework" && !!r.homework_items && localDate(new Date(r.done_at)) <= addDays(r.homework_items.due_date, -2);
   const kind = r.source === "homework" ? (early ? " · ★ sớm" : "") : r.task_templates?.part === "skill" ? " · kỹ năng" : " · bài bổ sung";
   const photos = r.proof_paths.map((p) => signed.get(p)).filter((u): u is string => !!u);

@@ -607,7 +607,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(cards.getByRole("listitem", { name: "3 · Kỹ năng" })).toContainText("✓ Xong");
   await expect(play).toContainText("Giờ tự do đang chạy");
   // R8b: the unused break minutes are added to free time (40' set by the parent in S1).
-  await expect(play).toContainText(/Giờ tự do 40' \+ (9|10)' nghỉ chưa dùng = (49|50)'/);
+  await expect(play).toContainText(/Giờ tự do hôm nay: 40′ \+ (9|10)′ = (49|50)′/);
   await expect(play).toContainText(`Con định: ${chipName}`);
   await expect(page.getByRole("button", { name: "Dùng thẻ hôm nay" })).toHaveCount(0);
   // Tuần của con: today's three areas are ticked.

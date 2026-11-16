@@ -3,6 +3,7 @@ import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { localDate, startOfLocalDay } from "@/lib/time";
 import { vnTime } from "@/lib/today/view";
 import { ParentHeader } from "../parent-header";
+import { templateName } from "@/lib/parent/overview";
 import { reportMinutes, reportRange } from "@/lib/today/report";
 import { ConfirmButtons } from "./confirm-buttons";
 import { ReportButtons } from "./report-buttons";
@@ -55,11 +56,11 @@ export default async function RequestsPage() {
   // "Con quên bấm Bắt đầu?" of today (0020; before the migration the query fails: no section).
   const reports = await db
     .from("task_run_reports")
-    .select("id, child_id, started_at, ended_at, requested_at, task_templates(title)")
+    .select("id, child_id, started_at, ended_at, requested_at, task_templates(title, subject)")
     .eq("local_date", localDate(new Date()))
     .eq("status", "pending")
     .order("requested_at");
-  const reportRows = (reports.error ? [] : (reports.data ?? [])) as unknown as { id: string; child_id: string; started_at: string; ended_at: string; requested_at: string; task_templates: { title: string } | null }[];
+  const reportRows = (reports.error ? [] : (reports.data ?? [])) as unknown as { id: string; child_id: string; started_at: string; ended_at: string; requested_at: string; task_templates: { title: string; subject: string | null } | null }[];
 
   return (
     <>
@@ -96,7 +97,7 @@ export default async function RequestsPage() {
               Con quên bấm Bắt đầu ({reportRows.length})
             </h2>
             {reportRows.map((r) => {
-              const title = r.task_templates?.title ?? "Việc";
+              const title = r.task_templates ? templateName(r.task_templates.title, r.task_templates.subject) : "Việc";
               const range = reportRange({ startedAt: r.started_at, endedAt: r.ended_at });
               return (
                 <article key={r.id} aria-label={`Nhờ xác nhận ${title}`} className="flex flex-col gap-3 rounded-2xl border-2 border-accent bg-white p-4">

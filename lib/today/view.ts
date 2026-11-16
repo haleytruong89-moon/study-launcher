@@ -200,6 +200,45 @@ export function freeBonusLine(state: DayState, freeMinutes: number): string | nu
 }
 
 /**
+ * "Giờ tự do tối nay" (child report 16/11/2026: the minutes saved up were not visible where the
+ * child works). Display only, the same numbers as the bank (R8b, rule 19): base free time +
+ * unused break minutes, the current focus block and what its next step adds. A break taken now
+ * spends the saved minutes; whatever is left is added when free time starts. null once free time
+ * has started and ended, and before migration 0014 (no bank).
+ */
+export interface FreeMeter {
+  base: number;
+  bonus: number;
+  total: number;
+  /** Before free time starts: "tối nay"; once it runs: "hôm nay" (the total is then fixed). */
+  started: boolean;
+  /** The current block toward the next step, or null at the top step / free time started. */
+  progress: { focus: number; atFocus: number; more: number; gain: number } | null;
+  /** A task is running: its minutes count once the child presses Xong. */
+  countsOnXong: boolean;
+}
+
+export function freeMeter(state: DayState, freeMinutes: number, nowMs: number): FreeMeter | null {
+  if (state.break.legacy) return null;
+  const started = state.free.startedAt !== null;
+  if (started && state.free.endsAt && nowMs >= Date.parse(state.free.endsAt)) return null;
+  const bonus = Math.max(0, state.free.bonusMinutes);
+  const next = state.break.nextTier;
+  const gain = next ? next.minutes - state.break.bankMinutes : 0;
+  const progress =
+    !started && next && gain > 0
+      ? { focus: state.break.blockFocusMinutes, atFocus: next.atFocus, more: Math.max(0, next.atFocus - state.break.blockFocusMinutes), gain }
+      : null;
+  return { base: freeMinutes, bonus, total: freeMinutes + bonus, started, progress, countsOnXong: !started && runningTimedTask(state) !== null };
+}
+
+/** The parent's one line under a child (16/11/2026): "Giờ tự do tối nay: 70′ (+25′ để dành)". */
+export function freeMeterParentLine(m: FreeMeter | null): string | null {
+  if (!m) return null;
+  return `Giờ tự do ${m.started ? "hôm nay" : "tối nay"}: ${m.total}′${m.bonus > 0 ? ` (+${m.bonus}′ để dành)` : ""}`;
+}
+
+/**
  * Header steps (R1): Bài tập and Kỹ năng are done in any order, so each step is ticked on its
  * own; "Giờ tự do" is ticked once it has started (or ended). Display only.
  */
