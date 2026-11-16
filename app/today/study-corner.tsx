@@ -10,6 +10,7 @@ import { dayMonth, dueLabel, freeMeter, groupLabel, leftCount, timerMs, upcoming
 import { FreeMeterBox } from "./free-meter";
 import { plannable } from "@/lib/today/week";
 import { TUTOR_HOME, isMathSubject, tutorTaskHref } from "@/lib/tutor/entry";
+import { SitesCard } from "./sites-card";
 import { CalendarCard } from "./calendar-card";
 import { FilesFold, LamThem, OpenAppLink, TaskActions, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
@@ -306,6 +307,7 @@ export function StudyCorner({
           </section>
           {meter && <FreeMeterBox m={meter} color={color} />}
           <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
+          <SitesCard color={color} />
         </div>
       )}
     </div>
