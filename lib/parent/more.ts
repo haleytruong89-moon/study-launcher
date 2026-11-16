@@ -21,6 +21,7 @@ const GROUPS: { title: string; links: MoreLink[] }[] = [
   {
     title: "Việc của con",
     links: [
+      { href: "/parent/week", label: "Tổng kết tuần", sub: "Tuần qua của các con, gợi ý kèm con cuối tuần (tối Thứ Sáu)" },
       { href: "/parent/templates", label: "Lịch việc mỗi tuần", sub: "Bài bổ sung + kỹ năng theo thứ" },
       { href: "/parent/slots", label: "App môn học", sub: "Nút mở app trên màn của con" },
     ],

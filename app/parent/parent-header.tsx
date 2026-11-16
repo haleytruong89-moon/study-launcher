@@ -9,6 +9,7 @@ import { TalkBanner } from "./talk-banner";
 const PAGES = {
   "/parent": "home",
   "/parent/review": "home",
+  "/parent/week": "home",
   "/parent/homework": "homework",
   "/parent/requests": "requests",
   "/parent/talk": "requests",
