@@ -357,6 +357,7 @@ Quy tắc:
 | 15/11/2026 | **L-3 "Học với app"** (thiết kế báo cáo 3 tầng `BAO_CAO_PHU_HUYNH_DESIGN_v1.md`; phụ huynh chọn qua popup): ô mỗi app ở **Ngày của con** + **1 dòng mỗi con ở Hôm nay**; nhắc tối dời **20:00** (trước ~21:00); "Gia sư AI: N chỗ cần bố mẹ xem" đếm **dòng cần chú ý + luật dạy chờ duyệt**. Dòng cần chú ý chỉ bố mẹ đọc (Q5). Thời gian gia sư chưa tính vào ngân hàng giờ nghỉ / khóa-mở (Q3). SQL 0021 |
 | 16/11/2026 | **L-5 Tổng kết tuần cho bố mẹ** (phụ huynh chọn qua popup): trang chung 2 con, số liệu T7 → T6; "Gợi ý kèm con cuối tuần" **tự rút từ dữ liệu** (≤ 3 dòng: Chưa đạt, quá hạn, để dành ở gia sư), không AI; **tối Thứ Sáu 1 thông báo tuần thay bản tin ngày**, luôn gửi, kèm việc còn chờ; **không nhắc con** viết tổng kết. Không điểm, không so sánh hai con |
 | 16/11/2026 | **Tên môn ở màn bố mẹ + "Giờ tự do tối nay" cho con** (bố mẹ duyệt qua popup): việc bổ sung/kỹ năng hiện môn (và tên app) để phân biệt 2 việc cùng tên; ô giờ tự do (cơ bản + phút để dành = tổng, thanh tới mốc thưởng kế) ở Góc học tập + thẻ Vui chơi, **bố mẹ thấy 1 dòng ngắn**. Chỉ hiển thị, luật ngân hàng giờ nghỉ giữ nguyên |
+| 16/11/2026 | **Trang con mở được** (đề xuất mục 1, bố mẹ đồng ý): con xem danh sách trang được phép ngay trong Góc học tập, nhóm theo loại, trang mở tạm có giờ hết; chỉ đọc, không đổi allowlist hay hành vi khóa/mở |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 
