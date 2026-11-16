@@ -9,6 +9,7 @@ import { appLinkMode, extraRunView, isExtraRun, runningItems } from "@/lib/today
 import { dayMonth, dueLabel, groupLabel, leftCount, timerMs, upcomingHint } from "@/lib/today/view";
 import { plannable } from "@/lib/today/week";
 import { TUTOR_HOME, isMathSubject, tutorTaskHref } from "@/lib/tutor/entry";
+import { SitesCard } from "./sites-card";
 import { CalendarCard } from "./calendar-card";
 import { FilesFold, LamThem, OpenAppLink, TaskActions, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
@@ -299,6 +300,7 @@ export function StudyCorner({
             <WorkPanel item={current} ctx={ctx} tutor={tutor} />
           </section>
           <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
+          <SitesCard color={color} />
         </div>
       )}
     </div>
