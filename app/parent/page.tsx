@@ -3,6 +3,8 @@ import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { loadChildrenToday, type ChildToday } from "@/lib/parent/load";
 import { buildLearningTiles, homeLine } from "@/lib/parent/learning";
 import { loadLearning } from "@/lib/parent/learningLoad";
+import { periodLabel, weekCardVisible } from "@/lib/parent/weekDigest";
+import { latestReviewWeek } from "@/lib/today/week";
 import { DAY_TYPE_INFO, specialDayWindow, type TemplateForDay } from "@/lib/admin/specialDay";
 import { suggestionText, TRUST_DISMISSED, TRUST_SET, trustSuggestion, weekStartIso, type TrustDecisionRow } from "@/lib/admin/trust";
 import { localDate } from "@/lib/time";
@@ -121,6 +123,15 @@ export default async function ParentHome() {
             </ul>
           )}
         </section>
+
+        {weekCardVisible(now) && (
+          <Link href="/parent/week" className="flex min-h-13 items-center justify-between gap-2 rounded-2xl bg-white px-4 py-3 font-extrabold">
+            <span>
+              Tổng kết tuần <span className="font-semibold text-ink/70">{periodLabel(latestReviewWeek(now))}</span>
+            </span>
+            <span aria-hidden>›</span>
+          </Link>
+        )}
 
         {kids.map((k) => (
           <ChildCard key={k.child.id} kid={k} special={special} learning={learningLine(k.child.id)} />
