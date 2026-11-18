@@ -27,6 +27,21 @@ export function TimetableEditor({ child, versions, today }: { child: { id: strin
   const [msg, setMsg] = useState<string | null>(null);
   const [armed, setArmed] = useState<string | null>(null);
   const parsed = parseQuick(text);
+  // 18/11/2026: the empty starting text is not an error yet (the parent has not pasted anything).
+  const empty = !parsed.ok && !text.split(/\r?\n/).some((l) => /^[SC]\s*\d[^|]*\|.*[^|\s]/iu.test(l.trim()));
+  const [pasteMsg, setPasteMsg] = useState<string | null>(null);
+
+  /** One tap: replace the box with what was copied (the phone may ask "Dán" first). */
+  async function pasteFromClipboard() {
+    setPasteMsg(null);
+    try {
+      const t = await navigator.clipboard.readText();
+      if (!t.trim()) return setPasteMsg("Bộ nhớ tạm đang trống: hãy sao chép thời khóa biểu trước.");
+      setText(t.trim());
+    } catch {
+      setPasteMsg("Máy không cho dán tự động: chạm giữ trong ô, chọn “Chọn tất cả” rồi “Dán”.");
+    }
+  }
 
   async function save() {
     setBusy(true);
@@ -99,6 +114,15 @@ export function TimetableEditor({ child, versions, today }: { child: { id: strin
               <input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} className="min-h-11 rounded-xl border border-ink/30 px-3 text-base" />
               <span className="text-xs font-normal text-ink/65">Cùng ngày với một bản đã có thì bản đó được thay. Ngày khác thì thêm bản mới.</span>
             </label>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => void pasteFromClipboard()} className="btn bg-ink font-semibold text-white">
+                📋 Dán thời khóa biểu đã sao chép
+              </button>
+              <button type="button" onClick={() => setText("")} className="btn border-2 border-ink bg-white font-semibold">
+                Xóa trắng ô
+              </button>
+            </div>
+            {pasteMsg && <p className="text-sm text-[#A3341F]">{pasteMsg}</p>}
             <label className="flex flex-col gap-1 text-sm font-semibold">
               Thời khóa biểu (dán nhanh)
               <textarea
@@ -115,6 +139,8 @@ export function TimetableEditor({ child, versions, today }: { child: { id: strin
             </label>
             {parsed.ok ? (
               <Grid data={parsed.data} />
+            ) : empty ? (
+              <p className="text-sm text-ink/70">Chưa có môn nào. Sao chép thời khóa biểu (đoạn chữ bắt đầu bằng “LỚP:”) rồi bấm “📋 Dán thời khóa biểu đã sao chép”.</p>
             ) : (
               <ul aria-label="Lỗi" className="flex flex-col gap-0.5 text-sm text-[#A3341F]">
                 {parsed.errors.slice(0, 5).map((e) => (
