@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { TimetableVersion } from "@/lib/timetable/rules";
 import { HomeworkForm } from "./homework-form";
 
 interface Kid {
@@ -10,7 +11,21 @@ interface Kid {
 }
 
 /** "+ Giao bài" floating button that opens the homework form as a sheet (UI review 19/10/2026). */
-export function NewHomeworkSheet({ familyId, today, tomorrow, kids, defaultKidId }: { familyId: string; today: string; tomorrow: string; kids: Kid[]; defaultKidId?: string }) {
+export function NewHomeworkSheet({
+  familyId,
+  today,
+  tomorrow,
+  kids,
+  defaultKidId,
+  timetables,
+}: {
+  familyId: string;
+  today: string;
+  tomorrow: string;
+  kids: Kid[];
+  defaultKidId?: string;
+  timetables?: TimetableVersion[];
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   // A fresh form each time the sheet opens.
@@ -60,6 +75,7 @@ export function NewHomeworkSheet({ familyId, today, tomorrow, kids, defaultKidId
             tomorrow={tomorrow}
             kids={kids}
             defaultKidId={defaultKidId}
+            timetables={timetables}
             onCreated={(m) => {
               setMessage(m);
               dialog.current?.close();

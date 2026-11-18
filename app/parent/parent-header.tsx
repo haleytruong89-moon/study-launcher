@@ -10,6 +10,7 @@ const PAGES = {
   "/parent": "home",
   "/parent/review": "home",
   "/parent/week": "home",
+  "/parent/timetable": "more",
   "/parent/homework": "homework",
   "/parent/requests": "requests",
   "/parent/talk": "requests",

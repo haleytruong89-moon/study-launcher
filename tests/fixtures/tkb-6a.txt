@@ -1,0 +1,15 @@
+LỚP: 6A6
+GHI CHÚ: Phòng A105 · Sáng có mặt 7h10 · Chiều T2 phòng B401, T3 phòng B201, tiết 2 có mặt 13h40
+#   giờ          | T2 | T3 | T4 | T5 | T6 | T7
+S1 07:30-08:15 | CHAOCO | GDTC | KHTN(S) | Văn | Toán |
+S2 08:20-09:05 | GDTC | Văn | HĐTNHN/CĐ | GDCD | Toán |
+S3 09:20-10:05 | Văn | Văn | LS&ĐL(LS) | Công Nghệ | ANH |
+S4 10:10-10:55 | GDĐP | NT(AN) | ANH | LS&ĐL(LS) | KHTN(L) |
+S5 11:00-11:45 | NT(MT) | Toán | Tin | Toán | HĐTNHN/SH |
+C2 13:50-14:35 | LS&ĐL(ĐL) | KHTN(H) |  |  |  |
+C3 14:40-15:25 | ANH | KHTN(S) |  |  |  |
+ĐỒNG PHỤC T2: Áo polo đỏ, quần thể thao, khăn quàng đỏ, đi giày có dây
+ĐỒNG PHỤC T3: Áo polo đỏ, quần thể thao, khăn quàng đỏ, đi giày có dây
+ĐỒNG PHỤC T4: Áo trắng, quần kaki/quần sooc, váy đồng phục, khăn quàng đỏ, đi giày có dây/dép quai hậu
+ĐỒNG PHỤC T5: Áo polo đỏ, quần kaki/quần sooc, váy đồng phục, khăn quàng đỏ, đi giày có dây/dép quai hậu
+ĐỒNG PHỤC T6: Áo polo đỏ, quần kaki/quần sooc, váy đồng phục, khăn quàng đỏ, đi giày có dây/dép quai hậu
