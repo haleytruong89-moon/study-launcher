@@ -1,4 +1,6 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { AUTH_LOST_COOKIE, decodeLost } from "@/lib/authLost";
 import { z } from "zod";
 import { hashToken } from "@/lib/ext/secrets";
 import { verifyPin } from "@/lib/pin/hash";
@@ -64,7 +66,11 @@ export async function POST(request: Request) {
     if (otpErr) throw new Error(otpErr.message);
 
     await admin.from("pin_devices").update({ last_used_at: new Date().toISOString() }).eq("id", device.id);
-    await audit(admin, device.family_id as string, childId, "pin.login", {});
+    // 18/11/2026: why the previous session ended, when the server noticed it (see lib/authLost.ts).
+    const store = await cookies();
+    const lost = decodeLost(store.get(AUTH_LOST_COOKIE)?.value);
+    store.delete(AUTH_LOST_COOKIE);
+    await audit(admin, device.family_id as string, childId, "pin.login", lost ? { lost_code: lost.code, lost_at: lost.at, lost_path: lost.path } : {});
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("pin.login failed", e instanceof Error ? e.message : e);
