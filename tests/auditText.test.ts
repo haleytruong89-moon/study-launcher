@@ -147,6 +147,9 @@ describe("Nhật ký: sentences", () => {
 
   it("login, settings and automatic jobs", () => {
     expect(text("pin.login", { child_id: AN }, AN)).toBe("An đăng nhập bằng PIN");
+    expect(text("pin.login", { child_id: AN, lost_code: "refresh_token_already_used", lost_at: "2026-11-18T01:05:00Z", lost_path: "/today" }, AN)).toBe(
+      "An đăng nhập bằng PIN (phiên trước bị mất lúc 08:05 18/11: phiên bị làm mới 2 lần cùng lúc)",
+    );
     expect(text("pin.login_failed", { child_id: AN, try: 3 }, AN)).toBe("An nhập sai PIN (lần 3)");
     expect(text("child.password_reset", { child_id: AN, signed_out: true })).toBe("Đặt lại mật khẩu của An (đăng xuất khỏi mọi máy)");
     expect(text("settings.update", { settings: { free_minutes: 45 } })).toBe("Sửa Luật trong nhà");

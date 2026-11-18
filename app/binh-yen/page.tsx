@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SessionKeeper } from "../session-keeper";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { storedAvatar } from "@/lib/avatar";
@@ -47,12 +48,15 @@ export default async function BinhYenPage({ searchParams }: { searchParams: Prom
 
   const { avatar, mine } = storedAvatar(look.avatar, voice);
   return (
-    <BinhYenScreen
-      child={{ id: ctx.childId, name: ctx.displayName, color: ctx.color, icon: look.icon, avatar, pics: look.pics, avatarMine: mine || hasPics(look.pics) }}
-      voice={voice}
-      initial={state}
-      initialTalk={talk}
-      startQuad={isQuad(quad) ? quad : null}
-    />
+    <>
+      <SessionKeeper />
+      <BinhYenScreen
+        child={{ id: ctx.childId, name: ctx.displayName, color: ctx.color, icon: look.icon, avatar, pics: look.pics, avatarMine: mine || hasPics(look.pics) }}
+        voice={voice}
+        initial={state}
+        initialTalk={talk}
+        startQuad={isQuad(quad) ? quad : null}
+      />
+    </>
   );
 }

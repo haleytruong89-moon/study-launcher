@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { SessionKeeper } from "../session-keeper";
 import { getCurrentUser } from "@/lib/auth";
 import { storedAvatar } from "@/lib/avatar";
 import { readAvatar, type StoredLook } from "@/lib/avatarServer";
@@ -40,6 +41,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <div className="lg:pl-52">
         <ExtensionCheck />
       </div>
+      <SessionKeeper />
       <TodayScreen
         child={{
           id: ctx.childId,

@@ -11,6 +11,7 @@ import { DAY_TYPE_INFO, type DayType } from "@/lib/admin/specialDay";
 import { presetById } from "@/lib/admin/presets";
 import { localDate } from "@/lib/time";
 import { vnTime } from "@/lib/today/view";
+import { lostReasonText } from "@/lib/authLost";
 
 export const AUDIT_GROUPS = ["lock", "homework", "request", "device", "settings", "login", "trust"] as const;
 export type AuditGroup = (typeof AUDIT_GROUPS)[number];
@@ -284,8 +285,12 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
     }
 
     // --- Đăng nhập / PIN -------------------------------------------------------
-    case "pin.login":
-      return say(`${kid} đăng nhập bằng PIN`);
+    case "pin.login": {
+      // 18/11/2026: why the previous session ended, when the server noticed it.
+      const code = typeof p.lost_code === "string" ? p.lost_code : null;
+      const at = typeof p.lost_at === "string" ? p.lost_at : null;
+      return say(`${kid} đăng nhập bằng PIN${code ? ` (phiên trước bị mất${at ? ` lúc ${Number.isFinite(Date.parse(at)) ? `${vnTime(at)} ${dm(localDate(new Date(at)))}` : at}` : ""}: ${lostReasonText(code)})` : ""}`);
+    }
     case "pin.login_failed": {
       const n = num(p.try);
       return say(`${kid} nhập sai PIN${n ? ` (lần ${n})` : ""}`);
