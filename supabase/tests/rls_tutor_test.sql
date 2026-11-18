@@ -296,4 +296,57 @@ begin
   end;
 end $$;
 reset role;
+-- G7 (0023): report link, rule sources, console alert column, purpose 'reference', atomic add_usage (server only).
+do $$
+declare v numeric;
+begin
+  perform 1 from public.learning_cards
+    where child_id = '00000000-0000-0000-0000-0000000000c1'
+      and report_path = '/gia-su/bo-me/bao-cao?ngay=' || local_date::text;
+  if not found then raise exception 'FAIL: learning_cards.report_path not set'; end if;
+  insert into tutor.teaching_rules (family_id, child_id, text, status, source, source_key, source_ids) values
+    ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'Mỗi lượt chỉ hỏi con một câu.', 'proposed',
+     'child_rating', 'rating:too_many_questions', array['30000000-0000-0000-0000-000000000001']::uuid[]);
+  begin
+    insert into tutor.teaching_rules (family_id, child_id, text, status, source)
+      values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', repeat('x', 301), 'proposed', 'manual');
+    raise exception 'FAIL: rule longer than 300 accepted';
+  exception when check_violation then null;
+  end;
+  insert into tutor.model_calls (family_id, child_id, problem_id, purpose, model, prompt_version)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '31000000-0000-0000-0000-000000000001', 'reference', 'sonnet', 'p0.7');
+  update tutor.usage_monthly set console_alert_sent_at = now() where family_id = '10000000-0000-0000-0000-00000000000a';
+  v := tutor.add_usage('10000000-0000-0000-0000-00000000000a', date_trunc('month', now())::date, 0.25);
+  if v <> 1.75 then raise exception 'FAIL: add_usage total % (expected 1.75)', v; end if;
+  v := tutor.add_usage('10000000-0000-0000-0000-00000000000b', date '2026-01-01', 0.5);
+  if v <> 0.5 then raise exception 'FAIL: add_usage new row %', v; end if;
+  raise notice 'ok: G7 report path, rule sources, reference purpose, add_usage';
+end $$;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  begin
+    perform tutor.add_usage('10000000-0000-0000-0000-00000000000a', date '2026-01-01', 1);
+    raise exception 'FAIL: child called add_usage';
+  exception when insufficient_privilege then raise notice 'ok: G7: child cannot call add_usage';
+  end;
+end $$;
+reset role;
+set role service_role;
+select test_helpers.expect_count('G7: service_role adds usage (1.75 + 0.25 = 2)',
+  (select (tutor.add_usage('10000000-0000-0000-0000-00000000000a', date_trunc('month', now())::date, 0.25) * 100)::bigint), 200);
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+do $$
+begin
+  begin
+    perform tutor.add_usage('10000000-0000-0000-0000-00000000000a', date '2026-01-01', 1);
+    raise exception 'FAIL: parent called add_usage';
+  exception when insufficient_privilege then raise notice 'ok: G7: parent cannot call add_usage';
+  end;
+end $$;
+reset role;
 do $$ begin raise notice 'TUTOR RLS OK'; end $$;
