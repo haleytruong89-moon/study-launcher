@@ -2,8 +2,7 @@ import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
-import { localDate } from "../lib/time";
-import { dossierFor } from "../lib/binhYen/dossier";
+import { DOSSIERS, deckPool } from "../lib/binhYen/dossier";
 
 /**
  * R7c — Hồ sơ mật for Nguyên. Self-contained (helpers copied from flow.spec.ts / r7b.spec.ts;
@@ -65,7 +64,6 @@ test("R7c Nguyên: after a visit she can open today's Hồ sơ mật, switch top
     const k = await kCtx.newPage();
     await login(k, email, password);
     const done = await checkIn(k, /^Hồ sơ lục:/);
-    const today = localDate(new Date());
 
     // Nothing about the dossier goes to the server: no API call mentions it while she reads and keeps one.
     const sent: string[] = [];
@@ -86,7 +84,16 @@ test("R7c Nguyên: after a visit she can open today's Hồ sơ mật, switch top
     await expect(chips.getByRole("button")).toHaveCount(5);
     // Default topic: Não bộ; the card heading gets the focus.
     await expect(chips.getByRole("button", { name: /Não bộ/ })).toHaveAttribute("aria-pressed", "true");
-    const nao = dossierFor(today, "green", "nao");
+    // 18/11/2026: one of the topic's cards, different per visit (no fixed card per day).
+    const shown = async (topic: "nao" | "lich_su") => {
+      const h = panel.getByRole("heading", { level: 3 });
+      await expect(h).toHaveCount(1);
+      const title = (await h.textContent())?.trim() ?? "";
+      const c = deckPool(DOSSIERS, "green", topic).find((x) => x.title === title);
+      expect(c, `"${title}" is a ${topic} card`).toBeTruthy();
+      return c!;
+    };
+    const nao = await shown("nao");
     await expect(panel.getByRole("heading", { name: nao.title })).toBeFocused();
     await expect(panel).toContainText("HỒ SƠ MẬT");
     await expect(panel).toContainText(`Nguồn: ${nao.source}`);
@@ -95,8 +102,7 @@ test("R7c Nguyên: after a visit she can open today's Hồ sơ mật, switch top
     await chips.getByRole("button", { name: /Lịch sử/ }).click();
     await expect(chips.getByRole("button", { name: /Lịch sử/ })).toHaveAttribute("aria-pressed", "true");
     await expect(chips.getByRole("button", { name: /Não bộ/ })).toHaveAttribute("aria-pressed", "false");
-    const card = dossierFor(today, "green", "lich_su");
-    await expect(panel.getByRole("heading", { name: card.title })).toBeVisible();
+    const card = await shown("lich_su");
     expect(await k.evaluate(() => window.localStorage.getItem("dossier-topic"))).toBe("lich_su");
 
     // Keep it.
