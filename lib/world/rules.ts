@@ -169,7 +169,30 @@ export interface MonthView {
   /** R6b: the visitors closest to coming (at most 4), fewest missing first. Names only, no facts. */
   coming: ComingView[];
   plants: number;
+  /** 18/11/2026: the study / skill plant still to come today, revealed task by task (see seedOf). */
+  seeds: SeedView[];
 }
+
+/**
+ * 18/11/2026 (An: finishing a whole part takes long before anything new appears): the plant a
+ * part will grow today, revealed little by little as its tasks are done. Display only: what is
+ * planted and when does not change (one plant per part, when the part is done).
+ * - 1 task done: the seed and the name of the plant to come;
+ * - each next task: one more of its facts (at most MAX_FACTS);
+ * - from 2 tasks: the visitor this plant will bring, if any.
+ */
+export interface SeedView {
+  pillar: "study" | "skill";
+  done: number;
+  total: number;
+  name: string;
+  icon: Icon;
+  facts: string[];
+  visitor: { name: string; icon: Icon } | null;
+}
+
+/** Tasks done / total per part today, as the child's own screen counts them. */
+export type SeedProgress = Partial<Record<"study" | "skill", { done: number; total: number }>>;
 
 const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
@@ -188,7 +211,7 @@ function inGrowthOrder(rows: readonly WorldRow[]): WorldRow[] {
 }
 
 /** The month as the child sees it. Rows of another world (or unknown keys) are skipped, never break the page. */
-export function monthView(month: string, worldKey: string, rows: readonly WorldRow[], today: string): MonthView | null {
+export function monthView(month: string, worldKey: string, rows: readonly WorldRow[], today: string, progress: SeedProgress = {}): MonthView | null {
   const world = findWorld(worldKey);
   if (!world) return null;
   const mine = inGrowthOrder(rows.filter((r) => r.world_key === worldKey && monthOf(r.local_date) === month));
@@ -239,7 +262,32 @@ export function monthView(month: string, worldKey: string, rows: readonly WorldR
     waiting: total - things.size,
     coming,
     plants: mine.length,
+    seeds: monthOf(today) === month ? (["study", "skill"] as const).map((p) => seedOf(world, mine, p, today, progress[p], animals)).filter((x): x is SeedView => x !== null) : [],
   };
+}
+
+/** The seed of one part (null: nothing done yet, the part is done, or its plant already grew today). */
+export function seedOf(world: World, mine: readonly WorldRow[], pillar: "study" | "skill", today: string, p: { done: number; total: number } | undefined, arrived: readonly { key: string }[]): SeedView | null {
+  if (!p || p.done <= 0 || p.done >= p.total) return null;
+  if (mine.some((r) => r.local_date === today && r.pillar === pillar)) return null;
+  const { itemKey } = pick(world, pillar, mine.filter((r) => r.pillar === pillar).length);
+  const found = findThing(world, itemKey);
+  if (!found) return null;
+  const { thing } = found;
+  // Which visitor this plant would bring: the tags of what grew this month, plus this plant's.
+  let visitor: SeedView["visitor"] = null;
+  if (p.done >= 2) {
+    const tagged = new Map<string, Set<string>>();
+    for (const r of mine) {
+      const t = findThing(world, r.item_key)?.thing;
+      for (const tag of t?.tags ?? []) tagged.set(tag, (tagged.get(tag) ?? new Set()).add(t!.key));
+    }
+    for (const tag of thing.tags) tagged.set(tag, (tagged.get(tag) ?? new Set()).add(thing.key));
+    const counts = new Map([...tagged].map(([t, set]) => [t, set.size]));
+    const a = world.animals.find((x) => !arrived.some((y) => y.key === x.key) && animalReady(x, counts));
+    visitor = a ? { name: a.name, icon: a.icon } : null;
+  }
+  return { pillar, done: p.done, total: p.total, name: thing.name, icon: thing.icon, facts: thing.facts.slice(0, Math.min(MAX_FACTS, p.done - 1)), visitor };
 }
 
 /** What today's Góc bình yên visit grew, for the reward on the "Xong rồi" screen (R6a). */
@@ -370,4 +418,13 @@ export function recentDayLabel(date: string, today: string): string {
   if (date === today) return "Hôm nay";
   if (date === addDays(today, -1)) return "Hôm qua";
   return `${WEEKDAY_VI[isoWeekday(date)] ?? ""} ${dm(date)}`;
+}
+
+/** "2/3" → { done: 2, total: 3 } (small whole numbers only), anything else → undefined. */
+export function seedParam(raw: string | null): { done: number; total: number } | undefined {
+  const m = raw ? /^(\d{1,2})\/(\d{1,2})$/.exec(raw) : null;
+  if (!m) return undefined;
+  const done = Number(m[1]);
+  const total = Number(m[2]);
+  return total > 0 && done <= total ? { done, total } : undefined;
 }
