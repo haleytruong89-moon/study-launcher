@@ -115,8 +115,10 @@ export function HomeworkForm({
   const [dueTouched, setDueTouched] = useState(false);
   const suggested = edit ? null : nextClassDate(timetables.filter((t) => t.childId === kidId), subjectName, today);
   const manualDue = due === "today" ? today : due === "tomorrow" ? tomorrow : pickedDate;
-  const dueDate = !dueTouched && suggested ? suggested : manualDue;
-  const shownDue: Due = dueDate === today ? "today" : dueDate === tomorrow ? "tomorrow" : "pick";
+  const useSuggested = !dueTouched && suggested !== null;
+  const dueDate = useSuggested ? suggested : manualDue;
+  // The chosen chip stays as the parent pressed it ("Chọn ngày" keeps its date field even on tomorrow).
+  const shownDue: Due = useSuggested ? (dueDate === today ? "today" : dueDate === tomorrow ? "tomorrow" : "pick") : due;
   // An edit may keep an already-past due date; a new date must be today or later.
   const minDate = edit && edit.dueDate < today ? edit.dueDate : today;
   const formId = edit ? `hw-edit-${edit.id}` : "hw-new";
