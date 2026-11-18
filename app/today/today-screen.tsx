@@ -395,7 +395,14 @@ export function TodayScreen({
               />
             )}
 
-            {hasWorld && <WorldMini key={`${s.part1.doneAt}|${s.part2.doneAt}|${s.free.startedAt}`} onOpen={() => selectTab("tuan")} onWorld={setWorldKey} />}
+            {hasWorld && (
+              <WorldMini
+                key={`${s.part1.doneAt}|${s.part2.doneAt}|${s.free.startedAt}`}
+                onOpen={() => selectTab("tuan")}
+                onWorld={setWorldKey}
+                progress={{ study: { done: s.part1.done, total: s.part1.total }, skill: { done: s.part2.done, total: s.part2.total } }}
+              />
+            )}
             {/* R5: Nguyên's comic page of today (the feeling frame only when Góc bình yên is on). */}
             {voice === "detective" && week && (
               <ComicToday

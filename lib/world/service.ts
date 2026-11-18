@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { addDays, localDate } from "@/lib/time";
 import type { ChildContext } from "@/lib/today/service";
 import { findWorld } from "./catalog";
-import { feelGrowthOf, monthOf, monthView, plantsToAdd, prevMonth, recentGrowth, worldOfMonth, worldStarted, type FeelGrowth, type MonthView, type RecentDay, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
+import { feelGrowthOf, monthOf, monthView, plantsToAdd, prevMonth, recentGrowth, worldOfMonth, worldStarted, type FeelGrowth, type MonthView, type RecentDay, type SeedProgress, type WorldChoice, type WorldResponse, type WorldRow } from "./rules";
 import { PILLARS, type Pillar } from "./types";
 
 /** The world of the month is An's (scientist voice). Nguyên gets her comic in R5. */
@@ -118,7 +118,7 @@ function choiceOf(key: string): WorldChoice | null {
 }
 
 /** A month of the child's world (default: this month) + the album of months with plants (+ the choice, R4b). */
-export async function readWorld(ctx: ChildContext, month: string | null, now = new Date()): Promise<WorldResponse | null> {
+export async function readWorld(ctx: ChildContext, month: string | null, now = new Date(), progress: SeedProgress = {}): Promise<WorldResponse | null> {
   const today = localDate(now);
   const current = monthOf(today);
   const want = month ?? current;
@@ -141,7 +141,7 @@ export async function readWorld(ctx: ChildContext, month: string | null, now = n
   const { key, choose } = worldOfMonth(want, want === current, known);
   return {
     month: want,
-    view: key ? monthView(want, key, byMonth.get(want) ?? [], today) : null,
+    view: key ? monthView(want, key, byMonth.get(want) ?? [], today, progress) : null,
     choose: choose.map(choiceOf).filter((c): c is WorldChoice => c !== null),
     current: want === current,
     album,

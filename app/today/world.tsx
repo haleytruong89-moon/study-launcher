@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { AnimalView, MonthView, ThingView, WorldChoice, WorldResponse } from "@/lib/world/rules";
+import type { AnimalView, MonthView, SeedView, ThingView, WorldChoice, WorldResponse } from "@/lib/world/rules";
 import { PILLARS, type Pillar } from "@/lib/world/types";
 import { WorldIcon } from "../world-icon";
 import { LivingScene, type Picked } from "./world-scene";
@@ -17,12 +17,12 @@ export const monthLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7))] ?? ""}
 
 type Load = { state: "loading" } | { state: "error"; text: string } | { state: "ok"; data: WorldResponse };
 
-function useWorld(month: string | null): [Load, () => void] {
+function useWorld(month: string | null, seeds = ""): [Load, () => void] {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [tick, setTick] = useState(0);
   useEffect(() => {
     let live = true;
-    fetch(month ? `/api/world?month=${month}` : "/api/world", { cache: "no-store" })
+    fetch(month ? `/api/world?month=${month}` : `/api/world${seeds ? `?${seeds}` : ""}`, { cache: "no-store" })
       .then(async (res) => {
         const data = (await res.json().catch(() => null)) as (WorldResponse & { error?: string }) | null;
         if (!live) return;
@@ -33,7 +33,7 @@ function useWorld(month: string | null): [Load, () => void] {
     return () => {
       live = false;
     };
-  }, [month, tick]);
+  }, [month, tick, seeds]);
   return [load, () => setTick((t) => t + 1)];
 }
 
@@ -408,8 +408,18 @@ export function WorldTab({ color, onWorld }: { color: string; onWorld?: (key: st
 }
 
 /** Hôm nay (An): the world in one line + what grew today; opens the Thế giới tab. */
-export function WorldMini({ onOpen, onWorld }: { onOpen: () => void; onWorld?: (key: string | null) => void }) {
-  const [load] = useWorld(null);
+export function WorldMini({
+  onOpen,
+  onWorld,
+  progress,
+}: {
+  onOpen: () => void;
+  onWorld?: (key: string | null) => void;
+  /** 18/11/2026: tasks done / total per part today, for the seed that opens task by task. */
+  progress?: { study: { done: number; total: number }; skill: { done: number; total: number } };
+}) {
+  const seedQuery = progress ? `hoc=${progress.study.done}/${progress.study.total}&kn=${progress.skill.done}/${progress.skill.total}` : "";
+  const [load] = useWorld(null, seedQuery);
   // R7a: the focus screen draws this world behind the timer (no extra request).
   const worldKey = load.state === "ok" ? (load.data.view?.world.key ?? null) : undefined;
   useEffect(() => {
@@ -465,9 +475,47 @@ export function WorldMini({ onOpen, onWorld }: { onOpen: () => void; onWorld?: (
       ) : (
         <p className="text-sm text-ink/75">Xong một mảng hôm nay (cảm xúc, học tập, kỹ năng, vui chơi) là có thứ mới mọc.</p>
       )}
+      {(v.seeds ?? []).map((seed) => (
+        <SeedCard key={seed.pillar} seed={seed} area={v.world.pillarNames[seed.pillar]} />
+      ))}
       <button type="button" onClick={onOpen} className="btn self-start border-[1.5px] border-[#2B5D4F] bg-white text-sm text-[#2B5D4F]">
         Xem cả {v.world.name.toLowerCase()} →
       </button>
+    </section>
+  );
+}
+
+/**
+ * 18/11/2026: the plant a part will grow today, opening as its tasks get done (An asked for
+ * something new sooner). It grows for real only when the whole part is done.
+ */
+function SeedCard({ seed, area }: { seed: SeedView; area: string }) {
+  return (
+    <section aria-label={`Hạt giống ${area}`} className="flex flex-col gap-1.5 rounded-xl border border-dashed border-[#2B5D4F]/40 bg-[#F3F7EE] p-3 text-sm">
+      <p className="font-bold">
+        <span aria-hidden>🌱 </span>Hạt giống {area.toLowerCase()} đang nảy mầm · {seed.done}/{seed.total}
+      </p>
+      <p className="flex items-center gap-1.5">
+        Sắp mọc: <WorldIcon icon={seed.icon} size={22} /> <b>{seed.name}</b>
+      </p>
+      {seed.facts.length > 0 && (
+        <ul aria-label="Điều thú vị đã mở" className="flex flex-col gap-1">
+          {seed.facts.map((f) => (
+            <li key={f}>
+              <span aria-hidden>✨ </span>
+              {f}
+            </li>
+          ))}
+        </ul>
+      )}
+      {seed.visitor && (
+        <p className="flex items-center gap-1.5">
+          <span aria-hidden>🐾</span> Khi cây mọc, <WorldIcon icon={seed.visitor.icon} size={22} /> <b>{seed.visitor.name}</b> sẽ ghé thăm!
+        </p>
+      )}
+      <p className="text-ink/70">
+        Xong thêm {seed.total - seed.done} việc nữa là cây mọc.{seed.done === 1 ? " Mỗi việc xong mở thêm một điều thú vị." : ""}
+      </p>
     </section>
   );
 }
