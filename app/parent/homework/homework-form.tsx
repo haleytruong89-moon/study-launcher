@@ -6,6 +6,8 @@ import { NETWORK_ERROR, sendJson } from "@/lib/api-client";
 import { HOMEWORK_ACCEPT, KIND_LABEL, MAX_FILE_BYTES, MAX_HOMEWORK_FILES, fileKind, homeworkFileUrl, mimeOf, storedExt, type FileKind } from "@/lib/files";
 import { compressImage } from "@/lib/images";
 import { SUBJECTS, shortDate } from "@/lib/subjects";
+import { DAY_NAMES, nextClassDate, type TimetableVersion } from "@/lib/timetable/rules";
+import { isoWeekday } from "@/lib/time";
 import { createClient } from "@/lib/supabase/client";
 
 interface Kid {
@@ -71,6 +73,7 @@ export function HomeworkForm({
   onDone,
   defaultKidId,
   onCreated,
+  timetables = [],
 }: {
   familyId: string;
   today: string;
@@ -82,6 +85,8 @@ export function HomeworkForm({
   defaultKidId?: string;
   /** New item: called with the confirmation instead of showing it in the form (the sheet closes). */
   onCreated?: (message: string) => void;
+  /** 18/11/2026: the children's timetables; a new item's due date follows the next lesson of the subject. */
+  timetables?: TimetableVersion[];
 }) {
   const router = useRouter();
   const [kidId, setKidId] = useState(edit?.childId ?? (kids.some((k) => k.id === defaultKidId) ? defaultKidId : undefined) ?? kids[0]?.id ?? "");
@@ -105,7 +110,13 @@ export function HomeworkForm({
 
   const kid = kids.find((k) => k.id === kidId);
   const subjectName = subject === OTHER ? otherSubject.trim() : subject;
-  const dueDate = due === "today" ? today : due === "tomorrow" ? tomorrow : pickedDate;
+  // 18/11/2026: until the parent picks a date, a new item is due on the next day the subject is
+  // taught (Thời khóa biểu); no timetable or subject not in it → the usual "Ngày mai".
+  const [dueTouched, setDueTouched] = useState(false);
+  const suggested = edit ? null : nextClassDate(timetables.filter((t) => t.childId === kidId), subjectName, today);
+  const manualDue = due === "today" ? today : due === "tomorrow" ? tomorrow : pickedDate;
+  const dueDate = !dueTouched && suggested ? suggested : manualDue;
+  const shownDue: Due = dueDate === today ? "today" : dueDate === tomorrow ? "tomorrow" : "pick";
   // An edit may keep an already-past due date; a new date must be today or later.
   const minDate = edit && edit.dueDate < today ? edit.dueDate : today;
   const formId = edit ? `hw-edit-${edit.id}` : "hw-new";
@@ -278,29 +289,50 @@ export function HomeworkForm({
             [
               ["today", "Hôm nay", shortDate(today)],
               ["tomorrow", "Ngày mai", shortDate(tomorrow)],
-              ["pick", "Chọn ngày", due === "pick" ? shortDate(pickedDate) : "…"],
+              ["pick", "Chọn ngày", shownDue === "pick" ? shortDate(dueDate) : "…"],
             ] as const
           ).map(([value, name, date]) => (
             <button
               key={value}
               type="button"
-              aria-pressed={due === value}
-              onClick={() => setDue(value)}
-              className={`flex min-h-12 flex-col items-center justify-center rounded-xl border text-sm leading-tight font-semibold ${chipClass(due === value)}`}
+              aria-pressed={shownDue === value}
+              onClick={() => {
+                if (value === "pick") setPickedDate(dueDate);
+                setDue(value);
+                setDueTouched(true);
+              }}
+              className={`flex min-h-12 flex-col items-center justify-center rounded-xl border text-sm leading-tight font-semibold ${chipClass(shownDue === value)}`}
             >
               <span>{name}</span>
               <span className="text-xs font-medium">{date}</span>
             </button>
           ))}
         </div>
-        {due === "pick" && (
+        {suggested && (
+          <p className="text-xs text-ink/75">
+            <span aria-hidden>📅 </span>Theo thời khóa biểu: buổi {subjectName} gần nhất là {DAY_NAMES[isoWeekday(suggested)]} {shortDate(suggested)}
+            {dueTouched && dueDate !== suggested ? (
+              <>
+                {" · "}
+                <button type="button" onClick={() => setDueTouched(false)} className="font-semibold underline">
+                  Dùng ngày này
+                </button>
+              </>
+            ) : null}
+          </p>
+        )}
+        {shownDue === "pick" && (
           <label className="flex flex-col gap-1 text-sm font-medium">
             Ngày
             <input
               type="date"
               min={minDate}
-              value={pickedDate}
-              onChange={(e) => setPickedDate(e.target.value)}
+              value={dueDate}
+              onChange={(e) => {
+                setPickedDate(e.target.value);
+                setDue("pick");
+                setDueTouched(true);
+              }}
               className="min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base"
             />
           </label>

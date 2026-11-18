@@ -1317,5 +1317,66 @@ set role service_role;
 select test_helpers.expect_count('service_role sees all homework (3)', (select count(*) from public.homework_items), 3);
 
 reset role;
+-- 0022 Thời khóa biểu: parents read/write the family's; a child only reads their own.
+insert into public.timetables (family_id, child_id, valid_from, label, periods) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-09', '6A6', '[{"day":1,"session":"am","n":1,"subject":"Toán"}]'),
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c2', '2026-11-09', '9A13', '[]'),
+  ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', '2026-11-09', 'B', '[]');
+do $$
+begin
+  begin
+    insert into public.timetables (family_id, child_id, valid_from) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-09');
+    raise exception 'FAIL: two timetables with the same start';
+  exception when unique_violation then raise notice 'ok: one timetable per child and start day';
+  end;
+  begin
+    insert into public.timetables (family_id, child_id, valid_from) values ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000c1', '2026-12-01');
+    raise exception 'FAIL: timetable for a child of another family';
+  exception when foreign_key_violation then raise notice 'ok: timetable child must be in the row family';
+  end;
+  begin
+    insert into public.timetables (family_id, child_id, valid_from, periods) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-12-01', '{}');
+    raise exception 'FAIL: periods not an array';
+  exception when check_violation then raise notice 'ok: periods must be an array';
+  end;
+end $$;
+select test_helpers.expect_count('timetables has RLS on', (select count(*) from pg_class where oid = 'public.timetables'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('anon has no timetables access', (select case when has_table_privilege('anon', 'public.timetables', 'SELECT') then 1 else 0 end), 0);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees only own timetable', (select count(*) from public.timetables), 1);
+do $$
+begin
+  begin
+    update public.timetables set label = 'x';
+    if (select count(*) from public.timetables where label = 'x') > 0 then raise exception 'FAIL: child updated a timetable'; end if;
+    raise notice 'ok: child update touches nothing';
+  exception when insufficient_privilege then raise notice 'ok: child cannot update timetables';
+  end;
+  begin
+    insert into public.timetables (family_id, child_id, valid_from) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2027-01-01');
+    raise exception 'FAIL: child inserted a timetable';
+  exception when insufficient_privilege then raise notice 'ok: child cannot insert timetables';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees the family timetables (2)', (select count(*) from public.timetables), 2);
+insert into public.timetables (family_id, child_id, valid_from, label) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2027-02-01', 'mới');
+update public.timetables set label = '6A6 mới' where label = 'mới';
+select test_helpers.expect_count('parentA added and edited a version', (select count(*) from public.timetables where label = '6A6 mới'), 1);
+do $$
+begin
+  begin
+    insert into public.timetables (family_id, child_id, valid_from) values ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', '2027-02-01');
+    raise exception 'FAIL: parentA wrote into family B';
+  exception when insufficient_privilege then raise notice 'ok: parentA cannot write family B timetables';
+  end;
+end $$;
+delete from public.timetables where label = '6A6 mới';
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees only family B timetable', (select count(*) from public.timetables), 1);
+
+reset role;
 drop schema test_helpers cascade;
 \echo RLS OK

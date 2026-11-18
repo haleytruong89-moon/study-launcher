@@ -44,6 +44,8 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "run_report.approve": "homework",
   "run_report.reject": "homework",
   "template.create": "homework",
+  "timetable.save": "homework",
+  "timetable.delete": "homework",
   "template.update": "homework",
 
   "request.create": "request",
@@ -223,6 +225,14 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
       return say(`Không xác nhận một lượt làm ${kid} quên bấm Bắt đầu`);
     case "template.create":
       return say(`Thêm việc${quoted(short(p.title, 40))} vào lịch tuần của ${kid}`);
+    case "timetable.save": {
+      const from = str(p.valid_from);
+      return say(`Lưu thời khóa biểu${quoted(short(p.label, 20))} của ${kid}${from ? `, áp dụng từ ${dm(from)}` : ""}`);
+    }
+    case "timetable.delete": {
+      const from = str(p.valid_from);
+      return say(`Xóa bản thời khóa biểu của ${kid}${from ? ` (từ ${dm(from)})` : ""}`);
+    }
     case "template.update":
       return say(`${p.active === false ? "Tắt" : "Sửa"} việc${quoted(short(p.title, 40))} trong lịch tuần của ${kid}`);
 

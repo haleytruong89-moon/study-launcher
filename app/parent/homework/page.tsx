@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { loadChildren, requireParentPage, type ChildSummary } from "@/lib/admin/page";
+import { loadTimetables } from "@/lib/timetable/load";
 import { addDays } from "@/lib/admin/dates";
 import { KIND_LABEL, attachmentViews } from "@/lib/files";
 import { daysBetween } from "@/lib/parent/overview";
@@ -30,6 +31,11 @@ interface HomeworkRow {
 export default async function HomeworkPage({ searchParams }: { searchParams: Promise<{ con?: string }> }) {
   const { me, db } = await requireParentPage();
   const children = await loadChildren(db);
+  // 18/11/2026: the timetables, for the due date Giao bài suggests.
+  const timetables = await loadTimetables(
+    db,
+    children.map((c) => c.id),
+  );
   const today = localDate(new Date());
   const tomorrow = addDays(today, 1);
   const { con } = await searchParams;
@@ -81,7 +87,7 @@ export default async function HomeworkPage({ searchParams }: { searchParams: Pro
                 })}
               </nav>
             )}
-            <NewHomeworkSheet familyId={me.profile.family_id} today={today} tomorrow={tomorrow} kids={kids} defaultKidId={filter?.id} />
+            <NewHomeworkSheet familyId={me.profile.family_id} today={today} tomorrow={tomorrow} kids={kids} defaultKidId={filter?.id} timetables={timetables} />
 
             <Group title="Quá hạn · chưa làm" danger items={overdue} empty={null} {...itemProps} />
             <Group title="Đang chờ con làm" items={waiting} empty="Không có bài nào đang chờ." {...itemProps} />
