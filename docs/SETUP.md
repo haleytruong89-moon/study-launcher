@@ -425,3 +425,17 @@ Kho ảnh (`homework`, `proofs`, `avatars`) do chính các file SQL tạo (0001,
 1. Vercel: xóa các biến **chỉ-Preview** đã thêm ở H4; ở 3 biến Production (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) bấm Edit → **tick lại Preview** → Redeploy một bản preview. Từ đó preview lại dùng database thật.
 2. GitHub: xóa secret `PREVIEW_DB_URL` → các workflow preview tự bỏ qua.
 3. (Tùy) xóa hoặc Pause project `study-launcher-preview` để trả suất miễn phí.
+
+---
+
+## I. Gia sư AI Toán báo chuyện tiền (G7, ~5 phút, làm 1 lần)
+
+Gia sư AI chỉ gửi thông báo đẩy về **chi phí** (chốt 18/11/2026, D23): ~45 USD (tạm ngừng Opus), Console hết tiền, dự báo vượt trần 50 USD (≤ 1 lần/tuần). Thông báo đi qua Launcher, cần **một khóa bí mật chung** cho 2 project Vercel.
+
+| Bước | Việc | Ghi chú |
+|---|---|---|
+| I1 | Tạo khóa: trên máy tính mở Terminal, gõ `openssl rand -hex 32` → copy dòng chữ số hiện ra | Hoặc nhờ Claude tạo; **không** dán khóa vào chat, GitHub hay tài liệu |
+| I2 | Vercel → project **study-launcher** → Settings → Environment Variables → thêm `TUTOR_NOTIFY_SECRET` = khóa vừa tạo (Production + Preview) | Thiếu biến này → route trả 503, không gửi gì |
+| I3 | Vercel → project **gia-su-ai-math** → thêm `TUTOR_NOTIFY_SECRET` = **cùng khóa**, và `LAUNCHER_URL` = địa chỉ Launcher (vd `https://<launcher>.vercel.app`) | Gia sư cần cả hai để gửi |
+| I4 | Redeploy cả 2 project | Biến mới chỉ có hiệu lực ở bản deploy sau |
+| I5 | Sau khi merge PR G7c bên gia sư: trang **/gia-su/bo-me/bao-cao** → "Gửi thử thông báo tiền" → iPhone nhận "Gia sư AI: tốc độ chi đang vượt trần" | Cần A10 (thông báo đẩy) đã bật trên iPhone |

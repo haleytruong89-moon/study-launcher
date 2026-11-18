@@ -151,3 +151,20 @@ export function parseSubscription(input: unknown): SubscriptionInput | null {
   if (p256dh.length < 80 || p256dh.length > 100 || auth.length < 16 || auth.length > 32) return null;
   return { endpoint: o.endpoint, keys: { p256dh, auth } };
 }
+
+/**
+ * Maths tutor money alerts (D23, parent decision 18/11/2026): the ONLY pushes the tutor app may
+ * ask for, through POST /api/internal/tutor-notify. Fixed wording, no child content.
+ */
+export type TutorCostKind = "economy" | "console_blocked" | "burn";
+export function tutorCostMessage(a: { kind: TutorCostKind; forecastUsd?: number }): PushMessage {
+  const url = "/gia-su/bo-me/bao-cao";
+  const tag = "tutor-cost";
+  if (a.kind === "economy") {
+    return { title: "Gia sư AI: đã chi ~45 USD tháng này", body: "Tạm ngừng Opus, Sonnet vẫn dạy bình thường · chạm để xem", url, tag };
+  }
+  if (a.kind === "console_blocked") {
+    return { title: "Gia sư AI tạm nghỉ: hết hạn mức tháng", body: "Console đã chặn ở 50 USD. Nâng trần trong Console nếu muốn con học tiếp", url, tag };
+  }
+  return { title: "Gia sư AI: tốc độ chi đang vượt trần", body: `Dự báo ~${Math.round(a.forecastUsd ?? 0)} USD tháng này (trần 50) · chưa chặn gì`, url, tag };
+}
