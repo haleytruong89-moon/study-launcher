@@ -826,3 +826,15 @@ export function findShownFieldNote(key: string): FieldNote | undefined {
   const d = findFieldNote(key);
   return d && !d.held ? d : undefined;
 }
+
+/**
+ * 18/11/2026 (An: "Bí mật của não" was the same text every visit): a sourced card about the brain
+ * or feelings that suits the quad, chosen by `n` (random per visit in the UI). Null only if the
+ * deck had no such card (then the fixed BRAIN text shows).
+ */
+export function brainCard(quad: Quad, n: number): FieldNote | null {
+  const pool = FIELD_NOTES.filter((d) => !d.held && (d.topic === "bo_nao" || d.topic === "cam_xuc") && (d.quads.length === 0 || d.quads.includes(quad)));
+  if (pool.length === 0) return null;
+  const i = ((Math.trunc(n) % pool.length) + pool.length) % pool.length;
+  return pool[i] ?? null;
+}

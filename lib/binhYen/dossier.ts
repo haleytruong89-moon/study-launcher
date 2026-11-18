@@ -453,12 +453,34 @@ export function fitsQuad(d: Pick<DeckCard, "quads">, quad: Quad | null | undefin
  * by quad fit; if the quad filter leaves fewer than 2 cards, use the whole topic. Pick `dayIndex % n`.
  */
 export function pickDossier<C extends DeckCard>(list: readonly C[], date: string, quad: Quad | null | undefined, topic: C["topic"]): C | null {
-  const inTopic = list.filter((d) => d.topic === topic && !d.held);
-  const fit = inTopic.filter((d) => fitsQuad(d, quad));
-  const pool = fit.length >= 2 ? fit : inTopic;
+  const pool = deckPool(list, quad, topic);
   const n = pool.length;
   if (n === 0) return null;
   return pool[((dayIndex(date) % n) + n) % n] ?? null;
+}
+
+/** The cards a (quad, topic) may show, in deck order (the same pool `pickDossier` picks from). */
+export function deckPool<C extends DeckCard>(list: readonly C[], quad: Quad | null | undefined, topic: C["topic"]): C[] {
+  const inTopic = list.filter((d) => d.topic === topic && !d.held);
+  const fit = inTopic.filter((d) => fitsQuad(d, quad));
+  return fit.length >= 2 ? fit : inTopic;
+}
+
+/**
+ * 18/11/2026 (An: "bấm 2 lần ra giống nhau"): the next card to show, starting at `start` and
+ * skipping cards already seen today on this device; when every card was seen, start over at
+ * `start`. `start` is random per visit; "Một điều khác ›" passes the current index + 1.
+ * Returns the index in `pool`, or -1 for an empty pool.
+ */
+export function nextUnseen<C extends { key: string }>(pool: readonly C[], start: number, seen: ReadonlySet<string>): number {
+  const n = pool.length;
+  if (n === 0) return -1;
+  const s = ((Math.trunc(start) % n) + n) % n;
+  for (let i = 0; i < n; i++) {
+    const j = (s + i) % n;
+    if (!seen.has((pool[j] as C).key)) return j;
+  }
+  return s;
 }
 
 /** Today's card for (local date, the visit's quad, the chosen topic). Same inputs → same card; rotates daily. */

@@ -2,8 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { Quad } from "@/lib/binhYen/catalog";
-import { TOPICS, TOPIC_KEYS, dossierFor, isDossierTopic, type Dossier } from "@/lib/binhYen/dossier";
-import { SCIENCE_TOPICS, activeScienceTopics, fieldNoteFor, isScienceTopic, type FieldNote } from "@/lib/binhYen/fieldNotes";
+import { DOSSIERS, TOPICS, TOPIC_KEYS, deckPool, isDossierTopic, nextUnseen, type Dossier } from "@/lib/binhYen/dossier";
+import { FIELD_NOTES, SCIENCE_TOPICS, activeScienceTopics, isScienceTopic, type FieldNote } from "@/lib/binhYen/fieldNotes";
+import { markSeen, readSeen } from "@/lib/binhYen/seenToday";
 import { DOSSIER_NOTEBOOK, FIELD_NOTEBOOK, type NotebookStore } from "@/lib/binhYen/notebook";
 
 /**
@@ -24,7 +25,8 @@ interface DeckSpec {
   topicKeys: () => readonly string[];
   topic: (t: string) => { label: string; emoji: string };
   defaultTopic: string;
-  pick: (date: string, quad: Quad | null, topic: string) => DeckCardData | null;
+  /** The cards (quad, topic) may show; which one is shown is chosen per visit (18/11/2026). */
+  pool: (quad: Quad | null, topic: string) => DeckCardData[];
   store: NotebookStore<string>;
   offer: { emoji: string; text: string };
   sectionLabel: string;
@@ -36,7 +38,7 @@ export const DECKS: Record<Deck, DeckSpec> = {
     topicKeys: () => TOPIC_KEYS,
     topic: (t) => TOPICS[isDossierTopic(t) ? t : "nao"],
     defaultTopic: "nao",
-    pick: (date, quad, t) => (isDossierTopic(t) ? dossierFor(date, quad, t) : null),
+    pool: (quad, t) => (isDossierTopic(t) ? deckPool(DOSSIERS, quad, t) : []),
     store: DOSSIER_NOTEBOOK,
     offer: { emoji: "📁", text: "Mở hồ sơ mật hôm nay?" },
     sectionLabel: "Hồ sơ mật",
@@ -47,7 +49,7 @@ export const DECKS: Record<Deck, DeckSpec> = {
     topicKeys: () => activeScienceTopics(),
     topic: (t) => SCIENCE_TOPICS[isScienceTopic(t) ? t : "dong_vat"],
     defaultTopic: "dong_vat",
-    pick: (date, quad, t) => (isScienceTopic(t) ? fieldNoteFor(date, quad, t) : null),
+    pool: (quad, t) => (isScienceTopic(t) ? deckPool(FIELD_NOTES, quad, t) : []),
     store: FIELD_NOTEBOOK,
     offer: { emoji: "📓", text: "Mở sổ tay nhà khoa học hôm nay?" },
     sectionLabel: "Sổ tay nhà khoa học",
@@ -159,19 +161,42 @@ export function DossierOffer({ today, quad, deck = "detective" }: { today: strin
   const heading = useRef<HTMLHeadingElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
-  const card = spec.pick(today, quad, topic) ?? spec.pick(today, quad, spec.defaultTopic);
+  const topicPool = spec.pool(quad, topic);
+  const pool = topicPool.length > 0 ? topicPool : spec.pool(quad, spec.defaultTopic);
+  // 18/11/2026: a different card each visit / each "Một điều khác ›", no repeat today while
+  // unseen cards are left. `at` = where to start looking (random once per visit).
+  const [at, setAt] = useState(0);
+  const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set());
+  const idx = nextUnseen(pool, at, seen);
+  const card = idx >= 0 ? (pool[idx] ?? null) : null;
   const cardKey = card?.key ?? null;
   const saved = cardKey !== null && savedKey === cardKey;
   const sci = deck === "scientist";
 
-  // The last topic picked on this device (after mount, never during the first render).
+  // The last topic picked on this device, today's seen cards and a random start (after mount,
+  // never during the first render).
   useEffect(() => {
     const id = window.setTimeout(() => {
       const t = spec.store.readTopic();
       if (t && spec.topicKeys().includes(t)) setTopic(t);
+      setSeen(readSeen(deck, today));
+      setAt(Math.floor(Math.random() * 1000));
     }, 0);
     return () => window.clearTimeout(id);
-  }, [spec]);
+  }, [spec, deck, today]);
+
+  // A card counts as seen once it is open on screen.
+  useEffect(() => {
+    if (open && cardKey) markSeen(deck, today, cardKey);
+  }, [open, cardKey, deck, today]);
+
+  function another() {
+    if (!cardKey) return;
+    const next = new Set(seen);
+    next.add(cardKey);
+    setSeen(next);
+    setAt(idx + 1);
+  }
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -279,6 +304,11 @@ export function DossierOffer({ today, quad, deck = "detective" }: { today: strin
         >
           {saved ? "Đã cất ✓" : "Cất vào sổ tay"}
         </button>
+        {pool.length > 1 && (
+          <button type="button" onClick={another} className={`btn border-2 bg-white font-semibold ${sci ? "border-an" : "border-ink"}`}>
+            Một điều khác ›
+          </button>
+        )}
         <button type="button" onClick={() => setOpen(false)} className="btn font-semibold text-ink/75 underline">
           Đóng
         </button>

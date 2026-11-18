@@ -25,6 +25,7 @@ import {
 } from "@/lib/binhYen/catalog";
 import { DELETE_ALL_WORD, HEAVY_REPEAT_TEXT, NOT_SAVED_TEXT, typedDeleteWord, type CheckinView } from "@/lib/binhYen/checkin";
 import { whoSeesWhat } from "@/lib/binhYen/copy";
+import { brainCard } from "@/lib/binhYen/fieldNotes";
 import { activityEmoji, wordEmoji } from "@/lib/binhYen/emoji";
 import { studyChip } from "@/lib/binhYen/studyCap";
 import { suggest } from "@/lib/binhYen/suggest";
@@ -226,6 +227,12 @@ export function Corner({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const runId = useRef<string | null>(null);
+  // 18/11/2026: which "Bí mật của não" card this visit shows; set after mount (random each visit).
+  const [brainSeed, setBrainSeed] = useState(0);
+  useEffect(() => {
+    const id = window.setTimeout(() => setBrainSeed(Math.floor(Math.random() * 1000)), 0);
+    return () => window.clearTimeout(id);
+  }, []);
   const copy = homeCopy(voice, firstName);
 
   const go = useCallback(
@@ -357,6 +364,8 @@ export function Corner({
     const label = findWord(step.word)?.label ?? "";
     const pos = isPleasant(step.quad);
     const ideas = suggest({ voice, quad: step.quad, word: step.word, intensity: step.intensity });
+    // 18/11/2026: a different sourced "Bí mật của não" each visit (seed set once per visit).
+    const brain = voice === "scientist" ? brainCard(step.quad, brainSeed) : null;
     return (
       <Card label="Gợi ý cho con" quad={step.quad}>
         <p className="text-lg">{mentorLine(voice, step.quad, label, firstName)}</p>
@@ -364,7 +373,15 @@ export function Corner({
           {voice === "scientist" ? (
             <>
               <span className="block text-xs font-bold uppercase tracking-wide text-ink/70">{BRAIN[step.quad].head}</span>
-              <p>{BRAIN[step.quad].body}</p>
+              {brain ? (
+                <>
+                  <p className="font-bold">{brain.title}</p>
+                  <p>{brain.body}</p>
+                  <p className="mt-1 text-xs text-ink/65">Nguồn: {brain.source}</p>
+                </>
+              ) : (
+                <p>{BRAIN[step.quad].body}</p>
+              )}
             </>
           ) : (
             <>

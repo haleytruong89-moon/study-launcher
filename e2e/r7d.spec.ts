@@ -2,8 +2,8 @@ import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 import { e2eEnv } from "./env";
-import { localDate } from "../lib/time";
-import { activeScienceTopics, fieldNoteFor } from "../lib/binhYen/fieldNotes";
+import { deckPool } from "../lib/binhYen/dossier";
+import { FIELD_NOTES, activeScienceTopics } from "../lib/binhYen/fieldNotes";
 
 /**
  * R7d — Sổ tay nhà khoa học for An. Self-contained (helpers copied from flow.spec.ts / r7c.spec.ts;
@@ -91,7 +91,6 @@ test("R7d An: after a visit she can open today's Sổ tay nhà khoa học page, 
     const k = await kCtx.newPage();
     await login(k, email, password);
     const done = await checkIn(k, /^Khu rừng:/);
-    const today = localDate(new Date());
 
     // Nothing about the notebook goes to the server: no API call mentions it while she reads and keeps a page.
     const sent: string[] = [];
@@ -114,20 +113,30 @@ test("R7d An: after a visit she can open today's Sổ tay nhà khoa học page, 
     // Default topic: 🐾; the card heading gets the focus.
     const animals = chips.getByRole("button", { name: /Động vật và cảm xúc/ });
     await expect(animals).toHaveAttribute("aria-pressed", "true");
-    const first = fieldNoteFor(today, "green", "dong_vat");
-    expect(first).not.toBeNull();
-    await expect(panel.getByRole("heading", { name: first!.title })).toBeFocused();
+    // 18/11/2026: the card is one of the topic's cards, different per visit (no fixed card per day).
+    const shown = async (topic: "dong_vat" | "vu_tru") => {
+      const h = panel.getByRole("heading", { level: 3 });
+      await expect(h).toHaveCount(1);
+      const title = (await h.textContent())?.trim() ?? "";
+      const c = deckPool(FIELD_NOTES, "green", topic).find((x) => x.title === title);
+      expect(c, `"${title}" is a ${topic} card`).toBeTruthy();
+      return c!;
+    };
+    const first = await shown("dong_vat");
+    await expect(panel.getByRole("heading", { name: first.title })).toBeFocused();
     await expect(panel).toContainText("SỔ TAY NHÀ KHOA HỌC");
-    await expect(panel).toContainText(`Nguồn: ${first!.source}`);
+    await expect(panel).toContainText(`Nguồn: ${first.source}`);
+    // "Một điều khác ›" shows another card of the same topic.
+    await panel.getByRole("button", { name: "Một điều khác ›" }).click();
+    const other = await shown("dong_vat");
+    expect(other.key).not.toBe(first.key);
 
     // Switch topic.
     const space = chips.getByRole("button", { name: /Vũ trụ bao la/ });
     await space.click();
     await expect(space).toHaveAttribute("aria-pressed", "true");
     await expect(animals).toHaveAttribute("aria-pressed", "false");
-    const card = fieldNoteFor(today, "green", "vu_tru");
-    expect(card).not.toBeNull();
-    await expect(panel.getByRole("heading", { name: card!.title })).toBeVisible();
+    const card = await shown("vu_tru");
     expect(await k.evaluate(() => window.localStorage.getItem("field-topic"))).toBe("vu_tru");
     // Nguyên's topic key is untouched.
     expect(await k.evaluate(() => window.localStorage.getItem("dossier-topic"))).toBeNull();
@@ -144,10 +153,10 @@ test("R7d An: after a visit she can open today's Sổ tay nhà khoa học page, 
     await expect(notebook).toContainText("Trên máy này · chỉ con thấy");
     const kept = notebook.getByRole("list", { name: "Trang đã cất" }).getByRole("listitem");
     await expect(kept).toHaveCount(1);
-    await expect(kept.first()).toContainText(card!.title);
+    await expect(kept.first()).toContainText(card.title);
     await kept.first().locator("summary").click();
-    await expect(kept.first().getByRole("heading", { name: card!.title })).toBeVisible();
-    await expect(kept.first()).toContainText(card!.body.slice(0, 40));
+    await expect(kept.first().getByRole("heading", { name: card.title })).toBeVisible();
+    await expect(kept.first()).toContainText(card.body.slice(0, 40));
     await expect(side.getByRole("region", { name: /Sổ tay thám tử/ })).toHaveCount(0);
 
     // Đóng folds it back.
@@ -156,12 +165,12 @@ test("R7d An: after a visit she can open today's Sổ tay nhà khoa học page, 
     await expect(done.getByRole("region", { name: "Sổ tay nhà khoa học" })).toHaveCount(0);
 
     listening = false;
-    const keys = [first!.key, card!.key, "field-notebook", "field-topic", "vu_tru", "dong_vat"];
+    const keys = [first.key, card.key, "field-notebook", "field-topic", "vu_tru", "dong_vat"];
     expect(sent.filter((x) => keys.some((key) => x.includes(key)))).toEqual([]);
 
     // Still there after a reload (this browser).
     await k.reload();
-    await expect(k.getByRole("complementary", { name: "Nhìn lại 7 ngày" }).getByRole("region", { name: /Sổ tay nhà khoa học/ })).toContainText(card!.title);
+    await expect(k.getByRole("complementary", { name: "Nhìn lại 7 ngày" }).getByRole("region", { name: /Sổ tay nhà khoa học/ })).toContainText(card.title);
 
     await kCtx.close();
   } finally {
