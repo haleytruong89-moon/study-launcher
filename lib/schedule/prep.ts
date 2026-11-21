@@ -15,6 +15,15 @@ export interface PrepItem {
   done: boolean;
 }
 
+export interface PrepView {
+  /** The school day being prepared (YYYY-MM-DD). */
+  date: string;
+  items: PrepItem[];
+  ticked: string[];
+  /** When every row the child ticks was ticked. */
+  doneAt: string | null;
+}
+
 /**
  * "Chuẩn bị cho ngày mai" (parent decision 21/11/2026: the child ticks, the parents see "đã chuẩn bị").
  * Pure, display only: it never changes what is done, locked or open.

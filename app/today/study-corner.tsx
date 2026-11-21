@@ -12,6 +12,9 @@ import { plannable } from "@/lib/today/week";
 import { TUTOR_HOME, isMathSubject, tutorTaskHref } from "@/lib/tutor/entry";
 import { SitesCard } from "./sites-card";
 import { SchoolCard } from "./school-card";
+import { PrepCard } from "./prep-card";
+import type { SchoolDay } from "./use-school-day";
+import type { ClassPrep } from "@/lib/schedule/classPrep";
 import { CalendarCard } from "./calendar-card";
 import { taskName } from "@/lib/today/taskName";
 import { FilesFold, LamThem, OpenAppLink, TaskActions, TaskName, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
@@ -70,6 +73,9 @@ export function StudyCorner({
   focus,
   tutor = false,
   freeMinutes,
+  school = null,
+  prep = [],
+  onPrepSaved,
 }: {
   s: DayState;
   view: TodayView;
@@ -86,6 +92,11 @@ export function StudyCorner({
   tutor?: boolean;
   /** The family's free time (minutes) for "Giờ tự do tối nay" (16/11/2026). */
   freeMinutes: number;
+  /** 21/11/2026: the child's school day (useSchoolDay), for the timetable + Ngày mai cards. */
+  school?: SchoolDay | null;
+  /** 21/11/2026: tasks to finish before the next extra class (classPrep). */
+  prep?: ClassPrep[];
+  onPrepSaved?: (ticked: string[], doneAt: string | null) => void;
 }) {
   // 16/11/2026: the saved-up free minutes, visible where the child works.
   const meter = freeMeter(s, freeMinutes, ctx.nowMs);
@@ -93,7 +104,10 @@ export function StudyCorner({
   // plan it was made from: a new view from the server (saved, or polled) replaces it.
   const [draft, setDraft] = useState<{ base: string[] | null; keys: string[] } | null>(null);
   const plan = draft && draft.base === view.plan ? draft.keys : view.plan;
-  const list = orderedToday(s, plan);
+  // 21/11/2026: with no order of their own, homework for the next extra class comes first.
+  const prepKeys = prep.map((p) => p.taskKey);
+  const list = orderedToday(s, plan ?? (prepKeys.length > 0 ? prepKeys : null));
+  const prepLabel = new Map(prep.map((p) => [p.taskKey, p.label]));
   const upcoming = s.part1.items.filter((i) => i.group === "upcoming");
   const [picked, setPicked] = useState<string | null>(null);
   const [drag, setDrag] = useState<{ key: string; over: string | null } | null>(null);
@@ -243,6 +257,7 @@ export function StudyCorner({
                         {item.state === "running" ? " · đang làm" : item.extra ? " · đang làm thêm" : ""}
                       </b>
                       {rowSub(item, ctx) && <span className="text-[13px] text-ink/70">{rowSub(item, ctx)}</span>}
+                      {prepLabel.has(item.key) && <PrepChip label={prepLabel.get(item.key) as string} />}
                     </button>
                     {done ? (
                       <span className="flex flex-col items-end gap-0.5 px-1 text-right">
@@ -299,19 +314,27 @@ export function StudyCorner({
 
       {focus ? (
         <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
-          <WorkPanel item={current} ctx={ctx} tutor={tutor} />
+          <WorkPanel item={current} ctx={ctx} tutor={tutor} prepLabel={current ? (prepLabel.get(current.key) ?? null) : null} />
         </section>
       ) : (
         // The right column: the work panel, then "Lịch của con" (read only, 14/11/2026). The column
         // is sticky as a whole; below lg it stacks under the list like before.
         <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4">
           <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
-            <WorkPanel item={current} ctx={ctx} tutor={tutor} />
+            <WorkPanel item={current} ctx={ctx} tutor={tutor} prepLabel={current ? (prepLabel.get(current.key) ?? null) : null} />
           </section>
           {meter && <FreeMeterBox m={meter} color={color} />}
           {/* 21/11/2026: door ① moved here (parent's sketch): "Thứ tự hôm nay" is first on the page. */}
           {tutor && <TutorCard color={color} />}
-          <SchoolCard color={color} />
+          {school?.prep && onPrepSaved && (
+            <PrepCard
+              prep={school.prep}
+              color={color}
+              onSaved={onPrepSaved}
+              doneTasks={new Set([...s.part1.items, ...s.part2.items].filter((i) => i.state === "done").map((i) => i.key))}
+            />
+          )}
+          <SchoolCard data={school} color={color} />
           <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
           <SitesCard color={color} />
         </div>
@@ -321,6 +344,16 @@ export function StudyCorner({
 }
 
 const EYEBROW = "text-xs font-bold tracking-[0.07em] uppercase";
+
+/** 21/11/2026: "⏰ Trước buổi Gia sư Tiếng Anh 20:30 tối nay" (classPrep). Display only. */
+function PrepChip({ label }: { label: string }) {
+  return (
+    <span className="rounded-full px-2 py-px text-[12px] font-bold" style={{ background: "#FFF4E8", color: "#8A4A07" }}>
+      <span aria-hidden>⏰ </span>
+      {label}
+    </span>
+  );
+}
 
 /**
  * Door ① to Gia sư AI Toán (parent decision 14/11/2026): always shown in Góc học tập. Since
@@ -344,7 +377,7 @@ export function TutorCard({ color }: { color: string }) {
 }
 
 /** The work panel (artifact workPanel): what the child works on, a big timer, the buttons. */
-function WorkPanel({ item, ctx, tutor }: { item: TaskView | null; ctx: TaskCtx; tutor: boolean }) {
+function WorkPanel({ item, ctx, tutor, prepLabel = null }: { item: TaskView | null; ctx: TaskCtx; tutor: boolean; prepLabel?: string | null }) {
   if (!item) {
     return (
       <>
@@ -386,6 +419,11 @@ function WorkPanel({ item, ctx, tutor }: { item: TaskView | null; ctx: TaskCtx; 
           <TaskName item={item} />
         </h3>
         {sub && <p className="text-[15px] text-ink/75">{sub}</p>}
+        {prepLabel && (
+          <span className="self-start">
+            <PrepChip label={prepLabel} />
+          </span>
+        )}
       </div>
       <StudyTimer item={item} ctx={ctx} />
       {isWaiting(item, ctx) && <p className="text-sm font-semibold text-ink/80">Làm xong “{ctx.runningTimed ? taskName(ctx.runningTimed) : ""}” rồi bắt đầu việc này.</p>}
