@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TaskView } from "@/lib/dayState/types";
 import { classPrep } from "@/lib/schedule/classPrep";
-import { prepDone, prepItems, tickableKeys } from "@/lib/schedule/prep";
+import { prepDone, prepItems, prepParentLine, tickableKeys } from "@/lib/schedule/prep";
 import { extrasOn, subjectRows, type ExtraClass } from "@/lib/schedule/rules";
 import { dayPlan, nextSchoolDay, type Period, type TimetableVersion } from "@/lib/timetable/rules";
 
@@ -86,5 +86,16 @@ describe("prepItems — Chuẩn bị cho ngày mai (21/11/2026)", () => {
   it("no school day → nothing", () => {
     expect(prepItems({ plan: null, extrasNext: [], rows: [], prep: [], items: [], ticked: [] })).toEqual([]);
     expect(prepDone([], [])).toBe(false);
+  });
+});
+
+describe("prepParentLine", () => {
+  const base = { dayName: "Thứ 6", keys: 4, ticked: 0, doneAt: null, evening: true };
+  it("done, part done, not yet, nothing to say", () => {
+    expect(prepParentLine({ ...base, ticked: 4, doneAt: "2026-11-26T12:50:00Z" })).toBe("Chuẩn bị cho Thứ 6: ✓ 19:50");
+    expect(prepParentLine({ ...base, ticked: 2 })).toBe("Chuẩn bị cho Thứ 6: 2/4 dòng");
+    expect(prepParentLine(base)).toBe("Chuẩn bị cho Thứ 6: chưa");
+    expect(prepParentLine({ ...base, evening: false })).toBeNull();
+    expect(prepParentLine({ ...base, keys: 0 })).toBeNull();
   });
 });

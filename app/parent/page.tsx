@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { loadChildrenToday, type ChildToday } from "@/lib/parent/load";
+import { loadPrepLines } from "@/lib/parent/prep";
 import { buildLearningTiles, homeLine } from "@/lib/parent/learning";
 import { loadLearning } from "@/lib/parent/learningLoad";
 import { periodLabel, weekCardVisible } from "@/lib/parent/weekDigest";
@@ -58,10 +59,12 @@ export default async function ParentHome() {
     );
   }
 
-  const [kids, [{ count: pending }, templateRes, specialRes, rulesRes, decisionsRes], learning] = await Promise.all([
+  const [kids, [{ count: pending }, templateRes, specialRes, rulesRes, decisionsRes], learning, prepLines] = await Promise.all([
     loadChildrenToday(db, me.profile.family_id, children, today, now),
     familyReads,
     loadLearning(db, children.map((c) => c.id), today),
+    // 21/11/2026: "Chuẩn bị cho ngày mai" (the child ticks, the parents see it).
+    loadPrepLines(db, children.map((c) => c.id), today, now),
   ]);
   // L-3: one line per child about the learning apps (the tutor's own numbers; links to Ngày của con).
   const learningLine = (childId: string) => homeLine(buildLearningTiles(childId, today, learning.cards, learning.attention, learning.pendingRules, false));
@@ -134,7 +137,7 @@ export default async function ParentHome() {
         )}
 
         {kids.map((k) => (
-          <ChildCard key={k.child.id} kid={k} special={special} learning={learningLine(k.child.id)} nowMs={now.getTime()} />
+          <ChildCard key={k.child.id} kid={k} special={special} learning={learningLine(k.child.id)} prepLine={prepLines.get(k.child.id) ?? null} nowMs={now.getTime()} />
         ))}
       </main>
     </>
@@ -150,7 +153,19 @@ interface SpecialData {
   decisions: TrustDecisionRow[];
 }
 
-function ChildCard({ kid, special, learning, nowMs }: { kid: ChildToday; special: SpecialData; learning: string | null; nowMs: number }) {
+function ChildCard({
+  kid,
+  special,
+  learning,
+  prepLine,
+  nowMs,
+}: {
+  kid: ChildToday;
+  special: SpecialData;
+  learning: string | null;
+  prepLine: string | null;
+  nowMs: number;
+}) {
   const { child, state, overview: o } = kid;
   // 16/11/2026: what the child has saved up for tonight's free time (same numbers as the child sees).
   const freeLine = state && kid.freeMinutes > 0 ? freeMeterParentLine(freeMeter(state, kid.freeMinutes, nowMs)) : null;
@@ -188,6 +203,12 @@ function ChildCard({ kid, special, learning, nowMs }: { kid: ChildToday; special
               <div className="h-2 rounded-full bg-white" style={{ width: `${o.pct}%` }} />
             </div>
             {freeLine && <p className="text-sm font-semibold">{freeLine}</p>}
+            {prepLine && (
+              <p className="text-sm font-semibold">
+                <span aria-hidden>🎒 </span>
+                {prepLine}
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <OverrideSheet
                 childId={child.id}

@@ -89,3 +89,18 @@ export const prepDone = (items: readonly PrepItem[], ticked: readonly string[]):
   const keys = tickableKeys(items);
   return keys.length > 0 && keys.every((k) => ticked.includes(k));
 };
+
+/**
+ * The parent's line (21/11/2026): "Chuẩn bị cho Thứ 6: ✓ 19:50" / "2/4 dòng" / "chưa". null when
+ * there is nothing to say yet (no school day, or before 19:00 with nothing ticked).
+ */
+export function prepParentLine(input: { dayName: string; keys: number; ticked: number; doneAt: string | null; evening: boolean }): string | null {
+  const { dayName, keys, ticked, doneAt, evening } = input;
+  if (keys === 0) return null;
+  if (doneAt) {
+    const hm = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(doneAt));
+    return `Chuẩn bị cho ${dayName}: ✓ ${hm}`;
+  }
+  if (ticked > 0) return `Chuẩn bị cho ${dayName}: ${ticked}/${keys} dòng`;
+  return evening ? `Chuẩn bị cho ${dayName}: chưa` : null;
+}
