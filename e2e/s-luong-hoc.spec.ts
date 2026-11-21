@@ -48,7 +48,9 @@ test("Góc học tập: subject first, “Ôn thi” tag, list before the tutor 
     await login(page, email, password);
 
     // Menu: Góc học tập comes before Hôm nay (Góc bình yên, when on, is first).
-    const names = await page.getByRole("navigation", { name: "Các mục của con" }).getByRole("link").allInnerTexts();
+    const nav = page.getByRole("navigation", { name: "Các mục của con" });
+    await expect(nav.getByRole("link", { name: "Góc học tập" })).toBeVisible();
+    const names = await nav.getByRole("link").allInnerTexts();
     const flat = names.map((n) => n.replace(/\s+/g, " ").trim());
     const at = (label: string) => flat.findIndex((n) => n.includes(label));
     expect(at("Góc học tập")).toBeGreaterThanOrEqual(0);

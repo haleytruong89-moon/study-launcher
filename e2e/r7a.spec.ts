@@ -149,7 +149,7 @@ test("R7a long run: a task started 3 hours ago asks kindly “Con vẫn đang l�
     await expect(focus).toHaveCount(0);
     await chip.click();
     await expect(focus).toBeVisible();
-    await expect(focus).toContainText("Con vẫn đang làm “R7a Luyện lâu” chứ?");
+    await expect(focus).toContainText("Con vẫn đang làm “Toán · R7a Luyện lâu” chứ?");
     await expect(focus.getByRole("timer")).toHaveCount(0);
 
     // "Vẫn đang làm": the question rests for an hour (this tab), even after a reload.
@@ -165,7 +165,7 @@ test("R7a long run: a task started 3 hours ago asks kindly “Con vẫn đang l�
     // The question again, then "Xong rồi" finishes the run on the server (minimum long reached).
     await page.evaluate((key) => window.sessionStorage.removeItem(key), `focus-snooze:template:${task.id}`);
     await page.reload();
-    await expect(focus).toContainText("Con vẫn đang làm “R7a Luyện lâu” chứ?");
+    await expect(focus).toContainText("Con vẫn đang làm “Toán · R7a Luyện lâu” chứ?");
     await focus.getByRole("button", { name: "Xong rồi" }).click();
     await expect(focus).toHaveCount(0);
     await expect(chip).toHaveCount(0);
