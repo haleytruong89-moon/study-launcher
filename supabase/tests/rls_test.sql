@@ -1378,5 +1378,56 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1
 select test_helpers.expect_count('parentB sees only family B timetable', (select count(*) from public.timetables), 1);
 
 reset role;
+-- 0025 Lịch học con tự quản: parents + the child read; only the server (service_role) writes.
+insert into public.extra_classes (family_id, child_id, subject, sessions, place) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'Văn', '[{"day":2,"start":"15:30","end":"17:00"}]', 'home'),
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c2', 'Tiếng Anh', '[{"day":4,"start":"20:30","end":"22:30"}]', 'online'),
+  ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', 'Toán', '[]', 'center');
+insert into public.subject_prefs (family_id, child_id, subject_key, label, color, bring) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'toan', 'Toán', '#3B6FB6', 'Thước, compa');
+update public.timetables set updated_by = '00000000-0000-0000-0000-0000000000c1' where child_id = '00000000-0000-0000-0000-0000000000c1';
+do $$
+begin
+  begin
+    insert into public.extra_classes (family_id, child_id, subject, place) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'Văn', 'moon');
+    raise exception 'FAIL: bad place accepted';
+  exception when check_violation then raise notice 'ok: place is one of home/center/online';
+  end;
+  begin
+    insert into public.extra_classes (family_id, child_id, subject) values ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000c1', 'Văn');
+    raise exception 'FAIL: extra class for a child of another family';
+  exception when foreign_key_violation then raise notice 'ok: extra class child must be in the row family';
+  end;
+  begin
+    insert into public.extra_classes (family_id, child_id, subject, sessions) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'Văn', '{}');
+    raise exception 'FAIL: sessions not an array';
+  exception when check_violation then raise notice 'ok: sessions must be an array';
+  end;
+  begin
+    insert into public.subject_prefs (family_id, child_id, subject_key, color) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'van', 'red');
+    raise exception 'FAIL: bad colour accepted';
+  exception when check_violation then raise notice 'ok: colour is #RRGGBB or empty';
+  end;
+end $$;
+select test_helpers.expect_count('extra_classes has RLS on', (select count(*) from pg_class where oid = 'public.extra_classes'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('subject_prefs has RLS on', (select count(*) from pg_class where oid = 'public.subject_prefs'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('anon has no extra_classes access', (select case when has_table_privilege('anon', 'public.extra_classes', 'SELECT') then 1 else 0 end), 0);
+select test_helpers.expect_count('authenticated cannot insert extra_classes', (select case when has_table_privilege('authenticated', 'public.extra_classes', 'INSERT') then 1 else 0 end), 0);
+select test_helpers.expect_count('authenticated cannot update subject_prefs', (select case when has_table_privilege('authenticated', 'public.subject_prefs', 'UPDATE') then 1 else 0 end), 0);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees only own extra classes', (select count(*) from public.extra_classes), 1);
+select test_helpers.expect_count('child1 sees own subject prefs', (select count(*) from public.subject_prefs), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c2', false);
+select test_helpers.expect_count('child2 sees no subject prefs of child1', (select count(*) from public.subject_prefs), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees the family extra classes (2)', (select count(*) from public.extra_classes), 2);
+select test_helpers.expect_count('parentA sees the family subject prefs (1)', (select count(*) from public.subject_prefs), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees only family B extra classes (1)', (select count(*) from public.extra_classes), 1);
+select test_helpers.expect_count('parentB sees no family A subject prefs', (select count(*) from public.subject_prefs), 0);
+
+reset role;
 drop schema test_helpers cascade;
 \echo RLS OK

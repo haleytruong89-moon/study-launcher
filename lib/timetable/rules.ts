@@ -22,7 +22,10 @@ export interface TimetableData {
   periods: Period[];
   /** "07:30-08:15" per session and period number. */
   times: Partial<Record<Session, Record<string, string>>>;
-  /** Uniform text per weekday ("1".."6"). */
+  /**
+   * Uniform text per weekday ("1".."6"), plus optional "pe" (21/11/2026): the uniform of a day that
+   * has a Thể dục lesson (it wins over the weekday text, see uniformFor).
+   */
   uniform: Record<string, string>;
 }
 
@@ -34,6 +37,8 @@ export interface TimetableVersion extends TimetableData {
 
 export const DAY_NAMES = ["", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"] as const;
 export const MAX_PERIOD = 6;
+/** Uniform key for "a day with a Thể dục lesson" (Nguyên, 21/11/2026). */
+export const PE_KEY = "pe";
 const SUBJECT_MAX = 30;
 const TIME = /^(\d{1,2})[:hH](\d{2})\s*-\s*(\d{1,2})[:hH](\d{2})$/;
 
@@ -80,6 +85,12 @@ export function parseQuick(text: string): ParseResult {
     m = /^GHI CHÚ\s*:\s*(.*)$/iu.exec(line);
     if (m) {
       data.note = m[1]!.trim().slice(0, 200);
+      return;
+    }
+    m = /^ĐỒNG PHỤC\s*THỂ DỤC\s*:\s*(.*)$/iu.exec(line.normalize("NFC"));
+    if (m) {
+      const text = m[1]!.trim().slice(0, 160);
+      if (text) data.uniform[PE_KEY] = text;
       return;
     }
     m = /^ĐỒNG PHỤC\s*T([2-7])\s*:\s*(.*)$/iu.exec(line);
@@ -147,6 +158,7 @@ export function toQuick(d: TimetableData): string {
     const u = d.uniform[String(day)];
     if (u) lines.push(`ĐỒNG PHỤC T${day + 1}: ${u}`);
   }
+  if (d.uniform[PE_KEY]) lines.push(`ĐỒNG PHỤC THỂ DỤC: ${d.uniform[PE_KEY]}`);
   return lines.join("\n");
 }
 
@@ -174,7 +186,7 @@ export function dayPlan(versions: readonly TimetableVersion[], date: string): Da
   const periods = v.periods
     .filter((p) => p.day === weekday)
     .map((p) => ({ session: p.session, n: p.n, subject: p.subject, time: v.times[p.session]?.[String(p.n)] ?? null }));
-  return { date, weekday, periods, uniform: v.uniform[String(weekday)] ?? null, note: v.note, label: v.label };
+  return { date, weekday, periods, uniform: uniformFor(v, weekday), note: v.note, label: v.label };
 }
 
 /** The next school day after `date` that has lessons (within 7 days), for "Chuẩn bị cho ngày mai". */
@@ -211,6 +223,10 @@ const GROUPS: readonly string[][] = [
   ["gdcd", "cong dan"],
   ["tin", "tin hoc"],
   ["cong nghe", "cn"],
+  // 21/11/2026: the PE uniform rule and the subject list need these.
+  ["the duc", "gdtc", "giao duc the chat"],
+  ["my thuat", "nt(mt)", "mt"],
+  ["am nhac", "nhac", "nt(an)"],
 ];
 
 /** A subject's group key ("Toán", "toán 9", "KHTN(S)" → "toan" / "khtn"), or its folded name. */
@@ -236,6 +252,57 @@ export function nextClassDate(versions: readonly TimetableVersion[], subject: st
     if (plan?.periods.some((p) => subjectKey(p.subject) === key)) return d;
   }
   return null;
+}
+
+/**
+ * The day's uniform (21/11/2026): a day with a Thể dục lesson wears `uniform.pe` when it is set
+ * (Nguyên: áo xanh lá, it wins over "T2/T6 áo lớp"); otherwise that weekday's text. Sunday: null.
+ */
+export function uniformFor(v: Pick<TimetableData, "periods" | "uniform">, weekday: number): string | null {
+  if (weekday < 1 || weekday > 6) return null;
+  const pe = v.uniform[PE_KEY];
+  if (pe && v.periods.some((p) => p.day === weekday && subjectKey(p.subject) === "the duc")) return pe;
+  return v.uniform[String(weekday)] ?? null;
+}
+
+const record = (x: unknown): Record<string, unknown> => (x && typeof x === "object" && !Array.isArray(x) ? (x as Record<string, unknown>) : {});
+
+/** The child's editor sends a version as JSON (21/11/2026): the same limits as the quick text. */
+export function validateData(raw: unknown): { ok: true; data: TimetableData } | { ok: false; error: string } {
+  const o = record(raw);
+  if (!Array.isArray(o.periods)) return { ok: false, error: "Thời khóa biểu không hợp lệ." };
+  const seen = new Set<string>();
+  const periods: Period[] = [];
+  for (const raw of o.periods as unknown[]) {
+    const p = record(raw);
+    const { day, n, session } = p;
+    const subject = typeof p.subject === "string" ? p.subject.trim() : "";
+    if (typeof day !== "number" || !Number.isInteger(day) || day < 1 || day > 6 || typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > MAX_PERIOD || (session !== "am" && session !== "pm"))
+      return { ok: false, error: "Có tiết sai thứ hoặc số tiết." };
+    if (!subject || subject.length > SUBJECT_MAX) return { ok: false, error: "Tên môn trống hoặc dài quá." };
+    const k = `${day}${session}${n}`;
+    if (seen.has(k)) return { ok: false, error: "Một tiết bị nhập hai lần." };
+    seen.add(k);
+    periods.push({ day, session, n, subject });
+  }
+  const times: TimetableData["times"] = {};
+  const t = record(o.times);
+  for (const s of ["am", "pm"] as const) {
+    for (const [n, v] of Object.entries(record(t[s]))) {
+      const norm = typeof v === "string" ? normTime(v) : null;
+      if (!/^[1-6]$/.test(n) || !norm) return { ok: false, error: "Giờ tiết chưa đúng (vd 07:30-08:15)." };
+      times[s] = { ...(times[s] ?? {}), [n]: norm };
+    }
+  }
+  const uniform: Record<string, string> = {};
+  for (const [k, v] of Object.entries(record(o.uniform))) {
+    if (!/^[1-6]$/.test(k) && k !== PE_KEY) return { ok: false, error: "Đồng phục sai thứ." };
+    if (typeof v !== "string" || v.length > 160) return { ok: false, error: "Đồng phục dài quá." };
+    if (v.trim()) uniform[k] = v.trim();
+  }
+  const label = typeof o.label === "string" ? o.label.trim().slice(0, 40) : "";
+  const note = typeof o.note === "string" ? o.note.trim().slice(0, 200) : "";
+  return { ok: true, data: sortPeriods({ label, note, periods, times, uniform }) };
 }
 
 /** A row from the database → a version (bad shapes are dropped, never trusted). */

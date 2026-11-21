@@ -1,39 +1,86 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
+import { auditText } from "@/lib/admin/auditText";
+import { loadSchedule } from "@/lib/schedule/load";
+import { RESTORABLE } from "@/lib/schedule/restore";
+import { PLACE_LABEL, sessionsText } from "@/lib/schedule/rules";
 import { localDate } from "@/lib/time";
-import { loadTimetables } from "@/lib/timetable/load";
 import { ParentHeader } from "../parent-header";
+import { RestoreButton } from "./restore-button";
 import { TimetableEditor } from "./timetable-editor";
 
 export const dynamic = "force-dynamic";
 
+const SCHEDULE_ACTIONS = ["schedule.timetable", "schedule.extra.save", "schedule.extra.off", "schedule.restore"];
+const when = (iso: string) =>
+  new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", hour12: false }).format(new Date(iso));
+
 /**
- * Thời khóa biểu (18/11/2026): each child's school timetable, in versions ("Áp dụng từ"). Parents
- * only write; the child sees it in Góc học tập, and Giao bài suggests the due date from it.
+ * Thời khóa biểu (18/11/2026) + lịch học con tự quản (21/11/2026): each child's school timetable
+ * in versions, their extra classes, and the recent changes the children made, each with
+ * "Khôi phục bản trước". Parents can still paste a timetable themselves.
  */
 export default async function TimetablePage() {
   const { db } = await requireParentPage();
   const children = await loadChildren(db);
-  const versions = await loadTimetables(
-    db,
-    children.map((c) => c.id),
-  );
+  const ids = children.map((c) => c.id);
+  const [{ versions, extras }, log] = await Promise.all([
+    loadSchedule(db, ids),
+    db.from("audit_log").select("id, action, payload, actor_id, created_at").in("action", SCHEDULE_ACTIONS).order("created_at", { ascending: false }).limit(20),
+  ]);
+  const names = new Map(children.map((c) => [c.id, c.display_name]));
+  const entries = (log.data ?? []) as { id: string; action: string; payload: Record<string, unknown> | null; actor_id: string | null; created_at: string }[];
+  const restored = new Set(entries.filter((e) => e.action === "schedule.restore").map((e) => String(e.payload?.of ?? "")));
   const today = localDate(new Date());
   return (
     <>
       <ParentHeader title="Thời khóa biểu" current="/parent/timetable" />
       <main className="mx-auto flex max-w-2xl flex-col gap-5 px-4 py-6">
         <p className="text-sm text-ink/75">
-          Mỗi con một thời khóa biểu, có <b>ngày áp dụng</b>. Khi trường đổi lịch, thêm bản mới với ngày bắt đầu mới; bản cũ vẫn giữ lại. Con chỉ xem được, không sửa được.
+          Mỗi con một thời khóa biểu, có <b>ngày áp dụng</b>. Từ 21/11 <b>con tự sửa</b> thời khóa biểu và học thêm ở Góc học tập → Lịch của con → Sửa lịch học. Mỗi lần con sửa hiện ở mục “Con sửa gần đây” bên dưới, bố mẹ khôi phục được bản trước.
         </p>
+
+        <section aria-label="Con sửa gần đây" className="flex flex-col gap-2 rounded-2xl bg-white p-4">
+          <h2 className="text-lg font-extrabold">Con sửa gần đây</h2>
+          {entries.length === 0 ? (
+            <p className="text-sm text-ink/70">Chưa có thay đổi nào.</p>
+          ) : (
+            <ul className="flex flex-col">
+              {entries.map((e) => (
+                <li key={e.id} className="flex flex-col gap-1.5 border-t border-ink/10 py-2.5 first:border-t-0">
+                  <span className="text-xs text-ink/60">{when(e.created_at)}</span>
+                  <span className="text-sm">{auditText({ action: e.action, payload: e.payload, actor_id: e.actor_id }, names).text}</span>
+                  {(RESTORABLE as readonly string[]).includes(e.action) &&
+                    (restored.has(e.id) ? <span className="text-xs font-semibold text-ink/60">Đã khôi phục</span> : <RestoreButton auditId={e.id} />)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         {children.length === 0 && <p className="text-sm text-ink/70">Chưa có tài khoản con nào.</p>}
-        {children.map((c) => (
-          <TimetableEditor
-            key={c.id}
-            child={{ id: c.id, name: c.display_name, color: c.color ?? "#2B5D4F" }}
-            versions={versions.filter((v) => v.childId === c.id)}
-            today={today}
-          />
-        ))}
+        {children.map((c) => {
+          const mine = extras.filter((x) => x.childId === c.id);
+          return (
+            <div key={c.id} className="flex flex-col gap-3">
+              <TimetableEditor child={{ id: c.id, name: c.display_name, color: c.color ?? "#2B5D4F" }} versions={versions.filter((v) => v.childId === c.id)} today={today} />
+              <section aria-label={`Học thêm của ${c.display_name}`} className="flex flex-col gap-1.5 rounded-2xl bg-white p-4">
+                <h3 className="font-bold">Học thêm của {c.display_name} (con tự nhập)</h3>
+                {mine.length === 0 ? (
+                  <p className="text-sm text-ink/70">Chưa có.</p>
+                ) : (
+                  <ul className="flex flex-col text-sm">
+                    {mine.map((x) => (
+                      <li key={x.id} className="border-t border-ink/10 py-1.5 first:border-t-0">
+                        <b>{x.subject}</b> · {sessionsText(x.sessions)} · {PLACE_LABEL[x.place]}
+                        {x.bring && <span className="block text-xs text-ink/65">Mang: {x.bring}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          );
+        })}
       </main>
     </>
   );

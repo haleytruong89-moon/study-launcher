@@ -3,7 +3,26 @@
 import { useEffect, useState } from "react";
 import { DAY_NAMES, type DayPlan } from "@/lib/timetable/rules";
 
-type Data = { has: boolean; today: DayPlan | null; next: DayPlan | null; nowMs: number };
+type ExtraLine = { subject: string; start: string; end: string; place: string; bring: string };
+type Data = { has: boolean; today: DayPlan | null; next: DayPlan | null; extrasToday?: ExtraLine[]; extrasNext?: ExtraLine[]; nowMs: number };
+
+/** 21/11/2026: the child's extra classes (học thêm / gia sư) of a day. */
+function ExtraList({ label, lines, withBring }: { label: string; lines: ExtraLine[]; withBring?: boolean }) {
+  return (
+    <ul aria-label={label} className="flex flex-col">
+      {lines.map((x) => (
+        <li key={`${x.start}${x.subject}`} className="flex flex-wrap items-baseline gap-x-2 border-t border-ink/10 py-1 text-sm first:border-t-0">
+          <span className="w-24 shrink-0 text-ink/60 tabular-nums">
+            {x.start}–{x.end}
+          </span>
+          <span className="font-semibold">{x.subject}</span>
+          <span className="text-xs text-ink/60">· {x.place}</span>
+          {withBring && x.bring && <span className="w-full pl-[6.5rem] text-xs text-ink/70">Mang: {x.bring}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
@@ -60,7 +79,9 @@ export function SchoolCard({ color }: { color: string }) {
   if (!data?.has) return null;
   const today = data.today && data.today.periods.length > 0 ? data.today : null;
   const next = data.next;
-  if (!today && !next) return null;
+  const extrasToday = data.extrasToday ?? [];
+  const extrasNext = data.extrasNext ?? [];
+  if (!today && !next && extrasToday.length === 0) return null;
   const minutes = clock !== null ? vnMinutes(clock) : -1;
 
   return (
@@ -92,6 +113,12 @@ export function SchoolCard({ color }: { color: string }) {
           {today.note && <p className="text-xs text-ink/65">{today.note}</p>}
         </div>
       )}
+      {extrasToday.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <h2 className="font-bold">Học thêm hôm nay</h2>
+          <ExtraList label="Học thêm hôm nay" lines={extrasToday} />
+        </div>
+      )}
       {next && (
         <div aria-label="Chuẩn bị cho ngày mai" className="flex flex-col gap-1.5 rounded-xl bg-bg p-3">
           <h2 className="font-bold">
@@ -109,6 +136,12 @@ export function SchoolCard({ color }: { color: string }) {
               <span aria-hidden>👕 </span>
               <b>Đồng phục:</b> {next.uniform}
             </p>
+          )}
+          {extrasNext.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-bold">Học thêm {DAY_NAMES[next.weekday]}:</p>
+              <ExtraList label="Học thêm ngày mai" lines={extrasNext} withBring />
+            </div>
           )}
         </div>
       )}
