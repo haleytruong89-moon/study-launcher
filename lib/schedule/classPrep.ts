@@ -16,10 +16,17 @@ export interface ClassPrep {
  * (English OS for Tiếng Anh; the Toán app when it exists). A task matches a class that starts LATER
  * TODAY or TOMORROW when: the class names an app slot and the task opens that slot; or the class names
  * none and the task is a set task (template, Phần 1) of the same subject. School homework is never
- * matched. Done tasks are skipped. When several classes match a task, the earliest wins.
+ * matched. Done tasks are skipped (the "Ngày mai" list keeps them, ticked: `includeDone`). When
+ * several classes match a task, the earliest wins.
  * Display + order only: it never changes what is done, locked or open.
  */
-export function classPrep(items: readonly TaskView[], extras: readonly ExtraClass[], nowMs: number, today: string): ClassPrep[] {
+export function classPrep(
+  items: readonly TaskView[],
+  extras: readonly ExtraClass[],
+  nowMs: number,
+  today: string,
+  opts: { includeDone?: boolean } = {},
+): ClassPrep[] {
   const tomorrow = addDays(today, 1);
   const classes = [
     ...extrasOn(extras, today).map((c) => ({ ...c, date: today })),
@@ -32,7 +39,7 @@ export function classPrep(items: readonly TaskView[], extras: readonly ExtraClas
 
   const out: ClassPrep[] = [];
   for (const item of items) {
-    if (item.source !== "template" || item.state === "done" || item.state === "placeholder") continue;
+    if (item.source !== "template" || item.state === "placeholder" || (item.state === "done" && !opts.includeDone)) continue;
     const cls = classes.find(({ extra }) =>
       extra.appSlotId
         ? item.appSlotId === extra.appSlotId
