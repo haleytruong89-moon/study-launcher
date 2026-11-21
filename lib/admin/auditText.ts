@@ -48,6 +48,11 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "timetable.save": "homework",
   "timetable.delete": "homework",
   "template.update": "homework",
+  // 21/11/2026: the child edits their own schedule; parents can restore the previous version.
+  "schedule.timetable": "homework",
+  "schedule.extra.save": "homework",
+  "schedule.extra.off": "homework",
+  "schedule.restore": "homework",
 
   "request.create": "request",
   "request.15m": "request",
@@ -238,6 +243,20 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
     }
     case "template.update":
       return say(`${p.active === false ? "Tắt" : "Sửa"} việc${quoted(short(p.title, 40))} trong lịch tuần của ${kid}`);
+    case "schedule.timetable": {
+      const changes = Array.isArray(p.changes) ? p.changes.filter((c): c is string => typeof c === "string") : [];
+      const total = num(p.change_count) ?? changes.length;
+      const more = total > 3 ? ` (+${total - 3})` : "";
+      return say(changes.length > 0 ? `${kid} sửa thời khóa biểu: ${changes.slice(0, 3).join("; ")}${more}` : `${kid} sửa đồng phục / giờ tiết trong thời khóa biểu`);
+    }
+    case "schedule.extra.save": {
+      const clash = (num(p.conflicts) ?? 0) > 0 ? " · trùng giờ học ở trường" : "";
+      return say(`${kid} ${p.before ? "sửa" : "thêm"} học thêm ${short(p.summary, 80) ?? ""}`.trim() + clash);
+    }
+    case "schedule.extra.off":
+      return say(`${kid} bỏ học thêm ${short(p.summary, 80) ?? ""}`.trim());
+    case "schedule.restore":
+      return say(`Khôi phục lịch học của ${kid} về bản trước`);
 
     // --- Xin mở trang / trang học --------------------------------------------
     case "request.create":
