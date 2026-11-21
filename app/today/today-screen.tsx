@@ -12,7 +12,7 @@ import { NextTask, type Act, type TaskCtx } from "./today-parts";
 import { FocusView } from "./focus-view";
 import { StartSheet } from "./start-sheet";
 import { Breadcrumb, ChildNav } from "../child-nav";
-import { tabLabel } from "@/lib/childTabs";
+import { DEFAULT_TAB, tabLabel } from "@/lib/childTabs";
 import type { Avatar } from "@/lib/avatar";
 import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
@@ -21,11 +21,11 @@ import { FeelInvite, FeelWeek } from "./tabs";
 import { StudyCorner } from "./study-corner";
 import { WorldMini } from "./world";
 import { ComicToday } from "./comic";
-import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
+import { IconPicker, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
 import { ReportSheet } from "./report-sheet";
-import { nextFromPlan, plannable, planProgress } from "@/lib/today/week";
-import { noStore, readFocusOpen, readPlanLater, subscribeStorage, writeFocusOpen } from "./today-storage";
+import { nextFromPlan, planProgress } from "@/lib/today/week";
+import { noStore, readFocusOpen, writeFocusOpen } from "./today-storage";
 import { useChildTabs, type Tab } from "./use-child-tabs";
 import { useServerClock } from "./use-server-clock";
 import { useWeekDays } from "./use-week-days";
@@ -75,16 +75,12 @@ export function TodayScreen({
   const [started, setStarted] = useState<{ key: string; runId: string | null; opener: Element | null } | null>(null);
   // An's world key (for the focus background), from the world card's own fetch when it ran.
   const [worldKey, setWorldKey] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<"plan" | "icon" | null>(null);
+  const [dialog, setDialog] = useState<"icon" | null>(null);
   // "Con quên bấm Bắt đầu?" (15/11/2026): the task key the sheet is open for.
   const [reportKey, setReportKey] = useState<string | null>(null);
   // "Nộp ảnh bài" sheet: the homework key it is open for, and upload progress.
   const [proofKey, setProofKey] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
-  // "Để sau" on the plan nudge: remembered for today on this laptop only (a convenience).
-  const storedLater = useSyncExternalStore(subscribeStorage, readPlanLater, () => null);
-  const [laterNow, setPlanLater] = useState<string | null>(null);
-  const planLater = laterNow ?? storedLater;
   // Server clock offset: countdowns use server time, never the laptop clock alone.
   const { offsetRef, nowMs, setNowMs, accept } = useServerClock(initial, setView);
   // The child's own week (feelings + 4 areas), fetched only where it is shown.
@@ -254,8 +250,6 @@ export function TodayScreen({
   const dayNote = s.status === "OPEN_SICK" ? null : childDayTypeNote(s.dayType);
   const progress = dayProgress(s);
   const next = nextFromPlan(s, view.plan) ?? nextTask(s);
-  const planItems = plannable(s).filter((i) => i.state !== "done");
-  const showNudge = !view.plan && !s.part1.complete && planItems.length >= 2 && planLater !== s.localDate;
   const planDone = view.plan ? planProgress(s, view.plan) : null;
   // R8b: the break counts down in whole minutes (breakLine below), never in seconds.
   const countdownTo = s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
@@ -311,17 +305,6 @@ export function TodayScreen({
 
   return (
     <div className="min-h-dvh pb-24 lg:pb-0 lg:pl-52">
-      {dialog === "plan" && (
-        <Planner
-          items={planItems}
-          plan={view.plan}
-          color={color}
-          busy={!!busy}
-          error={error}
-          onSave={(keys) => act({ url: "/api/day/plan", body: { keys } })}
-          onClose={() => setDialog(null)}
-        />
-      )}
       {reportItem && (
         <ReportSheet
           key={`report:${reportItem.key}`}
@@ -381,16 +364,17 @@ export function TodayScreen({
 
       <main className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
         <Breadcrumb
-          trail={tab === "hom-nay" ? [tabLabel("hom-nay")] : [tabLabel("hom-nay"), tabLabel(tab, voice)]}
+          // 21/11/2026: Góc học tập is the home of the child's screen (DEFAULT_TAB).
+          trail={tab === DEFAULT_TAB ? [tabLabel(DEFAULT_TAB)] : [tabLabel(DEFAULT_TAB), tabLabel(tab, voice)]}
           onBack={
-            tab === "hom-nay"
+            tab === DEFAULT_TAB
               ? undefined
               : () => {
                   // Skip entries equal to this tab (e.g. after the browser's own Back button).
                   let h = tabHistory;
                   while (h.length > 0 && h.at(-1) === tab) h = h.slice(0, -1);
                   setTabHistory(h.slice(0, -1));
-                  selectTab(h.at(-1) ?? "hom-nay", { back: true });
+                  selectTab(h.at(-1) ?? DEFAULT_TAB, { back: true });
                 }
           }
         />
@@ -446,24 +430,6 @@ export function TodayScreen({
                   </div>
                 )}
               </section>
-            )}
-
-            {showNudge && (
-              <PlanNudge
-                color={color}
-                onPlan={() => {
-                  setError(null);
-                  setDialog("plan");
-                }}
-                onLater={() => {
-                  setPlanLater(s.localDate);
-                  try {
-                    window.localStorage.setItem("plan-later", s.localDate);
-                  } catch {
-                    /* not remembered: fine */
-                  }
-                }}
-              />
             )}
 
             <PillarCards

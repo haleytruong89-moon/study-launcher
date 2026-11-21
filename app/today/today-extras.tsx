@@ -2,12 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { TaskView } from "@/lib/dayState";
 import type { WeekStats } from "@/lib/today/week";
 import { hoursMinutes, ICONS, REVIEW_QUESTIONS, reviewPeriod } from "@/lib/today/week";
 import type { WeeklyReview } from "@/lib/today/week-load";
-import { groupLabel } from "@/lib/today/view";
-import { TaskName } from "./today-parts";
 
 /** Small modal shell (real dialog semantics, Esc / backdrop close, 44px controls). */
 export function Modal({ title, error, onClose, children }: { title: string; error?: string | null; onClose: () => void; children: React.ReactNode }) {
@@ -40,141 +37,6 @@ export function Modal({ title, error, onClose, children }: { title: string; erro
         )}
       </section>
     </div>
-  );
-}
-
-/** "Xếp bài hôm nay?" nudge: optional, "Để sau" hides it for today on this laptop. */
-export function PlanNudge({ color, onPlan, onLater }: { color: string; onPlan: () => void; onLater: () => void }) {
-  return (
-    <section aria-label="Xếp bài hôm nay" className="flex flex-col gap-2.5 rounded-2xl px-4 py-3.5" style={{ background: `${color}1A` }}>
-      <div className="flex flex-col gap-0.5">
-        <strong className="text-base">Xếp bài hôm nay?</strong>
-        <span className="text-sm text-ink/80">Con chọn bài nào làm trước. Mất khoảng 1 phút — không bắt buộc.</span>
-      </div>
-      <div className="flex gap-2">
-        <button type="button" onClick={onPlan} className="min-h-11 rounded-full px-5 text-[15px] font-bold text-white" style={{ background: color }}>
-          Xếp bài
-        </button>
-        <button type="button" onClick={onLater} className="min-h-11 rounded-full px-4 text-[15px] font-semibold" style={{ color }}>
-          Để sau
-        </button>
-      </div>
-    </section>
-  );
-}
-
-interface Row {
-  key: string;
-  item: TaskView;
-  on: boolean;
-}
-
-function initialRows(items: TaskView[], plan: string[] | null): Row[] {
-  const open = items.filter((i) => i.state !== "done");
-  if (plan) {
-    const byKey = new Map(open.map((i) => [i.key, i]));
-    const planned = plan.map((k) => byKey.get(k)).filter((i): i is TaskView => !!i);
-    const rest = open.filter((i) => !plan.includes(i.key));
-    return [...planned.map((item) => ({ key: item.key, item, on: true })), ...rest.map((item) => ({ key: item.key, item, on: false }))];
-  }
-  return open.map((item) => ({ key: item.key, item, on: item.group !== "upcoming" }));
-}
-
-function rowSub(i: TaskView): string {
-  if (i.source === "homework") return i.group === "upcoming" ? `Sắp tới · hạn ${i.dueDate?.slice(8, 10)}/${i.dueDate?.slice(5, 7)}` : "Bài trên lớp · phải xong hôm nay";
-  const where = i.appLabel ? ` · trên ${i.appLabel}` : "";
-  return `${i.part === 1 ? groupLabel(i) : "Phần 2 · kỹ năng"}${where}`;
-}
-
-/** "Kế hoạch hôm nay": tick what to do and put it in order (buttons, no drag needed). */
-export function Planner({
-  items,
-  plan,
-  color,
-  busy,
-  error,
-  onSave,
-  onClose,
-}: {
-  items: TaskView[];
-  plan: string[] | null;
-  color: string;
-  busy: boolean;
-  error: string | null;
-  onSave: (keys: string[]) => Promise<boolean>;
-  onClose: () => void;
-}) {
-  const [rows, setRows] = useState<Row[]>(() => initialRows(items, plan));
-  const move = (from: number, to: number) =>
-    setRows((r) => {
-      if (to < 0 || to >= r.length) return r;
-      const next = [...r];
-      const [x] = next.splice(from, 1);
-      if (x) next.splice(to, 0, x);
-      return next;
-    });
-  const chosen = rows.filter((r) => r.on).map((r) => r.key);
-
-  return (
-    <Modal title="Kế hoạch hôm nay" error={error} onClose={onClose}>
-      <p className="text-sm text-ink/75">Đánh dấu việc con sẽ làm và xếp theo thứ tự. Thẻ “Việc tiếp theo” sẽ đi theo kế hoạch này. Bài trong “Sắp tới” chọn thêm nếu muốn làm trước.</p>
-      <ol className="flex flex-col gap-2">
-        {rows.map((r, n) => (
-          <li key={r.key} className={`flex items-center gap-2 rounded-2xl border px-3 py-2 ${r.on ? "border-ink/15 bg-white" : "border-dashed border-ink/20 bg-bg/60"}`}>
-            <label className="flex min-h-11 grow cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={r.on}
-                onChange={(e) => setRows((all) => all.map((x) => (x.key === r.key ? { ...x, on: e.target.checked } : x)))}
-                className="size-5 shrink-0"
-                style={{ accentColor: color }}
-              />
-              <span className="flex min-w-0 flex-col">
-                <span className="font-bold">
-                  <TaskName item={r.item} />
-                </span>
-                <span className="text-xs text-ink/70">{rowSub(r.item)}</span>
-              </span>
-            </label>
-            <button type="button" aria-label={`Đưa ${r.item.title} lên`} disabled={n === 0} onClick={() => move(n, n - 1)} className="flex size-11 items-center justify-center rounded-full border border-ink/20 disabled:opacity-30">
-              ↑
-            </button>
-            <button type="button" aria-label={`Đưa ${r.item.title} xuống`} disabled={n === rows.length - 1} onClick={() => move(n, n + 1)} className="flex size-11 items-center justify-center rounded-full border border-ink/20 disabled:opacity-30">
-              ↓
-            </button>
-          </li>
-        ))}
-      </ol>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={busy || chosen.length === 0}
-          onClick={async () => {
-            // Planned tasks already done today stay in the plan (in front), so editing later
-            // in the day keeps "x/y xong" and the weekly "theo kế hoạch" count honest.
-            const open = new Set(items.map((i) => i.key));
-            const doneKept = (plan ?? []).filter((k) => !open.has(k));
-            if (await onSave([...doneKept, ...chosen])) onClose();
-          }}
-          className="min-h-12 grow rounded-2xl text-base font-bold text-white disabled:opacity-50"
-          style={{ background: color }}
-        >
-          Lưu kế hoạch ({chosen.length} việc)
-        </button>
-        {plan && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={async () => {
-              if (await onSave([])) onClose();
-            }}
-            className="min-h-12 rounded-2xl border border-ink/25 px-4 text-sm font-semibold"
-          >
-            Bỏ kế hoạch
-          </button>
-        )}
-      </div>
-    </Modal>
   );
 }
 

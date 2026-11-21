@@ -30,7 +30,7 @@ async function childLogin(childId: string): Promise<{ email: string; password: s
   return { email: data.user?.email ?? "", password };
 }
 
-test("Góc học tập: subject first, “Ôn thi” tag, list before the tutor card, menu order", async ({ page }) => {
+test("Góc học tập: home tab, subject first, “Ôn thi” tag, list before the tutor card, menu order", async ({ page }) => {
   const db = admin();
   const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
   const all = [1, 2, 3, 4, 5, 6, 7];
@@ -47,9 +47,15 @@ test("Góc học tập: subject first, “Ôn thi” tag, list before the tutor 
     const { email, password } = await childLogin(kid?.id as string);
     await login(page, email, password);
 
-    // Menu: Góc học tập comes before Hôm nay (Góc bình yên, when on, is first).
+    // The laptop opens on Góc học tập (21/11/2026).
     const nav = page.getByRole("navigation", { name: "Các mục của con" });
-    await expect(nav.getByRole("link", { name: "Góc học tập" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Góc học tập" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
+    // One place to order the tasks: Hôm nay has no "Xếp bài hôm nay?" box any more.
+    await nav.getByRole("link", { name: "Hôm nay" }).click();
+    await expect(page.getByRole("list", { name: "Bốn mảng hôm nay" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Xếp bài hôm nay" })).toHaveCount(0);
+    // Menu: Góc học tập comes before Hôm nay (Góc bình yên, when on, is first).
     const names = await nav.getByRole("link").allInnerTexts();
     const flat = names.map((n) => n.replace(/\s+/g, " ").trim());
     const at = (label: string) => flat.findIndex((n) => n.includes(label));

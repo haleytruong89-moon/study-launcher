@@ -37,7 +37,7 @@ export default function AppError({
           </button>
         )}
         <Link href="/today" className="btn border-2 border-accent text-accent">
-          Về Hôm nay
+          Về Góc học tập
         </Link>
       </div>
     </main>

@@ -117,7 +117,7 @@ test("R8b break bank: 50' of focus → “nghỉ được 10'” + “Nghỉ 10'
 
     const { email, password } = await childLogin(childId);
     await login(page, email, password);
-    await page.goto("/today");
+    await page.goto("/today?tab=hom-nay");
     const status = page.getByRole("region", { name: "Trạng thái hôm nay" });
     await expect(status).toContainText(/Con đã tập trung 50' · nghỉ được 10'/);
     await expect(status).toContainText("Học thêm 40' nữa (không nghỉ) để được nghỉ 30'");

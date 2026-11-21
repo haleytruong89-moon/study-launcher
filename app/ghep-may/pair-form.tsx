@@ -99,7 +99,7 @@ export function PairForm() {
         </p>
       )}
       <Link href="/today" className="text-sm font-semibold text-accent underline">
-        Về Hôm nay
+        Về Góc học tập
       </Link>
     </div>
   );

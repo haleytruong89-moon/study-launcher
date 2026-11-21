@@ -141,7 +141,7 @@ test("R7a long run: a task started 3 hours ago asks kindly “Con vẫn đang l�
 
     const { email, password } = await childLogin(task.childId);
     await login(page, email, password);
-    await page.goto("/today");
+    await page.goto("/today?tab=hom-nay");
     const chip = page.getByRole("button", { name: /^Đang làm R7a Luyện lâu/ });
     await expect(chip).toContainText("hơn 2 giờ");
     await expect(chip).not.toHaveText(SECONDS);

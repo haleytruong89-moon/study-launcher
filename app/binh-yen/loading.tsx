@@ -7,7 +7,7 @@ export default function BinhYenLoading() {
     <div className="min-h-dvh bg-bg pb-24 lg:pb-0 lg:pl-52">
       <header className="text-white" style={{ background: "#4E8C63" }}>
         <div className="mx-auto flex max-w-md items-center gap-3 px-4 pt-5 pb-4">
-          <span className="inline-flex min-h-11 items-center px-1 text-sm font-bold opacity-80">‹ Hôm nay</span>
+          <span className="inline-flex min-h-11 items-center px-1 text-sm font-bold opacity-80">‹ Góc học tập</span>
           <h1 className="ml-auto text-xl font-bold">🌿 Góc bình yên</h1>
         </div>
       </header>

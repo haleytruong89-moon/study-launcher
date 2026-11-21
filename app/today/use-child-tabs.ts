@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isChildTab, tabHref, type ChildTab } from "@/lib/childTabs";
+import { DEFAULT_TAB, isChildTab, tabHref, type ChildTab } from "@/lib/childTabs";
 
 export type Tab = Exclude<ChildTab, "binh-yen">;
 
 function tabFromUrl(): Tab {
   const t = new URLSearchParams(window.location.search).get("tab");
-  return isChildTab(t) ? t : "hom-nay";
+  return isChildTab(t) ? t : DEFAULT_TAB;
 }
 
 /**

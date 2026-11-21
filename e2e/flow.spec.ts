@@ -440,6 +440,10 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
 
   await login(page, childEmail, childPassword);
   await expect(page).toHaveURL(/\/today$/);
+  // 21/11/2026: the child lands on Góc học tập; Hôm nay is one tap away.
+  await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Hôm nay" }).click();
+  await expect(page).toHaveURL(/\/today\?tab=hom-nay$/);
   const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
   await expect(banner).toContainText("Còn 2 bài tập · 1 kỹ năng");
   await expect(page.getByText("Giờ học · máy chỉ mở trang học")).toBeVisible();
@@ -469,20 +473,22 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await page.reload();
   await expect(chip).toHaveAttribute("aria-pressed", "true");
   await tabs.getByRole("link", { name: "Góc học tập" }).click();
-  await expect(page).toHaveURL(/\/today\?tab=hoc-tap$/);
-  await expect(page.getByRole("navigation", { name: "Con đang ở" })).toContainText("Hôm nay › Góc học tập");
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByRole("navigation", { name: "Con đang ở" })).toHaveText(/Góc học tập$/);
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
-  // R6c: "Chỉ hiện bài này" (R7a name) shows only the work panel; "← Quay lại" goes back to Hôm nay.
+  // R6c: "Chỉ hiện bài này" (R7a name) shows only the work panel.
   await page.getByRole("button", { name: "Chỉ hiện bài này" }).click();
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Khung làm bài" })).toBeVisible();
   await page.getByRole("button", { name: "Hiện cả danh sách" }).click();
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
+  // 21/11/2026: Góc học tập is the home tab (no "← Quay lại"); from another tab it goes back there.
+  await expect(page.getByRole("button", { name: "← Quay lại" })).toHaveCount(0);
+  await tabs.getByRole("link", { name: "Hôm nay" }).click();
+  await expect(page.getByRole("navigation", { name: "Con đang ở" })).toContainText("Góc học tập › Hôm nay");
   await page.getByRole("button", { name: "← Quay lại" }).click();
   await expect(page).toHaveURL(/\/today$/);
-  await expect(tabs.getByRole("link", { name: "Hôm nay" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("button", { name: "← Quay lại" })).toHaveCount(0);
-  await tabs.getByRole("link", { name: "Góc học tập" }).click();
+  await expect(tabs.getByRole("link", { name: "Góc học tập" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { name: "Thứ tự hôm nay" })).toBeVisible();
 
   // R1 (07/11/2026): skills are open from the start, in parallel with homework.
@@ -647,7 +653,7 @@ test("S2b today: the child cannot change the day directly, and parents have no /
   // R2: the child's week (with feelings) is for the child only — parents have no route to it.
   const weekStatus = await page.evaluate(async () => (await fetch("/api/week/days")).status);
   expect(weekStatus).toBe(403);
-  await page.goto("/today");
+  await page.goto("/today?tab=hom-nay");
   await expect(page).toHaveURL(/\/parent$/);
 });
 
@@ -859,13 +865,13 @@ test("S2e: the child picks an icon and plans today; the plan only reorders 'Vi�
     keys,
   );
   expect(saved).toBe(200);
-  await page.reload();
+  await page.goto("/today?tab=hom-nay");
   const banner = page.getByRole("region", { name: "Trạng thái hôm nay" });
   await expect(banner.getByText("Hóa học", { exact: true })).toBeVisible();
   await expect(banner.getByText("Theo thứ tự của con · 0/2 xong")).toBeVisible();
   // R2: the order is changed in Góc học tập with ↑ ↓ (saved at once).
   await banner.getByRole("button", { name: "Xếp lại ở Góc học tập" }).click();
-  await expect(page).toHaveURL(/\/today\?tab=hoc-tap$/);
+  await expect(page).toHaveURL(/\/today$/);
   await page.getByRole("button", { name: "Đưa “Vật lí” lên" }).click();
   await expect(page.getByRole("button", { name: "Đưa “Hóa học” lên" })).toBeEnabled(); // saved: Vật lí is now first
   await expect(page.getByRole("button", { name: "Đưa “Vật lí” lên" })).toBeDisabled();
@@ -1999,7 +2005,7 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   const kCtx = await browser.newContext();
   const k = await kCtx.newPage();
   await login(k, childEmail, childPassword);
-  await k.goto("/today");
+  await k.goto("/today?tab=hom-nay");
   await expect(k.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc bình yên" })).toBeVisible(); // the corner is on (previous test)
   await expect(k.getByRole("button", { name: /Muốn nói chuyện|Đã gửi bố mẹ/ })).toHaveCount(0);
   expect(await byCall(k, "POST", "/api/by/signal", { kind: "want_talk", to: null })).toBe(409);
@@ -2010,7 +2016,7 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   await k.goto("/binh-yen");
   await expect(k.getByRole("region", { name: "Góc của con" })).toBeVisible();
   await expect(k.getByRole("region", { name: "Con muốn nói chuyện" })).toBeVisible();
-  await k.goto("/today");
+  await k.goto("/today?tab=hom-nay");
   await k.getByRole("button", { name: "💬 Muốn nói chuyện" }).click();
   const talk = k.getByRole("region", { name: "Con muốn nói chuyện" });
   expect(await byCall(k, "POST", "/api/by/signal", { kind: "needs_care", to: null })).toBe(400); // not a kind the child sends
@@ -2095,7 +2101,7 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   expect((await first.json()).escalated).toBe(0);
   const { data: esc } = await db.from("by_signals").select("escalated_at").eq("id", signalId).single();
   expect(esc?.escalated_at).toBeNull();
-  await k.goto("/today");
+  await k.goto("/today?tab=hom-nay");
   await k.getByRole("button", { name: /Đã gửi bố mẹ/ }).click();
   await expect(talk.getByRole("status")).toContainText("Bố mẹ chưa thấy tin. Con tìm bố mẹ trực tiếp để nói chuyện nhé.");
 
@@ -2104,7 +2110,7 @@ test("Con muốn nói chuyện: hidden without a parent phone; parent 'Đã th�
   await k.goto("/binh-yen");
   await expect(k.getByRole("heading", { name: "Góc bình yên chưa mở." })).toBeVisible();
   await expect(k.getByRole("region", { name: "Con muốn nói chuyện" })).toBeVisible();
-  await k.goto("/today");
+  await k.goto("/today?tab=hom-nay");
   await expect(k.getByRole("button", { name: /Muốn nói chuyện|Đã gửi bố mẹ/ })).toBeVisible();
   await expect(k.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc bình yên" })).toHaveCount(0);
   await kCtx.close();
@@ -2307,7 +2313,7 @@ test("Góp ý: the child sends from the Góp ý tab (told parents read it); limi
   const kCtx = await browser.newContext();
   const k = await kCtx.newPage();
   await login(k, childEmail, childPassword);
-  await k.goto("/today");
+  await k.goto("/today?tab=hom-nay");
   // R2: Góp ý is a tab of the child's screen.
   await k.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góp ý" }).click();
   await expect(k).toHaveURL(/\/today\?tab=gop-y$/);
@@ -2596,7 +2602,7 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     const kCtx = await browser.newContext();
     const k = await kCtx.newPage();
     await login(k, childEmail, childPassword);
-    await k.goto("/today");
+    await k.goto("/today?tab=hom-nay");
     const nav = k.getByRole("navigation", { name: "Các mục của con" });
     await expect(nav.getByRole("link", { name: "Thế giới" })).toBeVisible();
     await expect(k.getByRole("region", { name: /Rừng nhiệt đới của con/ })).toContainText(/\d+ thứ đã mọc/);
@@ -2657,7 +2663,7 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     expect(await byCall(k, "GET", "/api/world?month=2026-10")).toBe(404);
     await db.from("profiles").update({ grade: 9 }).eq("id", childId);
     expect(await byCall(k, "GET", "/api/world")).toBe(404);
-    await k.goto("/today");
+    await k.goto("/today?tab=hom-nay");
     await expect(nav.getByRole("link", { name: "Tập của tuần" })).toBeVisible();
     await kCtx.close();
 
@@ -2699,7 +2705,7 @@ test("R4b An chọn thế giới: a new month waits for An's pick (nothing plant
     const kCtx = await browser.newContext();
     const k = await kCtx.newPage();
     await login(k, childEmail, childPassword);
-    await k.goto("/today");
+    await k.goto("/today?tab=hom-nay");
     await k.getByRole("button", { name: /Tháng mới! Chọn thế giới của con/ }).click();
     await expect(k).toHaveURL(/\/today\?tab=tuan$/);
     await expect(k.getByRole("heading", { name: /Tháng mới! Con chọn thế giới cho tháng này/ })).toBeVisible();
@@ -2765,7 +2771,7 @@ test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that r
     const kCtx = await browser.newContext();
     const k = await kCtx.newPage();
     await login(k, childEmail, childPassword);
-    await k.goto("/today");
+    await k.goto("/today?tab=hom-nay");
 
     // The 4 regions of An's corner are on Hôm nay; a tile goes straight to that region's words.
     const invite = k.getByRole("region", { name: "Hôm nay con thấy thế nào?" });
@@ -2793,7 +2799,7 @@ test("R6a thấy ngay: a region tile on Hôm nay opens Góc bình yên at that r
     await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
 
     // Hôm nay: the visit is remembered (only for the child) and the compact world card shows today's plant.
-    await k.goto("/today");
+    await k.goto("/today?tab=hom-nay");
     await expect(k.getByRole("region", { name: "Hôm nay con thấy thế nào?" })).toContainText("Hôm nay con đã ghé Góc bình yên");
     // R6d: the Cảm xúc card (child only) says the visit too, with the way back in.
     const feelCard = k.getByRole("list", { name: "Bốn mảng hôm nay" }).getByRole("listitem", { name: "1 · Cảm xúc" });
@@ -2885,7 +2891,7 @@ test("R5 truyện của Nguyên: \"Xong rồi\" draws frame 1; Hôm nay shows to
     await expect(k.getByRole("heading", { name: "Tuần này của con" })).toBeVisible();
 
     // Hôm nay: today's comic page — frame 1 (the visit) and frame 2 (Phần 1) are drawn.
-    await k.goto("/today");
+    await k.goto("/today?tab=hom-nay");
     await expect(k.getByRole("heading", { name: "Trang truyện hôm nay" })).toBeVisible();
     const feelPanel = k.getByRole("group", { name: /^KHUNG 1 · CẢM XÚC/ });
     await expect(feelPanel).toContainText("Bình yên…");
@@ -2905,7 +2911,7 @@ test("R5 truyện của Nguyên: \"Xong rồi\" draws frame 1; Hôm nay shows to
 
     // An (scientist voice) has her world, never the comic.
     await db.from("profiles").update({ grade: 6 }).eq("id", childId);
-    await k.goto("/today");
+    await k.goto("/today?tab=hom-nay");
     await expect(nav.getByRole("link", { name: "Thế giới" })).toBeVisible();
     await expect(k.getByRole("heading", { name: "Trang truyện hôm nay" })).toHaveCount(0);
     await kCtx.close();

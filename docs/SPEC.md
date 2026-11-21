@@ -66,7 +66,7 @@ Vai trò trong hub:
 - Thẻ miễn chỉ dùng được khi còn thẻ trong tuần (tuần bắt đầu thứ Hai); dùng → giờ tự do bắt đầu ngay, ngày tính "đạt".
 - 00:00 giờ Việt Nam: trạng thái về KHÓA_BÀI_TẬP; nghỉ/giờ tự do không cộng dồn sang ngày sau.
 - Không hiển thị streak hay bảng xếp hạng; chỉ "7 ngày qua" + tiến độ Tin tưởng.
-- *(S2e)* **Kế hoạch hôm nay** (tùy chọn): con đánh dấu + xếp thứ tự việc; thẻ "Việc tiếp theo" đi theo kế hoạch. Kế hoạch **chỉ để hiển thị** — không đổi khóa/mở, không bắt buộc việc nào. Nhắc nhẹ "Xếp bài hôm nay?" khi Phần 1 chưa xong và có ≥ 2 việc; "Để sau" ẩn đến hết ngày trên máy đó.
+- *(S2e)* **Kế hoạch hôm nay** (tùy chọn): con đánh dấu + xếp thứ tự việc; thẻ "Việc tiếp theo" đi theo kế hoạch. Kế hoạch **chỉ để hiển thị** — không đổi khóa/mở, không bắt buộc việc nào. ~~Nhắc nhẹ "Xếp bài hôm nay?" khi Phần 1 chưa xong và có ≥ 2 việc~~ — *(21/11/2026, bố mẹ chốt)* bỏ nhắc + hộp "Kế hoạch hôm nay" ở trang Hôm nay: xếp thứ tự chỉ còn ở **Góc học tập → Thứ tự hôm nay** (↑ ↓ / kéo ⋮⋮), và mở máy là vào **Góc học tập** (`/today`; Hôm nay ở `/today?tab=hom-nay`).
 - *(S2e)* Con chọn **biểu tượng** trong bộ 24 biểu tượng có sẵn (server kiểm tra); màu vẫn do bố mẹ đặt.
 - *(S2e; đổi 15/11/2026)* **Tổng kết tuần**: mở từ **17:00 Thứ Sáu đến hết Thứ Bảy** (giờ server), tính **7 ngày Thứ Bảy tuần trước → Thứ Sáu** (trước 15/11: 17:00 CN → hết T2, tuần T2–CN). Hiện: số ngày đạt /7, bài ★ sớm, thời gian học, số ngày theo đúng kế hoạch; con trả lời 2 câu (≤ 500 chữ mỗi câu). Bố mẹ đọc ở Xem gộp. Ngoài giờ mở, server từ chối.
 
