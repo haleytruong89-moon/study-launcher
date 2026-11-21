@@ -30,6 +30,7 @@ const DOT = {
   exam: "#D9731E",
   neutral: "#9AA19C",
   skill: "#3C8C5F",
+  extra: "#8A4FA8",
 } as const;
 
 const WEEKDAY_SHORT = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"] as const;
@@ -49,6 +50,7 @@ function weekLines(d: CalendarDay): { key: string; color: string; text: string }
   return [
     ...(label ? [{ key: "type", color: typeDot(d), text: label }] : []),
     ...d.homework.map((h) => ({ key: `h:${h.id}`, color: DOT.homework, text: h.title })),
+    ...d.extras.map((x, i) => ({ key: `x:${i}`, color: DOT.extra, text: `${x.start} ${x.subject}` })),
     ...d.skills.map((s) => ({ key: `s:${s.id}`, color: DOT.skill, text: s.title })),
   ];
 }
@@ -161,7 +163,11 @@ export function CalendarCard({
         <h3 id="lich-title" className="text-[19px] font-bold">
           Lịch của con
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 21/11/2026: the child keeps the timetable + extra classes themselves. */}
+          <a href="/lich-hoc" className="inline-flex min-h-11 items-center rounded-xl border-[1.5px] px-3 text-sm font-bold" style={{ borderColor: color, color }}>
+            Sửa lịch học
+          </a>
           {running && (
             <button type="button" aria-expanded onClick={() => setOpenFor(null)} className="min-h-11 rounded-lg px-2 text-sm font-semibold text-ink/70">
               Thu gọn
@@ -304,6 +310,10 @@ export function CalendarCard({
         <span className="inline-flex items-center gap-1">
           <Dot color={DOT.skill} /> Kỹ năng theo lịch
         </span>
+        <span aria-hidden>·</span>
+        <span className="inline-flex items-center gap-1">
+          <Dot color={DOT.extra} /> Học thêm
+        </span>
       </p>
     </section>
   );
@@ -312,7 +322,7 @@ export function CalendarCard({
 /** Every item of one day, untruncated (same panel for Tuần and Tháng). */
 function DayDetail({ d, today, onClose }: { d: CalendarDay; today: string; onClose: () => void }) {
   const label = dayTypeLabel(d.dayType);
-  const empty = !label && d.homework.length === 0 && d.skills.length === 0;
+  const empty = !label && d.homework.length === 0 && d.skills.length === 0 && d.extras.length === 0;
   const title = `${dayMonth(d.date)}${d.date === today ? " · Hôm nay" : ""}`;
   return (
     <div role="region" aria-label={`Việc ${dayMonth(d.date)}`} className="flex flex-col gap-2 rounded-[14px] bg-[#F4F5F0] p-3">
@@ -340,6 +350,16 @@ function DayDetail({ d, today, onClose }: { d: CalendarDay; today: string; onClo
               <span className="min-w-0 break-words">
                 <b>Hạn nộp: {h.title}</b>
                 {h.note && <span className="block text-[13px] text-ink/70">{h.note}</span>}
+              </span>
+            </li>
+          ))}
+          {d.extras.map((x, i) => (
+            <li key={`x${i}`} className="flex items-start gap-2 text-sm">
+              <span className="pt-1.5">
+                <Dot color={DOT.extra} />
+              </span>
+              <span className="min-w-0 break-words">
+                <b>Học thêm {x.subject}</b> <span className="text-[13px] text-ink/60">· {x.start}–{x.end}</span>
               </span>
             </li>
           ))}

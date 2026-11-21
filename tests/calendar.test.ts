@@ -131,6 +131,14 @@ describe("buildCalendar", () => {
     expect(v).toMatchObject({ today: TODAY, from: range.from, to: range.to });
   });
 
+  it("adds the day's extra classes (21/11/2026)", () => {
+    const gs = { id: "g", childId: "c", subject: "Gia sư Anh", sessions: [{ day: 4, start: "20:30", end: "22:30" }], place: "online" as const, bring: "", note: "", appSlotId: null, active: true };
+    const v = buildCalendar(range, TODAY, rows({ extras: [gs] }));
+    expect(v.days.find((d) => d.date === "2026-11-12")?.extras).toEqual([{ subject: "Gia sư Anh", start: "20:30", end: "22:30" }]); // Thursday
+    expect(v.days.find((d) => d.date === "2026-11-11")?.extras).toEqual([]);
+    expect(buildCalendar(range, TODAY, rows({ extras: [{ ...gs, active: false }] })).days.every((d) => d.extras.length === 0)).toBe(true);
+  });
+
   it("maps exam / holiday / sick from day_sessions", () => {
     const v = buildCalendar(
       range,
@@ -258,8 +266,8 @@ describe("GET /api/calendar", () => {
     expect([body.today, body.from, body.to, body.days.length]).toEqual([TODAY, "2026-10-14", "2026-12-14", 62]);
     expect(env.tracker.depth).toBe(1);
     const q = env.tracker.log.map((l) => l.what);
-    expect(q).toHaveLength(4);
-    expect(seen.map((x) => x.table).sort()).toEqual(["app_slots", "day_sessions", "homework_items", "task_templates"]);
+    expect(q).toHaveLength(5);
+    expect(seen.map((x) => x.table).sort()).toEqual(["app_slots", "day_sessions", "extra_classes", "homework_items", "task_templates"]);
     for (const x of seen) expect(x.filters).toContain(x.table === "app_slots" ? "eq(family_id,fam-1)" : "eq(child_id,child-1)");
     expect(seen.find((x) => x.table === "homework_items")?.filters).toEqual(
       expect.arrayContaining(["is(archived_at,null)", "gte(due_date,2026-10-14)", "lte(due_date,2026-12-14)", "or(done_at.is.null,done_at.gte.2026-11-13T17:00:00.000Z)"]),

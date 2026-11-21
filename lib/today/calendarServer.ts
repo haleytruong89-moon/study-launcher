@@ -3,6 +3,7 @@ import type { DayType, TaskTemplateInput } from "@/lib/dayState";
 import { localDate, startOfLocalDay } from "@/lib/time";
 import { buildCalendar, type CalendarHomeworkRow, type CalendarSessionRow, type CalendarView } from "./calendar";
 import type { ChildContext } from "./service";
+import { loadExtras } from "@/lib/schedule/load";
 
 type Res = { data: unknown; error: { message: string } | null };
 
@@ -32,7 +33,7 @@ interface TemplateRow {
 export async function readCalendar(ctx: ChildContext, range: { from: string; to: string }, now = new Date()): Promise<CalendarView> {
   const today = localDate(now);
   const startOfToday = startOfLocalDay(today).toISOString();
-  const [homework, sessions, templates, slots] = await Promise.all([
+  const [homework, sessions, templates, slots, extras] = await Promise.all([
     ctx.db
       .from("homework_items")
       .select("id, subject, due_date, note, done_at, archived_at, created_at")
@@ -48,6 +49,8 @@ export async function readCalendar(ctx: ChildContext, range: { from: string; to:
       .eq("child_id", ctx.childId)
       .eq("active", true),
     ctx.db.from("app_slots").select("id, kind").eq("family_id", ctx.familyId),
+    // 21/11/2026: extra classes; a read error gives [] (the calendar still opens).
+    loadExtras(ctx.db, [ctx.childId]),
   ]);
 
   return buildCalendar(range, today, {
@@ -68,5 +71,6 @@ export async function readCalendar(ctx: ChildContext, range: { from: string; to:
       }),
     ),
     slots: rows<{ id: string; kind: "internal" | "external" | "placeholder" }>(slots, "app_slots"),
+    extras,
   });
 }

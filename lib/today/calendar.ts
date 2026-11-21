@@ -17,6 +17,7 @@ import { scheduledTemplates, type AppSlotInput, type DayType, type TaskTemplateI
 import { addDays, isoWeekday, localDate, weekStart } from "@/lib/time";
 import { dayMonth } from "./view";
 import { isExamPrep, taskName } from "./taskName";
+import { extrasOn, type ExtraClass } from "@/lib/schedule/rules";
 
 /** At most this many dates in one answer (two months). */
 export const CALENDAR_MAX_DAYS = 62;
@@ -44,11 +45,19 @@ export interface CalendarSkill {
   exam?: true;
 }
 
+/** 21/11/2026: an extra class (học thêm / gia sư) the child entered, on that day. */
+export interface CalendarExtra {
+  subject: string;
+  start: string;
+  end: string;
+}
+
 export interface CalendarDay {
   date: string;
   dayType: DayType;
   homework: CalendarHomework[];
   skills: CalendarSkill[];
+  extras: CalendarExtra[];
 }
 
 export interface CalendarView {
@@ -81,6 +90,8 @@ export interface CalendarRows {
   sessions: CalendarSessionRow[];
   templates: TaskTemplateInput[];
   slots: Pick<AppSlotInput, "id" | "kind">[];
+  /** 21/11/2026: the child's active extra classes (optional: older callers send none). */
+  extras?: readonly ExtraClass[];
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -200,7 +211,7 @@ export function dayAria(d: CalendarDay, today: string): string {
 }
 
 /** An empty normal day (a date the answer does not cover yet). */
-export const emptyDay = (date: string): CalendarDay => ({ date, dayType: "normal", homework: [], skills: [] });
+export const emptyDay = (date: string): CalendarDay => ({ date, dayType: "normal", homework: [], skills: [], extras: [] });
 
 /** Builds every date of the range from the child's rows. */
 export function buildCalendar(range: { from: string; to: string }, today: string, rows: CalendarRows): CalendarView {
@@ -237,7 +248,8 @@ export function buildCalendar(range: { from: string; to: string }, today: string
           return isExamPrep(named) ? { id: t.id, title: taskName(named), part, exam: true } : { id: t.id, title: taskName(named), part };
         }),
     );
-    days.push({ date, dayType: session?.day_type ?? "normal", homework: byDue.get(date) ?? [], skills });
+    const extras = extrasOn(rows.extras ?? [], date).map(({ extra, session: s }) => ({ subject: extra.subject, start: s.start, end: s.end }));
+    days.push({ date, dayType: session?.day_type ?? "normal", homework: byDue.get(date) ?? [], skills, extras });
   }
   return { today, from: range.from, to: range.to, days };
 }

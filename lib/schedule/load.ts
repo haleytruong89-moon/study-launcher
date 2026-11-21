@@ -17,7 +17,9 @@ export const EXTRA_COLUMNS = "id, child_id, subject, sessions, place, bring, not
 export async function loadExtras(db: SupabaseClient, childIds: readonly string[]): Promise<ExtraClass[]> {
   if (childIds.length === 0) return [];
   try {
-    const { data, error } = await db.from("extra_classes").select(EXTRA_COLUMNS).in("child_id", [...childIds]).eq("active", true).order("created_at");
+    const base = db.from("extra_classes").select(EXTRA_COLUMNS);
+    const scoped = childIds.length === 1 ? base.eq("child_id", childIds[0]!) : base.in("child_id", [...childIds]);
+    const { data, error } = await scoped.eq("active", true).order("created_at");
     if (error) {
       console.error("extra_classes read failed", error.message);
       return [];
