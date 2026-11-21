@@ -349,4 +349,45 @@ begin
   end;
 end $$;
 reset role;
+-- G6 (0024): card reference on messages; review questions from approved teaching cards.
+do $$
+declare m uuid;
+begin
+  select id into m from tutor.messages limit 1;
+  if m is null then raise exception 'FAIL: test data has no message'; end if;
+  update tutor.messages set card_ref = 'T6.12#1' where id = m;
+  update tutor.messages set card_ref = 'D9.1#2' where id = m;
+  begin
+    update tutor.messages set card_ref = 'T6.12#3' where id = m;
+    raise exception 'FAIL: bad card_ref accepted';
+  exception when check_violation then null;
+  end;
+  insert into tutor.review_items (family_id, child_id, ku_code, kind, prompt, answer, answer_check, buttons, due_date_vn, source, card_code, item_key)
+  values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'T6.12', 'why',
+          'Vì sao BCNN lấy mũ cao nhất?', 'b', 'exact', '["a","b","c"]', current_date, 'card', 'T6.12', 'why1');
+  insert into tutor.review_items (family_id, child_id, ku_code, kind, prompt, answer, answer_check, due_date_vn, source, card_code, item_key)
+  values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'T6.11', 'recognize',
+          'Dùng kiến thức nào?', 'ƯCLN', 'exact', current_date, 'card', 'D6.1', 'rec1');
+  begin
+    insert into tutor.review_items (family_id, child_id, ku_code, kind, prompt, answer, answer_check, due_date_vn, source, card_code, item_key)
+    values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'T6.12', 'recognize',
+            'x', 'y', 'exact', current_date, 'card', 'T6.12', 'why1');
+    raise exception 'FAIL: duplicate card review item accepted';
+  exception when unique_violation then null;
+  end;
+  raise notice 'ok: G6 card_ref, review kinds why/recognize, source card, one item per (child, card, key)';
+end $$;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+do $$
+begin
+  perform card_code, item_key, kind from tutor.review_items limit 1;
+  begin
+    perform answer from tutor.review_items limit 1;
+    raise exception 'FAIL: child reads review answers';
+  exception when insufficient_privilege then raise notice 'ok: G6: child reads card_code but never the answer';
+  end;
+end $$;
+reset role;
 do $$ begin raise notice 'TUTOR RLS OK'; end $$;
