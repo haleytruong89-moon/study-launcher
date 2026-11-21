@@ -27,14 +27,6 @@ export function writeFocusOpen(key: string | null) {
   }
 }
 
-export function readPlanLater(): string | null {
-  try {
-    return window.localStorage.getItem("plan-later");
-  } catch {
-    return null; // storage blocked: the nudge just shows again
-  }
-}
-
 // "Lịch của con": the view the child last chose (Tuần / Tháng) on this laptop. A convenience only.
 const CALENDAR_MODE = "calendar-mode";
 export type CalendarMode = "week" | "month";

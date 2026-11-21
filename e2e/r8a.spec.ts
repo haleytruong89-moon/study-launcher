@@ -88,7 +88,7 @@ test("R8a Làm thêm: a skill done today (25') starts again; the chip shows it; 
 
     const { email, password } = await childLogin(task.childId);
     await login(page, email, password);
-    await page.goto("/today");
+    await page.goto("/today?tab=hom-nay");
     const first = await todayParts(page);
     expect(first.part2.items.find((i) => i.id === task.id)).toMatchObject({ state: "done", sessions: 1, extra: null });
 

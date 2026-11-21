@@ -13,9 +13,12 @@ export const TAB_LABELS: Record<ChildTab, string> = {
   "gop-y": "Góp ý",
 };
 
+/** 21/11/2026 (parent): opening the laptop lands on Góc học tập; /today without ?tab= is this tab. */
+export const DEFAULT_TAB: TodayTab = "hoc-tap";
+
 export function tabHref(tab: ChildTab): string {
   if (tab === "binh-yen") return "/binh-yen";
-  return tab === "hom-nay" ? "/today" : `/today?tab=${tab}`;
+  return tab === DEFAULT_TAB ? "/today" : `/today?tab=${tab}`;
 }
 
 export function isChildTab(v: unknown): v is TodayTab {

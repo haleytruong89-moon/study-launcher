@@ -214,7 +214,7 @@ export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = 
         <h2 className="text-xl font-bold">{STUDY_CAP_TEXT}</h2>
         <p className="text-sm text-ink/75">Trong giờ học, mỗi lần vào Góc bình yên tối đa {state?.studyMinutes ?? 10} phút. Vào lại lúc nào cũng được.</p>
         <Link href="/today" className="btn self-start text-white" style={{ background: color }}>
-          Về Hôm nay
+          Về Góc học tập
         </Link>
       </div>
     );
@@ -269,14 +269,14 @@ export function BinhYenScreen({ child, voice, initial, initialTalk, startQuad = 
       <header className="text-white" style={{ background: color }}>
         <div className={`mx-auto flex ${width} items-center gap-3 px-4 pt-5 pb-4`}>
           <Link href="/today" className="-ml-1 inline-flex min-h-11 items-center px-1 text-sm font-bold">
-            ‹ Hôm nay
+            ‹ Góc học tập
           </Link>
           <h1 className="ml-auto text-xl font-bold">🌿 Góc bình yên</h1>
         </div>
       </header>
       <main className={`mx-auto flex ${width} flex-col gap-5 px-4 py-5 ${side ? "lg:grid lg:grid-cols-[minmax(0,28rem)_380px] lg:items-start lg:gap-6" : ""}`}>
         <div className="flex min-w-0 flex-col gap-5">
-          <Breadcrumb trail={["Hôm nay", "Góc bình yên"]} onBack={() => (window.history.length > 1 ? router.back() : router.push("/today"))} />
+          <Breadcrumb trail={["Góc học tập", "Góc bình yên"]} onBack={() => (window.history.length > 1 ? router.back() : router.push("/today"))} />
           {content}
           {talk}
         </div>

@@ -6,7 +6,7 @@ import { readAvatar, type StoredLook } from "@/lib/avatarServer";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { bySettings } from "@/lib/binhYen/session";
 import { requireChild, todayView } from "@/lib/today/service";
-import { isChildTab } from "@/lib/childTabs";
+import { DEFAULT_TAB, isChildTab } from "@/lib/childTabs";
 import { tutorEnabled, tutorOrigin } from "@/lib/tutor/entry";
 import { ExtensionCheck } from "./extension-check";
 import { TodayScreen } from "./today-screen";
@@ -53,7 +53,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           pics: stored.pics,
         }}
         initial={initial}
-        initialTab={isChildTab(tab) ? tab : "hom-nay"}
+        initialTab={isChildTab(tab) ? tab : DEFAULT_TAB}
         byEnabled={byEnabled}
         tutor={tutorEnabled(tutorOrigin(process.env.TUTOR_APP_ORIGIN), ctx.grade)}
       />
