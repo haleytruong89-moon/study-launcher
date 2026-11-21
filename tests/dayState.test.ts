@@ -651,6 +651,23 @@ describe("Part 1 composition", () => {
     expect(s.part1.items[0]?.appLabel).toBe("App Toán");
   });
 
+  it("21/11/2026: a task exposes its app slot (display only); homework and placeholders give null", () => {
+    const s = computeDayState(
+      input({
+        appSlots: [
+          { id: "os", kind: "internal", label: "English OS", url: "https://os.example", active: true },
+          { id: "van", kind: "placeholder", label: "App Văn", url: null, active: true },
+        ],
+        templates: [tpl("e", "extra", { appSlotId: "os" }), tpl("v", "extra", { appSlotId: "van", sort: 1 })],
+        homework: [hw("h1")],
+      }),
+      NOW,
+    );
+    expect(s.part1.items.find((x) => x.id === "e")?.appSlotId).toBe("os");
+    expect(s.part1.items.find((x) => x.id === "v")?.appSlotId).toBeNull();
+    expect(s.part1.items.find((x) => x.id === "h1")?.appSlotId).toBeNull();
+  });
+
   it("R6a: the app name falls back to the link's site; none without a link", () => {
     const s = computeDayState(input({ templates: [tpl("e", "extra", { deepLink: "https://www.khanacademy.org/math/x" }), tpl("s", "skill")] }), NOW);
     expect(s.part1.items[0]?.appLabel).toBe("khanacademy.org");
