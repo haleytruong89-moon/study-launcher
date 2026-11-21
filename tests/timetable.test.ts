@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { dayPlan, nextClassDate, nextSchoolDay, normTime, parseQuick, subjectKey, toQuick, versionOn, type TimetableVersion } from "@/lib/timetable/rules";
+import { dayPlan, nextClassDate, nextSchoolDay, normTime, parseQuick, subjectKey, toQuick, uniformFor, validateData, versionOn, type TimetableVersion } from "@/lib/timetable/rules";
 
 const text6 = readFileSync("tests/fixtures/tkb-6a.txt", "utf8");
 const text9 = readFileSync("tests/fixtures/tkb-9a.txt", "utf8");
@@ -80,5 +80,68 @@ describe("Thời khóa biểu (18/11/2026)", () => {
     expect(subjectKey("Ngữ văn")).toBe("van");
     expect(subjectKey("ANH")).toBe("anh");
     expect(subjectKey("KHTN(L)")).toBe("khtn");
+  });
+});
+
+const nguyen = (periods: { day: number; subject: string }[]): TimetableVersion => ({
+  id: "v",
+  childId: "c",
+  validFrom: "2026-11-09",
+  label: "9A13",
+  note: "",
+  periods: periods.map((p, i) => ({ day: p.day, session: "am", n: (i % 5) + 1, subject: p.subject })),
+  times: {},
+  uniform: { "1": "Áo đồng phục lớp", "2": "Áo trắng", "3": "Áo trắng", "4": "Áo trắng", "5": "Áo đồng phục lớp", "6": "Áo trắng", pe: "Đồng phục thể dục (áo xanh lá)" },
+});
+
+describe("uniform rule (21/11/2026)", () => {
+  it("a day with Thể dục wears the PE uniform, else the weekday text", () => {
+    const v = nguyen([{ day: 3, subject: "Thể dục" }, { day: 2, subject: "Hóa" }, { day: 6, subject: "Thể dục" }]);
+    expect(uniformFor(v, 3)).toBe("Đồng phục thể dục (áo xanh lá)");
+    expect(uniformFor(v, 2)).toBe("Áo trắng");
+    expect(uniformFor(v, 6)).toBe("Đồng phục thể dục (áo xanh lá)");
+    expect(uniformFor(v, 1)).toBe("Áo đồng phục lớp");
+    expect(uniformFor(v, 7)).toBeNull();
+  });
+  it("PE wins even on a class-uniform day; GDTC counts as Thể dục", () => {
+    expect(uniformFor(nguyen([{ day: 1, subject: "GDTC" }]), 1)).toBe("Đồng phục thể dục (áo xanh lá)");
+  });
+  it("without a pe key the weekday text stays (An)", () => {
+    const v = { ...nguyen([{ day: 1, subject: "GDTC" }]), uniform: { "1": "Áo polo đỏ, quần thể thao" } };
+    expect(uniformFor(v, 1)).toBe("Áo polo đỏ, quần thể thao");
+  });
+  it("dayPlan uses the rule", () => {
+    expect(dayPlan([nguyen([{ day: 3, subject: "Thể dục" }])], "2026-11-25")?.uniform).toBe("Đồng phục thể dục (áo xanh lá)");
+  });
+  it("quick text round-trips the PE line", () => {
+    const r = parseQuick("S1 07:30-08:15 | Toán | | Thể dục | | |\nĐỒNG PHỤC THỂ DỤC: Áo xanh lá");
+    expect(r.ok && r.data.uniform.pe).toBe("Áo xanh lá");
+    expect(r.ok && toQuick(r.data)).toContain("ĐỒNG PHỤC THỂ DỤC: Áo xanh lá");
+  });
+});
+
+describe("subject groups (21/11/2026)", () => {
+  it("folds the school names together", () => {
+    expect(subjectKey("GDTC")).toBe("the duc");
+    expect(subjectKey("Thể dục")).toBe("the duc");
+    expect(subjectKey("NT(MT)")).toBe("my thuat");
+    expect(subjectKey("Mỹ thuật")).toBe("my thuat");
+    expect(subjectKey("NT(AN)")).toBe("am nhac");
+    expect(subjectKey("Nhạc")).toBe("am nhac");
+  });
+});
+
+describe("validateData (the child's editor sends JSON)", () => {
+  const ok = { label: "9A13", note: "", periods: [{ day: 1, session: "am", n: 1, subject: "Toán" }], times: { am: { "1": "07:30-08:15" } }, uniform: { "1": "Áo lớp", pe: "Áo xanh" } };
+  it("accepts a clean version", () => expect(validateData(ok)).toEqual({ ok: true, data: ok }));
+  it("rejects a duplicate period", () => {
+    expect(validateData({ ...ok, periods: [...ok.periods, { day: 1, session: "am", n: 1, subject: "Văn" }] }).ok).toBe(false);
+  });
+  it("rejects a bad time, a long subject, an unknown uniform key, a bad day", () => {
+    expect(validateData({ ...ok, times: { am: { "1": "7h" } } }).ok).toBe(false);
+    expect(validateData({ ...ok, periods: [{ day: 1, session: "am", n: 1, subject: "x".repeat(31) }] }).ok).toBe(false);
+    expect(validateData({ ...ok, uniform: { "9": "x" } }).ok).toBe(false);
+    expect(validateData({ ...ok, periods: [{ day: 7, session: "am", n: 1, subject: "Toán" }] }).ok).toBe(false);
+    expect(validateData(null).ok).toBe(false);
   });
 });
