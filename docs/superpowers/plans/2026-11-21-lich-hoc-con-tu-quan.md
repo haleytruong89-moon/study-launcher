@@ -1682,7 +1682,9 @@ export const tickableKeys = (items: PrepItem[]) => items.filter((i) => !i.auto).
 
 ---
 
-# LÁT 3 — "Chiều nay" (outline; its own plan is written when Lát 2 is merged)
+# LÁT 3 — "Chiều nay" (branch `feature/s-lh3-chieu-nay`, no SQL)
+
+Built 21/11/2026 as outlined below, with one change: the rule takes today's `DayPlan` + `extrasOn(...)` (already in the `/api/timetable` answer) instead of the raw versions, so the card needs no new read. Files: `lib/schedule/afternoon.ts` (`afternoonStrip`, `currentBlock`, `stripOver`), `app/today/afternoon-card.tsx`, `tests/afternoon.test.ts`, `e2e/s-chieu-nay.spec.ts`. Gaps under 10 minutes are not shown as free.
 
 - Pure `afternoonStrip(versions, extras, date, nowMs)` → blocks
   `{ start, end, kind: "school" | "extra" | "free", label }` from 12:00 to 22:30, using `schoolBusy` + `extrasOn`.
