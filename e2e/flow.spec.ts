@@ -608,7 +608,7 @@ test("S2b today: a full day from Part 1 to free time, with the server enforcing 
   await expect(page.getByText(/Giờ tự do · còn \d\d:\d\d/)).toBeVisible();
   // Back on Hôm nay: the four areas are ticked, no pass offered; the browser's Back button works too.
   await page.goBack();
-  await expect(page).toHaveURL(/\/today$/);
+  await expect(page).toHaveURL(/\/today\?tab=hom-nay$/);
   await expect(study).toContainText("Xong hết bài hôm nay ✓");
   await expect(cards.getByRole("listitem", { name: "3 · Kỹ năng" })).toContainText("✓ Xong");
   await expect(play).toContainText("Giờ tự do đang chạy");
