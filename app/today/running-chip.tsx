@@ -2,6 +2,7 @@
 
 import type { TaskView } from "@/lib/dayState";
 import { chipTime, elapsedMs, shortTitle } from "@/lib/today/focus";
+import { taskName } from "@/lib/today/taskName";
 
 /**
  * R7a: a small "⏱ Đang làm …" pill in the header, on every tab, while a task runs. Tapping it
@@ -23,7 +24,7 @@ export function RunningChip({ running, nowMs, paused, onOpen }: { running: TaskV
     >
       <span aria-hidden>⏱</span>
       <span className="truncate">
-        Đang làm <b>{shortTitle(item.title)}</b> · {time}
+        Đang làm <b>{shortTitle(taskName(item))}</b> · {time}
         {more}
       </span>
     </button>

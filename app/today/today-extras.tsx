@@ -6,6 +6,8 @@ import type { TaskView } from "@/lib/dayState";
 import type { WeekStats } from "@/lib/today/week";
 import { hoursMinutes, ICONS, REVIEW_QUESTIONS, reviewPeriod } from "@/lib/today/week";
 import type { WeeklyReview } from "@/lib/today/week-load";
+import { groupLabel } from "@/lib/today/view";
+import { TaskName } from "./today-parts";
 
 /** Small modal shell (real dialog semantics, Esc / backdrop close, 44px controls). */
 export function Modal({ title, error, onClose, children }: { title: string; error?: string | null; onClose: () => void; children: React.ReactNode }) {
@@ -80,7 +82,8 @@ function initialRows(items: TaskView[], plan: string[] | null): Row[] {
 
 function rowSub(i: TaskView): string {
   if (i.source === "homework") return i.group === "upcoming" ? `Sắp tới · hạn ${i.dueDate?.slice(8, 10)}/${i.dueDate?.slice(5, 7)}` : "Bài trên lớp · phải xong hôm nay";
-  return i.part === 1 ? "Bài bổ sung" : "Phần 2 · kỹ năng";
+  const where = i.appLabel ? ` · trên ${i.appLabel}` : "";
+  return `${i.part === 1 ? groupLabel(i) : "Phần 2 · kỹ năng"}${where}`;
 }
 
 /** "Kế hoạch hôm nay": tick what to do and put it in order (buttons, no drag needed). */
@@ -127,7 +130,9 @@ export function Planner({
                 style={{ accentColor: color }}
               />
               <span className="flex min-w-0 flex-col">
-                <span className="font-bold">{r.item.title}</span>
+                <span className="font-bold">
+                  <TaskName item={r.item} />
+                </span>
                 <span className="text-xs text-ink/70">{rowSub(r.item)}</span>
               </span>
             </label>

@@ -12,7 +12,8 @@ import { breakLine, clock, dayMonth, dueLabel, freeMeter, groupLabel, leftCount,
 import { FreeMeterBox } from "./free-meter";
 import type { WeekDay } from "@/lib/today/weekDays";
 import { appLinkMode } from "@/lib/today/rules";
-import { LamThem, StartAndOpen, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
+import { taskName } from "@/lib/today/taskName";
+import { LamThem, StartAndOpen, TaskName, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
 /**
  * R6d (artifact vHome, audit item I): the four areas of Hôm nay — Cảm xúc, Học tập, Kỹ năng,
@@ -46,7 +47,7 @@ function defaultSub(item: TaskView, ctx: TaskCtx): string {
 function TaskLine({ item, ctx, eyebrow, sub }: { item: TaskView; ctx: TaskCtx; eyebrow?: string; sub?: string }) {
   const waiting = isWaiting(item, ctx);
   const asked = item.state === "running" && !!item.runId && ctx.asked.has(item.runId);
-  const line = waiting ? `Làm xong “${ctx.runningTimed?.title}” rồi bắt đầu việc này` : asked ? "Đang chờ bố mẹ xem…" : item.state === "running" ? defaultSub(item, ctx) : (sub ?? defaultSub(item, ctx));
+  const line = waiting ? `Làm xong “${ctx.runningTimed ? taskName(ctx.runningTimed) : ""}” rồi bắt đầu việc này` : asked ? "Đang chờ bố mẹ xem…" : item.state === "running" ? defaultSub(item, ctx) : (sub ?? defaultSub(item, ctx));
   const btn = "min-h-11 shrink-0 rounded-full border-[1.5px] bg-white px-4 text-sm font-bold whitespace-nowrap disabled:opacity-50";
   const off = !!ctx.busy || ctx.paused;
   return (
@@ -57,7 +58,9 @@ function TaskLine({ item, ctx, eyebrow, sub }: { item: TaskView; ctx: TaskCtx; e
             {eyebrow}
           </span>
         )}
-        <b className="break-words">{item.title}</b>
+        <b className="break-words">
+          <TaskName item={item} />
+        </b>
         {line && <span className="text-[13px] text-ink/75">{line}</span>}
       </div>
       {item.state === "todo" && appLinkMode(item, { paused: ctx.paused, waiting }) === "startAndOpen" ? (
@@ -92,7 +95,9 @@ function DoneTemplateRow({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
   return (
     <div className={`${DONE_ROW} flex-wrap`}>
       <div className="flex min-w-0 grow basis-40 flex-col gap-0.5">
-        <b className="break-words">{item.title}</b>
+        <b className="break-words">
+          <TaskName item={item} />
+        </b>
         <span className="text-[13px] text-ink/75">{doneLine(item, ctx.nowMs)}</span>
       </div>
       <span className="flex shrink-0 flex-col items-end gap-1.5">

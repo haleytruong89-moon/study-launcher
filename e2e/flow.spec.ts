@@ -1180,10 +1180,12 @@ test("Confirm: the child asks a parent to look; the parent confirms on the phone
   await child.getByRole("navigation", { name: "Các mục của con" }).getByRole("link", { name: "Góc học tập" }).click();
   const row = child.getByRole("listitem", { name: "Mỹ thuật" });
   await row.getByRole("button").first().click(); // R6c: select the row; its buttons are in the work panel
-  await child.getByRole("region", { name: "Khung làm bài" }).getByRole("button", { name: "Làm xong trong vở rồi · nộp ảnh" }).click();
-  const sheet = child.getByRole("dialog", { name: "Nộp ảnh bài Mỹ thuật" });
-  await sheet.getByRole("button", { name: "Không chụp được? Nhờ bố mẹ xem trực tiếp" }).click();
-  await expect(sheet).toHaveCount(0);
+  // 21/11/2026: "Nộp ảnh" and "Nhờ bố mẹ xem" side by side in the work panel (one confirm, no sheet).
+  child.on("dialog", (d) => void d.accept());
+  const work = child.getByRole("region", { name: "Khung làm bài" });
+  await expect(work.getByRole("button", { name: "📷 Nộp ảnh" })).toBeVisible();
+  await work.getByRole("button", { name: "🙋 Nhờ bố mẹ xem" }).click();
+  await expect(child.getByRole("dialog", { name: "Nộp ảnh bài Mỹ thuật" })).toHaveCount(0);
   await expect(row.getByText("Đang chờ bố mẹ xem…")).toBeVisible();
   await expect(child.getByRole("dialog", { name: /^Màn tập trung/ })).toHaveCount(0);
   await expect(child.getByRole("dialog", { name: /^Mục tiêu nhỏ/ })).toHaveCount(0);

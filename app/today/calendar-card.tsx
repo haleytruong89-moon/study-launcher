@@ -349,7 +349,7 @@ function DayDetail({ d, today, onClose }: { d: CalendarDay; today: string; onClo
                 <Dot color={DOT.skill} />
               </span>
               <span className="min-w-0 break-words">
-                {s.title} <span className="text-[13px] text-ink/60">· {s.part === "extra" ? "Bài bổ sung" : "Kỹ năng"}</span>
+                {s.title} <span className="text-[13px] text-ink/60">· {s.exam ? "Ôn thi" : s.part === "extra" ? "Bài bổ sung" : "Kỹ năng"}</span>
               </span>
             </li>
           ))}

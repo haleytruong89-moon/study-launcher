@@ -5,7 +5,7 @@ import type { TaskView } from "@/lib/dayState";
 import { compressImage } from "@/lib/images";
 import { createClient } from "@/lib/supabase/client";
 import type { TodayView } from "@/lib/today/service";
-import { MAX_PROOFS, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
+import { MAX_PROOFS, allItems, passOffered, runningItems, runningTimedTask } from "@/lib/today/rules";
 import { childDayTypeNote } from "@/lib/admin/specialDay";
 import { bannerFor, breakLine, dayProgress, daySteps, lockSoonMinutes, nextTask, statusPill } from "@/lib/today/view";
 import { NextTask, type Act, type TaskCtx } from "./today-parts";
@@ -18,7 +18,7 @@ import type { AvatarPics } from "@/lib/avatarPics";
 import { voiceFor } from "@/lib/binhYen/catalog";
 import { PillarCards } from "./pillars";
 import { FeelInvite, FeelWeek } from "./tabs";
-import { StudyCorner, TutorCard } from "./study-corner";
+import { StudyCorner } from "./study-corner";
 import { WorldMini } from "./world";
 import { ComicToday } from "./comic";
 import { IconPicker, PlanNudge, Planner, WeeklyReviewCard } from "./today-extras";
@@ -96,7 +96,7 @@ export function TodayScreen({
    * POSTs a child action; true when the server accepted it (the new view is shown). A start
    * shows the small "Bắt đầu rồi ✓" card (R7a), unless `sheet` is false.
    */
-  async function act({ url, body, confirm, keepalive, sheet }: Act, opts?: { sheet?: boolean }): Promise<boolean> {
+  async function act({ url, body, confirm, keepalive, sheet }: Act, opts?: { sheet?: boolean; onView?: (v: TodayView) => void }): Promise<boolean> {
     if (confirm && !window.confirm(confirm)) return false;
     const opener = document.activeElement;
     setBusy(url);
@@ -114,6 +114,7 @@ export function TodayScreen({
         return false;
       }
       accept(data);
+      opts?.onView?.(data);
       void loadWeek(true);
       if (url === "/api/tasks/start" && (opts?.sheet ?? sheet) !== false) {
         const b = (body ?? {}) as { source?: string; id?: string };
@@ -174,6 +175,22 @@ export function TodayScreen({
     setError(null);
     if (item.state === "todo" && !(await act({ url: "/api/tasks/start", body: { source: item.source, id: item.id } }, { sheet: false }))) return;
     setProofKey(item.key);
+  }
+
+  /**
+   * "Nhờ bố mẹ xem" (21/11/2026: a button of its own next to "Nộp ảnh"): start the homework quietly
+   * when needed, then ask (same server checks as the button inside the photo sheet).
+   */
+  async function askNow(item: TaskView) {
+    setError(null);
+    if (!window.confirm(`Nhờ bố mẹ xem bài “${item.title}”? Con đưa vở cho bố mẹ; bố mẹ bấm xác nhận trên điện thoại.`)) return;
+    let runId = item.runId;
+    if (item.state === "todo") {
+      const got: { view: TodayView | null } = { view: null };
+      if (!(await act({ url: "/api/tasks/start", body: { source: item.source, id: item.id } }, { sheet: false, onView: (v) => (got.view = v) }))) return;
+      runId = got.view ? (allItems(got.view.state).find((i) => i.key === item.key)?.runId ?? null) : null;
+    }
+    if (runId) await act({ url: "/api/tasks/confirm-request", body: { runId } });
   }
 
   // The QR code on the laptop opens /today?nop=<homework id> on the phone: open that sheet.
@@ -275,6 +292,7 @@ export function TodayScreen({
       setProofKey(item.key);
     },
     onDoneNow: (item) => void doneNow(item),
+    onAskNow: (item) => void askNow(item),
     onFocus: (item) => openFocus(item ?? next),
     reviewed: new Set(view.reviewed ?? []),
     asked: new Set(view.asked ?? []),
@@ -521,7 +539,6 @@ export function TodayScreen({
               {statusTop}
               {controls}
             </section>
-            {tutor && !studyFocus && <TutorCard color={color} />}
             <StudyCorner
               s={s}
               view={view}

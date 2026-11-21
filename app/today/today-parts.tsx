@@ -6,7 +6,8 @@ import { addDays } from "@/lib/time";
 import { elapsedMs, minutesLabel, todayLine } from "@/lib/today/focus";
 import { canReport, reportNote, type RunReport } from "@/lib/today/report";
 import { appLinkMode, extraRunView, isExtraRun } from "@/lib/today/rules";
-import { dayLabel, dayMonth, dueLabel, dueTone, earlyUntil, isOkResult, taskMeta } from "@/lib/today/view";
+import { nameParts, taskName } from "@/lib/today/taskName";
+import { dayLabel, dayMonth, dueLabel, dueTone, earlyUntil, groupLabel, isOkResult, taskMeta } from "@/lib/today/view";
 
 /**
  * A child action for the screen's `act`. `keepalive`: the request survives the page losing focus
@@ -31,6 +32,11 @@ export interface TaskCtx {
   onProofOpen: (item: TaskView) => void;
   /** Homework already done in the notebook: start it (no focus screen) and open "Nộp ảnh bài". */
   onDoneNow: (item: TaskView) => void;
+  /**
+   * 21/11/2026 "nộp ảnh | Nhờ bố mẹ xem": ask a parent to look at a homework in person (starts it
+   * quietly first when needed). Same route as before (/api/tasks/confirm-request).
+   */
+  onAskNow: (item: TaskView) => void;
   /** Opens the focus view; with an item, that running item (not only the suggested one). */
   onFocus: (item?: TaskView) => void;
   /** Run ids a parent has looked at ("Bố mẹ đã xem ✓"). */
@@ -67,17 +73,31 @@ export function isWaiting(item: TaskView, ctx: TaskCtx): boolean {
 }
 
 /**
- * R6a (parent 08/11: "Practice ghi chung chung"): which subject and which app a set task is,
- * e.g. "Toán · trên Khan Academy". Empty for homework (its title is already the subject).
+ * R6a: which app a set task opens, e.g. "trên Khan Academy". 21/11/2026: the subject moved into
+ * the task's name (TaskName), so it is not repeated here. Empty for homework.
  */
 export function whereLine(item: TaskView): string {
   if (item.source !== "template") return "";
-  const subject = item.subject && item.subject.trim().toLowerCase() !== item.title.trim().toLowerCase() ? item.subject.trim() : null;
-  return [subject, item.appLabel ? `trên ${item.appLabel}` : null].filter(Boolean).join(" · ");
+  return item.appLabel ? `trên ${item.appLabel}` : "";
+}
+
+/**
+ * A task's name on screen (parent comment 21/11/2026): the subject first, then the task's own
+ * title lighter, e.g. **English** · Practice. Reads as "English · Practice" (taskName).
+ */
+export function TaskName({ item }: { item: TaskView }) {
+  const { subject, rest } = nameParts(item);
+  if (!subject) return <>{rest}</>;
+  return (
+    <>
+      {subject}
+      {rest && <span className="font-medium text-ink/65"> · {rest}</span>}
+    </>
+  );
 }
 
 function subLine(item: TaskView, ctx: TaskCtx): string {
-  if (isWaiting(item, ctx)) return `Làm xong “${ctx.runningTimed?.title}” rồi bắt đầu việc này`;
+  if (isWaiting(item, ctx)) return `Làm xong “${ctx.runningTimed ? taskName(ctx.runningTimed) : ""}” rồi bắt đầu việc này`;
   if (item.state === "todo" && item.source === "homework" && item.dueDate) {
     const due = item.group === "upcoming" ? `Hạn ${dayMonth(item.dueDate)}` : dueLabel(item.dueDate, ctx.today);
     return item.note ? `${due} · ${item.note}` : due;
@@ -267,7 +287,7 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
 
   return (
     <li
-      aria-label={item.title}
+      aria-label={taskName(item)}
       className={`flex flex-wrap items-center gap-3 rounded-2xl bg-white px-3.5 py-3 ${upcoming && !done ? "border border-dashed border-ink/25" : "border border-ink/10"} ${running ? "ring-2" : ""} ${locked && item.state === "todo" ? "opacity-60" : ""}`}
       style={running ? ({ "--tw-ring-color": ctx.color } as React.CSSProperties) : undefined}
     >
@@ -286,7 +306,7 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
       )}
       <div className="flex min-w-0 grow basis-48 flex-col gap-1">
         <span className={`text-base font-bold ${done ? "text-ink/55 line-through" : ""}`}>
-          {item.title}
+          <TaskName item={item} />
           {item.placeholder && <span className="ml-2 rounded-full bg-[#ECEDE8] px-2 py-0.5 text-xs font-bold text-ink/70">Đang xây</span>}
         </span>
         <span className="text-[13px] font-medium" style={{ color: tone && !done && !upcoming && !waiting ? tone.text : "#4A4F4C" }}>
@@ -345,7 +365,7 @@ export function TaskRow({ item, ctx, locked = false }: { item: TaskView; ctx: Ta
 export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: TaskView; ctx: TaskCtx; label?: string }) {
   const files = ctx.files(item);
   const tone = item.dueDate ? TONE[dueTone(item.dueDate, ctx.today)] : null;
-  const kind = item.source === "homework" ? (item.group === "upcoming" ? "Bài trên lớp · làm trước" : "Bài trên lớp") : item.part === 1 ? "Bài bổ sung" : "Kỹ năng";
+  const kind = item.source === "homework" ? (item.group === "upcoming" ? "Bài trên lớp · làm trước" : "Bài trên lớp") : groupLabel(item);
   const extra = isExtraRun(item); // R8a
   return (
     <div className="flex flex-col gap-3">
@@ -353,7 +373,9 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
         {extra ? "Đang làm thêm" : label}
       </div>
       <div className="flex flex-col gap-1">
-        <div className="text-[23px] leading-tight font-bold">{item.title}</div>
+        <div className="text-[23px] leading-tight font-bold">
+          <TaskName item={item} />
+        </div>
         <div className="text-[15px] text-ink/80">
           {kind}
           {whereLine(item) ? ` · ${whereLine(item)}` : ""}
@@ -376,6 +398,29 @@ export function NextTask({ item, ctx, label = "Việc tiếp theo" }: { item: Ta
         <OpenAppLink item={item} className="inline-flex min-h-11 items-center gap-2 self-start rounded-xl bg-bg px-3 text-sm font-semibold text-ink" />
       )}
       <TaskActions item={item} ctx={ctx} />
+    </div>
+  );
+}
+
+/**
+ * Homework already done in the notebook (parent comment 21/11/2026 "nộp ảnh | Nhờ bố mẹ xem"):
+ * two equal buttons side by side: send photos, or ask a parent nearby to look. Both start the
+ * homework quietly first; the server decides as before (photo, or the parent's confirmation).
+ */
+function DoneInNotebook({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
+  const off = !!ctx.busy || ctx.paused;
+  const btn = "min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white px-2 text-base font-bold disabled:opacity-50";
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[13px] font-semibold text-ink/70">Làm xong trong vở rồi?</span>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" disabled={off} onClick={() => ctx.onDoneNow(item)} className={btn}>
+          📷 Nộp ảnh
+        </button>
+        <button type="button" disabled={off} onClick={() => ctx.onAskNow(item)} className={btn}>
+          🙋 Nhờ bố mẹ xem
+        </button>
+      </div>
     </div>
   );
 }
@@ -404,11 +449,7 @@ export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
             Bắt đầu
           </button>
         )}
-        {item.requiresProof && (
-          <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onDoneNow(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">
-            Làm xong trong vở rồi · nộp ảnh
-          </button>
-        )}
+        {item.requiresProof && <DoneInNotebook item={item} ctx={ctx} />}
         <ForgotStart item={item} ctx={ctx} />
       </div>
     );
@@ -422,6 +463,11 @@ export function TaskActions({ item, ctx }: { item: TaskView; ctx: TaskCtx }) {
         ) : (
           <button type="button" disabled={(!!ctx.busy || ctx.paused)} onClick={() => ctx.onProofOpen(item)} className="min-h-14 rounded-2xl text-[17px] font-bold text-white disabled:opacity-50" style={{ background: ctx.color }}>
             Nộp ảnh bài
+          </button>
+        )}
+        {!isAsked(item, ctx) && !canFinishWithPhotos(item) && (
+          <button type="button" disabled={!!ctx.busy || ctx.paused} onClick={() => ctx.onAskNow(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">
+            🙋 Nhờ bố mẹ xem
           </button>
         )}
         <button type="button" disabled={ctx.paused} onClick={() => ctx.onFocus(item)} className="min-h-12 rounded-2xl border-[1.5px] border-ink/25 bg-white text-base font-bold disabled:opacity-50">

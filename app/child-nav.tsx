@@ -42,7 +42,8 @@ export function ChildNav({
   onSelect?: (tab: Exclude<ChildTab, "binh-yen">) => void;
 }) {
   const fourth: Voice | null = voice ?? (world ? "scientist" : null);
-  const tabs: ChildTab[] = byEnabled ? ["hom-nay", "hoc-tap", "binh-yen", "tuan", "gop-y"] : ["hom-nay", "hoc-tap", "tuan", "gop-y"];
+  // 21/11/2026 (parent): Góc bình yên · Góc học tập · Hôm nay · Tuần · Góp ý. /today still opens on Hôm nay.
+  const tabs: ChildTab[] = byEnabled ? ["binh-yen", "hoc-tap", "hom-nay", "tuan", "gop-y"] : ["hoc-tap", "hom-nay", "tuan", "gop-y"];
   return (
     <nav
       aria-label="Các mục của con"

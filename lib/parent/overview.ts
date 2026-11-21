@@ -6,6 +6,7 @@
 import type { DayState, Status, TaskView } from "@/lib/dayState";
 import { addDays } from "@/lib/time";
 import { dayProgress, vnTime } from "@/lib/today/view";
+import { isExamPrep, taskName } from "@/lib/today/taskName";
 
 export type Verdict = "ok" | "not_ok" | null;
 export type Tone = "late" | "todo" | "run" | "wait" | "ok" | "bad";
@@ -70,6 +71,7 @@ export function templateName(title: string, subject: string | null | undefined):
 
 export function taskTitle(item: TaskView): string {
   if (item.source === "homework") return item.title;
+  if (isExamPrep(item)) return `Ôn thi · ${taskName(item)}`; // 21/11/2026
   return `${item.part === 1 ? "Bổ sung" : "Kỹ năng"} · ${templateName(item.title, item.subject)}`;
 }
 
