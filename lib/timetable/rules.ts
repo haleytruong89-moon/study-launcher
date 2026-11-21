@@ -240,6 +240,24 @@ export function subjectKey(name: string): string {
 }
 
 /**
+ * 21/11/2026: the subject named inside a longer class name ("Gia sư Tiếng Anh", "TA HSG", "Toán 9
+ * nâng cao" → "anh" / "toan"). Falls back to `subjectKey`. Aliases match whole words only; the words
+ * "gia sư" are ignored (else "sư" would read as Lịch sử) and the longest alias wins.
+ */
+export function subjectKeyIn(name: string): string {
+  const direct = subjectKey(name);
+  if (GROUPS.some((g) => g[0] === direct)) return direct;
+  const words = ` ${fold(name).replace(/[^a-z0-9&()]+/g, " ").replace(/\bgia su\b/g, " ").replace(/\s+/g, " ").trim()} `;
+  let best: { key: string; len: number } | null = null;
+  for (const g of GROUPS) {
+    for (const alias of g) {
+      if (words.includes(` ${alias} `) && (!best || alias.length > best.len)) best = { key: g[0]!, len: alias.length };
+    }
+  }
+  return best ? best.key : direct;
+}
+
+/**
  * Giao bài: the next day after `from` the subject is taught (up to 14 days ahead), as the
  * suggested due date. Null when the subject is not in the timetable.
  */
