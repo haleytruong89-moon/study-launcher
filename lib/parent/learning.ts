@@ -72,8 +72,8 @@ export function reportHref(source: string, path: string | null | undefined, tuto
   return path;
 }
 
-/** Where "N luật chờ duyệt ›" goes (the tutor app approves them, Q4). */
-export const TUTOR_RULES_HREF = "/gia-su/bo-me";
+/** Where "N luật chờ duyệt ›" goes: the tutor app's rules page (approves them, Q4; tutor G7b). */
+export const TUTOR_RULES_HREF = "/gia-su/bo-me/luat";
 
 /**
  * One child, one day → tiles, one per source. Order: sources with a card first (most minutes

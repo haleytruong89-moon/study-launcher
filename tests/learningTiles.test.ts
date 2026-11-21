@@ -35,7 +35,7 @@ describe("L-3 learning tiles", () => {
     expect(tiles[0]).toMatchObject({ label: "Gia sư AI Toán", stats: { minutes: 35, sessions: 2, problems: 5, selfSolved: 3 }, reportHref: null });
   });
 
-  it("report link only from the app's own path (none before tutor G7), on this site", () => {
+  it("report link only from the app's own path (the tutor sends its evening report path since 0023), on this site", () => {
     const at = (report_path: string | null, on = true) => buildLearningTiles(AN, DAY, [card({ report_path })], [], [], on)[0]?.reportHref;
     expect(at("/gia-su/bo-me/bao-cao?ngay=2026-11-16")).toBe("/gia-su/bo-me/bao-cao?ngay=2026-11-16");
     expect(at(null)).toBeNull();
@@ -64,7 +64,7 @@ describe("L-3 learning tiles", () => {
   it("pending rules go on the first tutor tile, or a small Gia sư AI tile", () => {
     const rules = [{ child_id: AN, app: "tutor", pending: 1 }, { child_id: NG, app: "tutor", pending: 5 }];
     const [first] = buildLearningTiles(AN, DAY, [card()], [], rules, true);
-    expect(first).toMatchObject({ pendingRules: 1, rulesHref: "/gia-su/bo-me" });
+    expect(first).toMatchObject({ pendingRules: 1, rulesHref: "/gia-su/bo-me/luat" });
     expect(buildLearningTiles(AN, DAY, [], [], rules, true)).toEqual([expect.objectContaining({ label: "Gia sư AI", stats: null, pendingRules: 1 })]);
     expect(buildLearningTiles(AN, DAY, [], [], [], true)).toEqual([]);
   });
