@@ -360,6 +360,7 @@ Quy tắc:
 | 16/11/2026 | **Trang con mở được** (đề xuất mục 1, bố mẹ đồng ý): con xem danh sách trang được phép ngay trong Góc học tập, nhóm theo loại, trang mở tạm có giờ hết; chỉ đọc, không đổi allowlist hay hành vi khóa/mở |
 | 18/11/2026 | **Góp ý của con khi dùng thật** (bố mẹ chọn qua popup): (1) An: **hé lộ dần cây sắp mọc** theo từng việc xong (tên cây → điều thú vị → con vật sẽ ghé), luật trồng cây giữ nguyên (1 cây/phần khi xong cả phần); (2) **hỏi PIN nhiều** trên laptop (mở lại Edge, cả lúc đang học) → làm mới phiên từ 1 chỗ + ghi lý do mất phiên vào Nhật ký; (3) Góc bình yên **mỗi lần ra điều khác** + nút "Một điều khác ›"; "Bí mật của não" lấy từ thẻ có nguồn đã duyệt, không viết nội dung mới |
 | 18/11/2026 | **Thời khóa biểu** (bố mẹ chọn qua popup): TKB từng con theo phiên bản "áp dụng từ ngày"; **chỉ bố mẹ sửa**; con thấy "Hôm nay ở trường" + "Chuẩn bị cho ngày mai" (từ 19:00, kèm **đồng phục** theo thứ); Giao bài gợi ý hạn nộp theo buổi có môn gần nhất. Không dùng TKB để khóa/mở hay tính giờ |
+| 21/11/2026 | **"✓ Con đã làm"** (bố mẹ chọn qua popup): bố mẹ tự xác nhận bài trên lớp con đã làm ngoài máy (cả bài quá hạn) → xong ngay, tự ghi **Đạt** (tối vẫn đổi được). **Chỉ bố mẹ bấm**, con không tự báo. Cùng luật ảnh-hoặc-bố-mẹ-xác-nhận (19/10) |
 
 ## Nguồn tham khảo (tra 05/10/2026)
 

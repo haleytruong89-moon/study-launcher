@@ -9,6 +9,7 @@ import { localDate, startOfLocalDay, weekStart } from "@/lib/time";
 import { ParentHeader } from "../parent-header";
 import { Tag } from "../task-rows";
 import { ArchiveButton } from "./archive-button";
+import { DoneButton } from "./done-button";
 import { HomeworkEdit } from "./homework-edit";
 import { NewHomeworkSheet } from "./new-homework-sheet";
 
@@ -184,6 +185,7 @@ function Item({ item: i, today, tomorrow, familyId, showChild, kidOf }: ItemProp
       )}
       {kid && (
         <div className="-mb-1 flex flex-wrap justify-end gap-1 border-t border-ink/10 pt-1">
+          {!i.done_at && <DoneButton id={i.id} label={label} />}
           <HomeworkEdit
             item={{ id: i.id, childId: i.child_id, subject: i.subject, dueDate: i.due_date, note: i.note, paths: i.photo_paths }}
             kid={{ id: kid.id, name: kid.display_name, color: kid.color }}
