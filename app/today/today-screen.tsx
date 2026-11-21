@@ -489,6 +489,17 @@ export function TodayScreen({
 
         {tab === "hoc-tap" && (
           <>
+            {/* 21/11/2026: the laptop opens here, so the Friday/Saturday weekly review shows here too. */}
+            {view.weekly && !studyFocus && (
+              <WeeklyReviewCard
+                key={view.weekly.stats.weekStart}
+                stats={view.weekly.stats}
+                review={view.weekly.review}
+                color={color}
+                busy={!!busy}
+                onSave={(answers) => act({ url: "/api/week/review", body: answers })}
+              />
+            )}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-[22px] font-bold">📚 Góc học tập</h2>
               {/* R7a: renamed so it is not confused with the focus screen; same behaviour. */}
