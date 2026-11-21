@@ -34,8 +34,9 @@ test("Con đã làm: the parent marks an overdue homework done (Đạt), no phot
     await expect(card).toContainText("Trễ 2 ngày");
     await card.getByRole("button", { name: /Con đã làm bài/ }).click();
     await card.getByRole("button", { name: /Bấm lần nữa/ }).click();
-    await expect(card).toContainText("Đã xong");
-    await expect(card.getByRole("button", { name: /Con đã làm/ })).toHaveCount(0);
+    // Saved, then the item leaves "Quá hạn" (it moves to the folded "Đã xong" list).
+    await expect.poll(async () => (await db.from("homework_items").select("done_at").eq("id", id).single()).data?.done_at ?? null).not.toBeNull();
+    await expect(page.getByRole("listitem", { name: `${subject} nộp ${due.slice(8, 10)}/${due.slice(5, 7)}` }).filter({ hasText: "Trễ" })).toHaveCount(0);
 
     const { data: run } = await db.from("task_runs").select("done_at, confirmed_by, parent_verdict").eq("homework_item_id", id).single();
     expect(run?.done_at).not.toBeNull();
