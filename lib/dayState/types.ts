@@ -171,6 +171,11 @@ export interface TaskView {
    * ("khanacademy.org"). null without a link. Display only.
    */
   appLabel: string | null;
+  /**
+   * 21/11/2026: which app slot the task opens (display only; Lát 2 "làm trước buổi học thêm").
+   * null for homework and for "Đang xây" slots.
+   */
+  appSlotId?: string | null;
   /** Homework created after part1_done_at: shown, does not re-lock the day. */
   addedAfterPart1Done: boolean;
   /** Homework only (interpretation 17): 'due' is required, 'upcoming' can be done early. */

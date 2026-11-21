@@ -29,6 +29,8 @@ import { noStore, readFocusOpen, writeFocusOpen } from "./today-storage";
 import { useChildTabs, type Tab } from "./use-child-tabs";
 import { useServerClock } from "./use-server-clock";
 import { useWeekDays } from "./use-week-days";
+import { useSchoolDay } from "./use-school-day";
+import { classPrep } from "@/lib/schedule/classPrep";
 import { useFastPoll, useTodaySync } from "./use-today-sync";
 import { useLockSoonTitle } from "./use-lock-soon-title";
 import { DayControls, StatusTop } from "./status-card";
@@ -85,6 +87,8 @@ export function TodayScreen({
   const { offsetRef, nowMs, setNowMs, accept } = useServerClock(initial, setView);
   // The child's own week (feelings + 4 areas), fetched only where it is shown.
   const { week, loadWeek } = useWeekDays(tabRef, loadWeekRef);
+  // 21/11/2026: one read of the school day (timetable, Ngày mai, làm trước buổi học thêm).
+  const school = useSchoolDay(!!view && view.state.part1.complete && view.state.part2.complete);
   // /api/today: refresh, 30 s poll, 1-second tick (use-today-sync.ts).
   const refresh = useTodaySync({ view, accept, loadWeek, setError, offsetRef, setNowMs });
 
@@ -249,7 +253,10 @@ export function TodayScreen({
   // Special day (S3d): the sick status pill already says "Ngày ốm" when the sick day decides the state.
   const dayNote = s.status === "OPEN_SICK" ? null : childDayTypeNote(s.dayType);
   const progress = dayProgress(s);
-  const next = nextFromPlan(s, view.plan) ?? nextTask(s);
+  // 21/11/2026: homework for the next extra class (English OS before Tiếng Anh) comes after the
+  // child's own order and before the usual one. Display + order only.
+  const prep = classPrep([...s.part1.items, ...s.part2.items], school.data?.extras ?? [], nowMs, s.localDate);
+  const next = nextFromPlan(s, view.plan) ?? nextFromPlan(s, prep.map((p) => p.taskKey)) ?? nextTask(s);
   const planDone = view.plan ? planProgress(s, view.plan) : null;
   // R8b: the break counts down in whole minutes (breakLine below), never in seconds.
   const countdownTo = s.status === "FREE" || s.status === "OPEN_OVERRIDE" ? s.openUntil : null;
@@ -528,6 +535,9 @@ export function TodayScreen({
               focus={studyFocus}
               tutor={tutor}
               freeMinutes={view.rules.freeMinutes}
+              school={school.data}
+              prep={prep}
+              onPrepSaved={school.setPrep}
             />
           </>
         )}

@@ -1429,5 +1429,38 @@ select test_helpers.expect_count('parentB sees only family B extra classes (1)',
 select test_helpers.expect_count('parentB sees no family A subject prefs', (select count(*) from public.subject_prefs), 0);
 
 reset role;
+-- 0026 Chuẩn bị cho ngày mai: parents + the child read; only the server (service_role) writes.
+insert into public.prep_checks (family_id, child_id, for_date, ticked) values
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-27', '{books,uniform}'),
+  ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000d1', '2026-11-27', '{}');
+do $$
+begin
+  begin
+    insert into public.prep_checks (family_id, child_id, for_date) values ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000c1', '2026-11-28');
+    raise exception 'FAIL: prep check for a child of another family';
+  exception when foreign_key_violation then raise notice 'ok: prep check child must be in the row family';
+  end;
+  begin
+    insert into public.prep_checks (family_id, child_id, for_date, ticked) values ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', '2026-11-29', (select array_agg(g::text) from generate_series(1, 21) g));
+    raise exception 'FAIL: 21 ticks accepted';
+  exception when check_violation then raise notice 'ok: at most 20 ticks';
+  end;
+end $$;
+select test_helpers.expect_count('prep_checks has RLS on', (select count(*) from pg_class where oid = 'public.prep_checks'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('anon has no prep_checks access', (select case when has_table_privilege('anon', 'public.prep_checks', 'SELECT') then 1 else 0 end), 0);
+select test_helpers.expect_count('authenticated cannot insert prep_checks', (select case when has_table_privilege('authenticated', 'public.prep_checks', 'INSERT') then 1 else 0 end), 0);
+select test_helpers.expect_count('authenticated cannot update prep_checks', (select case when has_table_privilege('authenticated', 'public.prep_checks', 'UPDATE') then 1 else 0 end), 0);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees own prep check', (select count(*) from public.prep_checks), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c2', false);
+select test_helpers.expect_count('child2 sees no prep check of child1', (select count(*) from public.prep_checks), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees the family prep checks (1)', (select count(*) from public.prep_checks), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees only family B prep checks (1)', (select count(*) from public.prep_checks), 1);
+
+reset role;
 drop schema test_helpers cascade;
 \echo RLS OK
