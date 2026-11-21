@@ -30,6 +30,7 @@ import { useChildTabs, type Tab } from "./use-child-tabs";
 import { useServerClock } from "./use-server-clock";
 import { useWeekDays } from "./use-week-days";
 import { useSchoolDay } from "./use-school-day";
+import { AfternoonCard } from "./afternoon-card";
 import { classPrep } from "@/lib/schedule/classPrep";
 import { useFastPoll, useTodaySync } from "./use-today-sync";
 import { useLockSoonTitle } from "./use-lock-soon-title";
@@ -438,6 +439,9 @@ export function TodayScreen({
                 )}
               </section>
             )}
+
+            {/* 21/11/2026 (Lát 3): afternoon school, extra classes and free time today. */}
+            {school.data?.has && <AfternoonCard plan={school.data.today} extras={school.data.extras ?? []} date={s.localDate} nowMs={nowMs} color={color} />}
 
             <PillarCards
               s={s}
