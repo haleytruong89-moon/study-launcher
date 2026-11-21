@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { sendJson } from "@/lib/api-client";
 import { WEEKDAY_LABELS } from "@/lib/subjects";
+import { isExamPrep, withExamPrefix } from "@/lib/today/taskName";
 
 import { emptyTemplate, type SlotOption, type TemplateValues } from "./values";
 
@@ -102,6 +103,20 @@ export function TemplateForm({
         Tên việc
         <input required maxLength={120} value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} className={input} />
       </label>
+      {v.part === "extra" && (
+        // 21/11/2026: an exam-prep task is a bài bổ sung whose name starts with "Ôn thi" (same rules).
+        <label className="-mt-2 flex min-h-11 items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={isExamPrep({ source: "template", part: 1, title: v.title, subject: null })}
+            onChange={(e) => setV({ ...v, title: withExamPrefix(v.title, e.target.checked) })}
+            className="size-5"
+          />
+          <span>
+            Bài ôn thi <span className="text-ink/60">— con thấy nhãn “Ôn thi”, luật như bài bổ sung</span>
+          </span>
+        </label>
+      )}
       <label className="flex flex-col gap-1 text-sm font-semibold">
         Môn (tùy chọn)
         <input maxLength={40} value={v.subject} onChange={(e) => setV({ ...v, subject: e.target.value })} className={input} />

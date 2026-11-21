@@ -6,6 +6,7 @@ import { MIN_BREAK_MINUTES, type DayState, type TaskView, type WeekResult } from
 import { addDays, isoWeekday } from "@/lib/time";
 import { minutesLabel } from "@/lib/today/focus";
 import { isExtraRun, runningItems, runningTimedTask } from "@/lib/today/rules";
+import { isExamPrep } from "@/lib/today/taskName";
 
 export interface Banner {
   title: string;
@@ -370,6 +371,7 @@ export function nextPart1(state: DayState, plan: readonly string[] | null): Task
 
 /** The group name shown on a task (same words on Hôm nay and in Góc học tập). */
 export function groupLabel(i: TaskView): string {
+  if (isExamPrep(i)) return "Ôn thi"; // 21/11/2026: a bài bổ sung named "Ôn thi …"
   return i.source === "homework" ? (i.group === "upcoming" ? "Làm trước" : "Bài trên lớp") : i.part === 1 ? "Bài bổ sung" : "Kỹ năng";
 }
 

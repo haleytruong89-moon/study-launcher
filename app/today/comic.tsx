@@ -9,6 +9,7 @@ import { SPEED, comicCover, comicPages, ddmm, panelLabel, type ComicPage, type P
 import type { DayState } from "@/lib/dayState";
 import { addDays } from "@/lib/time";
 import { parsePlayPlans, readPlayPlansRaw } from "@/lib/today/playPlan";
+import { taskName } from "@/lib/today/taskName";
 import type { WeekDay, WeekDaysView, WeekFeel } from "@/lib/today/weekDays";
 import { Character } from "../avatar-face";
 
@@ -155,7 +156,8 @@ function withToday(week: WeekDaysView, s: DayState): WeekDay[] {
 /** Today's skill title for panel D: the first finished skill, else the first one. */
 function skillTitle(s: DayState): string | null {
   const items = s.part2.items.filter((i) => !i.placeholder);
-  return (items.find((i) => i.state === "done") ?? items[0])?.title ?? null;
+  const it = items.find((i) => i.state === "done") ?? items[0];
+  return it ? taskName(it) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -229,7 +231,7 @@ export function ComicToday({
   const me = look ?? defaultAvatar("detective");
   const plans = usePlayPlans();
   const feel = byEnabled ? (week.days.find((d) => d.date === s.localDate)?.feel ?? null) : null;
-  const doneStudy = s.part1.items.filter((i) => i.state === "done" && i.group !== "upcoming" && !i.placeholder).map((i) => `${i.title} ✓`);
+  const doneStudy = s.part1.items.filter((i) => i.state === "done" && i.group !== "upcoming" && !i.placeholder).map((i) => `${taskName(i)} ✓`);
   const studyLine = doneStudy.length === 0 ? "Bài hôm nay ✓" : `${doneStudy.slice(0, 2).join(" · ")}${doneStudy.length > 2 ? " · …" : ""}`;
   const skill = skillTitle(s);
   const plan = plans[s.localDate] ?? null;

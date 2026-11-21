@@ -5,8 +5,9 @@ import type { Voice } from "@/lib/binhYen/catalog";
 import type { TaskView } from "@/lib/dayState";
 import { elapsedMs, focusLine, isLongRunning, isTimed, minutesLabel, remainingMinutes } from "@/lib/today/focus";
 import { isExtraRun } from "@/lib/today/rules";
-import { taskProgress } from "@/lib/today/view";
+import { groupLabel, taskProgress } from "@/lib/today/view";
 import { BodyPortal, escFrom, returnFocus } from "./portal";
+import { taskName } from "@/lib/today/taskName";
 import { FileLinks, FinishButton, canFinishWithPhotos, isAsked, whereLine, type TaskCtx } from "./today-parts";
 import { Ambient, Backdrop, sceneKeyOf } from "./world-scene";
 
@@ -97,7 +98,7 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
   const kind =
     item.source === "homework"
       ? "Bài trên lớp · chụp ảnh khi xong"
-      : [extra ? "Làm thêm" : "", item.part === 1 ? "Bài bổ sung" : "Kỹ năng", whereLine(item), item.minMinutes > 0 ? `ít nhất ${item.minMinutes} phút` : ""].filter(Boolean).join(" · ");
+      : [extra ? "Làm thêm" : "", groupLabel(item), whereLine(item), item.minMinutes > 0 ? `ít nhất ${item.minMinutes} phút` : ""].filter(Boolean).join(" · ");
   const under = item.requiresProof
     ? "Không cần đủ giờ. Làm xong trong vở thì chụp ảnh nộp."
     : !timed
@@ -157,7 +158,7 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
 
             <div className="flex flex-col gap-1 text-center">
               <h2 className="text-[26px] leading-tight font-bold break-words" style={comic ? undefined : { textShadow: "0 1px 3px rgba(0,0,0,.35)" }}>
-                {item.title}
+                {taskName(item)}
               </h2>
               <p className={`text-[15px] text-balance ${soft}`}>{kind}</p>
               {item.note && <p className={`text-[15px] ${soft}`}>{item.note}</p>}
@@ -168,7 +169,7 @@ export function FocusView({ item, ctx, voice, worldKey, onClose }: { item: TaskV
                 aria-label="Hỏi lại"
                 className={`flex flex-col gap-3 rounded-2xl p-4 text-center ${comic ? "border-[2.5px] border-ink bg-white" : "bg-black/35"}`}
               >
-                <p className="text-lg font-bold">Con vẫn đang làm “{item.title}” chứ?</p>
+                <p className="text-lg font-bold">Con vẫn đang làm “{taskName(item)}” chứ?</p>
                 <p className={`text-sm ${soft}`}>
                   Con đã làm {label} rồi. Có khi con xong rồi mà quên bấm. Không sao cả.
                 </p>

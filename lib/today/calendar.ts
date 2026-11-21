@@ -16,6 +16,7 @@
 import { scheduledTemplates, type AppSlotInput, type DayType, type TaskTemplateInput } from "@/lib/dayState";
 import { addDays, isoWeekday, localDate, weekStart } from "@/lib/time";
 import { dayMonth } from "./view";
+import { isExamPrep, taskName } from "./taskName";
 
 /** At most this many dates in one answer (two months). */
 export const CALENDAR_MAX_DAYS = 62;
@@ -39,6 +40,8 @@ export interface CalendarSkill {
   title: string;
   /** extra = bài bổ sung (Part 1), skill = kỹ năng (Part 2). */
   part: "extra" | "skill";
+  /** 21/11/2026: a bài bổ sung named "Ôn thi …" (only set when true). */
+  exam?: true;
 }
 
 export interface CalendarDay {
@@ -228,7 +231,11 @@ export function buildCalendar(range: { from: string; to: string }, today: string
     const skills = (["extra", "skill"] as const).flatMap((part) =>
       scheduledTemplates(rows.templates, part, weekday, disabled)
         .filter((t) => t.appSlotId === null || !placeholders.has(t.appSlotId))
-        .map((t): CalendarSkill => ({ id: t.id, title: t.title, part })),
+        .map((t): CalendarSkill => {
+          // 21/11/2026: the same name as on Hôm nay ("English · Practice").
+          const named = { source: "template" as const, part: part === "extra" ? (1 as const) : (2 as const), title: t.title, subject: t.subject };
+          return isExamPrep(named) ? { id: t.id, title: taskName(named), part, exam: true } : { id: t.id, title: taskName(named), part };
+        }),
     );
     days.push({ date, dayType: session?.day_type ?? "normal", homework: byDue.get(date) ?? [], skills });
   }

@@ -13,7 +13,8 @@ import { TUTOR_HOME, isMathSubject, tutorTaskHref } from "@/lib/tutor/entry";
 import { SitesCard } from "./sites-card";
 import { SchoolCard } from "./school-card";
 import { CalendarCard } from "./calendar-card";
-import { FilesFold, LamThem, OpenAppLink, TaskActions, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
+import { taskName } from "@/lib/today/taskName";
+import { FilesFold, LamThem, OpenAppLink, TaskActions, TaskName, TaskRow, doneLine, isWaiting, whereLine, type TaskCtx } from "./today-parts";
 
 /**
  * Góc học tập (R2 §3, R6c: artifact vStudy / workPanel, audit items K and L). The child puts
@@ -38,9 +39,10 @@ function tagLabel(i: TaskView): string {
   return i.group === "upcoming" ? "Làm trước ★" : groupLabel(i);
 }
 
-/** Pill colours (spec R6c): homework = the child's colour, extra grey, skill blue, early gold. */
+/** Pill colours (spec R6c): homework = the child's colour, extra grey, skill blue, early gold; "Ôn thi" plum (21/11/2026). */
 export function tagColor(i: TaskView, color: string): string {
   if (i.source === "homework") return i.group === "upcoming" ? "#A87A0E" : color;
+  if (groupLabel(i) === "Ôn thi") return "#7B4A8C";
   return i.part === 1 ? "#6A706B" : "#4C70A8";
 }
 
@@ -215,7 +217,7 @@ export function StudyCorner({
                   <li
                     key={item.key}
                     data-key={item.key}
-                    aria-label={item.title}
+                    aria-label={taskName(item)}
                     className={`grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 rounded-[14px] border-2 px-2 py-1.5 ${done ? "opacity-60" : ""}`}
                     style={{
                       borderColor: selected || over ? color : "transparent",
@@ -237,7 +239,7 @@ export function StudyCorner({
                         {tagLabel(item)}
                       </span>
                       <b className="text-base break-words">
-                        {item.title}
+                        <TaskName item={item} />
                         {item.state === "running" ? " · đang làm" : item.extra ? " · đang làm thêm" : ""}
                       </b>
                       {rowSub(item, ctx) && <span className="text-[13px] text-ink/70">{rowSub(item, ctx)}</span>}
@@ -251,7 +253,7 @@ export function StudyCorner({
                       <span className="flex flex-col gap-1">
                         <button
                           type="button"
-                          aria-label={`Đưa “${item.title}” lên`}
+                          aria-label={`Đưa “${taskName(item)}” lên`}
                           disabled={busy || n === 0}
                           onClick={() => move(item.key, -1)}
                           className="size-11 rounded-lg border-[1.5px] border-[#D3D8D0] bg-white font-extrabold disabled:opacity-30"
@@ -260,7 +262,7 @@ export function StudyCorner({
                         </button>
                         <button
                           type="button"
-                          aria-label={`Đưa “${item.title}” xuống`}
+                          aria-label={`Đưa “${taskName(item)}” xuống`}
                           disabled={busy || n === list.length - 1}
                           onClick={() => move(item.key, 1)}
                           className="size-11 rounded-lg border-[1.5px] border-[#D3D8D0] bg-white font-extrabold disabled:opacity-30"
@@ -307,6 +309,8 @@ export function StudyCorner({
             <WorkPanel item={current} ctx={ctx} tutor={tutor} />
           </section>
           {meter && <FreeMeterBox m={meter} color={color} />}
+          {/* 21/11/2026: door ① moved here (parent's sketch): "Thứ tự hôm nay" is first on the page. */}
+          {tutor && <TutorCard color={color} />}
           <SchoolCard color={color} />
           <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
           <SitesCard color={color} />
@@ -318,7 +322,10 @@ export function StudyCorner({
 
 const EYEBROW = "text-xs font-bold tracking-[0.07em] uppercase";
 
-/** Door ① to Gia sư AI Toán (parent decision 14/11/2026): always on top of Góc học tập. */
+/**
+ * Door ① to Gia sư AI Toán (parent decision 14/11/2026): always shown in Góc học tập. Since
+ * 21/11/2026 it sits in the right column under "Giờ tự do tối nay", so the list comes first.
+ */
 export function TutorCard({ color }: { color: string }) {
   return (
     <section aria-labelledby="ht-tutor" className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-ink/10 bg-white px-4 py-3">
@@ -352,7 +359,9 @@ function WorkPanel({ item, ctx, tutor }: { item: TaskView | null; ctx: TaskCtx; 
         <span className={EYEBROW} style={{ color: ctx.color }}>
           {tagLabel(item)}
         </span>
-        <h3 className="text-[23px] leading-tight font-bold">{item.title} ✓</h3>
+        <h3 className="text-[23px] leading-tight font-bold">
+          <TaskName item={item} /> ✓
+        </h3>
         <p className="text-sm text-ink/70">Đã xong. Chọn việc khác trong danh sách.</p>
         {item.source === "template" && (
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -373,11 +382,13 @@ function WorkPanel({ item, ctx, tutor }: { item: TaskView | null; ctx: TaskCtx; 
         <span className={EYEBROW} style={{ color: ctx.color }}>
           {isExtraRun(item) ? "Đang làm thêm" : item.state === "running" ? "Đang làm" : "Việc tiếp theo"} · {tagLabel(item)}
         </span>
-        <h3 className="text-[26px] leading-tight font-bold break-words">{item.title}</h3>
+        <h3 className="text-[26px] leading-tight font-bold break-words">
+          <TaskName item={item} />
+        </h3>
         {sub && <p className="text-[15px] text-ink/75">{sub}</p>}
       </div>
       <StudyTimer item={item} ctx={ctx} />
-      {isWaiting(item, ctx) && <p className="text-sm font-semibold text-ink/80">Làm xong “{ctx.runningTimed?.title}” rồi bắt đầu việc này.</p>}
+      {isWaiting(item, ctx) && <p className="text-sm font-semibold text-ink/80">Làm xong “{ctx.runningTimed ? taskName(ctx.runningTimed) : ""}” rồi bắt đầu việc này.</p>}
       <TaskActions item={item} ctx={ctx} />
       {tutor && isMathSubject(item.subject) && (
         // Another app under this address (D20): a plain link, not next/link.
