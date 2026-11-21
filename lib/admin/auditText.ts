@@ -40,6 +40,7 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "homework.restore": "homework",
   "run.verdict": "homework",
   "run.confirm_ok": "homework",
+  "homework.parent_done": "homework",
   "run.confirm_reject": "homework",
   "run_report.approve": "homework",
   "run_report.reject": "homework",
@@ -217,6 +218,8 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
     }
     case "run.confirm_ok":
       return say(`Xem bài trực tiếp và cho xong một bài của ${kid}`);
+    case "homework.parent_done":
+      return say(`Xác nhận ${kid} đã làm bài${quoted(short(p.subject, 30))} (làm ngoài máy)`);
     case "run.confirm_reject":
       return say(`Xem bài trực tiếp: một bài của ${kid} chưa được`);
     case "run_report.approve":
