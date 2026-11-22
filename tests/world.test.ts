@@ -320,3 +320,13 @@ describe("recentGrowth (R7b: Nhìn lại 7 ngày)", () => {
     expect(recentDayLabel("2026-11-08", "2026-11-10")).toBe("Chủ nhật 08/11");
   });
 });
+
+describe("big trees (22/11/2026)", () => {
+  it("are 1.6× a thing on a phone-sized scene and grow with a wider scene (max 2.2×)", async () => {
+    const { bigSizeOf } = await import("@/app/today/world-scene");
+    expect(bigSizeOf(1, 300)).toBe(48);
+    expect(bigSizeOf(4, 300)).toBe(77);
+    expect(bigSizeOf(1, 720)).toBe(96);
+    expect(bigSizeOf(1, 2000)).toBe(106);
+  });
+});
