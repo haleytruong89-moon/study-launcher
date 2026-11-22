@@ -172,7 +172,8 @@ test("22/11/2026: the wide week table shows the school lessons, the uniform and 
     const card = page.getByRole("region", { name: "Lịch của con" });
     await card.getByRole("button", { name: "Tuần", exact: true }).click();
     const week = card.getByRole("group", { name: isoWeekday(today) === 7 ? "Tuần tới" : "Tuần này" });
-    await expect(week).toContainText("LH4 Toán ×2");
+    await expect(week).toContainText("LH4 Toán");
+    await expect(week).toContainText("Sáng 1");
     await expect(week).toContainText("LH4 Anh");
     await expect(week).toContainText("Áo LH4");
     await expect(week).toContainText("LH4 Cờ vua");

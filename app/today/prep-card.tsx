@@ -4,6 +4,7 @@ import { useState } from "react";
 import { prepDone, tickableKeys, type PrepView } from "@/lib/schedule/prep";
 import { isoWeekday } from "@/lib/time";
 import { DAY_NAMES } from "@/lib/timetable/rules";
+import { Shirt } from "./shirt";
 
 const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
@@ -79,7 +80,10 @@ export function PrepCard({
           const body = (
             <span className="flex min-w-0 flex-col items-start text-left">
               <b className="text-[15px]">{item.title}</b>
-              <span className="text-[13px] break-words text-ink/70">{item.text}</span>
+              <span className="flex items-start gap-1 text-[13px] break-words text-ink/70">
+                {item.key === "uniform" && <Shirt uniform={item.text} />}
+                {item.text}
+              </span>
             </span>
           );
           return (

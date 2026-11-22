@@ -65,7 +65,7 @@ export default async function TimetablePage() {
           const mine = extras.filter((x) => x.childId === c.id);
           return (
             <div key={c.id} className="flex flex-col gap-3">
-              <TimetableEditor child={{ id: c.id, name: c.display_name, color: c.color ?? "#2B5D4F" }} versions={versions.filter((v) => v.childId === c.id)} today={today} />
+              <TimetableEditor child={{ id: c.id, name: c.display_name, color: c.color ?? "#2B5D4F" }} versions={versions.filter((v) => v.childId === c.id)} today={today} extras={mine} />
               <ExtraPaste
                 child={{ id: c.id, name: c.display_name }}
                 extras={mine}

@@ -18,6 +18,7 @@ import {
 } from "@/lib/today/calendar";
 import { dayMonth } from "@/lib/today/view";
 import { readCalendarMode, subscribeStorage, writeCalendarMode, type CalendarMode } from "./today-storage";
+import { Shirt } from "./shirt";
 
 /**
  * "Lịch của con" step 1 (parent decision 14/11/2026): READ ONLY, in Góc học tập. Tuần (Mon–Sun)
@@ -247,18 +248,8 @@ export function CalendarCard({
               ›
             </button>
           </div>
-          <div role="group" aria-label={weekLabel} onKeyDown={onGridKey} className="grid grid-cols-1 gap-1.5 md:grid-cols-7">
-            {week.map((date, n) => (
-              <WeekDay
-                key={date}
-                d={dayOf(date)}
-                weekday={WEEKDAY_SHORT[n] as string}
-                today={today}
-                color={color}
-                selected={selected === date}
-                onPick={() => setSelected(selected === date ? null : date)}
-              />
-            ))}
+          <div role="group" aria-label={weekLabel} onKeyDown={onGridKey}>
+            <WeekGrid days={week.map(dayOf)} today={today} color={color} selected={selected} onPick={(date) => setSelected(selected === date ? null : date)} />
           </div>
         </div>
       ) : (
@@ -413,7 +404,11 @@ function DayDetail({ d, today, onClose }: { d: CalendarDay; today: string; onClo
                     <b>Chiều:</b> {d.school.pm.join(", ")}
                   </span>
                 )}
-                {d.school.uniform && <span className="block text-[13px] text-ink/70">Đồng phục: {d.school.uniform}</span>}
+                {d.school.uniform && (
+                  <span className="flex items-start gap-1 text-[13px] text-ink/70">
+                    <Shirt uniform={d.school.uniform} /> Đồng phục: {d.school.uniform}
+                  </span>
+                )}
               </span>
             </li>
           )}
@@ -447,69 +442,165 @@ function DayDetail({ d, today, onClose }: { d: CalendarDay; today: string; onClo
   );
 }
 
+/** A pale fill + dark text from a subject colour (#RRGGBB), as in Sửa lịch học. */
+const tint = (hex: string) => ({ background: `${hex}22`, color: hex });
+
 /**
- * One day of the wide week table (22/11/2026). A button (tap → every item below the table); its
- * name is the short summary, the visible lines are for the eye. Phones: one row per day.
+ * The wide week (22/11/2026, parent: "like the timetable the child edits"): a table with the days
+ * as columns (T2 … CN) and the lessons as rows (Sáng 1…5, Chiều …, with the time), coloured as in
+ * Sửa lịch học; then rows for extra classes (with the time), homework due / special days, and the
+ * uniform (a shirt in its colour). The day headers are the buttons (tap → everything below).
+ * Phones scroll it sideways, like the editor.
  */
-function WeekDay({ d, weekday, today, color, selected, onPick }: { d: CalendarDay; weekday: string; today: string; color: string; selected: boolean; onPick: () => void }) {
-  const isToday = d.date === today;
-  const past = d.date < today;
-  const label = dayTypeLabel(d.dayType);
-  const nothing = !label && d.homework.length === 0 && !d.school && d.extras.length === 0;
-  const line = "flex min-w-0 items-start gap-1.5 text-[12.5px] leading-snug";
+function WeekGrid({ days, today, color, selected, onPick }: { days: CalendarDay[]; today: string; color: string; selected: string | null; onPick: (date: string) => void }) {
+  const slots = new Map<string, { session: "am" | "pm"; n: number; time: string | null }>();
+  for (const d of days)
+    for (const l of d.school?.lessons ?? []) {
+      const key = `${l.session}${l.n}`;
+      const had = slots.get(key);
+      if (!had) slots.set(key, { session: l.session, n: l.n, time: l.time });
+      else if (!had.time && l.time) had.time = l.time;
+    }
+  const rows = [...slots.values()].sort((a, b) => (a.session === b.session ? a.n - b.n : a.session === "am" ? -1 : 1));
+  const anyDue = days.some((d) => d.homework.length > 0 || dayTypeLabel(d.dayType));
+  const anyExtra = days.some((d) => d.extras.length > 0);
+  const anyUniform = days.some((d) => d.school?.uniform);
+  const col = (d: CalendarDay) => ({
+    className: d.date < today ? "opacity-55" : "",
+    style: d.date === today ? { background: soft(color) } : undefined,
+  });
+  const lessonAt = (d: CalendarDay, session: "am" | "pm", n: number) => d.school?.lessons?.find((l) => l.session === session && l.n === n) ?? null;
+  const rowHead = "w-[86px] pr-1 text-left align-top text-xs font-bold text-ink/70";
+
   return (
-    <button
-      type="button"
-      data-date={d.date}
-      aria-label={dayAria(d, today)}
-      aria-pressed={selected}
-      onClick={onPick}
-      className={`flex min-h-[64px] min-w-0 flex-col items-stretch gap-1.5 rounded-xl border-2 p-2 text-left md:min-h-[190px] ${past ? "opacity-55" : ""}`}
-      style={{
-        borderColor: isToday ? color : selected ? "#9AA19C" : "transparent",
-        background: isToday ? soft(color) : selected ? "#ECEEE8" : "#F4F5F0",
-      }}
-    >
-      <span aria-hidden className="flex items-baseline gap-1.5" style={isToday ? { color } : undefined}>
-        <span className="text-[13px] font-bold">{isToday ? "Hôm nay" : weekday}</span>
-        <span className="text-[15px] font-extrabold">{ddmm(d.date)}</span>
-      </span>
-      <span aria-hidden className="flex min-w-0 flex-col gap-1">
-        {label && (
-          <span className="self-start rounded-full px-2 py-px text-[11.5px] font-bold text-white" style={{ background: typeDot(d) }}>
-            {label}
-          </span>
-        )}
-        {d.homework.map((h) => (
-          <span key={h.id} className={`${line} font-semibold`} style={{ color: DOT.homework }}>
-            <span className="pt-1">
-              <Dot color={DOT.homework} />
-            </span>
-            <span className="min-w-0 break-words">Nộp: {h.title}</span>
-          </span>
-        ))}
-        {d.school && d.school.am.length > 0 && (
-          <span className={line}>
-            <span className="shrink-0 font-bold text-ink/60">Sáng</span>
-            <span className="min-w-0 break-words">{d.school.am.join(", ")}</span>
-          </span>
-        )}
-        {d.school && d.school.pm.length > 0 && (
-          <span className={line}>
-            <span className="shrink-0 font-bold text-ink/60">Chiều</span>
-            <span className="min-w-0 break-words">{d.school.pm.join(", ")}</span>
-          </span>
-        )}
-        {d.extras.map((x, i) => (
-          <span key={`x${i}`} className={`${line} font-semibold`} style={{ color: DOT.extra }}>
-            <span className="shrink-0 tabular-nums">{x.start}</span>
-            <span className="min-w-0 break-words">{x.subject}</span>
-          </span>
-        ))}
-        {d.school?.uniform && <span className="text-[11.5px] leading-snug break-words text-ink/60">👕 {d.school.uniform}</span>}
-        {nothing && <span className="text-[12.5px] text-ink/50">Không có lịch</span>}
-      </span>
-    </button>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] table-fixed border-separate border-spacing-1 text-sm">
+        <thead>
+          <tr>
+            <th className="w-[86px] text-left text-xs font-semibold text-ink/55">Tiết · giờ</th>
+            {days.map((d, i) => {
+              const isToday = d.date === today;
+              return (
+                <th key={d.date} scope="col" className="p-0 align-bottom">
+                  <button
+                    type="button"
+                    data-date={d.date}
+                    aria-label={dayAria(d, today)}
+                    aria-pressed={selected === d.date}
+                    onClick={() => onPick(d.date)}
+                    className={`flex min-h-11 w-full flex-col items-center justify-center rounded-xl border-2 px-1 ${d.date < today ? "opacity-55" : ""}`}
+                    style={{
+                      borderColor: isToday ? color : selected === d.date ? "#9AA19C" : "transparent",
+                      background: isToday ? soft(color) : selected === d.date ? "#ECEEE8" : "transparent",
+                      color: isToday ? color : undefined,
+                    }}
+                  >
+                    <span className="text-[13px] font-bold">{isToday ? "Hôm nay" : WEEKDAY_SHORT[i]}</span>
+                    <span className="text-[12px] font-semibold text-ink/60">{ddmm(d.date)}</span>
+                  </button>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {anyDue && (
+            <tr>
+              <th scope="row" className={rowHead} style={{ color: DOT.homework }}>
+                Hạn nộp · kiểm tra
+              </th>
+              {days.map((d) => {
+                const label = dayTypeLabel(d.dayType);
+                return (
+                  <td key={d.date} className={`rounded-lg align-top ${col(d).className}`} style={col(d).style}>
+                    <span className="flex flex-col gap-1">
+                      {label && (
+                        <span className="self-start rounded-full px-2 py-px text-[11.5px] font-bold text-white" style={{ background: typeDot(d) }}>
+                          {label}
+                        </span>
+                      )}
+                      {d.homework.map((h) => (
+                        <span key={h.id} className="rounded-lg px-1.5 py-1 text-[12px] leading-tight font-semibold break-words" style={{ background: `${DOT.homework}1A`, color: DOT.homework }}>
+                          Nộp: {h.title}
+                        </span>
+                      ))}
+                    </span>
+                  </td>
+                );
+              })}
+            </tr>
+          )}
+          {rows.length === 0 && (
+            <tr>
+              <td colSpan={days.length + 1} className="rounded-xl bg-[#F4F5F0] p-3 text-center text-sm text-ink/65">
+                Chưa có thời khóa biểu. Bấm <b>Sửa lịch học</b> để nhập.
+              </td>
+            </tr>
+          )}
+          {rows.map((r) => (
+            <tr key={`${r.session}${r.n}`}>
+              <th scope="row" className={rowHead}>
+                <span className="block">{`${r.session === "pm" ? "Chiều" : "Sáng"} ${r.n}`}</span>
+                {r.time && <span className="block text-[11px] font-normal text-ink/55 tabular-nums">{r.time.replace("-", "–")}</span>}
+              </th>
+              {days.map((d) => {
+                const l = lessonAt(d, r.session, r.n);
+                return (
+                  <td key={d.date} className={`rounded-lg ${col(d).className}`} style={col(d).style}>
+                    {l ? (
+                      <span className="flex min-h-10 items-center justify-center rounded-xl px-1 text-center text-[12.5px] leading-tight font-semibold break-words" style={tint(l.color)}>
+                        {l.subject}
+                      </span>
+                    ) : (
+                      <span aria-hidden className="block min-h-10 rounded-xl border-[1.5px] border-dashed border-ink/10" />
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+          {anyExtra && (
+            <tr>
+              <th scope="row" className={rowHead} style={{ color: DOT.extra }}>
+                Học thêm
+              </th>
+              {days.map((d) => (
+                <td key={d.date} className={`rounded-lg align-top ${col(d).className}`} style={col(d).style}>
+                  <span className="flex flex-col gap-1">
+                    {d.extras.map((x, i) => (
+                      <span key={i} className="rounded-xl px-1.5 py-1 text-center text-[12px] leading-tight font-semibold" style={{ background: "#8A4FA81F", color: "#6E3A8C" }}>
+                        <span className="block tabular-nums">
+                          {x.start}–{x.end}
+                        </span>
+                        <span className="block break-words">{x.subject}</span>
+                        {x.place && <span className="block text-[11px] font-normal text-ink/60">{x.place}</span>}
+                      </span>
+                    ))}
+                  </span>
+                </td>
+              ))}
+            </tr>
+          )}
+          {anyUniform && (
+            <tr>
+              <th scope="row" className={rowHead}>
+                Đồng phục
+              </th>
+              {days.map((d) => (
+                <td key={d.date} className={`rounded-lg align-top ${col(d).className}`} style={col(d).style}>
+                  {d.school?.uniform && (
+                    <span className="flex items-start gap-1 text-[11.5px] leading-snug text-ink/70">
+                      <Shirt uniform={d.school.uniform} size={18} />
+                      <span className="min-w-0 break-words">{d.school.uniform}</span>
+                    </span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
