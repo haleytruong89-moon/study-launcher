@@ -201,7 +201,8 @@ export function nextSchoolDay(versions: readonly TimetableVersion[], date: strin
 /** "Chuẩn bị cho ngày mai" shows from 19:00 (Vietnam time). */
 export const PREPARE_FROM = "19:00";
 
-const fold = (s: string) =>
+/** Lower case, no accents, "đ" → "d" (for matching names). */
+export const fold = (s: string) =>
   s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
