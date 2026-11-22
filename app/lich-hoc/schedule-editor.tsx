@@ -81,7 +81,7 @@ export function ScheduleEditor({ name, color, initial }: { name: string; color: 
         </div>
       </div>
 
-      {tab === "tkb" && <TimetableTab key={current?.id ?? "none"} today={data.today} current={current} rows={rows} colorOf={colorOf} color={color} onSaved={reload} />}
+      {tab === "tkb" && <TimetableTab key={current?.id ?? "none"} today={data.today} current={current} rows={rows} colorOf={colorOf} color={color} extras={data.extras} onSaved={reload} />}
       {tab === "them" && <ExtrasTab data={data} current={current} rows={rows} color={color} onSaved={reload} />}
       {tab === "mon" && <SubjectsTab rows={rows} color={color} onSaved={reload} />}
     </div>
@@ -96,6 +96,7 @@ function TimetableTab({
   rows,
   colorOf,
   color,
+  extras,
   onSaved,
 }: {
   today: string;
@@ -103,19 +104,32 @@ function TimetableTab({
   rows: SubjectRow[];
   colorOf: (s: string) => string;
   color: string;
+  /** 22/11/2026: shown under the lessons, by day and time (edited in the Học thêm tab). */
+  extras: ExtraClass[];
   onSaved: () => Promise<void>;
 }) {
   const [draft, setDraft] = useState<TimetableData>(() => copyData(current));
   const [validFrom, setValidFrom] = useState(current?.validFrom ?? today);
   const [sel, setSel] = useState<{ day: number; session: Session; n: number } | null>(null);
   const [other, setOther] = useState("");
-  const [showPm, setShowPm] = useState(() => !!current && (current.periods.some((p) => p.session === "pm") || Object.keys(current.times.pm ?? {}).length > 0));
+  // 22/11/2026: afternoon rows only when there are afternoon lessons (or after "+ Buổi chiều").
+  const [showPm, setShowPm] = useState(() => !!current && current.periods.some((p) => p.session === "pm"));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const original = useMemo(() => new Map((current?.periods ?? []).map((p) => [cellKey(p.day, p.session, p.n), p.subject])), [current]);
   const subjectAt = (day: number, session: Session, n: number) => draft.periods.find((p) => p.day === day && p.session === session && p.n === n)?.subject ?? "";
-  const maxN = (session: Session) => Math.max(5, ...draft.periods.filter((p) => p.session === session).map((p) => p.n));
+  const maxN = (session: Session) => {
+    const ns = draft.periods.filter((p) => p.session === session).map((p) => p.n);
+    // Afternoon: up to the last afternoon lesson (An: Chiều 2–3 → rows 1–3); none yet → 5 rows.
+    return session === "pm" && ns.length > 0 ? Math.max(...ns) : Math.max(5, ...ns);
+  };
+  const extraAt = (day: number) =>
+    extras
+      .filter((e) => e.active)
+      .flatMap((e) => e.sessions.filter((x) => x.day === day).map((x) => ({ id: `${e.id}${x.start}`, subject: e.subject, start: x.start, end: x.end, place: PLACE_LABEL[e.place] })))
+      .sort((a, b) => a.start.localeCompare(b.start));
+  const sundayExtras = extraAt(7);
   const sessions: Session[] = showPm ? ["am", "pm"] : ["am"];
   const changed = (day: number, session: Session, n: number) => (original.get(cellKey(day, session, n)) ?? "") !== subjectAt(day, session, n);
   const changeCount = useMemo(() => {
@@ -220,7 +234,7 @@ function TimetableTab({
                         <input
                           aria-label={`Giờ ${session === "pm" ? "chiều " : ""}tiết ${n}`}
                           value={draft.times[session]?.[String(n)] ?? ""}
-                          placeholder="07:30-08:15"
+                          placeholder={session === "pm" ? "13:30-14:15" : "07:30-08:15"}
                           onChange={(e) => setTime(session, n, e.target.value)}
                           className={`mt-0.5 w-24 rounded-md border px-1 py-0.5 text-xs tabular-nums ${(draft.times[session]?.[String(n)] ?? "").trim() && !normTime(draft.times[session]?.[String(n)] ?? "") ? "border-[#D07A12] bg-[#FFF4E8]" : "border-ink/15"}`}
                         />
@@ -252,9 +266,27 @@ function TimetableTab({
                     </tr>
                   )),
                 )}
+                {/* 22/11/2026: the extra classes of each day, by time (edited in the Học thêm tab). */}
+                <tr>
+                  <th scope="row" className="text-left align-top font-normal">
+                    <span className="block text-xs font-bold text-[#8A4FA8]">Học thêm</span>
+                    <span className="block text-[11px] text-ink/55">sửa ở tab Học thêm</span>
+                  </th>
+                  {DAYS.map((day) => (
+                    <td key={day} className="align-top">
+                      <ExtraChips list={extraAt(day)} />
+                    </td>
+                  ))}
+                </tr>
               </tbody>
             </table>
           </div>
+          {sundayExtras.length > 0 && (
+            <p className="mt-1 text-sm">
+              <b>CN:</b>{" "}
+              {sundayExtras.map((x) => `${x.start}–${x.end} ${x.subject}`).join(" · ")}
+            </p>
+          )}
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3 text-sm text-ink/65">
             <span>Bấm một tiết để đổi môn. Tiết đã sửa có viền cam.</span>
             {!showPm && (
@@ -544,5 +576,23 @@ function SubjectsTab({ rows, color, onSaved }: { rows: SubjectRow[]; color: stri
         </p>
       )}
     </section>
+  );
+}
+
+/** Extra classes in a grid cell: purple, with the time (22/11/2026). */
+export function ExtraChips({ list }: { list: { id: string; subject: string; start: string; end: string; place?: string }[] }) {
+  if (list.length === 0) return <span className="block min-h-12 rounded-xl border-[1.5px] border-dashed border-ink/10" aria-hidden />;
+  return (
+    <span className="flex flex-col gap-1">
+      {list.map((x) => (
+        <span key={x.id} className="rounded-xl px-1.5 py-1 text-center text-[12.5px] leading-tight font-semibold" style={{ background: "#8A4FA81F", color: "#6E3A8C" }}>
+          <span className="block tabular-nums">
+            {x.start}–{x.end}
+          </span>
+          <span className="block">{x.subject}</span>
+          {x.place && <span className="block text-[11px] font-normal text-ink/60">{x.place}</span>}
+        </span>
+      ))}
+    </span>
   );
 }

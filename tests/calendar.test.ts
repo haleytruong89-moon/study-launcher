@@ -159,8 +159,13 @@ describe("buildCalendar", () => {
       uniform: { "4": "Áo trắng" },
     };
     const v = buildCalendar(range, TODAY, rows({ timetables: [tt] }));
-    expect(v.days.find((d) => d.date === "2026-11-12")?.school).toEqual({ am: ["Toán ×2", "Địa"], pm: [], uniform: "Áo trắng" }); // Thursday
-    expect(v.days.find((d) => d.date === "2026-11-09")?.school).toEqual({ am: [], pm: ["Anh"], uniform: null }); // Monday
+    const thu = v.days.find((d) => d.date === "2026-11-12")?.school;
+    expect(thu).toMatchObject({ am: ["Toán ×2", "Địa"], pm: [], uniform: "Áo trắng" }); // Thursday
+    // The grid gets every lesson in order, coloured as in Sửa lịch học (same subject, same colour).
+    expect(thu?.lessons?.map((l) => `${l.session}${l.n} ${l.subject}`)).toEqual(["am1 Toán", "am2 Toán", "am3 Địa"]);
+    expect(thu?.lessons?.[0]?.color).toBe(thu?.lessons?.[1]?.color);
+    expect(thu?.lessons?.[0]?.color).not.toBe(thu?.lessons?.[2]?.color);
+    expect(v.days.find((d) => d.date === "2026-11-09")?.school).toMatchObject({ am: [], pm: ["Anh"], uniform: null }); // Monday
     expect(v.days.find((d) => d.date === "2026-11-10")?.school).toBeNull(); // no lesson on Tuesday
     expect(v.days.find((d) => d.date === "2026-11-15")?.school).toBeNull(); // Sunday
     expect(buildCalendar(range, TODAY, rows({})).days.every((d) => d.school === null)).toBe(true); // no timetable
@@ -301,8 +306,8 @@ describe("GET /api/calendar", () => {
     expect([body.today, body.from, body.to, body.days.length]).toEqual([TODAY, "2026-10-14", "2026-12-14", 62]);
     expect(env.tracker.depth).toBe(1);
     const q = env.tracker.log.map((l) => l.what);
-    expect(q).toHaveLength(6);
-    expect(seen.map((x) => x.table).sort()).toEqual(["app_slots", "day_sessions", "extra_classes", "homework_items", "task_templates", "timetables"]);
+    expect(q).toHaveLength(7);
+    expect(seen.map((x) => x.table).sort()).toEqual(["app_slots", "day_sessions", "extra_classes", "homework_items", "subject_prefs", "task_templates", "timetables"]);
     for (const x of seen) expect(x.filters).toContain(x.table === "app_slots" ? "eq(family_id,fam-1)" : "eq(child_id,child-1)");
     expect(seen.find((x) => x.table === "homework_items")?.filters).toEqual(
       expect.arrayContaining(["is(archived_at,null)", "gte(due_date,2026-10-14)", "lte(due_date,2026-12-14)", "or(done_at.is.null,done_at.gte.2026-11-13T17:00:00.000Z)"]),

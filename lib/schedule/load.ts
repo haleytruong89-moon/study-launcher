@@ -37,7 +37,11 @@ export async function loadSchedule(db: SupabaseClient, childIds: readonly string
   const [versions, extras, pr] = await Promise.all([
     loadTimetables(db, childIds),
     loadExtras(db, childIds),
-    Promise.resolve(db.from("subject_prefs").select("child_id, subject_key, label, color, bring").in("child_id", [...childIds])).catch(() => ({ data: null, error: { message: "network" } })),
+    Promise.resolve(
+      childIds.length === 1
+        ? db.from("subject_prefs").select("child_id, subject_key, label, color, bring").eq("child_id", childIds[0]!)
+        : db.from("subject_prefs").select("child_id, subject_key, label, color, bring").in("child_id", [...childIds]),
+    ).catch(() => ({ data: null, error: { message: "network" } })),
   ]);
   if (pr.error) console.error("subject_prefs read failed", pr.error.message);
   return {

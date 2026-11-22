@@ -17,8 +17,8 @@ import { scheduledTemplates, type AppSlotInput, type DayType, type TaskTemplateI
 import { addDays, isoWeekday, localDate, weekStart } from "@/lib/time";
 import { dayMonth } from "./view";
 import { isExamPrep, taskName } from "./taskName";
-import { PLACE_LABEL, extrasOn, type ExtraClass } from "@/lib/schedule/rules";
-import { dayPlan, type TimetableVersion } from "@/lib/timetable/rules";
+import { PLACE_LABEL, extrasOn, subjectRows, type ExtraClass, type SubjectPref, type SubjectRow } from "@/lib/schedule/rules";
+import { dayPlan, subjectKey, versionOn, type TimetableVersion } from "@/lib/timetable/rules";
 
 /** At most this many dates in one answer (two months). */
 export const CALENDAR_MAX_DAYS = 62;
@@ -55,12 +55,24 @@ export interface CalendarExtra {
   place?: string;
 }
 
+/** 22/11/2026: one lesson, for the timetable-like week grid (colour as in Sửa lịch học). */
+export interface CalendarLesson {
+  session: "am" | "pm";
+  n: number;
+  subject: string;
+  /** "07:30-08:15" when the timetable has it. */
+  time: string | null;
+  color: string;
+}
+
 /** 22/11/2026: the school lessons of that day (from the timetable in force that day). */
 export interface CalendarSchool {
   /** Morning / afternoon subjects in lesson order ("Toán ×2" for back-to-back lessons). */
   am: string[];
   pm: string[];
   uniform: string | null;
+  /** Every lesson, for the grid (rows Sáng 1…5, Chiều 1…5). */
+  lessons?: CalendarLesson[];
 }
 
 export interface CalendarDay {
@@ -107,6 +119,8 @@ export interface CalendarRows {
   extras?: readonly ExtraClass[];
   /** 22/11/2026: the child's timetable versions (optional: older callers send none). */
   timetables?: readonly TimetableVersion[];
+  /** 22/11/2026: the child's subject colours (as in Sửa lịch học). */
+  prefs?: readonly SubjectPref[];
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -151,16 +165,34 @@ export function compactLessons(subjects: readonly string[]): string[] {
   return out.map((x) => (x.n > 1 ? `${x.name} ×${x.n}` : x.name));
 }
 
+/** Subject colours per date, the same as Sửa lịch học shows (cached per timetable version). */
+function subjectColours(versions: readonly TimetableVersion[], extras: readonly ExtraClass[], prefs: readonly SubjectPref[]) {
+  const cache = new Map<string, SubjectRow[]>();
+  return (date: string, subject: string): string => {
+    const v = versionOn(versions, date);
+    const id = v?.id ?? "";
+    let rows = cache.get(id);
+    if (!rows) {
+      rows = subjectRows(v, extras, prefs);
+      cache.set(id, rows);
+    }
+    return rows.find((r) => r.key === subjectKey(subject))?.color ?? "#5E6662";
+  };
+}
+
 /** 22/11/2026: the school lessons of a date, or null (no timetable, or no lesson that day). */
-export function schoolOf(versions: readonly TimetableVersion[], date: string): CalendarSchool | null {
+export function schoolOf(versions: readonly TimetableVersion[], date: string, colour: (date: string, subject: string) => string = () => "#5E6662"): CalendarSchool | null {
   if (versions.length === 0) return null;
   const plan = dayPlan(versions, date);
   if (!plan || plan.periods.length === 0) return null;
+  const lessons = [...plan.periods]
+    .sort((a, b) => (a.session === b.session ? a.n - b.n : a.session === "am" ? -1 : 1))
+    .map((p) => ({ session: p.session, n: p.n, subject: p.subject, time: p.time ?? null, color: colour(date, p.subject) }));
   const of = (session: "am" | "pm") => compactLessons(plan.periods
         .filter((p) => p.session === session)
         .sort((a, b) => a.n - b.n)
         .map((p) => p.subject));
-  return { am: of("am"), pm: of("pm"), uniform: plan.uniform || null };
+  return { am: of("am"), pm: of("pm"), uniform: plan.uniform || null, lessons };
 }
 
 /**
@@ -279,6 +311,7 @@ export function buildCalendar(range: { from: string; to: string }, today: string
   }
 
   const days: CalendarDay[] = [];
+  const colours = subjectColours(rows.timetables ?? [], rows.extras ?? [], rows.prefs ?? []);
   for (let date = range.from; date <= range.to; date = addDays(date, 1)) {
     const session = sessions.get(date);
     const disabled = new Set(session?.disabled_template_ids ?? []);
@@ -293,7 +326,7 @@ export function buildCalendar(range: { from: string; to: string }, today: string
         }),
     );
     const extras = extrasOn(rows.extras ?? [], date).map(({ extra, session: s }) => ({ subject: extra.subject, start: s.start, end: s.end, place: PLACE_LABEL[extra.place] }));
-    days.push({ date, dayType: session?.day_type ?? "normal", homework: byDue.get(date) ?? [], skills, extras, school: schoolOf(rows.timetables ?? [], date) });
+    days.push({ date, dayType: session?.day_type ?? "normal", homework: byDue.get(date) ?? [], skills, extras, school: schoolOf(rows.timetables ?? [], date, colours) });
   }
   return { today, from: range.from, to: range.to, days };
 }
