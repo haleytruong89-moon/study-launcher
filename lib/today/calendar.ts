@@ -17,7 +17,8 @@ import { scheduledTemplates, type AppSlotInput, type DayType, type TaskTemplateI
 import { addDays, isoWeekday, localDate, weekStart } from "@/lib/time";
 import { dayMonth } from "./view";
 import { isExamPrep, taskName } from "./taskName";
-import { extrasOn, type ExtraClass } from "@/lib/schedule/rules";
+import { PLACE_LABEL, extrasOn, type ExtraClass } from "@/lib/schedule/rules";
+import { dayPlan, type TimetableVersion } from "@/lib/timetable/rules";
 
 /** At most this many dates in one answer (two months). */
 export const CALENDAR_MAX_DAYS = 62;
@@ -50,6 +51,16 @@ export interface CalendarExtra {
   subject: string;
   start: string;
   end: string;
+  /** 22/11/2026: "Ở nhà" / "Trung tâm" / "Online". */
+  place?: string;
+}
+
+/** 22/11/2026: the school lessons of that day (from the timetable in force that day). */
+export interface CalendarSchool {
+  /** Morning / afternoon subjects in lesson order ("Toán ×2" for back-to-back lessons). */
+  am: string[];
+  pm: string[];
+  uniform: string | null;
 }
 
 export interface CalendarDay {
@@ -58,6 +69,8 @@ export interface CalendarDay {
   homework: CalendarHomework[];
   skills: CalendarSkill[];
   extras: CalendarExtra[];
+  /** 22/11/2026: null on a day without school lessons (or without a timetable). */
+  school: CalendarSchool | null;
 }
 
 export interface CalendarView {
@@ -92,6 +105,8 @@ export interface CalendarRows {
   slots: Pick<AppSlotInput, "id" | "kind">[];
   /** 21/11/2026: the child's active extra classes (optional: older callers send none). */
   extras?: readonly ExtraClass[];
+  /** 22/11/2026: the child's timetable versions (optional: older callers send none). */
+  timetables?: readonly TimetableVersion[];
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -124,6 +139,35 @@ export function clampRange(from: string | null, to: string | null, today: string
   if (daysBetween(f, t) > CALENDAR_MAX_DAYS - 1) t = addDays(f, CALENDAR_MAX_DAYS - 1);
   return f <= t ? { from: f, to: t } : null;
 }
+
+/** Back-to-back lessons of the same subject as one entry: ["Toán", "Toán", "Địa"] → ["Toán ×2", "Địa"]. */
+export function compactLessons(subjects: readonly string[]): string[] {
+  const out: { name: string; n: number }[] = [];
+  for (const s of subjects) {
+    const last = out.at(-1);
+    if (last && last.name === s) last.n += 1;
+    else out.push({ name: s, n: 1 });
+  }
+  return out.map((x) => (x.n > 1 ? `${x.name} ×${x.n}` : x.name));
+}
+
+/** 22/11/2026: the school lessons of a date, or null (no timetable, or no lesson that day). */
+export function schoolOf(versions: readonly TimetableVersion[], date: string): CalendarSchool | null {
+  if (versions.length === 0) return null;
+  const plan = dayPlan(versions, date);
+  if (!plan || plan.periods.length === 0) return null;
+  const of = (session: "am" | "pm") => compactLessons(plan.periods
+        .filter((p) => p.session === session)
+        .sort((a, b) => a.n - b.n)
+        .map((p) => p.subject));
+  return { am: of("am"), pm: of("pm"), uniform: plan.uniform || null };
+}
+
+/**
+ * 22/11/2026 (parent): the week the calendar opens on. On Sunday it is NEXT week (Monday …
+ * Sunday after today), so the child sees what is coming; other days, this week.
+ */
+export const calendarWeekStart = (today: string): string => (isoWeekday(today) === 7 ? addDays(today, 1) : weekStart(today));
 
 /** Monday … Sunday of the week containing `date`. */
 export function weekDates(date: string): string[] {
@@ -211,7 +255,7 @@ export function dayAria(d: CalendarDay, today: string): string {
 }
 
 /** An empty normal day (a date the answer does not cover yet). */
-export const emptyDay = (date: string): CalendarDay => ({ date, dayType: "normal", homework: [], skills: [], extras: [] });
+export const emptyDay = (date: string): CalendarDay => ({ date, dayType: "normal", homework: [], skills: [], extras: [], school: null });
 
 /** Builds every date of the range from the child's rows. */
 export function buildCalendar(range: { from: string; to: string }, today: string, rows: CalendarRows): CalendarView {
@@ -248,8 +292,8 @@ export function buildCalendar(range: { from: string; to: string }, today: string
           return isExamPrep(named) ? { id: t.id, title: taskName(named), part, exam: true } : { id: t.id, title: taskName(named), part };
         }),
     );
-    const extras = extrasOn(rows.extras ?? [], date).map(({ extra, session: s }) => ({ subject: extra.subject, start: s.start, end: s.end }));
-    days.push({ date, dayType: session?.day_type ?? "normal", homework: byDue.get(date) ?? [], skills, extras });
+    const extras = extrasOn(rows.extras ?? [], date).map(({ extra, session: s }) => ({ subject: extra.subject, start: s.start, end: s.end, place: PLACE_LABEL[extra.place] }));
+    days.push({ date, dayType: session?.day_type ?? "normal", homework: byDue.get(date) ?? [], skills, extras, school: schoolOf(rows.timetables ?? [], date) });
   }
   return { today, from: range.from, to: range.to, days };
 }

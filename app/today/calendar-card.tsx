@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { addDays } from "@/lib/time";
+import { addDays, weekStart } from "@/lib/time";
 import {
   CALENDAR_MONTHS_AHEAD,
+  calendarWeekStart,
   dayAria,
   dayTypeLabel,
   emptyDay,
@@ -19,10 +20,15 @@ import { dayMonth } from "@/lib/today/view";
 import { readCalendarMode, subscribeStorage, writeCalendarMode, type CalendarMode } from "./today-storage";
 
 /**
- * "Lịch của con" step 1 (parent decision 14/11/2026): READ ONLY, under the work panel of Góc
- * học tập. Tuần (Mon–Sun) or Tháng (Monday-first grid, this month … +2). Shows homework due,
- * exam / holiday / sick days and the tasks scheduled that weekday. Never a ✓, a done count, a
- * percentage or a chain: past days are only muted. Data: GET /api/calendar (child session, RLS).
+ * "Lịch của con" step 1 (parent decision 14/11/2026): READ ONLY, in Góc học tập. Tuần (Mon–Sun)
+ * or Tháng (Monday-first grid, this month … +2). Never a ✓, a done count, a percentage or a
+ * chain: past days are only muted. Data: GET /api/calendar (child session, RLS).
+ *
+ * 22/11/2026 (parent): a WIDE week table under the two columns. Each day shows homework due,
+ * exam / holiday / sick days, the school lessons (Sáng / Chiều) with the uniform, and the extra
+ * classes with their time. The daily skills are no longer in the week table (they are in "Thứ tự
+ * hôm nay"; a tapped day still lists them). On Sunday the table opens on NEXT week; ‹ › move
+ * one week (last week … 4 weeks ahead).
  */
 
 const DOT = {
@@ -31,6 +37,7 @@ const DOT = {
   neutral: "#9AA19C",
   skill: "#3C8C5F",
   extra: "#8A4FA8",
+  school: "#2B5D4F",
 } as const;
 
 const WEEKDAY_SHORT = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"] as const;
@@ -44,18 +51,10 @@ function Dot({ color, label }: { color: string; label?: string }) {
 
 const typeDot = (d: CalendarDay) => (d.dayType === "exam" ? DOT.exam : DOT.neutral);
 
-/** The short lines of one week column (dot + truncated text). */
-function weekLines(d: CalendarDay): { key: string; color: string; text: string }[] {
-  const label = dayTypeLabel(d.dayType);
-  return [
-    ...(label ? [{ key: "type", color: typeDot(d), text: label }] : []),
-    ...d.homework.map((h) => ({ key: `h:${h.id}`, color: DOT.homework, text: h.title })),
-    ...d.extras.map((x, i) => ({ key: `x:${i}`, color: DOT.extra, text: `${x.start} ${x.subject}` })),
-    ...d.skills.map((s) => ({ key: `s:${s.id}`, color: DOT.skill, text: s.title })),
-  ];
-}
-
-const MAX_WEEK_LINES = 3;
+/** The week table moves from last week to 4 weeks ahead of the week it opens on. */
+const WEEK_BACK = -1;
+const WEEK_AHEAD = 4;
+const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
 export function CalendarCard({
   today,
@@ -73,6 +72,7 @@ export function CalendarCard({
   const [picked, setPicked] = useState<CalendarMode | null>(null);
   const mode: CalendarMode = picked ?? stored ?? "week";
   const [monthOffset, setMonthOffset] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   // While a timed task runs the card is one line; the child may open it (until the task ends).
   const [openFor, setOpenFor] = useState<string | null>(null);
@@ -83,7 +83,12 @@ export function CalendarCard({
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
 
   const month = monthViewRange(today, monthOffset);
-  const range = mode === "week" || monthOffset === 0 ? firstRange(today) : { from: month.from, to: month.to };
+  const monday = addDays(calendarWeekStart(today), 7 * weekOffset);
+  const week = weekDates(monday);
+  const range =
+    mode === "week" ? { from: monday, to: addDays(monday, 6) } : monthOffset === 0 ? firstRange(today) : { from: month.from, to: month.to };
+  const weekLabel =
+    monday === weekStart(today) ? "Tuần này" : monday === addDays(weekStart(today), 7) ? "Tuần tới" : monday < weekStart(today) ? "Tuần trước" : `Tuần ${ddmm(monday)}`;
   const tick = Math.floor(nowMs / REFRESH_MS);
 
   useEffect(() => {
@@ -181,45 +186,49 @@ export function CalendarCard({
       </div>
 
       {mode === "week" ? (
-        <div role="group" aria-label="Tuần này" onKeyDown={onGridKey} className="grid grid-cols-7 gap-1">
-          {weekDates(today).map((date, n) => {
-            const d = dayOf(date);
-            const lines = weekLines(d);
-            const isToday = date === today;
-            const past = date < today;
-            return (
-              <button
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              aria-label="Tuần trước"
+              disabled={weekOffset <= WEEK_BACK}
+              onClick={() => {
+                setWeekOffset((o) => Math.max(WEEK_BACK, o - 1));
+                setSelected(null);
+              }}
+              className="size-11 rounded-lg border-[1.5px] border-[#D3D8D0] bg-white font-extrabold disabled:opacity-30"
+            >
+              ‹
+            </button>
+            <span className="text-[15px] font-bold" aria-live="polite">
+              {weekLabel} · {ddmm(week[0] as string)}–{ddmm(week[6] as string)}
+            </span>
+            <button
+              type="button"
+              aria-label="Tuần sau"
+              disabled={weekOffset >= WEEK_AHEAD}
+              onClick={() => {
+                setWeekOffset((o) => Math.min(WEEK_AHEAD, o + 1));
+                setSelected(null);
+              }}
+              className="size-11 rounded-lg border-[1.5px] border-[#D3D8D0] bg-white font-extrabold disabled:opacity-30"
+            >
+              ›
+            </button>
+          </div>
+          <div role="group" aria-label={weekLabel} onKeyDown={onGridKey} className="grid grid-cols-1 gap-1.5 md:grid-cols-7">
+            {week.map((date, n) => (
+              <WeekDay
                 key={date}
-                type="button"
-                data-date={date}
-                aria-label={dayAria(d, today)}
-                aria-pressed={selected === date}
-                onClick={() => setSelected(selected === date ? null : date)}
-                className={`flex min-h-[112px] min-w-0 flex-col items-stretch gap-1 rounded-xl border-2 px-1 pt-1 pb-1.5 text-left ${past ? "opacity-55" : ""}`}
-                style={{
-                  borderColor: isToday ? color : selected === date ? "#9AA19C" : "transparent",
-                  background: isToday ? soft(color) : selected === date ? "#ECEEE8" : "#F4F5F0",
-                }}
-              >
-                <span aria-hidden className="text-center text-[11px] leading-tight font-bold" style={isToday ? { color } : { color: "#4A4F4C" }}>
-                  {isToday ? "Nay" : WEEKDAY_SHORT[n]}
-                </span>
-                <span aria-hidden className="text-center text-[15px] leading-tight font-extrabold" style={isToday ? { color } : undefined}>
-                  {Number(date.slice(8, 10))}
-                </span>
-                <span aria-hidden className="flex min-w-0 flex-col gap-0.5">
-                  {lines.slice(0, MAX_WEEK_LINES).map((l) => (
-                    <span key={l.key} className="flex min-h-[14px] min-w-0 items-center justify-center gap-1 text-[11px] leading-tight sm:justify-start">
-                      <Dot color={l.color} />
-                      {/* Phones: dots only (the column is too narrow); the full list opens below on tap. */}
-                      <span className="hidden truncate sm:inline">{l.text}</span>
-                    </span>
-                  ))}
-                  {lines.length > MAX_WEEK_LINES && <span className="text-center text-[11px] leading-tight font-semibold text-ink/60 sm:pl-3 sm:text-left">+{lines.length - MAX_WEEK_LINES}</span>}
-                </span>
-              </button>
-            );
-          })}
+                d={dayOf(date)}
+                weekday={WEEKDAY_SHORT[n] as string}
+                today={today}
+                color={color}
+                selected={selected === date}
+                onPick={() => setSelected(selected === date ? null : date)}
+              />
+            ))}
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -308,12 +317,16 @@ export function CalendarCard({
         </span>
         <span aria-hidden>·</span>
         <span className="inline-flex items-center gap-1">
-          <Dot color={DOT.skill} /> Kỹ năng theo lịch
-        </span>
-        <span aria-hidden>·</span>
-        <span className="inline-flex items-center gap-1">
           <Dot color={DOT.extra} /> Học thêm
         </span>
+        {mode === "month" && (
+          <>
+            <span aria-hidden>·</span>
+            <span className="inline-flex items-center gap-1">
+              <Dot color={DOT.skill} /> Kỹ năng theo lịch (bấm vào ngày để xem)
+            </span>
+          </>
+        )}
       </p>
     </section>
   );
@@ -322,7 +335,7 @@ export function CalendarCard({
 /** Every item of one day, untruncated (same panel for Tuần and Tháng). */
 function DayDetail({ d, today, onClose }: { d: CalendarDay; today: string; onClose: () => void }) {
   const label = dayTypeLabel(d.dayType);
-  const empty = !label && d.homework.length === 0 && d.skills.length === 0 && d.extras.length === 0;
+  const empty = !label && d.homework.length === 0 && d.skills.length === 0 && d.extras.length === 0 && !d.school;
   const title = `${dayMonth(d.date)}${d.date === today ? " · Hôm nay" : ""}`;
   return (
     <div role="region" aria-label={`Việc ${dayMonth(d.date)}`} className="flex flex-col gap-2 rounded-[14px] bg-[#F4F5F0] p-3">
@@ -353,13 +366,37 @@ function DayDetail({ d, today, onClose }: { d: CalendarDay; today: string; onClo
               </span>
             </li>
           ))}
+          {d.school && (
+            <li className="flex items-start gap-2 text-sm">
+              <span className="pt-1.5">
+                <Dot color={DOT.school} />
+              </span>
+              <span className="min-w-0 break-words">
+                {d.school.am.length > 0 && (
+                  <span className="block">
+                    <b>Sáng:</b> {d.school.am.join(", ")}
+                  </span>
+                )}
+                {d.school.pm.length > 0 && (
+                  <span className="block">
+                    <b>Chiều:</b> {d.school.pm.join(", ")}
+                  </span>
+                )}
+                {d.school.uniform && <span className="block text-[13px] text-ink/70">Đồng phục: {d.school.uniform}</span>}
+              </span>
+            </li>
+          )}
           {d.extras.map((x, i) => (
             <li key={`x${i}`} className="flex items-start gap-2 text-sm">
               <span className="pt-1.5">
                 <Dot color={DOT.extra} />
               </span>
               <span className="min-w-0 break-words">
-                <b>Học thêm {x.subject}</b> <span className="text-[13px] text-ink/60">· {x.start}–{x.end}</span>
+                <b>Học thêm {x.subject}</b>{" "}
+                <span className="text-[13px] text-ink/60">
+                  · {x.start}–{x.end}
+                  {x.place ? ` · ${x.place}` : ""}
+                </span>
               </span>
             </li>
           ))}
@@ -376,5 +413,71 @@ function DayDetail({ d, today, onClose }: { d: CalendarDay; today: string; onClo
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * One day of the wide week table (22/11/2026). A button (tap → every item below the table); its
+ * name is the short summary, the visible lines are for the eye. Phones: one row per day.
+ */
+function WeekDay({ d, weekday, today, color, selected, onPick }: { d: CalendarDay; weekday: string; today: string; color: string; selected: boolean; onPick: () => void }) {
+  const isToday = d.date === today;
+  const past = d.date < today;
+  const label = dayTypeLabel(d.dayType);
+  const nothing = !label && d.homework.length === 0 && !d.school && d.extras.length === 0;
+  const line = "flex min-w-0 items-start gap-1.5 text-[12.5px] leading-snug";
+  return (
+    <button
+      type="button"
+      data-date={d.date}
+      aria-label={dayAria(d, today)}
+      aria-pressed={selected}
+      onClick={onPick}
+      className={`flex min-h-[64px] min-w-0 flex-col items-stretch gap-1.5 rounded-xl border-2 p-2 text-left md:min-h-[190px] ${past ? "opacity-55" : ""}`}
+      style={{
+        borderColor: isToday ? color : selected ? "#9AA19C" : "transparent",
+        background: isToday ? soft(color) : selected ? "#ECEEE8" : "#F4F5F0",
+      }}
+    >
+      <span aria-hidden className="flex items-baseline gap-1.5" style={isToday ? { color } : undefined}>
+        <span className="text-[13px] font-bold">{isToday ? "Hôm nay" : weekday}</span>
+        <span className="text-[15px] font-extrabold">{ddmm(d.date)}</span>
+      </span>
+      <span aria-hidden className="flex min-w-0 flex-col gap-1">
+        {label && (
+          <span className="self-start rounded-full px-2 py-px text-[11.5px] font-bold text-white" style={{ background: typeDot(d) }}>
+            {label}
+          </span>
+        )}
+        {d.homework.map((h) => (
+          <span key={h.id} className={`${line} font-semibold`} style={{ color: DOT.homework }}>
+            <span className="pt-1">
+              <Dot color={DOT.homework} />
+            </span>
+            <span className="min-w-0 break-words">Nộp: {h.title}</span>
+          </span>
+        ))}
+        {d.school && d.school.am.length > 0 && (
+          <span className={line}>
+            <span className="shrink-0 font-bold text-ink/60">Sáng</span>
+            <span className="min-w-0 break-words">{d.school.am.join(", ")}</span>
+          </span>
+        )}
+        {d.school && d.school.pm.length > 0 && (
+          <span className={line}>
+            <span className="shrink-0 font-bold text-ink/60">Chiều</span>
+            <span className="min-w-0 break-words">{d.school.pm.join(", ")}</span>
+          </span>
+        )}
+        {d.extras.map((x, i) => (
+          <span key={`x${i}`} className={`${line} font-semibold`} style={{ color: DOT.extra }}>
+            <span className="shrink-0 tabular-nums">{x.start}</span>
+            <span className="min-w-0 break-words">{x.subject}</span>
+          </span>
+        ))}
+        {d.school?.uniform && <span className="text-[11.5px] leading-snug break-words text-ink/60">👕 {d.school.uniform}</span>}
+        {nothing && <span className="text-[12.5px] text-ink/50">Không có lịch</span>}
+      </span>
+    </button>
   );
 }

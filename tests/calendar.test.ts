@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskTemplateInput } from "@/lib/dayState";
 import {
   buildCalendar,
+  calendarWeekStart,
   clampRange,
+  compactLessons,
   dayAria,
   firstRange,
   isLocalDate,
@@ -10,6 +12,7 @@ import {
   monthRange,
   monthTitle,
   monthViewRange,
+  schoolOf,
   shiftMonth,
   weekDates,
   type CalendarHomeworkRow,
@@ -134,9 +137,41 @@ describe("buildCalendar", () => {
   it("adds the day's extra classes (21/11/2026)", () => {
     const gs = { id: "g", childId: "c", subject: "Gia sư Anh", sessions: [{ day: 4, start: "20:30", end: "22:30" }], place: "online" as const, bring: "", note: "", appSlotId: null, active: true };
     const v = buildCalendar(range, TODAY, rows({ extras: [gs] }));
-    expect(v.days.find((d) => d.date === "2026-11-12")?.extras).toEqual([{ subject: "Gia sư Anh", start: "20:30", end: "22:30" }]); // Thursday
+    expect(v.days.find((d) => d.date === "2026-11-12")?.extras).toEqual([{ subject: "Gia sư Anh", start: "20:30", end: "22:30", place: "Online" }]); // Thursday
     expect(v.days.find((d) => d.date === "2026-11-11")?.extras).toEqual([]);
     expect(buildCalendar(range, TODAY, rows({ extras: [{ ...gs, active: false }] })).days.every((d) => d.extras.length === 0)).toBe(true);
+  });
+
+  it("22/11/2026: adds the school lessons of each day (Sáng / Chiều, back-to-back lessons as ×2) and the uniform", () => {
+    const tt = {
+      id: "t",
+      childId: "c",
+      validFrom: "2026-11-01",
+      label: "9A13",
+      note: "",
+      periods: [
+        { day: 4, session: "am" as const, n: 2, subject: "Toán" },
+        { day: 4, session: "am" as const, n: 1, subject: "Toán" },
+        { day: 4, session: "am" as const, n: 3, subject: "Địa" },
+        { day: 1, session: "pm" as const, n: 2, subject: "Anh" },
+      ],
+      times: {},
+      uniform: { "4": "Áo trắng" },
+    };
+    const v = buildCalendar(range, TODAY, rows({ timetables: [tt] }));
+    expect(v.days.find((d) => d.date === "2026-11-12")?.school).toEqual({ am: ["Toán ×2", "Địa"], pm: [], uniform: "Áo trắng" }); // Thursday
+    expect(v.days.find((d) => d.date === "2026-11-09")?.school).toEqual({ am: [], pm: ["Anh"], uniform: null }); // Monday
+    expect(v.days.find((d) => d.date === "2026-11-10")?.school).toBeNull(); // no lesson on Tuesday
+    expect(v.days.find((d) => d.date === "2026-11-15")?.school).toBeNull(); // Sunday
+    expect(buildCalendar(range, TODAY, rows({})).days.every((d) => d.school === null)).toBe(true); // no timetable
+    expect(schoolOf([tt], "2026-10-29")).toBeNull(); // before the version starts
+    expect(compactLessons(["Văn", "Văn", "Toán", "Văn"])).toEqual(["Văn ×2", "Toán", "Văn"]);
+  });
+
+  it("22/11/2026: the week opens on next week on Sunday, else on this week", () => {
+    expect(calendarWeekStart("2026-11-22")).toBe("2026-11-23"); // Sunday → next Monday
+    expect(calendarWeekStart("2026-11-21")).toBe("2026-11-16"); // Saturday → this Monday
+    expect(calendarWeekStart("2026-11-16")).toBe("2026-11-16");
   });
 
   it("maps exam / holiday / sick from day_sessions", () => {
@@ -266,8 +301,8 @@ describe("GET /api/calendar", () => {
     expect([body.today, body.from, body.to, body.days.length]).toEqual([TODAY, "2026-10-14", "2026-12-14", 62]);
     expect(env.tracker.depth).toBe(1);
     const q = env.tracker.log.map((l) => l.what);
-    expect(q).toHaveLength(5);
-    expect(seen.map((x) => x.table).sort()).toEqual(["app_slots", "day_sessions", "extra_classes", "homework_items", "task_templates"]);
+    expect(q).toHaveLength(6);
+    expect(seen.map((x) => x.table).sort()).toEqual(["app_slots", "day_sessions", "extra_classes", "homework_items", "task_templates", "timetables"]);
     for (const x of seen) expect(x.filters).toContain(x.table === "app_slots" ? "eq(family_id,fam-1)" : "eq(child_id,child-1)");
     expect(seen.find((x) => x.table === "homework_items")?.filters).toEqual(
       expect.arrayContaining(["is(archived_at,null)", "gte(due_date,2026-10-14)", "lte(due_date,2026-12-14)", "or(done_at.is.null,done_at.gte.2026-11-13T17:00:00.000Z)"]),
