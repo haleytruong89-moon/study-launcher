@@ -24,7 +24,9 @@ import { readCalendarMode, subscribeStorage, writeCalendarMode, type CalendarMod
  * or Tháng (Monday-first grid, this month … +2). Never a ✓, a done count, a percentage or a
  * chain: past days are only muted. Data: GET /api/calendar (child session, RLS).
  *
- * 22/11/2026 (parent): a WIDE week table under the two columns. Each day shows homework due,
+ * 22/11/2026 (parent): two forms. `compact` in Góc học tập's right column — this week as 7 small
+ * cells (due homework, special days, extra classes) and "Xem cả tuần ›"; `full` on Hôm nay — a WIDE
+ * week table (+ Tháng). In the wide table each day shows homework due,
  * exam / holiday / sick days, the school lessons (Sáng / Chiều) with the uniform, and the extra
  * classes with their time. The daily skills are no longer in the week table (they are in "Thứ tự
  * hôm nay"; a tapped day still lists them). On Sunday the table opens on NEXT week; ‹ › move
@@ -61,16 +63,23 @@ export function CalendarCard({
   color,
   runningKey,
   nowMs,
+  variant = "full",
+  onOpenFull,
 }: {
   today: string;
   color: string;
   /** Key of the timed task that is running (the card folds to one line), else null. */
   runningKey: string | null;
   nowMs: number;
+  /** 22/11/2026: "compact" in Góc học tập, "full" (the wide table) on Hôm nay. */
+  variant?: "full" | "compact";
+  /** Compact only: opens the full table on Hôm nay ("Xem cả tuần ›"). */
+  onOpenFull?: () => void;
 }) {
+  const compact = variant === "compact";
   const stored = useSyncExternalStore(subscribeStorage, readCalendarMode, () => null);
   const [picked, setPicked] = useState<CalendarMode | null>(null);
-  const mode: CalendarMode = picked ?? stored ?? "week";
+  const mode: CalendarMode = compact ? "week" : (picked ?? stored ?? "week");
   const [monthOffset, setMonthOffset] = useState(0);
   const [weekOffset, setWeekOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -163,7 +172,7 @@ export function CalendarCard({
   );
 
   return (
-    <section aria-labelledby="lich-title" className="flex min-w-0 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
+    <section id={compact ? undefined : "lich-cua-con"} aria-labelledby="lich-title" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 id="lich-title" className="text-[19px] font-bold">
           Lịch của con
@@ -178,14 +187,36 @@ export function CalendarCard({
               Thu gọn
             </button>
           )}
-          <div role="group" aria-label="Xem theo" className="flex rounded-xl bg-[#ECEEE8] p-0.5">
-            {toggleBtn("week", "Tuần")}
-            {toggleBtn("month", "Tháng")}
-          </div>
+          {compact ? (
+            onOpenFull && (
+              <button type="button" onClick={onOpenFull} className="min-h-11 rounded-xl px-3 text-sm font-bold text-white" style={{ background: color }}>
+                Xem cả tuần ›
+              </button>
+            )
+          ) : (
+            <div role="group" aria-label="Xem theo" className="flex rounded-xl bg-[#ECEEE8] p-0.5">
+              {toggleBtn("week", "Tuần")}
+              {toggleBtn("month", "Tháng")}
+            </div>
+          )}
         </div>
       </div>
 
-      {mode === "week" ? (
+      {compact ? (
+        <div role="group" aria-label={weekLabel} onKeyDown={onGridKey} className="grid grid-cols-7 gap-1">
+          {week.map((date, n) => (
+            <SmallDay
+              key={date}
+              d={dayOf(date)}
+              weekday={WEEKDAY_SHORT[n] as string}
+              today={today}
+              color={color}
+              selected={selected === date}
+              onPick={() => setSelected(selected === date ? null : date)}
+            />
+          ))}
+        </div>
+      ) : mode === "week" ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <button
@@ -477,6 +508,57 @@ function WeekDay({ d, weekday, today, color, selected, onPick }: { d: CalendarDa
         ))}
         {d.school?.uniform && <span className="text-[11.5px] leading-snug break-words text-ink/60">👕 {d.school.uniform}</span>}
         {nothing && <span className="text-[12.5px] text-ink/50">Không có lịch</span>}
+      </span>
+    </button>
+  );
+}
+
+/** The short lines of one small cell (compact card): special day, homework due, extra classes. */
+function smallLines(d: CalendarDay): { key: string; color: string; text: string }[] {
+  const label = dayTypeLabel(d.dayType);
+  return [
+    ...(label ? [{ key: "type", color: typeDot(d), text: label }] : []),
+    ...d.homework.map((h) => ({ key: `h:${h.id}`, color: DOT.homework, text: h.title })),
+    ...d.extras.map((x, i) => ({ key: `x:${i}`, color: DOT.extra, text: `${x.start} ${x.subject}` })),
+  ];
+}
+
+const MAX_SMALL_LINES = 3;
+
+/** One day of the compact card (as before 22/11/2026, without the daily skills). */
+function SmallDay({ d, weekday, today, color, selected, onPick }: { d: CalendarDay; weekday: string; today: string; color: string; selected: boolean; onPick: () => void }) {
+  const lines = smallLines(d);
+  const isToday = d.date === today;
+  const past = d.date < today;
+  return (
+    <button
+      type="button"
+      data-date={d.date}
+      aria-label={dayAria(d, today)}
+      aria-pressed={selected}
+      onClick={onPick}
+      className={`flex min-h-[92px] min-w-0 flex-col items-stretch gap-1 rounded-xl border-2 px-1 pt-1 pb-1.5 text-left ${past ? "opacity-55" : ""}`}
+      style={{
+        borderColor: isToday ? color : selected ? "#9AA19C" : "transparent",
+        background: isToday ? soft(color) : selected ? "#ECEEE8" : "#F4F5F0",
+      }}
+    >
+      <span aria-hidden className="text-center text-[11px] leading-tight font-bold" style={isToday ? { color } : { color: "#4A4F4C" }}>
+        {isToday ? "Nay" : weekday}
+      </span>
+      <span aria-hidden className="text-center text-[15px] leading-tight font-extrabold" style={isToday ? { color } : undefined}>
+        {Number(d.date.slice(8, 10))}
+      </span>
+      <span aria-hidden className="flex min-w-0 flex-col gap-0.5">
+        {lines.slice(0, MAX_SMALL_LINES).map((l) => (
+          <span key={l.key} className="flex min-h-[14px] min-w-0 items-center justify-center gap-1 text-[11px] leading-tight sm:justify-start">
+            <Dot color={l.color} />
+            {/* Phones: dots only (the column is too narrow); the full list opens below on tap. */}
+            <span className="hidden truncate sm:inline">{l.text}</span>
+          </span>
+        ))}
+        {lines.length > MAX_SMALL_LINES && <span className="text-center text-[11px] leading-tight font-semibold text-ink/60 sm:pl-3 sm:text-left">+{lines.length - MAX_SMALL_LINES}</span>}
+        {lines.length === 0 && d.school && <span className="text-center text-[11px] leading-tight text-ink/55 sm:text-left">Đi học</span>}
       </span>
     </button>
   );

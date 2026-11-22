@@ -31,6 +31,7 @@ import { useServerClock } from "./use-server-clock";
 import { useWeekDays } from "./use-week-days";
 import { useSchoolDay } from "./use-school-day";
 import { AfternoonCard } from "./afternoon-card";
+import { CalendarCard } from "./calendar-card";
 import { classPrep } from "@/lib/schedule/classPrep";
 import { useFastPoll, useTodaySync } from "./use-today-sync";
 import { useLockSoonTitle } from "./use-lock-soon-title";
@@ -90,6 +91,14 @@ export function TodayScreen({
   const { week, loadWeek } = useWeekDays(tabRef, loadWeekRef);
   // 21/11/2026: one read of the school day (timetable, Ngày mai, làm trước buổi học thêm).
   const school = useSchoolDay(!!view && view.state.part1.complete && view.state.part2.complete);
+  // 22/11/2026: "Xem cả tuần ›" in Góc học tập opens Hôm nay at the wide week table.
+  const calendarScroll = useRef(false);
+  useEffect(() => {
+    if (tab !== "hom-nay" || !calendarScroll.current) return;
+    calendarScroll.current = false;
+    const id = window.setTimeout(() => document.getElementById("lich-cua-con")?.scrollIntoView({ block: "start" }), 60);
+    return () => window.clearTimeout(id);
+  }, [tab]);
   // /api/today: refresh, 30 s poll, 1-second tick (use-today-sync.ts).
   const refresh = useTodaySync({ view, accept, loadWeek, setError, offsetRef, setNowMs });
 
@@ -442,6 +451,8 @@ export function TodayScreen({
 
             {/* 21/11/2026 (Lát 3): afternoon school, extra classes and free time today. */}
             {school.data?.has && <AfternoonCard plan={school.data.today} extras={school.data.extras ?? []} date={s.localDate} nowMs={nowMs} color={color} />}
+            {/* 22/11/2026 (parent): the wide week table (lessons, uniform, extra classes, homework due). */}
+            <CalendarCard today={s.localDate} color={color} runningKey={null} nowMs={nowMs} />
 
             <PillarCards
               s={s}
@@ -542,6 +553,10 @@ export function TodayScreen({
               school={school.data}
               prep={prep}
               onPrepSaved={school.setPrep}
+              onOpenCalendar={() => {
+                calendarScroll.current = true;
+                selectTab("hom-nay");
+              }}
             />
           </>
         )}
