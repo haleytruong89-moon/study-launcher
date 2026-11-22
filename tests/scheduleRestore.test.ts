@@ -40,5 +40,6 @@ describe("Nhật ký sentences for schedule changes", () => {
     expect(t("schedule.extra.save", { child_id: "c2", summary: "Văn: T3 13:30–15:00", before: {}, conflicts: 1 }, "c2")).toBe("An sửa học thêm Văn: T3 13:30–15:00 · trùng giờ học ở trường");
     expect(t("schedule.extra.off", { child_id: "c2", summary: "Văn: T3 15:30–17:00" }, "c2")).toBe("An bỏ học thêm Văn: T3 15:30–17:00");
     expect(t("schedule.restore", { child_id: "c2" }, "p")).toBe("Khôi phục lịch học của An về bản trước");
+    expect(t("schedule.extras.paste", { child_id: "c1", added: 4, updated: 0, off: 1 }, "p")).toBe("Bố mẹ dán học thêm cho Nguyên: thêm 4, bỏ 1 môn");
   });
 });

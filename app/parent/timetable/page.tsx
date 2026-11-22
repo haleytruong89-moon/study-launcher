@@ -1,11 +1,12 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { auditText } from "@/lib/admin/auditText";
-import { loadSchedule } from "@/lib/schedule/load";
+import { loadSchedule, loadSlotChoices } from "@/lib/schedule/load";
+import { toQuickExtras } from "@/lib/schedule/quickExtras";
 import { RESTORABLE } from "@/lib/schedule/restore";
-import { PLACE_LABEL, sessionsText } from "@/lib/schedule/rules";
 import { localDate } from "@/lib/time";
 import { ParentHeader } from "../parent-header";
 import { RestoreButton } from "./restore-button";
+import { ExtraPaste } from "./extra-paste";
 import { TimetableEditor } from "./timetable-editor";
 
 export const dynamic = "force-dynamic";
@@ -23,9 +24,11 @@ export default async function TimetablePage() {
   const { db } = await requireParentPage();
   const children = await loadChildren(db);
   const ids = children.map((c) => c.id);
-  const [{ versions, extras }, log] = await Promise.all([
+  const [{ versions, extras }, log, slots] = await Promise.all([
     loadSchedule(db, ids),
     db.from("audit_log").select("id, action, payload, actor_id, created_at").in("action", SCHEDULE_ACTIONS).order("created_at", { ascending: false }).limit(20),
+    // 22/11/2026: the apps a class can give homework on, for "Dán học thêm".
+    loadSlotChoices(db, ids),
   ]);
   const names = new Map(children.map((c) => [c.id, c.display_name]));
   const entries = (log.data ?? []) as { id: string; action: string; payload: Record<string, unknown> | null; actor_id: string | null; created_at: string }[];
@@ -36,7 +39,7 @@ export default async function TimetablePage() {
       <ParentHeader title="Thời khóa biểu" current="/parent/timetable" />
       <main className="mx-auto flex max-w-2xl flex-col gap-5 px-4 py-6">
         <p className="text-sm text-ink/75">
-          Mỗi con một thời khóa biểu, có <b>ngày áp dụng</b>. Từ 21/11 <b>con tự sửa</b> thời khóa biểu và học thêm ở Góc học tập → Lịch của con → Sửa lịch học. Mỗi lần con sửa hiện ở mục “Con sửa gần đây” bên dưới, bố mẹ khôi phục được bản trước.
+          Mỗi con một thời khóa biểu, có <b>ngày áp dụng</b>. Từ 21/11 <b>con tự sửa</b> thời khóa biểu và học thêm ở Góc học tập → Lịch của con → Sửa lịch học; bố mẹ cũng <b>dán được cả danh sách học thêm</b> ở mục của từng con. Mỗi lần con sửa hiện ở mục “Con sửa gần đây” bên dưới, bố mẹ khôi phục được bản trước.
         </p>
 
         <section aria-label="Con sửa gần đây" className="flex flex-col gap-2 rounded-2xl bg-white p-4">
@@ -62,22 +65,13 @@ export default async function TimetablePage() {
           const mine = extras.filter((x) => x.childId === c.id);
           return (
             <div key={c.id} className="flex flex-col gap-3">
-              <TimetableEditor child={{ id: c.id, name: c.display_name, color: c.color ?? "#2B5D4F" }} versions={versions.filter((v) => v.childId === c.id)} today={today} />
-              <section aria-label={`Học thêm của ${c.display_name}`} className="flex flex-col gap-1.5 rounded-2xl bg-white p-4">
-                <h3 className="font-bold">Học thêm của {c.display_name} (con tự nhập)</h3>
-                {mine.length === 0 ? (
-                  <p className="text-sm text-ink/70">Chưa có.</p>
-                ) : (
-                  <ul className="flex flex-col text-sm">
-                    {mine.map((x) => (
-                      <li key={x.id} className="border-t border-ink/10 py-1.5 first:border-t-0">
-                        <b>{x.subject}</b> · {sessionsText(x.sessions)} · {PLACE_LABEL[x.place]}
-                        {x.bring && <span className="block text-xs text-ink/65">Mang: {x.bring}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+              <TimetableEditor child={{ id: c.id, name: c.display_name, color: c.color ?? "#2B5D4F" }} versions={versions.filter((v) => v.childId === c.id)} today={today} extras={mine} />
+              <ExtraPaste
+                child={{ id: c.id, name: c.display_name }}
+                extras={mine}
+                slots={slots.get(c.id) ?? []}
+                initialText={toQuickExtras(mine, slots.get(c.id) ?? [])}
+              />
             </div>
           );
         })}

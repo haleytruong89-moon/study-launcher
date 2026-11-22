@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { ExtraClass } from "@/lib/schedule/rules";
 import { DAY_NAMES, parseQuick, toQuick, versionOn, type TimetableData, type TimetableVersion } from "@/lib/timetable/rules";
 
 const BLANK = `LỚP:
@@ -17,7 +18,18 @@ S5 11:00-11:45 |  |  |  |  |  |
 const dmy = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
 
 /** One child's timetable: versions, a preview grid, and the quick-text editor (parents only). */
-export function TimetableEditor({ child, versions, today }: { child: { id: string; name: string; color: string }; versions: TimetableVersion[]; today: string }) {
+export function TimetableEditor({
+  child,
+  versions,
+  today,
+  extras = [],
+}: {
+  child: { id: string; name: string; color: string };
+  versions: TimetableVersion[];
+  today: string;
+  /** 22/11/2026: shown under the lessons in the grid. */
+  extras?: ExtraClass[];
+}) {
   const router = useRouter();
   const current = versionOn(versions, today);
   const [open, setOpen] = useState(versions.length === 0);
@@ -102,7 +114,7 @@ export function TimetableEditor({ child, versions, today }: { child: { id: strin
             ))}
           </ul>
         )}
-        {current && !open && <Grid data={current} />}
+        {current && !open && <Grid data={current} extras={extras} />}
         {!open ? (
           <button type="button" onClick={() => setOpen(true)} className="btn self-start border-2 border-ink bg-white font-semibold">
             {versions.length > 0 ? "Sửa / thêm bản mới" : "Nhập thời khóa biểu"}
@@ -138,7 +150,7 @@ export function TimetableEditor({ child, versions, today }: { child: { id: strin
               </span>
             </label>
             {parsed.ok ? (
-              <Grid data={parsed.data} />
+              <Grid data={parsed.data} extras={extras} />
             ) : empty ? (
               <p className="text-sm text-ink/70">Chưa có môn nào. Sao chép thời khóa biểu (đoạn chữ bắt đầu bằng “LỚP:”) rồi bấm “📋 Dán thời khóa biểu đã sao chép”.</p>
             ) : (
@@ -171,11 +183,17 @@ export function TimetableEditor({ child, versions, today }: { child: { id: strin
 }
 
 /** A preview of the week: rows = periods, columns = Thứ 2 … Thứ 7; uniform under it. */
-function Grid({ data }: { data: TimetableData }) {
+function Grid({ data, extras = [] }: { data: TimetableData; extras?: ExtraClass[] }) {
+  // 22/11/2026: the child's extra classes under the lessons, by day and time.
+  const extraAt = (day: number) =>
+    extras
+      .filter((e) => e.active)
+      .flatMap((e) => e.sessions.filter((x) => x.day === day).map((x) => `${x.start}–${x.end} ${e.subject}`))
+      .sort();
   const rows = (["am", "pm"] as const).flatMap((session) =>
     [...new Set(data.periods.filter((p) => p.session === session).map((p) => p.n))].sort((a, b) => a - b).map((n) => ({ session, n })),
   );
-  const days = [1, 2, 3, 4, 5, 6].filter((d) => d < 6 || data.periods.some((p) => p.day === 6));
+  const days = [1, 2, 3, 4, 5, 6, 7].filter((d) => d < 6 || data.periods.some((p) => p.day === d) || extraAt(d).length > 0);
   return (
     <div className="flex flex-col gap-2">
       <div className="overflow-x-auto">
@@ -204,6 +222,22 @@ function Grid({ data }: { data: TimetableData }) {
                 ))}
               </tr>
             ))}
+            {extras.some((e) => e.active) && (
+              <tr className="border-t border-ink/10">
+                <th scope="row" className="p-1 text-left font-semibold whitespace-nowrap text-[#8A4FA8]">
+                  Học thêm
+                </th>
+                {days.map((d) => (
+                  <td key={d} className="p-1 align-top text-[#6E3A8C]">
+                    {extraAt(d).map((t) => (
+                      <span key={t} className="block">
+                        {t}
+                      </span>
+                    ))}
+                  </td>
+                ))}
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
