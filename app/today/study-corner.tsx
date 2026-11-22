@@ -317,8 +317,8 @@ export function StudyCorner({
           <WorkPanel item={current} ctx={ctx} tutor={tutor} prepLabel={current ? (prepLabel.get(current.key) ?? null) : null} />
         </section>
       ) : (
-        // The right column: the work panel, then "Lịch của con" (read only, 14/11/2026). The column
-        // is sticky as a whole; below lg it stacks under the list like before.
+        // The right column: the work panel and the small cards. The column is sticky as a whole;
+        // below lg it stacks under the list like before. "Lịch của con" is under both (22/11/2026).
         <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4">
           <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
             <WorkPanel item={current} ctx={ctx} tutor={tutor} prepLabel={current ? (prepLabel.get(current.key) ?? null) : null} />
@@ -335,8 +335,13 @@ export function StudyCorner({
             />
           )}
           <SchoolCard data={school} color={color} />
-          <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
           <SitesCard color={color} />
+        </div>
+      )}
+      {/* 22/11/2026 (parent): "Lịch của con" is a wide week table under both columns. */}
+      {!focus && (
+        <div className="min-w-0 lg:col-span-2">
+          <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
         </div>
       )}
     </div>

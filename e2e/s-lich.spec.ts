@@ -69,8 +69,13 @@ test("Lịch của con: Tuần / Tháng, tap a day to see the homework due and �
     const card = page.getByRole("region", { name: "Lịch của con" });
     await expect(card).toBeVisible();
     // The legend is three separate chips (no spaces between them in textContent).
-    for (const label of ["Hạn nộp bài", "Kiểm tra", "Kỹ năng theo lịch"]) await expect(card).toContainText(label);
+    for (const label of ["Hạn nộp bài", "Kiểm tra", "Học thêm"]) await expect(card).toContainText(label);
     await expect(card.getByRole("button", { name: "Tuần", exact: true })).toHaveAttribute("aria-pressed", "true");
+    // 22/11/2026: on Sunday the table opens on next week; one step back is this week.
+    if (isoWeekday(today) === 7) {
+      await expect(card.getByRole("group", { name: "Tuần tới" })).toBeVisible();
+      await card.getByRole("button", { name: "Tuần trước" }).click();
+    }
     const week = card.getByRole("group", { name: "Tuần này" });
     await expect(week.getByRole("button")).toHaveCount(7);
     await expect(week).not.toContainText("✓");
@@ -113,5 +118,64 @@ test("Lịch của con: Tuần / Tháng, tap a day to see the homework due and �
     if (homeworkId) await db.from("homework_items").delete().eq("id", homeworkId);
     if (beforeExam) await db.from("day_sessions").upsert(beforeExam, { onConflict: "child_id,local_date" });
     else await db.from("day_sessions").delete().eq("child_id", childId).eq("local_date", examDate);
+  }
+});
+
+test("22/11/2026: the wide week table shows the school lessons, the uniform and the extra classes", async ({ page }) => {
+  const db = admin();
+  const { data: kid } = await db.from("profiles").select("id, family_id").eq("role", "child").single();
+  const childId = kid?.id as string;
+  const familyId = kid?.family_id as string;
+  const today = localDate(new Date());
+  let timetableId = "";
+  try {
+    const tt = await db
+      .from("timetables")
+      .insert({
+        family_id: familyId,
+        child_id: childId,
+        valid_from: addDays(today, -7),
+        label: "LH4 E2E",
+        periods: [1, 2, 3, 4, 5, 6].flatMap((day) => [
+          { day, session: "am", n: 1, subject: "LH4 Toán" },
+          { day, session: "am", n: 2, subject: "LH4 Toán" },
+          { day, session: "pm", n: 1, subject: "LH4 Anh" },
+        ]),
+        times: {},
+        uniform: Object.fromEntries([1, 2, 3, 4, 5, 6].map((d) => [String(d), "Áo LH4"])),
+      })
+      .select("id")
+      .single();
+    expect(tt.error).toBeNull();
+    timetableId = tt.data?.id as string;
+    expect(
+      (
+        await db.from("extra_classes").insert({
+          family_id: familyId,
+          child_id: childId,
+          subject: "LH4 Cờ vua",
+          sessions: [1, 2, 3, 4, 5, 6, 7].map((day) => ({ day, start: "19:00", end: "20:00" })),
+          place: "online",
+        })
+      ).error,
+    ).toBeNull();
+
+    const { email, password } = await childLogin(childId);
+    await login(page, email, password);
+    await page.goto("/today?tab=hoc-tap");
+    const card = page.getByRole("region", { name: "Lịch của con" });
+    await card.getByRole("button", { name: "Tuần", exact: true }).click();
+    const week = card.getByRole("group", { name: isoWeekday(today) === 7 ? "Tuần tới" : "Tuần này" });
+    await expect(week).toContainText("LH4 Toán ×2");
+    await expect(week).toContainText("LH4 Anh");
+    await expect(week).toContainText("Áo LH4");
+    await expect(week).toContainText("LH4 Cờ vua");
+    // A tapped day lists everything, with the place.
+    await week.getByRole("button").first().click();
+    await expect(card.getByRole("region", { name: /^Việc / })).toContainText("Sáng: LH4 Toán ×2");
+    await expect(card.getByRole("region", { name: /^Việc / })).toContainText("19:00–20:00 · Online");
+  } finally {
+    await db.from("extra_classes").delete().eq("child_id", childId).eq("subject", "LH4 Cờ vua");
+    if (timetableId) await db.from("timetables").delete().eq("id", timetableId);
   }
 });
