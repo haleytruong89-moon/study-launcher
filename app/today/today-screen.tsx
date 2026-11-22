@@ -19,7 +19,8 @@ import { voiceFor } from "@/lib/binhYen/catalog";
 import { PillarCards } from "./pillars";
 import { FeelInvite, FeelWeek } from "./tabs";
 import { StudyCorner } from "./study-corner";
-import { WorldMini } from "./world";
+import { WorldMini, WorldNudge } from "./world";
+import { worldProgress } from "@/lib/world/areas";
 import { ComicToday } from "./comic";
 import { IconPicker, WeeklyReviewCard } from "./today-extras";
 import { ProofSheet } from "./proof-sheet";
@@ -254,6 +255,7 @@ export function TodayScreen({
   }
 
   const s = view.state;
+  const wp = worldProgress(s);
   const banner = bannerFor(s, view.rules);
   const steps = daySteps(s);
   const currentStep = steps.findIndex((st) => !st.done);
@@ -416,10 +418,11 @@ export function TodayScreen({
 
             {hasWorld && (
               <WorldMini
-                key={`${s.part1.doneAt}|${s.part2.doneAt}|${s.free.startedAt}`}
+                key={`${wp.study.done === wp.study.total}|${wp.skill.done === wp.skill.total}|${s.free.startedAt}`}
                 onOpen={() => selectTab("tuan")}
                 onWorld={setWorldKey}
-                progress={{ study: { done: s.part1.done, total: s.part1.total }, skill: { done: s.part2.done, total: s.part2.total } }}
+                // 22/11/2026: Học tập = school homework; Kỹ năng = bài bổ sung + skills.
+                progress={wp}
               />
             )}
             {/* R5: Nguyên's comic page of today (the feeling frame only when Góc bình yên is on). */}
@@ -509,6 +512,8 @@ export function TodayScreen({
           </>
         )}
 
+        {/* 22/11/2026: what the task just done did to An's world, right where she works. */}
+        {tab === "hoc-tap" && hasWorld && <WorldNudge progress={wp} onOpen={() => selectTab("tuan")} />}
         {tab === "hoc-tap" && (
           <>
             {/* 21/11/2026: the laptop opens here, so the Friday/Saturday weekly review shows here too. */}

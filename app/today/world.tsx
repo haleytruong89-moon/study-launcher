@@ -519,3 +519,71 @@ function SeedCard({ seed, area }: { seed: SeedView; area: string }) {
     </section>
   );
 }
+
+type Progress = { study: { done: number; total: number }; skill: { done: number; total: number } };
+const seedQueryOf = (p: Progress) => `hoc=${p.study.done}/${p.study.total}&kn=${p.skill.done}/${p.skill.total}`;
+
+/**
+ * 22/11/2026 (parent): right after An finishes a task, a small card shows what it did to her world
+ * — the seed sprouting ("3/5 · sắp mọc: …", a fact, the visitor) or, when the area is complete, the
+ * plant that just grew — with "Xem trong Thế giới". Shown in Góc học tập; nothing on first load.
+ */
+export function WorldNudge({ progress, onOpen }: { progress: Progress; onOpen: () => void }) {
+  const [prev, setPrev] = useState(progress);
+  const [pop, setPop] = useState<{ pillar: "study" | "skill"; query: string } | null>(null);
+  const [view, setView] = useState<MonthView | null>(null);
+  // A task got done since the last render: remember which area (render-time update, no effect).
+  if (progress.study.done !== prev.study.done || progress.skill.done !== prev.skill.done) {
+    const pillar = progress.study.done > prev.study.done ? "study" : progress.skill.done > prev.skill.done ? "skill" : null;
+    setPrev(progress);
+    if (pillar) {
+      setPop({ pillar, query: seedQueryOf(progress) });
+      setView(null);
+    }
+  }
+  useEffect(() => {
+    if (!pop) return;
+    let live = true;
+    fetch(`/api/world?${pop.query}`, { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<WorldResponse>) : null))
+      .then((d) => {
+        if (live && d && "album" in d) setView(d.view);
+      })
+      .catch(() => undefined);
+    const hide = window.setTimeout(() => live && setPop(null), 20_000);
+    return () => {
+      live = false;
+      window.clearTimeout(hide);
+    };
+  }, [pop]);
+  if (!pop || !view) return null;
+  const area = view.world.pillarNames[pop.pillar];
+  const seed = (view.seeds ?? []).find((x) => x.pillar === pop.pillar) ?? null;
+  const grown = seed ? null : (view.things.find((t) => t.today && t.pillar === pop.pillar) ?? null);
+  if (!seed && !grown) return null;
+  return (
+    <div role="status" className="fixed right-4 bottom-20 z-40 flex w-[min(92vw,380px)] flex-col gap-2 rounded-2xl border-2 border-[#2B5D4F] bg-white p-3 shadow-lg lg:bottom-6">
+      {seed ? (
+        <SeedCard seed={seed} area={area} />
+      ) : (
+        grown && (
+          <p className="flex items-center gap-2 rounded-xl bg-[#F3F7EE] p-3 text-sm font-bold">
+            <WorldIcon icon={grown.icon} size={30} />
+            <span>
+              🌳 {grown.name} vừa mọc ở {area.toLowerCase()}!
+              {grown.facts[0] && <span className="block font-normal">✨ {grown.facts[0]}</span>}
+            </span>
+          </p>
+        )
+      )}
+      <div className="flex gap-2">
+        <button type="button" onClick={onOpen} className="btn flex-1 bg-[#2B5D4F] text-sm text-white">
+          Xem trong {view.world.name} →
+        </button>
+        <button type="button" onClick={() => setPop(null)} className="btn border-[1.5px] border-ink/20 bg-white text-sm">
+          Đóng
+        </button>
+      </div>
+    </div>
+  );
+}
