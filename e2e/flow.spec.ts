@@ -2655,7 +2655,8 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
     await grown.getByRole("button", { name: /^Chò ngàn năm, đã mọc \d+ lần/ }).click();
     await expect(k.getByRole("region", { name: "Chò ngàn năm" }).getByRole("button", { name: "Đã làm ✓" })).toBeVisible();
-    expect((await rows()).length).toBe(expected.size);
+    // Stored once, never twice: the same rows as before the reload (today's two may differ, see above).
+    expect((await rows()).filter((r) => !todays(`${r.local_date}|${r.pillar}`)).length).toBe([...expected].filter((k) => !todays(k)).length);
     // Deleting the visit does not take the flower away (BINH_YEN D2).
     await db.from("by_checkins").delete().eq("client_run_id", runId);
     await k.reload();
