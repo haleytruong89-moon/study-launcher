@@ -53,6 +53,7 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "schedule.extra.save": "homework",
   "schedule.extra.off": "homework",
   "schedule.restore": "homework",
+  "schedule.extras.paste": "homework",
 
   "request.create": "request",
   "request.15m": "request",
@@ -257,6 +258,14 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
       return say(`${kid} bỏ học thêm ${short(p.summary, 80) ?? ""}`.trim());
     case "schedule.restore":
       return say(`Khôi phục lịch học của ${kid} về bản trước`);
+    case "schedule.extras.paste": {
+      const parts = [
+        (num(p.added) ?? 0) > 0 ? `thêm ${num(p.added)}` : "",
+        (num(p.updated) ?? 0) > 0 ? `cập nhật ${num(p.updated)}` : "",
+        (num(p.off) ?? 0) > 0 ? `bỏ ${num(p.off)}` : "",
+      ].filter(Boolean);
+      return say(`Bố mẹ dán học thêm cho ${kid}${parts.length > 0 ? `: ${parts.join(", ")} môn` : ""}`);
+    }
 
     // --- Xin mở trang / trang học --------------------------------------------
     case "request.create":

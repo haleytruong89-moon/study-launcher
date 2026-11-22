@@ -52,3 +52,23 @@ export async function loadSchedule(db: SupabaseClient, childIds: readonly string
     })),
   };
 }
+
+/**
+ * The apps a class can give homework on, per child (22/11/2026, "Dán học thêm"): active,
+ * non-placeholder app slots meant for that child or for the whole family. Read with the caller's
+ * session (RLS: a parent sees the family). A read error gives none.
+ */
+export async function loadSlotChoices(db: SupabaseClient, childIds: readonly string[]): Promise<Map<string, { id: string; label: string }[]>> {
+  const out = new Map<string, { id: string; label: string }[]>(childIds.map((id) => [id, []]));
+  try {
+    const { data, error } = await db.from("app_slots").select("id, label, kind, child_id").eq("active", true);
+    if (error) return out;
+    for (const r of (data ?? []) as { id: string; label: string; kind: string; child_id: string | null }[]) {
+      if (r.kind === "placeholder") continue;
+      for (const id of childIds) if (r.child_id === null || r.child_id === id) out.get(id)!.push({ id: r.id, label: r.label });
+    }
+  } catch {
+    /* none */
+  }
+  return out;
+}
