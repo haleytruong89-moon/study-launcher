@@ -76,6 +76,7 @@ export function StudyCorner({
   school = null,
   prep = [],
   onPrepSaved,
+  onOpenCalendar,
 }: {
   s: DayState;
   view: TodayView;
@@ -97,6 +98,8 @@ export function StudyCorner({
   /** 21/11/2026: tasks to finish before the next extra class (classPrep). */
   prep?: ClassPrep[];
   onPrepSaved?: (ticked: string[], doneAt: string | null) => void;
+  /** 22/11/2026: "Xem cả tuần ›" → the wide week table on Hôm nay. */
+  onOpenCalendar?: () => void;
 }) {
   // 16/11/2026: the saved-up free minutes, visible where the child works.
   const meter = freeMeter(s, freeMinutes, ctx.nowMs);
@@ -317,8 +320,8 @@ export function StudyCorner({
           <WorkPanel item={current} ctx={ctx} tutor={tutor} prepLabel={current ? (prepLabel.get(current.key) ?? null) : null} />
         </section>
       ) : (
-        // The right column: the work panel and the small cards. The column is sticky as a whole;
-        // below lg it stacks under the list like before. "Lịch của con" is under both (22/11/2026).
+        // The right column: the work panel, then the small cards ("Lịch của con" short form). The
+        // column is sticky as a whole; below lg it stacks under the list like before.
         <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4">
           <section id="ht-work" aria-label="Khung làm bài" className="flex min-w-0 scroll-mt-4 flex-col gap-3 rounded-[20px] border border-ink/10 bg-white p-[18px]">
             <WorkPanel item={current} ctx={ctx} tutor={tutor} prepLabel={current ? (prepLabel.get(current.key) ?? null) : null} />
@@ -335,13 +338,16 @@ export function StudyCorner({
             />
           )}
           <SchoolCard data={school} color={color} />
+          {/* 22/11/2026 (parent): short here; the wide week table is on Hôm nay ("Xem cả tuần ›"). */}
+          <CalendarCard
+            variant="compact"
+            today={s.localDate}
+            color={color}
+            runningKey={ctx.runningTimed?.key ?? null}
+            nowMs={ctx.nowMs}
+            onOpenFull={onOpenCalendar}
+          />
           <SitesCard color={color} />
-        </div>
-      )}
-      {/* 22/11/2026 (parent): "Lịch của con" is a wide week table under both columns. */}
-      {!focus && (
-        <div className="min-w-0 lg:col-span-2">
-          <CalendarCard today={s.localDate} color={color} runningKey={ctx.runningTimed?.key ?? null} nowMs={ctx.nowMs} />
         </div>
       )}
     </div>

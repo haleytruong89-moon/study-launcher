@@ -64,7 +64,8 @@ test("Lịch của con: Tuần / Tháng, tap a day to see the homework due and �
 
     const { email, password } = await childLogin(childId);
     await login(page, email, password);
-    await page.goto("/today?tab=hoc-tap");
+    // 22/11/2026: the full calendar (Tuần table + Tháng) is on Hôm nay.
+    await page.goto("/today?tab=hom-nay");
 
     const card = page.getByRole("region", { name: "Lịch của con" });
     await expect(card).toBeVisible();
@@ -162,7 +163,12 @@ test("22/11/2026: the wide week table shows the school lessons, the uniform and 
 
     const { email, password } = await childLogin(childId);
     await login(page, email, password);
+    // Góc học tập has the short card; "Xem cả tuần ›" opens the wide table on Hôm nay.
     await page.goto("/today?tab=hoc-tap");
+    const small = page.getByRole("region", { name: "Lịch của con" });
+    await expect(small.getByRole("link", { name: "Sửa lịch học" })).toBeVisible();
+    await small.getByRole("button", { name: "Xem cả tuần ›" }).click();
+    await expect(page).toHaveURL(/tab=hom-nay/);
     const card = page.getByRole("region", { name: "Lịch của con" });
     await card.getByRole("button", { name: "Tuần", exact: true }).click();
     const week = card.getByRole("group", { name: isoWeekday(today) === 7 ? "Tuần tới" : "Tuần này" });
