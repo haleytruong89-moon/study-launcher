@@ -390,4 +390,37 @@ begin
   end;
 end $$;
 reset role;
+-- D32 (0027): the child flags a tutor message; server writes, browsers only read.
+insert into tutor.message_feedback (family_id, child_id, problem_id, message_id, kind, comment)
+  select family_id, child_id, problem_id, id, 'gave_answer', 'cô nói luôn đáp số'
+  from tutor.messages where child_id = '00000000-0000-0000-0000-0000000000c1' limit 1;
+do $$
+begin
+  begin
+    insert into tutor.message_feedback (family_id, child_id, problem_id, message_id, kind)
+      select family_id, child_id, problem_id, id, 'bad' from tutor.messages limit 1;
+    raise exception 'FAIL: bad feedback kind accepted';
+  exception when check_violation then null;
+  end;
+  raise notice 'ok: D32 message_feedback kinds';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('D32: child1 sees own message feedback', (select count(*) from tutor.message_feedback), 1);
+do $$
+begin
+  begin
+    insert into tutor.message_feedback (family_id, child_id, problem_id, message_id, kind)
+      select family_id, child_id, problem_id, id, 'wrong' from tutor.messages limit 1;
+    raise exception 'FAIL: child inserted feedback directly';
+  exception when insufficient_privilege then raise notice 'ok: D32: child writes feedback only through the server';
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c2', false);
+select test_helpers.expect_count('D32: child2 cannot see sibling feedback', (select count(*) from tutor.message_feedback), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('D32: parent sees family feedback', (select count(*) from tutor.message_feedback), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('D32: other family sees nothing', (select count(*) from tutor.message_feedback), 0);
+reset role;
 do $$ begin raise notice 'TUTOR RLS OK'; end $$;
