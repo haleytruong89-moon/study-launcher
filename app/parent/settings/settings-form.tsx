@@ -28,6 +28,9 @@ export interface SettingsValues {
   breakMaxPerDay?: number;
   /** 0014: each finished run counts at most this many minutes towards the break bank. */
   breakRunCapMinutes?: number;
+  /** 0028 night lock "HH:MM". Absent until that migration has run (then the section is hidden). */
+  nightLockFrom?: string;
+  nightLockTo?: string;
 }
 
 type Group = "time" | "homework" | "trust" | "photos" | "by" | "break";
@@ -78,7 +81,7 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
     () =>
       Object.fromEntries(
         Object.entries(initial)
-          .filter(([k]) => k !== "allowLocalFiles" && k !== "byEnabled" && k !== "breakTiers")
+          .filter(([k]) => k !== "allowLocalFiles" && k !== "byEnabled" && k !== "breakTiers" && k !== "nightLockFrom" && k !== "nightLockTo")
           .map(([k, v]) => [k, String(v)]),
       ) as Record<keyof SettingsValues, string>,
   );
@@ -86,6 +89,8 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
   const [localFiles, setLocalFiles] = useState(initial.allowLocalFiles === true);
   const [byOn, setByOn] = useState(initial.byEnabled === true);
   const [bedtimes, setBedtimes] = useState<Record<string, string>>(() => Object.fromEntries(kids.map((k) => [k.id, k.bedtime])));
+  const [nightFrom, setNightFrom] = useState(initial.nightLockFrom ?? "00:00");
+  const [nightTo, setNightTo] = useState(initial.nightLockTo ?? "07:00");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -109,6 +114,7 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
       ...(initial.allowLocalFiles === undefined ? {} : { allowLocalFiles: localFiles }),
       ...(initial.byEnabled === undefined ? {} : { byEnabled: byOn }),
       ...(initial.breakTiers === undefined ? {} : { breakTiers }),
+      ...(initial.nightLockFrom === undefined ? {} : { nightLockFrom: nightFrom, nightLockTo: nightTo }),
       bedtimes: kids.map((k) => ({ childId: k.id, bedtime: bedtimes[k.id] })),
     });
     setBusy(false);
@@ -249,6 +255,23 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
               {f.hint && <span className="text-xs font-normal text-ink/60">{f.hint}</span>}
             </label>
           ))}
+        </fieldset>
+      )}
+
+      {initial.nightLockFrom !== undefined && (
+        <fieldset className="flex flex-col gap-3 rounded-2xl bg-white p-4">
+          <legend className="float-left mb-1 text-xs font-extrabold tracking-wider text-ink/70 uppercase">Khóa đêm (cả nhà)</legend>
+          <p className="text-xs text-ink/65">
+            Trong giờ này máy của con không mở được: không giờ tự do, không nghỉ, không thẻ miễn, kể cả chế độ Tin tưởng hay ngày ốm. Trang học vẫn mở. Bố mẹ bấm “Mở máy” thì vẫn mở. Hai giờ bằng nhau = tắt khóa đêm.
+          </p>
+          <label className="flex items-center justify-between gap-3 text-sm font-semibold">
+            Từ
+            <input type="time" required value={nightFrom} onChange={(e) => setNightFrom(e.target.value)} className="min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal" />
+          </label>
+          <label className="flex items-center justify-between gap-3 text-sm font-semibold">
+            Đến
+            <input type="time" required value={nightTo} onChange={(e) => setNightTo(e.target.value)} className="min-h-11 rounded-xl border border-ink/30 bg-white px-3 text-base font-normal" />
+          </label>
         </fieldset>
       )}
 

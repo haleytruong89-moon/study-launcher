@@ -10,7 +10,9 @@ export type Status =
   | "OPEN_SICK"
   | "OPEN_TRUST"
   | "OPEN_OVERRIDE"
-  | "LOCK_OVERRIDE";
+  | "LOCK_OVERRIDE"
+  /** 23/11/2026: inside the night lock (family_settings night_lock_from/to); study pages only. */
+  | "LOCK_NIGHT";
 
 export type DayType = "normal" | "sick" | "exam" | "holiday";
 export type TrustMode = "lock" | "trust";
@@ -35,6 +37,9 @@ export interface FamilySettingsInput {
   breakMaxPerDay?: number;
   /** R8b (0014, parent 09/11): one finished run adds at most this much focus. Absent or outside 30-600 -> 180. */
   breakRunCapMinutes?: number;
+  /** 0027 (parent 23/11/2026): the night lock, "HH:MM[:SS]". Absent/malformed -> 00:00 / 07:00; equal -> off. */
+  nightLockFrom?: string;
+  nightLockTo?: string;
 }
 
 /** A day_breaks row (R8b, 0014). */
@@ -269,6 +274,8 @@ export interface TrustView {
 
 export interface DayState {
   status: Status;
+  /** 23/11/2026: the night lock ("HH:MM"); `until` is set while it is on. Optional for old fixtures. */
+  night?: { active: boolean; until: string | null; from: string; to: string };
   /** The extension only needs this + the allowlist. */
   open: boolean;
   /** ISO; when the current open window ends (always <= next 00:00). null when locked. */

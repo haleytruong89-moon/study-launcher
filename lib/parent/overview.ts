@@ -119,6 +119,7 @@ export function parentPill(state: DayState): string {
     OPEN_TRUST: "Tin tưởng",
     OPEN_OVERRIDE: "Bố mẹ đang mở máy",
     LOCK_OVERRIDE: "Bố mẹ đang khóa máy",
+    LOCK_NIGHT: "Giờ đi ngủ · chỉ trang học",
   };
   if (state.status === "LOCK_P1") {
     const all = [...state.part1.items, ...state.part2.items];

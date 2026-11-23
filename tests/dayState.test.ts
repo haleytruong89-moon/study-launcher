@@ -2094,3 +2094,64 @@ describe("R8b break bank", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Night lock (parent decision 23/11/2026): nothing opens 00:00–07:00, study pages stay open,
+// a parent's open override wins.
+// ---------------------------------------------------------------------------
+describe("night lock", () => {
+  const NIGHT = { ...SETTINGS, nightLockFrom: "00:00:00", nightLockTo: "07:00:00" };
+  const night = (patch: Partial<DayInput> = {}) => input({ settings: NIGHT, ...patch });
+
+  it("an empty day at 00:30 cannot start free time (LOCK_NIGHT, study pages only); at 07:00 it can", () => {
+    const s = computeDayState(night(), vn(`${TODAY} 00:30`));
+    expect(s.status).toBe("LOCK_NIGHT");
+    expect(s.open).toBe(false);
+    expect(s.free.canStart).toBe(false);
+    expect(s.passAvailable).toBe(false);
+    expect(s.night).toEqual({ active: true, until: iso(`${TODAY} 07:00`), from: "00:00", to: "07:00" });
+    const morning = computeDayState(night(), vn(`${TODAY} 07:00`));
+    expect(morning.status).toBe("FREE_READY");
+    expect(morning.night?.active).toBe(false);
+  });
+
+  it("trust mode and a sick day do not open the laptop at night", () => {
+    expect(computeDayState(normalDay({ settings: NIGHT, trustMode: "trust" }), vn(`${TODAY} 02:00`)).status).toBe("LOCK_NIGHT");
+    expect(computeDayState(normalDay({ settings: NIGHT, sessions: [session(TODAY, { dayType: "sick" })] }), vn(`${TODAY} 02:00`)).status).toBe("LOCK_NIGHT");
+    expect(computeDayState(normalDay({ settings: NIGHT, trustMode: "trust" }), vn(`${TODAY} 08:00`)).status).toBe("OPEN_TRUST");
+  });
+
+  it("both parts done at night: free time does not start until the night is over", () => {
+    const d = normalDay({ settings: NIGHT, sessions: [session(TODAY, { part1DoneAt: iso(`${TODAY} 01:00`), part2DoneAt: iso(`${TODAY} 01:10`) })] });
+    const s = computeDayState(d, vn(`${TODAY} 01:20`));
+    expect(s.status).toBe("LOCK_NIGHT");
+    expect(s.milestones.freeStartedAt).toBeUndefined();
+    expect(computeDayState(d, vn(`${TODAY} 07:05`)).status).toBe("FREE");
+  });
+
+  it("a parent's open override still opens the laptop at night", () => {
+    const s = computeDayState(night({ overrides: [ov("open_until", `${TODAY} 01:30`, `${TODAY} 00:40`)] }), vn(`${TODAY} 01:00`));
+    expect(s.status).toBe("OPEN_OVERRIDE");
+    expect(s.openUntil).toBe(iso(`${TODAY} 01:30`));
+  });
+
+  it("a night starting before 00:00 (22:30 → 07:00) ends free time at 22:30", () => {
+    const s = computeDayState(
+      normalDay({ settings: { ...NIGHT, nightLockFrom: "22:30", nightLockTo: "07:00" }, sessions: [session(TODAY, { ...P1_DONE, part2DoneAt: iso(`${TODAY} 22:00`), freeStartedAt: iso(`${TODAY} 22:00`) })] }),
+      vn(`${TODAY} 22:10`),
+    );
+    expect(s.status).toBe("FREE");
+    expect(s.openUntil).toBe(iso(`${TODAY} 22:30`));
+    const later = computeDayState(
+      normalDay({ settings: { ...NIGHT, nightLockFrom: "22:30", nightLockTo: "07:00" }, sessions: [session(TODAY, { ...P1_DONE, part2DoneAt: iso(`${TODAY} 22:00`), freeStartedAt: iso(`${TODAY} 22:00`) })] }),
+      vn(`${TODAY} 22:40`),
+    );
+    expect(later.status).toBe("LOCK_NIGHT");
+    expect(later.night?.until).toBe(iso(`${TOMORROW} 07:00`));
+  });
+
+  it("from = to turns the night lock off; no night settings at all = off (old inputs)", () => {
+    expect(computeDayState(input({ settings: { ...SETTINGS, nightLockFrom: "00:00", nightLockTo: "00:00" } }), vn(`${TODAY} 00:30`)).status).toBe("FREE_READY");
+    expect(computeDayState(input(), vn(`${TODAY} 00:30`)).status).toBe("FREE_READY");
+  });
+});

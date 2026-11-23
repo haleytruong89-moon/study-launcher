@@ -58,6 +58,9 @@ describe("loadDay family_settings", () => {
       breakTiers: [{ focus: 45, rest: 10 }],
       breakMaxPerDay: 6,
       breakRunCapMinutes: 180,
+      // 0027: the fixture row has no night columns → the defaults (the night lock is always on).
+      nightLockFrom: "00:00",
+      nightLockTo: "07:00",
     });
     expect(out.input.breaks).toHaveLength(1);
     // The history window still follows trust_up_weeks (Monday 09/11 - 3 weeks).
@@ -68,7 +71,8 @@ describe("loadDay family_settings", () => {
   it("builds the same day through the fallback reads", async () => {
     const { out: one } = await load(day);
     const { out: three, tracker } = await load((q) => (merged(q) ? missing("x") : day(q)));
-    expect(tracker.log.filter((l) => l.what.includes("family_settings"))).toHaveLength(4);
+    // main · 0002 · 0014 · 0027 (night lock)
+    expect(tracker.log.filter((l) => l.what.includes("family_settings"))).toHaveLength(5);
     expect(three).toEqual(one);
   });
 

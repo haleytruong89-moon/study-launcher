@@ -3,6 +3,7 @@
 import { addDays, isoWeekday, localDate, nextMidnight, weekStart } from "../time";
 import { breakBank, breakMaxOf, breakRunCapOf, breakTiersOf, focusIntervals, MIN_BREAK_MINUTES, nextTierOf, type BankResult, type Interval } from "./breakBank";
 import { iso, MINUTE_MS, startOfLocalDayMs, toMs, toMsOrNull } from "./instants";
+import { nightWindow } from "./night";
 import { openOverrideIntervals, pickOverride } from "./overrides";
 import type { FocusRun } from "./runs";
 import { countPart, homeworkViews, isEarly, pickQuota, templateViews } from "./tasks";
@@ -88,11 +89,14 @@ export function computeDayState(input: DayInput, now: Date): DayState {
 
   // --- Overrides: the NEWEST override of today supersedes all older ones ---
   const override = pickOverride(input.overrides, today, nowMs);
+  // Night lock (parent decision 23/11/2026): nothing opens inside it, a parent's open override wins.
+  const night = nightWindow(settings.nightLockFrom, settings.nightLockTo, startOfLocalDayMs(today), nowMs);
 
   // Free time starts once BOTH parts are done (once per day). Parent decision 14/10/2026:
   // while a parent LOCK override is in effect, free time is deferred and starts at the
   // first read after the lock ends (still clipped at 00:00).
-  if (bothDone && session.freeStartedAt === null && override?.kind !== "lock_until") {
+  // 23/11/2026: never inside the night lock either (it starts at the first read after it).
+  if (bothDone && session.freeStartedAt === null && override?.kind !== "lock_until" && !night.active) {
     session.freeStartedAt = nowIso;
     milestones.freeStartedAt = nowIso;
   }
@@ -229,7 +233,14 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   } else {
     status = "FREE_READY"; // row 10: empty day, waiting for "Bắt đầu giờ tự do"
   }
+  // 23/11/2026: inside the night lock, what would open the laptop stays locked (study pages only);
+  // a parent's open override (above) still wins. Before it, open windows stop where it starts.
+  if (night.active && (status === "OPEN_TRUST" || status === "OPEN_SICK" || status === "FREE" || status === "BREAK" || status === "FREE_READY")) {
+    status = "LOCK_NIGHT";
+    openUntilMs = null;
+  }
   if (openUntilMs !== null) openUntilMs = Math.min(openUntilMs, midnightMs);
+  if (openUntilMs !== null && night.nextStartMs !== null && status !== "OPEN_OVERRIDE") openUntilMs = Math.min(openUntilMs, night.nextStartMs);
   const open = openUntilMs !== null;
 
   // R8a: a running "Làm thêm" run counts as timed too (no break while it runs).
@@ -242,7 +253,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
   if (bank !== null) {
     // R8b rule 1: the bank decides; no "part done" condition any more (parent 08/11/2026).
     breakCanStart =
-      bank.bankMinutes >= MIN_BREAK_MINUTES && takenToday < maxPerDay && session.freeStartedAt === null && lockedStatus && !timedRunning;
+      bank.bankMinutes >= MIN_BREAK_MINUTES && takenToday < maxPerDay && session.freeStartedAt === null && lockedStatus && !timedRunning && !night.active;
     if (breakRunning) breakState = "running";
     else if (breakCanStart) breakState = "offer";
     else breakState = takenToday > 0 && takenToday >= maxPerDay ? "done" : "not_yet";
@@ -252,7 +263,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     const breakTaken = session.breakSkipped || legacyStartMs !== null;
     const partDoneForBreak = part1Done || session.part2DoneAt !== null;
     breakCanStart =
-      !breakTaken && settings.breakMinutes > 0 && session.freeStartedAt === null && partDoneForBreak && lockedStatus && !timedRunning;
+      !breakTaken && settings.breakMinutes > 0 && session.freeStartedAt === null && partDoneForBreak && lockedStatus && !timedRunning && !night.active;
     if (legacyStartMs !== null) breakState = breakRunning ? "running" : "done";
     else if (session.breakSkipped) breakState = "skipped";
     else breakState = breakCanStart ? "offer" : "not_yet";
@@ -273,7 +284,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
     (s) => s.localDate >= monday && s.localDate <= today && s.passUsedAt !== null,
   ).length;
   const passesLeft = Math.max(0, settings.passesPerWeek - passesUsed);
-  const passAvailable = passesLeft > 0 && session.freeStartedAt === null;
+  const passAvailable = passesLeft > 0 && session.freeStartedAt === null && !night.active;
 
   // --- Week strip + trust progress (today uses the applied session) ---
   const byDate = new Map<string, DaySessionInput>();
@@ -309,6 +320,7 @@ export function computeDayState(input: DayInput, now: Date): DayState {
 
   return {
     status,
+    night: { active: night.active, until: night.untilMs === null ? null : iso(night.untilMs), from: night.from, to: night.to },
     open,
     openUntil: openUntilMs === null ? null : iso(openUntilMs),
     localDate: today,
