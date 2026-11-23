@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { AnimalView, MonthView, ThingView } from "@/lib/world/rules";
 import type { Move, Pillar } from "@/lib/world/types";
 import { WorldIcon } from "../world-icon";
@@ -59,6 +60,28 @@ export function animalPlace(a: Pick<AnimalView, "slot" | "move">, scene: SceneKe
 /** Size grows with how many times it grew (1 → 4+), never shrinks. */
 const sizeOf = (count: number) => 30 + Math.min(count - 1, 3) * 6;
 
+/**
+ * 22/11/2026 (parent: "chò là cây to mà lại bé tí"): the BIG TREES of the forest (its Học tập layer,
+ * "Cây lớn") are drawn as trees, not as small icons: 1.6× the size, scaled with the scene's width
+ * (a phone-sized scene = 1×, a laptop-wide one up to 2.2×). Other things keep their size.
+ */
+const BIG_LAYER: Partial<Record<SceneKey, Pillar>> = { rung: "study" };
+export const bigSizeOf = (count: number, sceneWidth: number) => Math.round(sizeOf(count) * 1.6 * Math.min(2.2, Math.max(1, sceneWidth / 360)));
+
+/** The scene's width in px (0 before the first layout). */
+function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
+  const ref = useRef<T | null>(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => setW(entries[0]?.contentRect.width ?? 0));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w];
+}
+
 export type Picked = { kind: "thing"; key: string } | { kind: "animal"; key: string };
 
 export { ROWS, sceneOf };
@@ -69,8 +92,11 @@ export function LivingScene({ view, picked, onPick, compact = false }: { view: M
   const motion = scene ? THING_MOTION[scene] : "";
   const dark = view.world.dark;
   const live = !compact && !!onPick;
+  const [box, width] = useWidth<HTMLDivElement>();
+  const bigLayer = scene ? BIG_LAYER[scene] : undefined;
   return (
     <div
+      ref={box}
       className={`relative w-full overflow-hidden rounded-2xl border-4 ${compact ? "aspect-[16/7]" : "aspect-[4/3] sm:aspect-[16/9]"}`}
       style={{ borderColor: dark ? "#4B5390" : "#BFE6DF", background: `linear-gradient(${view.world.sky} 55%, ${view.world.land} 55%)` }}
     >
@@ -92,7 +118,18 @@ export function LivingScene({ view, picked, onPick, compact = false }: { view: M
                 delay={(i % 5) * 0.4}
                 onClick={() => onPick?.({ kind: "thing", key: t.key })}
               >
-                <WorldIcon icon={t.icon} size={compact ? Math.round(sizeOf(t.count) * 0.75) : sizeOf(t.count)} />
+                <WorldIcon
+                  icon={t.icon}
+                  size={
+                    t.pillar === bigLayer
+                      ? compact
+                        ? Math.round(sizeOf(t.count) * 1.2)
+                        : bigSizeOf(t.count, width)
+                      : compact
+                        ? Math.round(sizeOf(t.count) * 0.75)
+                        : sizeOf(t.count)
+                  }
+                />
               </Spot>
             </li>
           );

@@ -2614,16 +2614,21 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     const { data: days } = await db.from("day_sessions").select("local_date, part1_done_at, part2_done_at, free_started_at").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
     const { data: visits } = await db.from("by_checkins").select("local_date").eq("child_id", childId).gte("local_date", first).lte("local_date", today);
     const expected = new Set<string>();
+    // 22/11/2026: from that day Học tập = school homework, Kỹ năng = bổ sung + skills. Past days
+    // read the milestones (Kỹ năng only with both parts); today's two come from the day state, so
+    // they are left out of this comparison.
+    const todays = (key: string) => key === `${today}|study` || key === `${today}|skill`;
     for (const d of days ?? []) {
+      const newRule = d.local_date >= "2026-11-22";
       if (d.part1_done_at) expected.add(`${d.local_date}|study`);
-      if (d.part2_done_at) expected.add(`${d.local_date}|skill`);
+      if (d.part2_done_at && (!newRule || d.part1_done_at)) expected.add(`${d.local_date}|skill`);
       if (d.free_started_at) expected.add(`${d.local_date}|play`);
     }
     for (const v of visits ?? []) expected.add(`${v.local_date}|feel`);
 
     const rows = async () => (await db.from("world_items").select("local_date, pillar, world_key, item_key, variant").eq("child_id", childId).gte("local_date", first)).data ?? [];
     const planted = await rows();
-    expect(new Set(planted.map((r) => `${r.local_date}|${r.pillar}`))).toEqual(expected);
+    expect(new Set(planted.map((r) => `${r.local_date}|${r.pillar}`).filter((k) => !todays(k)))).toEqual(new Set([...expected].filter((k) => !todays(k))));
     expect(planted.every((r) => r.world_key === "rung")).toBe(true);
     // The first Học tập plant of the month is always the first big tree.
     const firstStudy = planted.filter((r) => r.pillar === "study").sort((a, b) => (a.local_date < b.local_date ? -1 : 1))[0];
@@ -2650,7 +2655,8 @@ test("R4a thế giới: An's tab shows what grew from finished areas (stored onc
     await expect(k.getByRole("heading", { name: /Rừng nhiệt đới · tháng/ })).toBeVisible();
     await grown.getByRole("button", { name: /^Chò ngàn năm, đã mọc \d+ lần/ }).click();
     await expect(k.getByRole("region", { name: "Chò ngàn năm" }).getByRole("button", { name: "Đã làm ✓" })).toBeVisible();
-    expect((await rows()).length).toBe(expected.size);
+    // Stored once, never twice: the same rows as before the reload (today's two may differ, see above).
+    expect((await rows()).filter((r) => !todays(`${r.local_date}|${r.pillar}`)).length).toBe([...expected].filter((k) => !todays(k)).length);
     // Deleting the visit does not take the flower away (BINH_YEN D2).
     await db.from("by_checkins").delete().eq("client_run_id", runId);
     await k.reload();

@@ -7,6 +7,8 @@ import { attachmentViews, type AttachmentView } from "@/lib/files";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { localDate } from "@/lib/time";
+import { worldAreasDone } from "@/lib/world/areas";
+import { plantTodayQuietly } from "@/lib/world/service";
 import { loadDay } from "./load";
 import type { RunReport } from "./report";
 import { reviewWeek, type WeekStats } from "./week";
@@ -160,7 +162,11 @@ export async function readToday(
 export async function todayView(ctx: ChildContext, now = new Date()): Promise<TodayView> {
   const date = localDate(now);
   const [{ state, homeworkPhotos, rules, weekly }, first, plan, icon, reviewed, asked, reports] = await Promise.all([
-    readToday(ctx, now).then(async (read) => ({ ...read, weekly: await readWeekly(ctx, now, read.bedtime) })),
+    readToday(ctx, now).then(async (read) => {
+      // 22/11/2026: An's world plants Học tập (school homework) / Kỹ năng (bổ sung + skills) right away.
+      const [weekly] = await Promise.all([readWeekly(ctx, now, read.bedtime), plantTodayQuietly(ctx, date, worldAreasDone(read.state), now)]);
+      return { ...read, weekly };
+    }),
     ctx.db.from("day_sessions").select("local_date").eq("child_id", ctx.childId).order("local_date").limit(1).maybeSingle(),
     readPlan(ctx, date),
     readIcon(ctx),

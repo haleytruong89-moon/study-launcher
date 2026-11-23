@@ -39,8 +39,22 @@ async function knownWorlds(childId: string): Promise<Known> {
   return { planted, picked };
 }
 
+/**
+ * Parent decision 22/11/2026: from this day, Học tập = school homework only and Kỹ năng = bài bổ
+ * sung + skills (`lib/world/areas.ts`). Today's areas come from the day state (`todayAreas`); a
+ * later day not planted in time falls back to the milestones, read so they never over-grow:
+ * Học tập with Phần 1 done (homework is in it), Kỹ năng only with both parts done.
+ */
+export const WORLD_AREAS_FROM = "2026-11-22";
+
 /** Finished areas from the durable records (milestones, finished Góc bình yên visits) between two dates. */
-async function finishedAreas(ctx: ChildContext, from: string, to: string): Promise<{ date: string; pillar: Pillar }[]> {
+async function finishedAreas(
+  ctx: ChildContext,
+  from: string,
+  to: string,
+  today: string,
+  todayAreas: readonly ("study" | "skill")[] | null,
+): Promise<{ date: string; pillar: Pillar }[]> {
   const admin = createAdminClient();
   const [days, visits] = await Promise.all([
     admin.from("day_sessions").select("local_date, part1_done_at, part2_done_at, free_started_at").eq("child_id", ctx.childId).gte("local_date", from).lte("local_date", to),
@@ -51,8 +65,15 @@ async function finishedAreas(ctx: ChildContext, from: string, to: string): Promi
   for (const d of days.data ?? []) {
     const date = d.local_date as string;
     // Học tập / Kỹ năng only with a real milestone (a pass day grows only Vui chơi).
-    if (d.part1_done_at) out.push({ date, pillar: "study" });
-    if (d.part2_done_at) out.push({ date, pillar: "skill" });
+    if (date === today && todayAreas) {
+      for (const pillar of todayAreas) out.push({ date, pillar });
+    } else if (date >= WORLD_AREAS_FROM) {
+      if (d.part1_done_at) out.push({ date, pillar: "study" });
+      if (d.part1_done_at && d.part2_done_at) out.push({ date, pillar: "skill" });
+    } else {
+      if (d.part1_done_at) out.push({ date, pillar: "study" });
+      if (d.part2_done_at) out.push({ date, pillar: "skill" });
+    }
     if (d.free_started_at) out.push({ date, pillar: "play" });
   }
   if (visits.error) throw new Error(`world.visits: ${visits.error.message}`);
@@ -65,7 +86,7 @@ async function finishedAreas(ctx: ChildContext, from: string, to: string): Promi
  * last day of a month is not lost). Idempotent: one row per (child, day, area) by the unique key;
  * two syncs at once simply skip the same rows.
  */
-export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<WorldRow[]> {
+export async function syncWorld(ctx: ChildContext, now = new Date(), todayAreas: readonly ("study" | "skill")[] | null = null): Promise<WorldRow[]> {
   if (!hasWorld(ctx)) return [];
   const today = localDate(now);
   const month = monthOf(today);
@@ -86,7 +107,7 @@ export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<Wo
     // No world yet (An has not picked this month's, or no new pack): plant later from the stored milestones.
     const worldKey = worldOfMonth(m, m === month, known).key;
     if (!worldKey) continue;
-    const add = plantsToAdd(await finishedAreas(ctx, firstDay(m), to), (existing ?? []) as WorldRow[], worldKey);
+    const add = plantsToAdd(await finishedAreas(ctx, firstDay(m), to, today, todayAreas), (existing ?? []) as WorldRow[], worldKey);
     if (add.length === 0) continue;
     // Only the rows this call inserted come back (a sync at the same time keeps its own).
     const { data: ins, error: insErr } = await admin
@@ -101,9 +122,9 @@ export async function syncWorld(ctx: ChildContext, now = new Date()): Promise<Wo
 }
 
 /** Best effort (e.g. right after a Góc bình yên visit): a failure only waits for the next sync (null). */
-export async function syncWorldQuietly(ctx: ChildContext, now = new Date()): Promise<WorldRow[] | null> {
+export async function syncWorldQuietly(ctx: ChildContext, now = new Date(), todayAreas: readonly ("study" | "skill")[] | null = null): Promise<WorldRow[] | null> {
   try {
-    return await syncWorld(ctx, now);
+    return await syncWorld(ctx, now, todayAreas);
   } catch (e) {
     console.error("world.sync", e instanceof Error ? e.message : e);
     return null;
@@ -255,5 +276,23 @@ export async function feelGrowthToday(ctx: ChildContext, planted: readonly World
   } catch (e) {
     console.error("world.growth", e instanceof Error ? e.message : e);
     return null;
+  }
+}
+
+/**
+ * 22/11/2026: plant today's Học tập / Kỹ năng as soon as the day state says the area is done (read
+ * on every /api/today), so the plant is stored even if An never opens the world that day. One
+ * cheap read when nothing is new; best effort.
+ */
+export async function plantTodayQuietly(ctx: ChildContext, today: string, areas: readonly ("study" | "skill")[], now = new Date()): Promise<void> {
+  if (!hasWorld(ctx) || areas.length === 0) return;
+  try {
+    const { data, error } = await createAdminClient().from("world_items").select("pillar").eq("child_id", ctx.childId).eq("local_date", today);
+    if (error) return;
+    const have = new Set((data ?? []).map((r) => r.pillar as string));
+    if (areas.every((a) => have.has(a))) return;
+    await syncWorld(ctx, now, areas);
+  } catch (e) {
+    console.error("world.plantToday", e instanceof Error ? e.message : e);
   }
 }
