@@ -172,6 +172,10 @@ test("S1 settings: parent changes family rules and a bedtime; they persist and a
   await expect(breaks.getByLabel("Bậc 4: phút nghỉ")).toHaveValue("60");
   await expect(breaks.getByLabel("Số lần nghỉ tối đa mỗi ngày")).toHaveValue("6");
   await expect(page.getByLabel("Nghỉ giữa 2 phần (phút)")).toHaveCount(0);
+  // 0028: the night lock shows 00:00 → 07:00 and survives a save.
+  const night = page.getByRole("group", { name: "Khóa đêm (cả nhà)" });
+  await expect(night.getByLabel("Từ", { exact: true })).toHaveValue("00:00");
+  await expect(night.getByLabel("Đến", { exact: true })).toHaveValue("07:00");
 
   // Out-of-range values are refused by the server, not just the browser.
   const status = await page.evaluate(async () => {

@@ -81,7 +81,7 @@ export function SettingsForm({ initial, kids, byPushReady = false }: { initial: 
     () =>
       Object.fromEntries(
         Object.entries(initial)
-          .filter(([k]) => k !== "allowLocalFiles" && k !== "byEnabled" && k !== "breakTiers")
+          .filter(([k]) => k !== "allowLocalFiles" && k !== "byEnabled" && k !== "breakTiers" && k !== "nightLockFrom" && k !== "nightLockTo")
           .map(([k, v]) => [k, String(v)]),
       ) as Record<keyof SettingsValues, string>,
   );
