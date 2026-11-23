@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DEFAULT_NIGHT_FROM, DEFAULT_NIGHT_TO } from "@/lib/dayState/night";
 import type {
   AppSlotInput,
   BreakRowInput,
@@ -70,6 +71,13 @@ const MAIN_COLUMNS =
 const MIN_UPCOMING_COLUMN = "homework_min_upcoming";
 /** 0014 (R8b break bank) */
 const BANK_COLUMNS = "break_tiers, break_max_per_day, break_run_cap_minutes";
+/** 0027 (night lock, parent 23/11/2026) */
+const NIGHT_COLUMNS = "night_lock_from, night_lock_to";
+
+interface NightRow {
+  night_lock_from?: string | null;
+  night_lock_to?: string | null;
+}
 
 interface BankRow {
   break_tiers: unknown;
@@ -77,8 +85,11 @@ interface BankRow {
   break_run_cap_minutes: number;
 }
 
-function settingsInput(row: SettingsRow, bank: Res<BankRow>): FamilySettingsInput {
+function settingsInput(row: SettingsRow, bank: Res<BankRow>, night: NightRow | null): FamilySettingsInput {
   return {
+    // Always passed (the family's values, or the defaults before 0027): computeDayState locks at night.
+    nightLockFrom: night?.night_lock_from ?? DEFAULT_NIGHT_FROM,
+    nightLockTo: night?.night_lock_to ?? DEFAULT_NIGHT_TO,
     breakMinutes: row.break_minutes,
     freeMinutes: row.free_minutes,
     extraMinMinutes: row.extra_min_minutes,
@@ -107,12 +118,12 @@ function settingsInput(row: SettingsRow, bank: Res<BankRow>): FamilySettingsInpu
 async function readSettings(db: SupabaseClient, familyId: string): Promise<{ settings: FamilySettingsInput; bankOk: boolean }> {
   const all = (await db
     .from("family_settings")
-    .select(`${MAIN_COLUMNS}, ${MIN_UPCOMING_COLUMN}, ${BANK_COLUMNS}`)
+    .select(`${MAIN_COLUMNS}, ${MIN_UPCOMING_COLUMN}, ${BANK_COLUMNS}, ${NIGHT_COLUMNS}`)
     .eq("family_id", familyId)
-    .single()) as Res<SettingsRow & BankRow>;
+    .single()) as Res<SettingsRow & BankRow & NightRow>;
   if (!all.error || !notMigratedYet(all.error)) {
     const row = must(all, "family_settings");
-    return { settings: settingsInput(row, { data: row, error: null }), bankOk: true };
+    return { settings: settingsInput(row, { data: row, error: null }, row), bankOk: true };
   }
 
   const settingsRow = must((await db.from("family_settings").select(MAIN_COLUMNS).eq("family_id", familyId).single()) as Res<SettingsRow>, "family_settings");
@@ -127,7 +138,9 @@ async function readSettings(db: SupabaseClient, familyId: string): Promise<{ set
   // single break (`breaks: null` in loadDay); any other error throws (fail-closed).
   const bankSettings = (await db.from("family_settings").select(BANK_COLUMNS).eq("family_id", familyId).maybeSingle()) as Res<BankRow>;
   if (bankSettings.error && !notMigratedYet(bankSettings.error)) throw new Error(`loadDay: family_settings (0014): ${bankSettings.error.message}`);
-  return { settings: settingsInput(settingsRow, bankSettings), bankOk: !bankSettings.error };
+  // 0027: the night lock; missing (before the migration) -> the defaults.
+  const night = (await db.from("family_settings").select(NIGHT_COLUMNS).eq("family_id", familyId).maybeSingle()) as Res<NightRow>;
+  return { settings: settingsInput(settingsRow, bankSettings, night.error ? null : night.data), bankOk: !bankSettings.error };
 }
 
 /**

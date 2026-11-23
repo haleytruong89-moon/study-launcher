@@ -44,6 +44,10 @@ export default async function SettingsPage() {
                         typeof s.break_run_cap_minutes === "number" ? s.break_run_cap_minutes : DEFAULT_BREAK_RUN_CAP_MINUTES,
                     }
                   : {}),
+                // 0028: the night lock (Postgres "HH:MM:SS" → "HH:MM").
+                ...(typeof s.night_lock_from === "string" && typeof s.night_lock_to === "string"
+                  ? { nightLockFrom: s.night_lock_from.slice(0, 5), nightLockTo: s.night_lock_to.slice(0, 5) }
+                  : {}),
                 ...(typeof s.by_enabled === "boolean"
                   ? { byEnabled: s.by_enabled, byStudyMinutes: s.by_study_minutes }
                   : {}),

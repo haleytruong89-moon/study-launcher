@@ -1462,5 +1462,10 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1
 select test_helpers.expect_count('parentB sees only family B prep checks (1)', (select count(*) from public.prep_checks), 1);
 
 reset role;
+-- 0028 night lock: defaults 00:00 → 07:00 for every family.
+select test_helpers.expect_count('family_settings night lock defaults (00:00 → 07:00)',
+  (select count(*) from public.family_settings where night_lock_from = '00:00'::time and night_lock_to = '07:00'::time), 2);
+
+reset role;
 drop schema test_helpers cascade;
 \echo RLS OK

@@ -137,6 +137,9 @@ export const settingsSchema = z
     breakMaxPerDay: int(0, 12).optional(),
     /** 0014: minutes one finished run counts at most (same range as the DB check). */
     breakRunCapMinutes: int(30, 600).optional(),
+    /** 0028 (parent 23/11/2026): the night lock; equal = off. Optional (absent before 0028). */
+    nightLockFrom: timeOfDay.optional(),
+    nightLockTo: timeOfDay.optional(),
     bedtimes: z.array(z.object({ childId: z.uuid(), bedtime: timeOfDay })).max(10).default([]),
   })
   .refine((s) => s.trustDownPct <= s.trustUpPct, {
@@ -166,6 +169,8 @@ export function settingsToRow(s: SettingsInput) {
     ...(s.breakTiers === undefined ? {} : { break_tiers: s.breakTiers }),
     ...(s.breakMaxPerDay === undefined ? {} : { break_max_per_day: s.breakMaxPerDay }),
     ...(s.breakRunCapMinutes === undefined ? {} : { break_run_cap_minutes: s.breakRunCapMinutes }),
+    ...(s.nightLockFrom === undefined ? {} : { night_lock_from: s.nightLockFrom }),
+    ...(s.nightLockTo === undefined ? {} : { night_lock_to: s.nightLockTo }),
   };
 }
 

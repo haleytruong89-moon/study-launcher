@@ -113,6 +113,7 @@ type Status =
   | 'LOCK_P1' | 'BREAK' | 'LOCK_P2' | 'FREE_READY'
   | 'FREE' | 'LOCK_END'          // luồng thường (R1 07/11/2026: bỏ BREAK_OFFER, thêm FREE_READY)
   | 'OPEN_SICK' | 'OPEN_TRUST' | 'OPEN_OVERRIDE' | 'LOCK_OVERRIDE'
+  | 'LOCK_NIGHT'                 // 23/11/2026: khóa đêm (family_settings.night_lock_from/to)
 
 interface DayState {
   status: Status
@@ -143,6 +144,7 @@ Thứ tự ưu tiên (đánh giá từ trên xuống, gặp điều kiện đún
 | 8 | Phần 1 chưa xong | LOCK_P1 | ✗ |
 | 9 | Phần 1 xong, Phần 2 chưa xong | LOCK_P2 | ✗ |
 | 10 | Cả hai phần **không có việc nào**, con chưa bấm "Bắt đầu giờ tự do" (chốt 07/11/2026) | FREE_READY | ✗ |
+| — | **Khóa đêm** (bố mẹ chốt 23/11/2026): trong `night_lock_from`–`night_lock_to` (mặc định 00:00–07:00, cả nhà; hai giờ bằng nhau = tắt), kết quả của hàng 3, 4, 6, 7, 10 đổi thành LOCK_NIGHT. Hàng 1–2 (bố mẹ mở/khóa) vẫn thắng. Trong giờ này: không tự bắt đầu giờ tự do (bắt đầu ở lần đọc đầu tiên sau khóa đêm), không nghỉ, không thẻ miễn. Cửa sổ mở trước khóa đêm bị cắt lúc khóa đêm bắt đầu. Trang học vẫn mở | LOCK_NIGHT | ✗ |
 
 Quy tắc phụ:
 - **Mọi `openUntil` bị cắt ở 00:00** giờ VN của ngày hiện tại (nghỉ, giờ tự do, override).

@@ -233,3 +233,13 @@ describe("homework files", () => {
     expect(storedExt({ name: "virus.exe", type: "application/x-msdownload" })).toBeNull();
   });
 });
+
+describe("settings: night lock (0028)", () => {
+  it("stores HH:MM and leaves the columns out when absent", async () => {
+    const { settingsSchema, settingsToRow } = await import("@/lib/admin/schemas");
+    const base = { breakMinutes: 10, freeMinutes: 45, extraMinMinutes: 20, skillMinMinutes: 20, passesPerWeek: 1, trustUpPct: 90, trustUpWeeks: 3, trustDownPct: 70, homeworkLookaheadDays: 7, photoRetentionDays: 30 };
+    expect(settingsToRow(settingsSchema.parse({ ...base, nightLockFrom: "00:00", nightLockTo: "07:00:00" }))).toMatchObject({ night_lock_from: "00:00", night_lock_to: "07:00" });
+    expect(settingsToRow(settingsSchema.parse(base))).not.toHaveProperty("night_lock_from");
+    expect(settingsSchema.safeParse({ ...base, nightLockFrom: "25:00", nightLockTo: "07:00" }).success).toBe(false);
+  });
+});

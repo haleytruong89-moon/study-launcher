@@ -88,7 +88,8 @@ describe("round trips per request", () => {
     env.answer = before0014;
     const res = await today();
     expect(res.status).toBe(200);
-    expect(env.tracker.log.filter((l) => l.what.includes("family_settings"))).toHaveLength(4);
+    // main · 0002 · 0014 · 0027 (night lock)
+    expect(env.tracker.log.filter((l) => l.what.includes("family_settings"))).toHaveLength(5);
   });
 
   it("GET /api/ext/state: 3 sequential trips (was 7), last_seen written after the answer", async () => {

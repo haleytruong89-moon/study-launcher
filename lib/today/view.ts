@@ -127,6 +127,12 @@ export function bannerFor(state: DayState, rules: { breakMinutes: number; freeMi
       };
     case "LOCK_OVERRIDE":
       return { title: "Bố mẹ đang tạm khóa máy", sub: "Chỉ mở trang học. Việc hôm nay vẫn làm bình thường.", tone: "dark" };
+    case "LOCK_NIGHT":
+      return {
+        title: "Giờ đi ngủ rồi",
+        sub: `Máy chỉ mở trang học đến ${state.night?.to ?? "07:00"}. Ngủ ngon, mai gặp lại!`,
+        tone: "dark",
+      };
   }
 }
 
@@ -423,6 +429,8 @@ export function statusPill(state: DayState, nowMs: number): { label: string; ope
       return { label: "Hết giờ tự do · mai gặp lại", open: false };
     case "LOCK_OVERRIDE":
       return { label: "Bố mẹ tạm khóa · chỉ mở trang học", open: false };
+    case "LOCK_NIGHT":
+      return { label: `Giờ đi ngủ · mở lại ${state.night?.to ?? "07:00"}`, open: false };
     default:
       return { label: "Giờ học · máy chỉ mở trang học", open: false };
   }
