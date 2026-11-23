@@ -988,6 +988,8 @@ test("S4b: parent code -> child pairs -> device token reads the state; revoke st
   await page.goto("/parent/devices");
   const { data: kid } = await admin().from("profiles").select("id").eq("role", "child").single();
   const card = page.getByRole("region", { name: /^Hạnh Nguyên/ });
+  // 23/11/2026: each child's last 7 days of free time, folded under the laptops.
+  await expect(card.getByText("Giờ tự do 7 ngày qua")).toBeVisible();
   await card.getByRole("button", { name: "Tạo mã ghép máy" }).click();
   const code = ((await card.getByLabel(/^Mã \d/).textContent()) ?? "").trim();
   expect(code).toMatch(/^\d{6}$/);
