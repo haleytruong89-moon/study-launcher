@@ -1,4 +1,6 @@
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
+import { loadFreeHistory } from "@/lib/parent/freeHistoryLoad";
+import { localDate } from "@/lib/time";
 import { EXT_MISSING, EXT_UNINSTALLED, lastExtEvents, whenText, type AuditEventRow } from "@/lib/ext/alerts";
 import { ParentHeader } from "../parent-header";
 import { PairCodeButton, RevokeButton } from "./device-buttons";
@@ -28,7 +30,7 @@ function seen(iso: string | null, now: number): string {
 
 /** "Thiết bị" (S4b): pair a child's laptop with a 6-digit code, see / remove laptops. */
 export default async function DevicesPage() {
-  const { db } = await requireParentPage();
+  const { db, me } = await requireParentPage();
   const children = await loadChildren(db);
   const { data } = await db
     .from("extension_devices")
@@ -47,6 +49,8 @@ export default async function DevicesPage() {
   const last = lastExtEvents((events ?? []) as AuditEventRow[]);
   // eslint-disable-next-line react-hooks/purity -- server component, rendered per request
   const now = Date.now();
+  // 23/11/2026 (bố báo laptop An không khóa sau 45'): each day's free-time window, for checking.
+  const history = await loadFreeHistory(db, me.profile.family_id, children, localDate(new Date(now)), new Date(now));
 
   return (
     <>
@@ -129,6 +133,31 @@ export default async function DevicesPage() {
                 </p>
               )}
               <PairCodeButton childId={c.id} name={c.display_name} />
+              <details className="rounded-xl bg-bg px-3 py-2 text-sm">
+                <summary className="flex min-h-11 cursor-pointer items-center font-semibold">Giờ tự do 7 ngày qua</summary>
+                {(history.get(c.id) ?? []).length === 0 ? (
+                  <p className="pb-2 text-xs text-ink/70">7 ngày qua chưa có giờ tự do nào và bố mẹ không mở/khóa tay.</p>
+                ) : (
+                  <ul aria-label={`Giờ tự do 7 ngày qua của ${c.display_name}`} className="flex flex-col pb-1">
+                    {(history.get(c.id) ?? []).map((d) => (
+                      <li key={d.date} className="flex flex-col border-t border-ink/10 py-2 first:border-t-0">
+                        <span className="font-semibold">
+                          {d.label} · {d.window ? `Giờ tự do ${d.window}` : "Không có giờ tự do"}
+                        </span>
+                        {d.detail && <span className="text-xs text-ink/70">{d.detail}</span>}
+                        {d.overrides.map((o, i) => (
+                          <span key={i} className="text-xs text-ink/70">
+                            {o}
+                          </span>
+                        ))}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="pb-2 text-xs text-ink/65">
+                  Sau giờ kết thúc, máy chủ trả lời “khóa”; laptop khóa trong khoảng 30 giây nếu extension đang bật. Giờ tự do dài hơn 45′ là do phút nghỉ để dành được cộng thêm. Nếu đến giờ mà máy vẫn mở: xem “Lần cuối hỏi máy chủ” ở trên (extension tắt hoặc con dùng trình duyệt khác thì máy chủ không thấy).
+                </p>
+              </details>
             </section>
           );
         })}
