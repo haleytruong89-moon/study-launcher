@@ -18,6 +18,8 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body: typeof data.body === "string" ? data.body : "",
       tag: typeof data.tag === "string" ? data.tag : undefined,
+      // 25/11/2026: a newer push with the same tag (a reminder) alerts again, not a silent swap.
+      renotify: typeof data.tag === "string",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
       data: { url },

@@ -1110,8 +1110,10 @@ test("S3d: the child asks to open a blocked site; the parent opens it for 15 min
   await box.getByRole("button", { name: "Xin bố mẹ mở trang này" }).click();
   await expect(box.getByRole("status")).toContainText("Đang chờ bố mẹ");
   // Asking again for the same site does not create a second request.
-  const again = await child.evaluate(async () => (await (await fetch("/api/unlock-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: "https://notebooklm.google.com/other" }) })).json()) as { status: string });
+  const again = await child.evaluate(async () => (await (await fetch("/api/unlock-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: "https://notebooklm.google.com/other" }) })).json()) as { status: string; reminded?: boolean });
   expect(again.status).toBe("pending");
+  // Asked a moment ago: the parents are not told twice within 10 minutes (25/11/2026).
+  expect(again.reminded).toBe(false);
   const { count } = await admin().from("unlock_requests").select("id", { count: "exact", head: true }).eq("domain", "notebooklm.google.com");
   expect(count).toBe(1);
 
@@ -1131,6 +1133,30 @@ test("S3d: the child asks to open a blocked site; the parent opens it for 15 min
   expect(mins).toBeLessThanOrEqual(15.1);
 
   await expect(box.getByText("Bố mẹ đã mở trang này 15 phút.")).toBeVisible({ timeout: 15_000 });
+  await childCtx.close();
+});
+
+test("25/11: a very long address is cut to its page, not refused; signing in comes back to the lock page", async ({ browser }) => {
+  // Signed out: the lock page asks to sign in and the link comes back to this lock page.
+  const outCtx = await browser.newContext();
+  const out = await outCtx.newPage();
+  await out.goto("/blocked?u=https://docs.example.org/a?b=1");
+  const outBox = out.getByRole("region", { name: "Xin mở trang" });
+  await outBox.getByRole("button", { name: "Xin bố mẹ mở trang này" }).click();
+  const link = outBox.getByRole("link", { name: "Đăng nhập" });
+  await expect(link).toHaveAttribute("href", `/login?next=${encodeURIComponent("/blocked?u=https://docs.example.org/a?b=1")}`);
+  await outCtx.close();
+
+  const childCtx = await browser.newContext();
+  const child = await childCtx.newPage();
+  await login(child, childEmail, childPassword);
+  const long = `https://longlink.example.com/path/page?q=${"x".repeat(2600)}`;
+  await child.goto(`/blocked?u=${long}`);
+  const box = child.getByRole("region", { name: "Xin mở trang" });
+  await box.getByRole("button", { name: "Xin bố mẹ mở trang này" }).click();
+  await expect(box.getByRole("status")).toContainText("Đang chờ bố mẹ");
+  const { data } = await admin().from("unlock_requests").select("url").eq("domain", "longlink.example.com").single();
+  expect(data?.url).toBe("https://longlink.example.com/path/page");
   await childCtx.close();
 });
 

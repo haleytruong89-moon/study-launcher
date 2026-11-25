@@ -17,8 +17,14 @@ export const allowAddSchema = z.object({
   duration: z.enum(["permanent", "today"]),
 });
 
+/** The longest address kept for a request (the column has no limit; this keeps rows small). */
+export const REQUEST_URL_MAX = 2000;
+
 export const requestSchema = z.object({
-  url: z.string().trim().min(1).max(2000),
+  // 25/11/2026: links from Google / Facebook can be longer than 2000 characters; they are no
+  // longer refused (the child saw "Thiếu địa chỉ trang." and the request never reached the
+  // parents), they are cut to their page by requestUrl below.
+  url: z.string().trim().min(1).max(32_000),
   reason: z
     .string()
     .trim()
@@ -101,3 +107,20 @@ export const GROUP_LABEL: Record<string, string> = {
   child_pick: "Con chọn",
   request: "Con xin mở",
 };
+
+/**
+ * The address stored for a "Xin mở trang" request: the address itself when it is short
+ * enough, else only its site + page path (query and #fragment dropped). Null when it is not an
+ * http(s) address.
+ */
+export function requestUrl(raw: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+  if (raw.length <= REQUEST_URL_MAX) return raw;
+  return `${u.origin}${u.pathname}`.slice(0, REQUEST_URL_MAX);
+}
