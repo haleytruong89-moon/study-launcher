@@ -215,10 +215,10 @@ describe("R6b living scene data", () => {
 describe("R6b scene placement (360 px screen: scene 288×216)", () => {
   // Worst case: every thing grown to its biggest (48 px), visitors 44 px.
   it("a visitor never covers more than 30% of a thing", async () => {
-    const { thingPlace, animalPlace, ROWS } = await import("@/app/today/world-scene");
+    const { thingPlace, animalPlace, ROWS, FRUIT_ROW, fruitShiftPx } = await import("@/app/today/world-scene");
     for (const key of ["rung", "bien", "vu_tru", "nui_lua"] as const) {
       const w = WORLDS[key]!;
-      const things = PILLARS.flatMap((p) => w.things[p].map((_, slot) => thingPlace({ pillar: p, slot }, ROWS[key])));
+      const things = PILLARS.flatMap((p) => w.things[p].map((_, slot) => thingPlace({ pillar: p, slot }, ROWS[key], FRUIT_ROW[key] === p ? (-fruitShiftPx(288) / 288) * 100 : 0)));
       for (const [slot, a] of w.animals.entries()) {
         const at = animalPlace({ slot, move: moveOf(w, a) }, key);
         for (const t of things) {
@@ -318,6 +318,46 @@ describe("recentGrowth (R7b: Nhìn lại 7 ngày)", () => {
     expect(recentDayLabel("2026-11-30", "2026-12-03")).toBe("Thứ Hai 30/11");
     expect(recentDayLabel("2026-11-05", "2026-11-08")).toBe("Thứ Năm 05/11");
     expect(recentDayLabel("2026-11-08", "2026-11-10")).toBe("Chủ nhật 08/11");
+  });
+});
+
+describe("big trees stand on the ground (25/11/2026)", () => {
+  it("their trunk ends on the ground, below the middle of the scene", async () => {
+    const { bigTreePlace, BIG_GROUND } = await import("@/app/today/world-scene");
+    for (let slot = 0; slot < 6; slot++) {
+      const t = bigTreePlace(slot, BIG_GROUND.rung!);
+      expect(t.base).toBeGreaterThanOrEqual(60);
+      expect(t.base).toBeLessThanOrEqual(65);
+    }
+  });
+  it("a fruit leaves the middle of the big tree of its column free to tap (laptop scene 900×506)", async () => {
+    const { bigTreePlace, bigSizeOf, thingPlace, ROWS, fruitShiftPx, BIG_GROUND } = await import("@/app/today/world-scene");
+    const size = bigSizeOf(1, 900);
+    for (let slot = 0; slot < RUNG.things.skill.length; slot++) {
+      const t = bigTreePlace(slot, BIG_GROUND.rung!);
+      const f = thingPlace({ pillar: "skill", slot }, ROWS.rung, (-fruitShiftPx(900) / 900) * 100);
+      // the fruit (≤ 48 px) ends left of the tree's middle
+      expect(((t.left - f.left) / 100) * 900, `slot ${slot}`).toBeGreaterThan(24);
+      // and still hangs on the crown (inside the tree's half-width)
+      expect(((t.left - f.left) / 100) * 900, `slot ${slot}`).toBeLessThan(size / 2 + 24);
+    }
+  });
+  it("a visitor never covers more than 30% of a big tree (phone scene 288×216, any size)", async () => {
+    const { bigTreePlace, bigSizeOf, animalPlace, BIG_GROUND } = await import("@/app/today/world-scene");
+    for (const count of [1, 2, 3, 4]) {
+      const size = bigSizeOf(count, 288);
+      for (let slot = 0; slot < RUNG.things.study.length; slot++) {
+        const t = bigTreePlace(slot, BIG_GROUND.rung!);
+        const cx = (t.left / 100) * 288;
+        const cy = (t.base / 100) * 216 - 0.46 * size; // the box is lifted by 96% of its height
+        for (const [i, a] of RUNG.animals.entries()) {
+          const at = animalPlace({ slot: i, move: moveOf(RUNG, a) }, "rung");
+          const ox = Math.max(0, (size + 44) / 2 - Math.abs((at.left / 100) * 288 - cx));
+          const oy = Math.max(0, (size + 44) / 2 - Math.abs((at.top / 100) * 216 - cy));
+          expect((Math.min(ox, 44) * Math.min(oy, 44)) / (size * size), `${count}/${slot}/${a.key}`).toBeLessThanOrEqual(0.3);
+        }
+      }
+    }
   });
 });
 

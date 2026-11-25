@@ -19,7 +19,7 @@ export const sceneKeyOf = (key: string | null | undefined): SceneKey => sceneOf(
 
 /** Height of each area's layer (% from the top), per world. */
 const ROWS: Record<SceneKey, Record<Pillar, number>> = {
-  rung: { study: 28, skill: 48, feel: 73, play: 88 },
+  rung: { study: 28, skill: 45, feel: 73, play: 88 }, // 25/11: fruits 48 → 45, on the crowns
   bien: { play: 36, study: 64, feel: 77, skill: 89 },
   vu_tru: { feel: 15, study: 36, skill: 57, play: 85 },
   nui_lua: { study: 42, play: 59, skill: 74, feel: 89 },
@@ -45,10 +45,10 @@ const MOVE_CLASS: Record<Move, string> = { fly: "w-fly", hop: "w-hop", swim: "w-
  * 6 things per area in fixed columns; the top-right corner stays clear for nothing (the count
  * is in the heading). Kept inside the frame so a grown (48 px) thing is not cut at the edge.
  */
-export function thingPlace(t: Pick<ThingView, "pillar" | "slot">, rows: Record<Pillar, number>): { left: number; top: number } {
+export function thingPlace(t: Pick<ThingView, "pillar" | "slot">, rows: Record<Pillar, number>, shift = 0): { left: number; top: number } {
   const left = 9 + (t.slot % 6) * 16.4;
   const top = rows[t.pillar] + (t.slot % 2 === 0 ? -2 : 2);
-  return { left: Math.min(left, 90), top: Math.min(top, 87) };
+  return { left: Math.min(left, 90) + shift, top: Math.min(top, 87) };
 }
 
 /** Visitors sit between the things' columns, in their world's free bands. */
@@ -56,6 +56,25 @@ export function animalPlace(a: Pick<AnimalView, "slot" | "move">, scene: SceneKe
   const ys = (scene ? MOVE_ROWS[scene] : DEFAULT_MOVE_ROWS)[a.move];
   return { left: 17.2 + (a.slot % 5) * 16.4, top: ys[Math.floor(a.slot / 5) % ys.length] ?? ys[0] ?? 50 };
 }
+
+/**
+ * 25/11/2026 (parent: "cây chò lơ lửng mà không ở dưới đất"): a big tree stands on the ground.
+ * Its BASE (not its middle) sits on the second hill, just above the bushes, and it is drawn
+ * behind everything else, so fruits hang on its crown and flowers stand in front of its trunk.
+ */
+export const BIG_GROUND: Partial<Record<SceneKey, number>> = { rung: 63 };
+export function bigTreePlace(slot: number, ground: number): { left: number; base: number } {
+  return { left: Math.min(9 + (slot % 6) * 16.4, 90), base: ground - (slot % 2 === 0 ? 0 : 2) };
+}
+/**
+ * Fruits and seeds (the forest's Kỹ năng row) hang on the LEFT part of the crown of the big
+ * tree of their column, so the middle of the tree stays free to tap (a fruit over it would
+ * open the fruit). The shift follows the tree's size (px), so the fruit stays on the crown.
+ */
+export const FRUIT_ROW: Partial<Record<SceneKey, Pillar>> = { rung: "skill" };
+export const fruitShiftPx = (sceneWidth: number) => Math.round(0.3 * bigSizeOf(1, sceneWidth));
+/** The tree drawing ends 2 px above the bottom of its 48 px box: lift it so the trunk touches the ground. */
+const TRUNK_END = 0.96;
 
 /** Size grows with how many times it grew (1 → 4+), never shrinks. */
 const sizeOf = (count: number) => 30 + Math.min(count - 1, 3) * 6;
@@ -104,10 +123,16 @@ export function LivingScene({ view, picked, onPick, compact = false }: { view: M
       {scene && <Ambient scene={scene} />}
       <ul aria-label="Những thứ đã mọc" className="absolute inset-0" aria-hidden={live ? undefined : true}>
         {view.things.map((t, i) => {
-          const at = thingPlace(t, rows);
+          const ground = t.pillar === bigLayer && scene ? BIG_GROUND[scene] : undefined;
+          const tree = ground === undefined ? null : bigTreePlace(t.slot, ground);
+          const at = tree ? { left: tree.left, top: tree.base } : thingPlace(t, rows);
+          const shiftPx = !compact && scene && FRUIT_ROW[scene] === t.pillar ? fruitShiftPx(width) : 0;
           const on = picked?.kind === "thing" && picked.key === t.key;
+          const place = tree
+            ? { left: `${at.left}%`, top: `${at.top}%`, transform: `translate(-50%, -${TRUNK_END * 100}%)`, zIndex: 1 }
+            : { left: shiftPx > 0 ? `calc(${at.left}% - ${shiftPx}px)` : `${at.left}%`, top: `${at.top}%`, transform: "translate(-50%, -50%)", zIndex: Math.round(at.top) };
           return (
-            <li key={t.key} className="absolute" style={{ left: `${at.left}%`, top: `${at.top}%`, transform: "translate(-50%, -50%)", zIndex: Math.round(at.top) }}>
+            <li key={t.key} className="absolute" style={place}>
               <Spot
                 spot={`thing:${t.key}`}
                 live={live}

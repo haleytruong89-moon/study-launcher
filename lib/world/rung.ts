@@ -60,7 +60,8 @@ export const RUNG: World = {
       {
         key: "da_quy",
         name: "Dã quỳ",
-        icon: { emoji: "🌼" },
+        // 25/11/2026: drawn, not the 🌼 emoji, which Windows paints lilac (dã quỳ is yellow).
+        icon: { svg: { shape: "bloom", color: "#F5C21B", accent: "#B86E1A", n: 10 } },
         tags: ["flower"],
         facts: [
           "Dã quỳ nở vàng rực ở Đà Lạt, Tây Nguyên, rộ nhất vào khoảng tháng 11.",
