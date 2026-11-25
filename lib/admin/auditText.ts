@@ -61,6 +61,9 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "request.permanent": "request",
   "request.permanent_base": "request",
   "request.deny": "request",
+  // 25/11/2026: the child asked again for a site still waiting; how many parent phones got the push.
+  "request.remind": "request",
+  "push.request": "request",
   "allowlist.add": "request",
   "allowlist.remove": "request",
   "allowlist.preset": "request",
@@ -270,6 +273,14 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
     // --- Xin mở trang / trang học --------------------------------------------
     case "request.create":
       return say(`${kid} xin mở trang ${host(p.domain) ?? "mới"}`);
+    case "request.remind":
+      return say(`${kid} xin lại trang ${host(p.domain) ?? "đang chờ"} (bố mẹ được báo lại)`);
+    case "push.request": {
+      const sent = num(p.sent) ?? 0;
+      const site = host(p.domain) ?? "trang con xin";
+      if (sent > 0) return say(`Đã báo tới ${sent} điện thoại của bố mẹ: ${kid} xin mở ${site}`);
+      return say(`Chưa điện thoại nào của bố mẹ nhận được thông báo ${kid} xin mở ${site} · bật lại ở Thêm › Thông báo`);
+    }
     case "request.15m":
       return say(`Cho ${kid} mở ${host(p.domain) ?? "trang đã xin"} 15 phút`);
     case "request.day":

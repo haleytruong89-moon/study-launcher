@@ -1,4 +1,5 @@
 import { requireParentPage } from "@/lib/admin/page";
+import { familyDevices } from "@/lib/push/devices";
 import { vapidConfig } from "@/lib/push/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ParentHeader } from "../parent-header";
@@ -14,8 +15,18 @@ export const dynamic = "force-dynamic";
 export default async function NotificationsPage() {
   const { me } = await requireParentPage();
   const config = vapidConfig();
-  // push_subscriptions has no browser grants: count this parent's devices with service_role.
-  const { count } = await createAdminClient().from("push_subscriptions").select("id", { count: "exact", head: true }).eq("profile_id", me.userId);
+  // push_subscriptions has no browser grants: read the family's parent devices with service_role.
+  const admin = createAdminClient();
+  const { count } = await admin.from("push_subscriptions").select("id", { count: "exact", head: true }).eq("profile_id", me.userId);
+  const parents = await admin.from("profiles").select("id, display_name").eq("family_id", me.profile.family_id).eq("role", "parent").order("created_at");
+  const ids = (parents.data ?? []).map((p) => p.id as string);
+  const subs = ids.length > 0 ? await admin.from("push_subscriptions").select("profile_id, user_agent, created_at").in("profile_id", ids) : { data: [] };
+  const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit" }).format(new Date(iso));
+  const family = familyDevices(
+    (parents.data ?? []) as { id: string; display_name: string | null }[],
+    (subs.data ?? []) as { profile_id: string; user_agent: string | null; created_at: string }[],
+    fmt,
+  );
 
   return (
     <>
@@ -30,6 +41,26 @@ export default async function NotificationsPage() {
           </ul>
           <p className="text-sm text-ink/70">Thông báo không chứa chữ con viết. Chạm vào thông báo để mở đúng trang duyệt.</p>
         </section>
+
+        {config && family.length > 0 && (
+          <section aria-labelledby="family-devices" className="flex flex-col gap-2 rounded-2xl bg-white p-4">
+            <h2 id="family-devices" className="font-bold">
+              Máy đang nhận thông báo của cả nhà
+            </h2>
+            <ul className="flex flex-col gap-1 text-sm">
+              {family.map((p, i) => (
+                <li key={i}>
+                  <strong>{p.name}:</strong>{" "}
+                  {p.devices.length > 0 ? (
+                    p.devices.map((d) => `${d.word} (bật từ ${d.since})`).join(" · ")
+                  ) : (
+                    <span className="font-semibold text-red-700">chưa có máy nào · mở trang này trên điện thoại đó rồi bấm Bật thông báo</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {config ? (
           <PushControls publicKey={config.publicKey} devices={count ?? 0} />

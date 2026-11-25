@@ -18,7 +18,22 @@ function blockedWebUrl(): string | null {
   }
 }
 
-type Req = { state: "idle" } | { state: "sending" } | { state: "login" } | { state: "error"; text: string } | { state: "waiting" | "approved" | "denied"; id: string; status?: string };
+type Req =
+  | { state: "idle" }
+  | { state: "sending" }
+  | { state: "login" }
+  | { state: "error"; text: string }
+  | { state: "waiting"; id: string; again?: "reminded" | "recent" }
+  | { state: "approved" | "denied"; id: string; status?: string };
+
+/**
+ * 25/11/2026: after signing in, come back to THIS lock page (not Hôm nay) so the request is not
+ * lost. The value is a same-site path; /login checks it again with safeNext.
+ */
+function loginHref(): string {
+  const back = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  return back.length <= 1800 ? `/login?next=${encodeURIComponent(back)}` : "/login?next=/today";
+}
 
 const APPROVED: Record<string, string> = {
   approved_15m: "Bố mẹ đã mở trang này 15 phút.",
@@ -56,9 +71,9 @@ export function BlockedView() {
     try {
       const r = await fetch("/api/unlock-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, reason: reason.trim() || undefined }) });
       if (r.status === 401) return setReq({ state: "login" });
-      const d = (await r.json().catch(() => null)) as { id?: string; error?: string } | null;
+      const d = (await r.json().catch(() => null)) as { id?: string; error?: string; reminded?: boolean } | null;
       if (!r.ok || !d?.id) return setReq({ state: "error", text: d?.error ?? "Chưa gửi được, thử lại." });
-      setReq({ state: "waiting", id: d.id });
+      setReq({ state: "waiting", id: d.id, again: d.reminded === true ? "reminded" : d.reminded === false ? "recent" : undefined });
     } catch {
       setReq({ state: "error", text: "Mất kết nối mạng, thử lại." });
     }
@@ -109,15 +124,19 @@ export function BlockedView() {
           )}
           {req.state === "login" && (
             <p className="text-sm">
-              Con cần đăng nhập trước.{" "}
-              <Link href="/login?next=/today" className="font-semibold text-accent underline">
+              Con cần đăng nhập trước, rồi bấm xin lại ở trang này.{" "}
+              <a href={loginHref()} className="font-semibold text-accent underline">
                 Đăng nhập
-              </Link>
+              </a>
             </p>
           )}
           {req.state === "waiting" && (
             <p role="status" className="text-sm font-semibold">
-              Đã gửi. Đang chờ bố mẹ trả lời… (trang tự cập nhật)
+              {req.again === "reminded"
+                ? "Con đã xin trang này rồi: đã báo lại cho bố mẹ. Đang chờ bố mẹ trả lời… (trang tự cập nhật)"
+                : req.again === "recent"
+                  ? "Con vừa xin trang này: bố mẹ đã được báo. Đang chờ bố mẹ trả lời… (trang tự cập nhật)"
+                  : "Đã gửi. Đang chờ bố mẹ trả lời… (trang tự cập nhật)"}
             </p>
           )}
           {req.state === "approved" && (

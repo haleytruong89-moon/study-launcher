@@ -130,6 +130,9 @@ describe("Nhật ký: sentences", () => {
     expect(text("allowlist.add", { domain: "meet.google.com", child_id: null, expires_at: null })).toBe("Thêm trang học meet.google.com cho cả nhà · luôn luôn");
     expect(text("allowlist.add", { domain: "a.vn", child_id: AN, expires_at: "2026-11-04T17:00:00.000Z" })).toBe("Thêm trang học a.vn cho An · đến hết 04/11");
     expect(text("allowlist.preset", { preset: "meet", added: ["meet.google.com"] })).toBe("Thêm nhanh Google Meet cho cả nhà (1 trang mới)");
+    expect(text("request.remind", { id: "x", domain: "zalo.me" }, AN)).toBe("An xin lại trang zalo.me (bố mẹ được báo lại)");
+    expect(text("push.request", { id: "x", domain: "zalo.me", sent: 2, failed: 0, removed: 0 }, AN)).toBe("Đã báo tới 2 điện thoại của bố mẹ: An xin mở zalo.me");
+    expect(text("push.request", { id: "x", domain: "zalo.me", sent: 0, failed: 0, removed: 1 }, AN)).toBe("Chưa điện thoại nào của bố mẹ nhận được thông báo An xin mở zalo.me · bật lại ở Thêm › Thông báo");
     // A full URL never shows up as a "domain".
     expect(text("request.create", { domain: "https://evil.example/?token=abc" }, AN)).toBe("An xin mở trang mới");
   });

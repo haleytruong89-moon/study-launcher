@@ -26,6 +26,16 @@ export function unlockRequestMessage(childName: string, domain: string): PushMes
   };
 }
 
+/** 25/11/2026: the child asked again for a site that still waits (lib/push/remind.ts). */
+export function unlockReminderMessage(childName: string, domain: string): PushMessage {
+  return {
+    title: `${childName} vẫn đang chờ: xin mở trang`,
+    body: `${domain} · chạm để duyệt`,
+    url: "/parent/requests",
+    tag: `unlock-${domain}`,
+  };
+}
+
 /** "Nhờ bố mẹ xem trực tiếp": the child cannot send a photo and asks a parent nearby. */
 export function confirmRequestMessage(childName: string): PushMessage {
   return {
