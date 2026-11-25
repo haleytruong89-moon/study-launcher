@@ -57,14 +57,15 @@ test("App ôn tập: upload, open with no network, the child sees it, turned off
     await parent.locator('input[maxlength="48"]').fill(SLUG);
     await parent.getByLabel("Tệp .html").setInputFiles({ name: "app.html", mimeType: "text/html", buffer: Buffer.from(APP_HTML) });
     await parent.getByRole("button", { name: "Thêm app" }).click();
-    await expect(parent.getByRole("status")).toHaveText("Đã thêm app.");
+    const form = parent.locator("form").filter({ has: parent.getByLabel("Tệp .html") });
+    await expect(form.getByRole("status")).toHaveText("Đã thêm app.");
     await expect(parent.getByText(`Cả nhà · /on-tap/${SLUG}`)).toBeVisible();
 
     // A non-HTML file is refused.
     await parent.getByLabel("Tên app (con thấy)").fill("Không phải html");
     await parent.getByLabel("Tệp .html").setInputFiles({ name: "x.html", mimeType: "text/html", buffer: Buffer.from("%PDF-1.7 fake") });
     await parent.getByRole("button", { name: "Thêm app" }).click();
-    await expect(parent.getByRole("alert")).toContainText("không phải trang .html");
+    await expect(form.getByRole("alert")).toContainText("không phải trang .html");
 
     // The app page: the app runs, has no network, carries the strict headers.
     const res = await parent.goto(`/on-tap/${SLUG}`);
@@ -96,7 +97,7 @@ test("App ôn tập: upload, open with no network, the child sees it, turned off
     await parent.getByLabel("Thay tệp cho app có sẵn (không bắt buộc)").selectOption(SLUG);
     await parent.getByLabel("Tệp .html").setInputFiles({ name: "app.html", mimeType: "text/html", buffer: Buffer.from(APP_HTML.replace(MARK, `${MARK}-2`)) });
     await parent.getByRole("button", { name: "Thay tệp" }).click();
-    await expect(parent.getByRole("status")).toHaveText("Đã thay tệp, link giữ nguyên.");
+    await expect(parent.locator("form").getByRole("status")).toHaveText("Đã thay tệp, link giữ nguyên.");
     await parent.goto(`/on-tap/${SLUG}`);
     await expect(parent.locator("#m")).toHaveText(`${MARK}-2`);
     const old = await admin().storage.from("study-apps").download(before);
