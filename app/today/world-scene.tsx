@@ -57,6 +57,18 @@ export function animalPlace(a: Pick<AnimalView, "slot" | "move">, scene: SceneKe
   return { left: 17.2 + (a.slot % 5) * 16.4, top: ys[Math.floor(a.slot / 5) % ys.length] ?? ys[0] ?? 50 };
 }
 
+/**
+ * 25/11/2026 (parent: "cây chò lơ lửng mà không ở dưới đất"): a big tree stands on the ground.
+ * Its BASE (not its middle) sits on the second hill, just above the bushes, and it is drawn
+ * behind everything else, so fruits hang on its crown and flowers stand in front of its trunk.
+ */
+export const BIG_GROUND: Partial<Record<SceneKey, number>> = { rung: 63 };
+export function bigTreePlace(slot: number, ground: number): { left: number; base: number } {
+  return { left: Math.min(9 + (slot % 6) * 16.4, 90), base: ground - (slot % 2 === 0 ? 0 : 2) };
+}
+/** The tree drawing ends 2 px above the bottom of its 48 px box: lift it so the trunk touches the ground. */
+const TRUNK_END = 0.96;
+
 /** Size grows with how many times it grew (1 → 4+), never shrinks. */
 const sizeOf = (count: number) => 30 + Math.min(count - 1, 3) * 6;
 
@@ -104,10 +116,15 @@ export function LivingScene({ view, picked, onPick, compact = false }: { view: M
       {scene && <Ambient scene={scene} />}
       <ul aria-label="Những thứ đã mọc" className="absolute inset-0" aria-hidden={live ? undefined : true}>
         {view.things.map((t, i) => {
-          const at = thingPlace(t, rows);
+          const ground = t.pillar === bigLayer && scene ? BIG_GROUND[scene] : undefined;
+          const tree = ground === undefined ? null : bigTreePlace(t.slot, ground);
+          const at = tree ? { left: tree.left, top: tree.base } : thingPlace(t, rows);
           const on = picked?.kind === "thing" && picked.key === t.key;
+          const place = tree
+            ? { left: `${at.left}%`, top: `${at.top}%`, transform: `translate(-50%, -${TRUNK_END * 100}%)`, zIndex: 1 }
+            : { left: `${at.left}%`, top: `${at.top}%`, transform: "translate(-50%, -50%)", zIndex: Math.round(at.top) };
           return (
-            <li key={t.key} className="absolute" style={{ left: `${at.left}%`, top: `${at.top}%`, transform: "translate(-50%, -50%)", zIndex: Math.round(at.top) }}>
+            <li key={t.key} className="absolute" style={place}>
               <Spot
                 spot={`thing:${t.key}`}
                 live={live}

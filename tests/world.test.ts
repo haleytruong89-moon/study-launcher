@@ -321,6 +321,34 @@ describe("recentGrowth (R7b: Nhìn lại 7 ngày)", () => {
   });
 });
 
+describe("big trees stand on the ground (25/11/2026)", () => {
+  it("their trunk ends on the ground, below the middle of the scene", async () => {
+    const { bigTreePlace, BIG_GROUND } = await import("@/app/today/world-scene");
+    for (let slot = 0; slot < 6; slot++) {
+      const t = bigTreePlace(slot, BIG_GROUND.rung!);
+      expect(t.base).toBeGreaterThanOrEqual(60);
+      expect(t.base).toBeLessThanOrEqual(65);
+    }
+  });
+  it("a visitor never covers more than 30% of a big tree (phone scene 288×216, any size)", async () => {
+    const { bigTreePlace, bigSizeOf, animalPlace, BIG_GROUND } = await import("@/app/today/world-scene");
+    for (const count of [1, 2, 3, 4]) {
+      const size = bigSizeOf(count, 288);
+      for (let slot = 0; slot < RUNG.things.study.length; slot++) {
+        const t = bigTreePlace(slot, BIG_GROUND.rung!);
+        const cx = (t.left / 100) * 288;
+        const cy = (t.base / 100) * 216 - 0.46 * size; // the box is lifted by 96% of its height
+        for (const [i, a] of RUNG.animals.entries()) {
+          const at = animalPlace({ slot: i, move: moveOf(RUNG, a) }, "rung");
+          const ox = Math.max(0, (size + 44) / 2 - Math.abs((at.left / 100) * 288 - cx));
+          const oy = Math.max(0, (size + 44) / 2 - Math.abs((at.top / 100) * 216 - cy));
+          expect((Math.min(ox, 44) * Math.min(oy, 44)) / (size * size), `${count}/${slot}/${a.key}`).toBeLessThanOrEqual(0.3);
+        }
+      }
+    }
+  });
+});
+
 describe("big trees (22/11/2026)", () => {
   it("are 1.6× a thing on a phone-sized scene and grow with a wider scene (max 2.2×)", async () => {
     const { bigSizeOf } = await import("@/app/today/world-scene");
