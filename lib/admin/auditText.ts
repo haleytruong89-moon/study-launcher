@@ -78,6 +78,9 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "settings.update": "settings",
   "slot.create": "settings",
   "slot.update": "settings",
+  "study_app.create": "settings",
+  "study_app.replace": "settings",
+  "study_app.update": "settings",
   "child.create": "settings",
   "child.update": "settings",
   "photos.cleanup": "settings",
@@ -326,6 +329,12 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
       return say(`Thêm app môn học${quoted(short(p.label, 40))}`);
     case "slot.update":
       return say(`${p.active === false ? "Tắt" : "Sửa"} app môn học${quoted(short(p.label, 40))}`);
+    case "study_app.create":
+      return say(`Thêm app ôn tập${quoted(short(p.title, 40))}`);
+    case "study_app.replace":
+      return say(`Thay tệp app ôn tập${quoted(short(p.title, 40))}`);
+    case "study_app.update":
+      return say(p.active === false ? "Tắt một app ôn tập" : p.active === true ? "Bật một app ôn tập" : "Sửa một app ôn tập");
     case "child.create":
       return say(`Tạo tài khoản cho ${short(p.display_name, 40) ?? kid}`);
     case "child.update":

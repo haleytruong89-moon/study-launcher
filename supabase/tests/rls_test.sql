@@ -1467,5 +1467,89 @@ select test_helpers.expect_count('family_settings night lock defaults (00:00 →
   (select count(*) from public.family_settings where night_lock_from = '00:00'::time and night_lock_to = '07:00'::time), 2);
 
 reset role;
+-- 0029 study apps (Ôn tập trong Launcher): parents of the family manage; a child reads only the
+-- ACTIVE apps meant for them or for the whole family; nobody sees another family's apps or files.
+insert into public.study_apps (family_id, child_id, slug, title, file_path, active) values
+  ('10000000-0000-0000-0000-00000000000a', null, 'lap-phuong-trinh', 'Lập phương trình', '10000000-0000-0000-0000-00000000000a/lap-phuong-trinh-aaaa.html', true),
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c1', 'so-nguyen', 'Số nguyên', '10000000-0000-0000-0000-00000000000a/so-nguyen-bbbb.html', true),
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000c2', 'tat-roi', 'Đã tắt', '10000000-0000-0000-0000-00000000000a/tat-roi-cccc.html', false),
+  ('10000000-0000-0000-0000-00000000000b', null, 'cua-nha-b', 'Của nhà B', '10000000-0000-0000-0000-00000000000b/cua-nha-b-dddd.html', true);
+insert into storage.objects (bucket_id, name) values
+  ('study-apps', '10000000-0000-0000-0000-00000000000a/lap-phuong-trinh-aaaa.html'),
+  ('study-apps', '10000000-0000-0000-0000-00000000000b/cua-nha-b-dddd.html');
+do $$
+begin
+  begin
+    insert into public.study_apps (family_id, child_id, slug, title, file_path) values
+      ('10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000c1', 'lech-nha', 'x', '10000000-0000-0000-0000-00000000000b/lech-nha-x.html');
+    raise exception 'FAIL: study app of family B for a child of family A accepted';
+  exception when foreign_key_violation then raise notice 'ok: study app child belongs to the same family';
+  end;
+  begin
+    insert into public.study_apps (family_id, slug, title, file_path) values
+      ('10000000-0000-0000-0000-00000000000a', 'lap-phuong-trinh', 'Trùng', '10000000-0000-0000-0000-00000000000a/lap-phuong-trinh-eeee.html');
+    raise exception 'FAIL: duplicate study app slug accepted';
+  exception when unique_violation then raise notice 'ok: one slug per family';
+  end;
+  begin
+    insert into public.study_apps (family_id, slug, title, file_path) values
+      ('10000000-0000-0000-0000-00000000000a', 'Bad Slug', 'x', '10000000-0000-0000-0000-00000000000a/bad.html');
+    raise exception 'FAIL: bad study app slug accepted';
+  exception when check_violation then raise notice 'ok: study app slug format checked';
+  end;
+end $$;
+select test_helpers.expect_count('study_apps has RLS on', (select count(*) from pg_class where oid = 'public.study_apps'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('anon has no study_apps access', (select case when has_table_privilege('anon', 'public.study_apps', 'SELECT') then 1 else 0 end), 0);
+select test_helpers.expect_count('study-apps bucket is private', (select count(*) from storage.buckets where id = 'study-apps' and public = false), 1);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child1 sees family app + own app (2)', (select count(*) from public.study_apps), 2);
+select test_helpers.expect_count('child1 reads the family app file (1)', (select count(*) from storage.objects where bucket_id = 'study-apps'), 1);
+do $$
+begin
+  insert into public.study_apps (family_id, slug, title, file_path) values
+    ('10000000-0000-0000-0000-00000000000a', 'con-tu-them', 'x', '10000000-0000-0000-0000-00000000000a/con-tu-them-x.html');
+  raise exception 'FAIL: child inserted a study app';
+exception when insufficient_privilege then raise notice 'ok: child cannot add a study app';
+end $$;
+update public.study_apps set active = true where slug = 'tat-roi';
+do $$
+begin
+  insert into storage.objects (bucket_id, name) values ('study-apps', '10000000-0000-0000-0000-00000000000a/con-tai-len-x.html');
+  raise exception 'FAIL: child uploaded a study app file';
+exception when insufficient_privilege then raise notice 'ok: child cannot upload a study app file';
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c2', false);
+select test_helpers.expect_count('child2 sees only the family app (own one is off) (1)', (select count(*) from public.study_apps), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d1', false);
+select test_helpers.expect_count('child of B sees only family B app (1)', (select count(*) from public.study_apps), 1);
+select test_helpers.expect_count('child of B reads no family A file', (select count(*) from storage.objects where bucket_id = 'study-apps' and name like '10000000-0000-0000-0000-00000000000a/%'), 0);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees all family A apps, also off ones (3)', (select count(*) from public.study_apps), 3);
+insert into public.study_apps (family_id, slug, title, file_path) values
+  ('10000000-0000-0000-0000-00000000000a', 'bo-me-them', 'Bố mẹ thêm', '10000000-0000-0000-0000-00000000000a/bo-me-them-ffff.html');
+insert into storage.objects (bucket_id, name) values ('study-apps', '10000000-0000-0000-0000-00000000000a/bo-me-them-ffff.html');
+select test_helpers.expect_count('parentA added an app (4)', (select count(*) from public.study_apps), 4);
+do $$
+begin
+  insert into public.study_apps (family_id, slug, title, file_path) values
+    ('10000000-0000-0000-0000-00000000000b', 'sang-nha-b', 'x', '10000000-0000-0000-0000-00000000000b/sang-nha-b-x.html');
+  raise exception 'FAIL: parentA added an app to family B';
+exception when insufficient_privilege then raise notice 'ok: parentA cannot add an app to family B';
+end $$;
+do $$
+begin
+  insert into storage.objects (bucket_id, name) values ('study-apps', '10000000-0000-0000-0000-00000000000b/sang-nha-b-x.html');
+  raise exception 'FAIL: parentA uploaded into family B folder';
+exception when insufficient_privilege then raise notice 'ok: parentA cannot upload into family B folder';
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB sees only family B apps (1)', (select count(*) from public.study_apps), 1);
+
+reset role;
+select test_helpers.expect_count('child update of an off app changed nothing', (select count(*) from public.study_apps where slug = 'tat-roi' and active), 0);
+
+reset role;
 drop schema test_helpers cascade;
 \echo RLS OK

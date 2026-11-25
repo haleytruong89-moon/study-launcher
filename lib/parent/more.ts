@@ -24,6 +24,7 @@ const GROUPS: { title: string; links: MoreLink[] }[] = [
       { href: "/parent/timetable", label: "Thời khóa biểu", sub: "Lịch học ở trường của từng con, đổi được khi trường đổi" },
       { href: "/parent/week", label: "Tổng kết tuần", sub: "Tuần qua của các con, gợi ý kèm con cuối tuần (tối Thứ Sáu)" },
       { href: "/parent/templates", label: "Lịch việc mỗi tuần", sub: "Bài bổ sung + kỹ năng theo thứ" },
+      { href: "/parent/on-tap", label: "App ôn tập", sub: "Tải app ôn tập (.html) lên, chép link giao bài" },
       { href: "/parent/slots", label: "App môn học", sub: "Nút mở app trên màn của con" },
     ],
   },
