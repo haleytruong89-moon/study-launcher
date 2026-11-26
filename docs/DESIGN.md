@@ -263,6 +263,7 @@ Mọi route trả `serverNow`. Launcher gọi lại `GET /api/today` **mỗi 30 
 |---|---|---|---|
 | `homework` (private) | phụ huynh | phụ huynh, con của bài đó | `{family_id}/{child_id}/{due_date}/{uuid}.{jpg,png,webp,pdf,doc,docx,xls,xlsx}` (S2c: ≤ 5 MB/tệp, ≤ 6 tệp/bài; sau khi sửa hạn, tệp cũ vẫn ở thư mục ngày cũ) |
 | `proofs` (private) | con (thư mục của mình) | phụ huynh, chính con | `{family_id}/{child_id}/{local_date}/{uuid}.jpg` |
+| `study-apps` (private, SQL 0029) | phụ huynh (phiên của mình) | mọi người trong nhà (trang `/on-tap/<slug>` tải bằng phiên người xem; bảng `study_apps` quyết định con thấy app nào) | `{family_id}/{slug}-{random}.html` (≤ 4 MB khi tải lên; thay tệp = đường dẫn mới, tệp cũ bị xóa) |
 
 - Nén ở client trước khi tải: cạnh dài ≤ 1600px, JPEG chất lượng 0.8 (~200–400 KB/ảnh).
 - Hiển thị bằng signed URL có hạn. *(S2c)* Tệp bài tập mở qua `GET /api/files/homework?path=…` (cùng domain với app, tải bằng phiên của người xem nên RLS kiểm tra) — máy đang khóa không cần mở domain Supabase.

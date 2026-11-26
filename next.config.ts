@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { tutorOrigin, tutorRewrites } from "./lib/tutor/entry";
+import { STUDY_APP_HEADERS } from "./lib/studyApps";
 
 // Our own Supabase (R6a review): the CSP of the page loaded first stays for pages opened from it
 // without a reload, so leaving Góc bình yên for Hôm nay must still allow photo uploads there.
@@ -68,6 +69,14 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "Cache-Control", value: "no-store" },
         ],
+      },
+      {
+        // Ôn tập (SQL 0029): a review app page gets NO network and is never framed (lib/studyApps.ts).
+        // The route sets the same headers; this rule comes last so the app-wide CSP cannot win.
+        source: "/on-tap/:slug",
+        headers: Object.entries(STUDY_APP_HEADERS)
+          .filter(([key]) => key !== "Content-Type")
+          .map(([key, value]) => ({ key, value })),
       },
     ];
   },

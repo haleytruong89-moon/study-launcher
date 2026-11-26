@@ -18,6 +18,7 @@ const PAGES = {
   "/parent/children": "more",
   "/parent/templates": "more",
   "/parent/slots": "more",
+  "/parent/on-tap": "more",
   "/parent/allowlist": "more",
   "/parent/devices": "more",
   "/parent/settings": "more",
