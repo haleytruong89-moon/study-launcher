@@ -357,6 +357,13 @@ begin
   if m is null then raise exception 'FAIL: test data has no message'; end if;
   update tutor.messages set card_ref = 'T6.12#1' where id = m;
   update tutor.messages set card_ref = 'D9.1#2' where id = m;
+  update tutor.messages set card_ref = 'C6.1#1' where id = m; -- 0030: cách làm cards
+  update tutor.messages set card_ref = 'C9.2#2' where id = m;
+  begin
+    update tutor.messages set card_ref = 'X6.1#1' where id = m;
+    raise exception 'FAIL: unknown card prefix accepted';
+  exception when check_violation then null;
+  end;
   begin
     update tutor.messages set card_ref = 'T6.12#3' where id = m;
     raise exception 'FAIL: bad card_ref accepted';
