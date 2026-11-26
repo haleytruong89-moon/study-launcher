@@ -12,7 +12,7 @@
 
 Theo thứ tự bố mẹ ưu tiên:
 
-1. **Con còn nhiều giờ trống**, chủ yếu trên iPad: đọc truyện trên web, chat với nhân vật AI (Character.ai và các trang tương tự). Hai con đã đồng ý: các trang không liên quan đến học bị khóa; **giờ chơi phải kiếm bằng việc học thật**. Hai con **thích** ý này. Mục tiêu là động lực tự học và thói quen học.
+1. **Con còn nhiều giờ trống**, chủ yếu trên iPad: đọc truyện trên web, chat với nhân vật AI (Character.ai và các trang tương tự). Số liệu Screen Time của Nguyên tuần 17–23/11 (iPhone + iPad, chưa tính Boox và laptop): khoảng **62 giờ/tuần**, trong đó học rõ ràng chỉ **~4%**; đọc / xem / chơi ~19 giờ (Netflix, AO3, nettruyen, poki); chat với AI ~13 giờ (Gemini, Character.ai, Grok, JanitorAI); nhắn tin ~12 giờ (Zalo có cả nhóm lớp). Giới hạn Chrome 45′ đặt sẵn **không chặn được**. Hai con đã đồng ý: các trang không liên quan đến học bị khóa; **giờ chơi phải kiếm bằng việc học thật**. Hai con **thích** ý này. Mục tiêu là động lực tự học và thói quen học.
 2. **Con được chọn môn** con muốn học vào lúc đó.
 3. **Luật tính đúng/sai để được giờ chơi phải chặt**: con không lách được bằng cách ngồi không, đoán mò hay làm lại tới khi đúng.
 
@@ -57,7 +57,8 @@ Bên trong ②, hai lựa chọn cách làm (quyết định của người thi�
 | D8 | Chủ đề con đã "làm được" chỉ thưởng **một nửa** (khi có trạng thái kỹ năng, Đợt 2) |
 | D9 | **iPad:** Screen Time kiểu "chỉ mở trang đã duyệt" (giống laptop), **gỡ Chrome**, chỉ dùng Safari. "Luôn cho phép": Zalo (cả ngày), Tin nhắn, Điện thoại, **Spotify**, Launcher, app học, Google Docs/Drive/Meet. Trang truyện: giới hạn 1′/ngày, mở bằng ví. Tiêu ví theo **khối 15′**, bố mẹ duyệt "Xin thêm giờ" |
 | D10 | **Boox:** khóa hết, chỉ mở khi đã xong bài; tiêu ví qua Google Family Link (nếu Boox nhận) hoặc bố mẹ giữ máy |
-| D11 | **Character.ai và các trang chat nhân vật AI: chặn hẳn**, không mở bằng ví. Character.AI đã bỏ chat mở cho người dưới 18 từ 25/11/2025 |
+| D11 | **Character.ai và các trang chat nhân vật AI: chặn hẳn**, không mở bằng ví. Character.AI đã bỏ chat mở cho người dưới 18 từ 25/11/2025. Cùng nhóm: **JanitorAI** (chỉ cho 18+) |
+| D15 | **Giờ dừng chơi 23:00** (bố mẹ chốt 27/11, 00:57): sau 23:00 không tiêu ví được trên máy nào; lượt chơi laptop bị cắt lúc 23:00 |
 | D12 | **Spotify** luôn mở (iPad + laptop) để con nghe nhạc khi học. Không dùng YouTube / YouTube Music cho nhạc |
 | D13 | **Bắt đầu sau thi HK1.** Trước đó chỉ làm phần chặn Character.ai + Spotify (V1) và bản bấm thử cho 2 con |
 | D14 | Ba cửa vào mỗi ngày: **Tiếng Anh · Toán · Ôn chủ đề**; xong **2/3** là đủ phần hoạt động (ý bố mẹ 26/11, handover E). Con tự chọn |
@@ -120,7 +121,7 @@ Bên trong ②, hai lựa chọn cách làm (quyết định của người thi�
 | **Boox** | "Dùng 15′ trên Boox" | Như iPad, máy `boox` | Như iPad |
 
 - Điều kiện tiêu: đã xong việc bắt buộc; còn ≥ số phút muốn dùng; chưa vượt trần tiêu ngày (T2–T6 60′, T7–CN 120′; tính **tiêu ròng** = tiêu − hoàn); không có việc có giờ đang chạy; trước **giờ dừng chơi**; trên laptop còn ≥ 5′ trước giờ dừng chơi. Trên laptop chỉ 1 lượt chơi chạy một lúc.
-- **Giờ dừng chơi** = `profiles.bedtime` của con (hiện cả hai con 22:30), không bao giờ muộn hơn khóa đêm / 00:00. Lượt chơi laptop bị cắt ở giờ này; iPad / Boox không tiêu được sau giờ này. *Bố mẹ xác nhận 27/11 — xem §13 O7.* Đây là thay đổi so với hiện nay: giờ tự do 45′ đang chạy được tới 00:00.
+- **Giờ dừng chơi** = `play_wallet_settings.play_until` của con, mặc định **23:00** (D15, bố mẹ chốt 27/11), không bao giờ muộn hơn khóa đêm / 00:00. Không dùng `profiles.bedtime` (22:30), vì cột đó vẫn chỉ để tính "ngày đạt". Lượt chơi laptop bị cắt ở giờ này; iPad / Boox không tiêu được sau giờ này. Đây là thay đổi so với hiện nay: giờ tự do 45′ đang chạy được tới 00:00.
 - Laptop đang mở vì lý do khác (Tin tưởng, ngày ốm, bố mẹ mở): **ẩn** nút "Chơi" trên laptop; iPad / Boox vẫn tiêu được.
 - **Luật cho bố mẹ (một câu):** *có yêu cầu "Xin thêm giờ" trên iPad / Boox mà không có thông báo ví đi kèm thì không duyệt.*
 
@@ -137,7 +138,7 @@ Bên trong ②, hai lựa chọn cách làm (quyết định của người thi�
 
 ### 5.9 Chặn hẳn (Character.ai) và nhạc
 
-- Thêm danh sách **"Luôn chặn"** của gia đình (dữ liệu, bố mẹ sửa được). Mặc định: `character.ai` (kèm `c.ai`). Builder đề xuất thêm vài trang chat nhân vật AI phổ biến vào PR để bố mẹ duyệt.
+- Thêm danh sách **"Luôn chặn"** của gia đình (dữ liệu, bố mẹ sửa được). Mặc định: `character.ai`, `c.ai`, `janitorai.com` (+ các trang bố mẹ chốt ở O7). Builder đề xuất thêm vài trang chat nhân vật AI phổ biến vào PR để bố mẹ duyệt.
 - Extension chặn danh sách này **cả khi máy mở** (`PLAY`, Tin tưởng, ngày ốm, bố mẹ mở). Hiện nay extension chỉ chặn `translate.goog` khi khóa, còn lúc mở thì "không có luật nào" (`extension/src/core/rules.ts`), nên cần một bản extension mới (0.4).
 - Extension 0.4 gửi số phiên bản khi hỏi máy chủ. Trang **Thiết bị** của bố mẹ hiện dòng cảnh báo cho máy chạy bản cũ hoặc chưa rõ bản: "Extension cũ: lúc chơi chưa chặn Character.ai — cài lại bản mới". **Không** khóa máy chỉ vì extension cũ (không đổi luật khóa/mở); khoảng hở này chấp nhận đến khi bố mẹ cài lại.
 - Trang học (allowlist) có nút Thêm nhanh **Spotify** (trang nghe nhạc web). Không thêm YouTube / YouTube Music.
@@ -182,7 +183,7 @@ Theo luật migration: chỉ thêm, idempotent, grant + RLS cùng file, có test
 
 | Bảng | Cột chính | Ai đọc / ghi |
 |---|---|---|
-| `play_wallet_settings` | `child_id` (pk), `family_id`, `enabled_from date null`, `base_minutes 20`, `earn_cap_day 60`, `balance_cap 120`, `spend_cap_weekday 60`, `spend_cap_weekend 120`, `carry_max 30`, `tiers jsonb [[20,8],[45,15]]`, `unverified_per_day 1`, `quiz_size 5`, `quiz_pass 3`, `device_block_minutes 15` | Bố mẹ đọc/ghi (cả nhà); con đọc của mình |
+| `play_wallet_settings` | `child_id` (pk), `family_id`, `enabled_from date null`, `base_minutes 20`, `earn_cap_day 60`, `balance_cap 120`, `spend_cap_weekday 60`, `spend_cap_weekend 120`, `carry_max 30`, `play_until time '23:00'`, `tiers jsonb [[20,8],[45,15]]`, `unverified_per_day 1`, `quiz_size 5`, `quiz_pass 3`, `device_block_minutes 15` | Bố mẹ đọc/ghi (cả nhà); con đọc của mình |
 | `wallet_entries` | `id`, `family_id`, `child_id`, `local_date`, `week_start`, `kind` (`earn_session` / `earn_unverified` / `base` / `break_leftover` / `spend` / `refund` / `carry` / `expire` / `parent_adjust`), `minutes int` (có dấu), `device` (`laptop`/`ipad`/`boox`, cho `spend`), `run_id`, `attempt_id`, `spend_id` (cho `refund`), `planned_minutes`, `started_at`, `ended_at`, `note`, `created_by`, `created_at` | Chỉ máy chủ ghi. Con đọc của mình; bố mẹ đọc cả nhà. Chỉ thêm dòng, không sửa số (`ended_at` của `spend` là cột duy nhất được cập nhật) |
 | `quiz_items` | `id`, `family_id`, `study_app_id`, `skill_code`, `stem`, `kind` (`mcq` / `number` / `text`), `choices jsonb`, `answer jsonb`, `explanation`, `version` | **Không grant cho con**, kể cả select (đáp án). Bố mẹ tải lên qua route; máy chủ đọc bằng service_role |
 | `quiz_attempts` | `id`, `family_id`, `child_id`, `run_id`, `seq` (1–2), `item_ids uuid[]`, `answers jsonb`, `correct int`, `passed bool`, `started_at`, `submitted_at`, `expires_at` | Chỉ máy chủ ghi; con đọc của mình (không có đáp án) |
@@ -261,7 +262,7 @@ Giả định: ví bật, cài đặt mặc định, ngày thường (T3), ví �
 | W8 | Ví 115′, phiên đạt +15′ | Ví 120′, 10′ mất, "Ví đầy" |
 | W9 | 20:00 chơi laptop 30′, 20:12 bấm Dừng | Tiêu 30′, hoàn 18′; PLAY 20:00–20:12 |
 | W10 | 20:00 chơi 30′, 20:10 bố mẹ khóa tay | PLAY kết thúc 20:10, hoàn 20′, LOCK_OVERRIDE |
-| W11 | Giờ dừng chơi 22:30; 22:20 mở màn Chơi | Chỉ cho chọn tối đa 10′; 22:26 thì không cho chơi (còn < 5′) |
+| W11 | Giờ dừng chơi 23:00; 22:50 mở màn Chơi | Chỉ cho chọn tối đa 10′; 22:56 thì không cho chơi (còn < 5′). 23:00 "Dùng 15′ trên iPad" → từ chối |
 | W11b | Đang chạy Ôn 30′ dở, bấm "Dùng 15′ trên iPad" | Từ chối: "Con đang học — bấm Xong trước" |
 | W11c | 20:00 bắt đầu Ôn; 20:10–20:25 bố mẹ mở máy 15′; 20:50 Xong | Phút phiên = 50 − 15 = 35′ → bậc 20 (+8′ nếu đạt) |
 | W11e | 19:55 "Dùng 15′ trên iPad"; 20:00 bấm Bắt đầu Ôn | Từ chối đến 20:10: "Con đang dùng giờ chơi trên iPad" |
@@ -282,9 +283,9 @@ Giả định: ví bật, cài đặt mặc định, ngày thường (T3), ví �
 ## 11. Việc bố mẹ cài trên máy (không cần code)
 
 **iPad** (Screen Time, mỗi con):
-1. Nội dung & Quyền riêng tư → Nội dung web → **Chỉ trang web được phép**: chép danh sách Trang học của laptop + `google.com` + các trang truyện con hay đọc.
-2. Giới hạn ứng dụng → thêm **trang truyện** (Safari) + nhóm Trò chơi / Giải trí: **1′/ngày**, bật "Chặn khi hết giới hạn".
-3. **Không bao giờ cho phép**: `character.ai`, `c.ai` và các trang tương tự.
+1. Nội dung & Quyền riêng tư → Nội dung web → **Chỉ trang web được phép**: chép danh sách Trang học của laptop + `google.com` + các trang mở bằng ví (`nettruyen…`, `poki.com`, và các trang theo O7).
+2. Giới hạn ứng dụng → thêm các **trang mở bằng ví** (Safari) + app **Netflix** + nhóm Trò chơi / Giải trí: **1′/ngày**, bật **"Chặn khi hết giới hạn"** (không bật thì con bấm "Bỏ qua giới hạn" được; đây là lý do giới hạn Chrome 45′ cũ không chặn).
+3. **Không bao giờ cho phép**: `character.ai`, `c.ai`, `janitorai.com` và các trang theo O7.
 4. **Luôn cho phép**: Zalo, Tin nhắn, Điện thoại, Spotify, Launcher (màn hình chính), Google Docs/Drive/Meet, Ghi chú, Camera, app học.
 5. Gỡ Chrome và trình duyệt khác; bật hỏi trước khi cài app để con không cài lại.
 6. Downtime đêm khớp giờ ngủ của con.
@@ -323,7 +324,7 @@ Giả định: ví bật, cài đặt mặc định, ngày thường (T3), ví �
 | O4 | Ngày thi HK1 của từng con (để đặt `enabled_from` và đợt ôn) | — |
 | O5 | "Làm được" một kỹ năng = đúng ở 2 ngày khác nhau? (Đợt 2) | Theo đề xuất của E |
 | O6 | Kết quả học Toán lâu dài lưu ở Launcher hay App Toán (Đợt 2) | Launcher cho HK2 |
-| O7 | Giờ dừng chơi = giờ ngủ 22:30 (đề xuất) hay 00:00 như giờ tự do hiện nay? | 22:30 — **chờ bố mẹ xác nhận** |
+| O7 | Xếp **Grok**, **Gemini**, **AO3** vào nhóm nào: chặn hẳn, mở bằng ví, hay luôn mở? | Đề xuất: Grok chặn hẳn (Common Sense Media 01/2026: không an toàn cho teen, có "bạn đồng hành" nội dung người lớn); Gemini mở bằng ví; AO3 chặn hẳn, thay bằng FanFiction.net (lọc K–T) mở bằng ví — **chờ bố mẹ** |
 
 ## 14. Lát build
 
