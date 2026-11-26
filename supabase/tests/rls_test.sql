@@ -1551,5 +1551,50 @@ reset role;
 select test_helpers.expect_count('child update of an off app changed nothing', (select count(*) from public.study_apps where slug = 'tat-roi' and active), 0);
 
 reset role;
+-- 0031 Luôn chặn: parents of the family read / add / remove; children and other families nothing.
+select test_helpers.expect_count('seeded family A has the 6 default always-block rows', (select count(*) from public.always_block_entries where family_id = '10000000-0000-0000-0000-00000000000a'), 6);
+delete from public.always_block_entries; -- throwaway test database: start the RLS checks from a known state
+insert into public.always_block_entries (family_id, domain) values
+  ('10000000-0000-0000-0000-00000000000a', 'grok.com'),
+  ('10000000-0000-0000-0000-00000000000b', 'character.ai');
+do $$
+begin
+  insert into public.always_block_entries (family_id, domain) values ('10000000-0000-0000-0000-00000000000a', 'Bad Domain!');
+  raise exception 'FAIL: malformed always-block domain accepted';
+exception when check_violation then raise notice 'ok: always-block domain must be a normalised host';
+end $$;
+select test_helpers.expect_count('always_block_entries has RLS on', (select count(*) from pg_class where oid = 'public.always_block_entries'::regclass and relrowsecurity), 1);
+select test_helpers.expect_count('anon has no always_block access', (select case when has_table_privilege('anon', 'public.always_block_entries', 'SELECT') then 1 else 0 end), 0);
+select test_helpers.expect_count('authenticated cannot update always_block', (select case when has_table_privilege('authenticated', 'public.always_block_entries', 'UPDATE') then 1 else 0 end), 0);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', false);
+select test_helpers.expect_count('child sees no always-block rows', (select count(*) from public.always_block_entries), 0);
+do $$
+begin
+  insert into public.always_block_entries (family_id, domain) values ('10000000-0000-0000-0000-00000000000a', 'poki.com');
+  raise exception 'FAIL: child added an always-block row';
+exception when insufficient_privilege then raise notice 'ok: child cannot add an always-block row';
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
+select test_helpers.expect_count('parentA sees family A always-block rows (1)', (select count(*) from public.always_block_entries), 1);
+insert into public.always_block_entries (family_id, domain) values ('10000000-0000-0000-0000-00000000000a', 'janitorai.com');
+select test_helpers.expect_count('parentA added an always-block row (2)', (select count(*) from public.always_block_entries), 2);
+do $$
+begin
+  insert into public.always_block_entries (family_id, domain) values ('10000000-0000-0000-0000-00000000000b', 'grok.com');
+  raise exception 'FAIL: parentA added an always-block row to family B';
+exception when insufficient_privilege then raise notice 'ok: parentA cannot add to family B';
+end $$;
+delete from public.always_block_entries where domain = 'grok.com';
+select test_helpers.expect_count('parentA removed grok.com (1 left)', (select count(*) from public.always_block_entries), 1);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000b1', false);
+select test_helpers.expect_count('parentB still sees family B row (1)', (select count(*) from public.always_block_entries), 1);
+
+reset role;
+select test_helpers.expect_count('parentA delete did not touch family B', (select count(*) from public.always_block_entries where family_id = '10000000-0000-0000-0000-00000000000b'), 1);
+select test_helpers.expect_count('ext_version column exists', (select count(*) from information_schema.columns where table_name = 'extension_devices' and column_name = 'ext_version'), 1);
+
+reset role;
 drop schema test_helpers cascade;
 \echo RLS OK

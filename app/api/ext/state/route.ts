@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { allowDomainsFor, extStateBody } from "@/lib/ext/payload";
 import { deviceFromRequest } from "@/lib/ext/device";
+import { extVersionFromHeader } from "@/lib/ext/version";
 import { ServerTimer } from "@/lib/serverTiming";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readToday, type ChildContext } from "@/lib/today/service";
@@ -38,12 +39,15 @@ export async function GET(request: Request) {
     const ctx: ChildContext = { childId: device.child_id, familyId: device.family_id, displayName: "", grade: null, color: null, db: admin };
     const now = new Date();
     // The family's allowlist does not depend on the day: read both at once. Any error still throws.
-    const [{ state }, allow, slots, files] = await Promise.all([
+    const [{ state }, allow, slots, files, blocked] = await Promise.all([
       readToday(ctx, now),
       admin.from("allowlist_entries").select("domain, child_id, expires_at").eq("family_id", device.family_id),
       admin.from("app_slots").select("child_id, url, allow_domains, active, kind").eq("family_id", device.family_id),
       // 0007 setting; before that migration the read fails and files stay blocked.
       admin.from("family_settings").select("allow_local_files").eq("family_id", device.family_id).maybeSingle(),
+      // 0031 "Luôn chặn". A failed read (e.g. before the migration) only drops the family list:
+      // failing the poll would lock the laptop, and translate.goog stays built in.
+      admin.from("always_block_entries").select("domain").eq("family_id", device.family_id),
     ]);
     if (allow.error) throw new Error(allow.error.message);
     if (slots.error) throw new Error(slots.error.message);
@@ -56,15 +60,23 @@ export async function GET(request: Request) {
     );
 
     const allowLocalFiles = !files.error && files.data?.allow_local_files === true;
-    const body = extStateBody(state, domains, launcherUrl(request), allowLocalFiles);
+    if (blocked.error) console.error("ext.state always-block read failed", blocked.error.message);
+    const familyBlock = blocked.error ? [] : (blocked.data ?? []).map((r) => r.domain as string);
+    const body = extStateBody(state, domains, launcherUrl(request), allowLocalFiles, familyBlock);
 
     // The extension reports whether it may run in InPrivate / incognito windows. Written after
     // the answer is sent (its result was never checked), still only after a successful read.
     const incognito = request.headers.get("x-incognito-allowed");
+    // 0.4+ reports its version (V1): the parent's Thiết bị page warns about older laptops.
+    const version = extVersionFromHeader(request.headers.get("x-extension-version"));
     after(async () => {
       await admin
         .from("extension_devices")
-        .update({ last_seen_at: now.toISOString(), ...(incognito === "1" || incognito === "0" ? { incognito_allowed: incognito === "1" } : {}) })
+        .update({
+          last_seen_at: now.toISOString(),
+          ...(incognito === "1" || incognito === "0" ? { incognito_allowed: incognito === "1" } : {}),
+          ...(version ? { ext_version: version } : {}),
+        })
         .eq("id", device.id);
     });
     timer.mark("db");

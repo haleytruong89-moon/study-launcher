@@ -69,12 +69,34 @@ export interface ExtStateBody {
   status: DayState["status"];
 }
 
-export function extStateBody(state: DayState, allow: string[], launcherUrl: string, allowLocalFiles = false): ExtStateBody {
+/** Built in: Google's page-translation proxy (it would open any site through translate.goog). */
+export const BUILTIN_BLOCK_ALWAYS = ["translate.goog"] as const;
+
+/**
+ * Domains the extension blocks in every state. V1 (27/11/2026, SQL 0031): the family's
+ * "Luôn chặn" rows are added to the built-in list; extension 0.4 also blocks them while open.
+ */
+export function blockAlwaysFor(familyBlock: readonly string[]): string[] {
+  const out = new Set<string>(BUILTIN_BLOCK_ALWAYS);
+  for (const d of familyBlock) {
+    const n = normalizeDomain(d);
+    if (n) out.add(n);
+  }
+  return [...out].sort();
+}
+
+export function extStateBody(
+  state: DayState,
+  allow: string[],
+  launcherUrl: string,
+  allowLocalFiles = false,
+  familyBlock: readonly string[] = [],
+): ExtStateBody {
   return {
     open: state.open,
     openUntil: state.openUntil,
     allow,
-    blockAlways: ["translate.goog"],
+    blockAlways: blockAlwaysFor(familyBlock),
     launcherUrl,
     pollSeconds: EXT_POLL_SECONDS,
     serverNow: state.serverNow,
