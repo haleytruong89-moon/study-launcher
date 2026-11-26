@@ -22,7 +22,7 @@ import {
   type SyncEvent,
   type SyncState,
 } from "@/extension/src/core/sync";
-import { planTabSweep, shouldSweep } from "@/extension/src/core/sweep";
+import { planBlockedTabReloads, planTabSweep, shouldSweep } from "@/extension/src/core/sweep";
 import { buildBlockedUrl, parseBlockedUrl } from "@/extension/src/core/blockedUrl";
 import { hostMatchesDomain, normalizeHost } from "@/extension/src/core/domains";
 
@@ -94,10 +94,28 @@ afterEach(() => {
 describe("buildRules", () => {
   const locked = effectiveState(run([ok(payload())]), FALLBACK);
 
-  it("open -> no rules at all (nothing blocked)", () => {
-    const open = effectiveState(run([ok(openPayload())]), FALLBACK);
+  it("open -> only the always-block rule (V1, extension 0.4)", () => {
+    const open = effectiveState(run([ok(openPayload({ blockAlways: ["translate.goog", "character.ai"], allow: ["archiveofourown.org"] }))]), FALLBACK);
     expect(open.locked).toBe(false);
-    expect(rulesFor(open)).toEqual([]);
+    const rules = rulesFor(open);
+    expect(rules).toHaveLength(1);
+    expect(rules[0]).toEqual({
+      id: RULE_IDS.blockAlways,
+      priority: 3,
+      action: { type: "block" },
+      condition: { requestDomains: ["character.ai"], resourceTypes: [...ALL_RESOURCE_TYPES] }, // built-in translate.goog stays open
+    });
+  });
+
+  it("open with no family always-block domain -> no rules", () => {
+    expect(buildRules({ locked: false, allow: ["x.vn"], blockAlways: [], launcherUrl: LAUNCHER_URL, launcherHost: "study-launcher-nine.vercel.app" })).toEqual([]);
+    expect(buildRules({ locked: false, allow: [], blockAlways: ["translate.goog"], launcherUrl: LAUNCHER_URL, launcherHost: "study-launcher-nine.vercel.app" })).toEqual([]);
+  });
+
+  it("open: a family always-blocked site is blocked even if the parent also allowed it", () => {
+    const open = effectiveState(run([ok(openPayload({ blockAlways: ["translate.goog", "archiveofourown.org"], allow: ["archiveofourown.org"] }))]), FALLBACK);
+    expect(evaluate(rulesFor(open), "https://archiveofourown.org/works/1", "main_frame").kind).toBe("block");
+    expect(evaluate(rulesFor(open), "https://docs.google.com/", "main_frame").kind).toBe("none");
   });
 
   it("locked -> 4 rules with stable ids and the DESIGN priorities", () => {
@@ -244,7 +262,7 @@ describe("sync: fail-closed state machine", () => {
   it("one failed poll does NOT lock, but openUntil is no longer trusted", () => {
     const s = effectiveState(run([ok(openPayload()), fail]), FALLBACK);
     expect(s).toMatchObject({ locked: false, failures: 1, openUntil: null });
-    expect(rulesFor(s)).toEqual([]);
+    expect(rulesFor(s)).toEqual([]); // open, no family always-block list
   });
 
   it(`${FAIL_CLOSED_AFTER_FAILURES} consecutive failures -> locked with the last stored allowlist`, () => {
@@ -410,6 +428,20 @@ describe("tab sweep", () => {
 
   it("open -> nothing to do", () => {
     expect(planTabSweep(tabs, effectiveState(run([ok(openPayload())]), FALLBACK))).toEqual([]);
+  });
+
+  it("open -> tabs already on an always-blocked site are reloaded (V1); locked -> none (the sweep covers it)", () => {
+    const open = effectiveState(run([ok(openPayload({ blockAlways: ["character.ai"] }))]), FALLBACK);
+    const t = [
+      { id: 31, url: "https://beta.character.ai/chat" },
+      { id: 32, url: "https://docs.google.com/x" },
+      { id: 33, url: "chrome://newtab/" },
+      { id: 34, url: "https://notcharacter.ai/" },
+      { id: 35, url: "https://docs.google.com/", pendingUrl: "https://character.ai/" },
+      { url: "https://character.ai/" }, // no id
+    ];
+    expect(planBlockedTabReloads(t, open)).toEqual([31, 35]);
+    expect(planBlockedTabReloads(t, effectiveState(run([ok(payload())]), FALLBACK))).toEqual([]);
   });
 
   it("locked -> every tab outside the allowlist goes to the lock page with its URL", () => {
