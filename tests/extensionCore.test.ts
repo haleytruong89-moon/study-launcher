@@ -103,7 +103,7 @@ describe("buildRules", () => {
       id: RULE_IDS.blockAlways,
       priority: 3,
       action: { type: "block" },
-      condition: { requestDomains: ["character.ai"], resourceTypes: [...ALL_RESOURCE_TYPES] }, // built-in translate.goog stays open
+      condition: { requestDomains: ["character.ai", "translate.goog"], resourceTypes: [...ALL_RESOURCE_TYPES] }, // translate.goog too: it would proxy a blocked site
     });
   });
 
@@ -116,6 +116,7 @@ describe("buildRules", () => {
     const open = effectiveState(run([ok(openPayload({ blockAlways: ["translate.goog", "archiveofourown.org"], allow: ["archiveofourown.org"] }))]), FALLBACK);
     expect(evaluate(rulesFor(open), "https://archiveofourown.org/works/1", "main_frame").kind).toBe("block");
     expect(evaluate(rulesFor(open), "https://docs.google.com/", "main_frame").kind).toBe("none");
+    expect(evaluate(rulesFor(open), "https://archiveofourown-org.translate.goog/works/1", "main_frame").kind).toBe("block");
   });
 
   it("locked -> 4 rules with stable ids and the DESIGN priorities", () => {

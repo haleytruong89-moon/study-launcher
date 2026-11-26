@@ -80,7 +80,8 @@ export function blockAlwaysFor(familyBlock: readonly string[]): string[] {
   const out = new Set<string>(BUILTIN_BLOCK_ALWAYS);
   for (const d of familyBlock) {
     const n = normalizeDomain(d);
-    if (n) out.add(n);
+    // A block entry covers the whole site (same rule as lib/admin/blocklist.ts blockDomain).
+    if (n) out.add(n.startsWith("www.") && n.split(".").length > 2 ? n.slice(4) : n);
   }
   return [...out].sort();
 }

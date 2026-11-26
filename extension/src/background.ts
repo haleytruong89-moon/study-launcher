@@ -84,6 +84,9 @@ async function hasHostAccess(): Promise<boolean> {
   return chrome.permissions.contains({ origins: ["<all_urls>"] }).catch(() => false);
 }
 
+/** Tabs already reloaded into the open-state block rule (tab id -> address). Lost on restart: fine. */
+const reloadedBlocked = new Map<number, string>();
+
 async function enforce(sync: SyncState): Promise<EffectiveState> {
   let eff = withHostAccess(effectiveState(sync, LAUNCHER_URL), await hasHostAccess());
   try {
@@ -99,9 +102,17 @@ async function enforce(sync: SyncState): Promise<EffectiveState> {
     const tabs = await chrome.tabs.query({});
     for (const t of planTabSweep(tabs, eff)) await chrome.tabs.update(t.tabId, { url: t.url }).catch(() => undefined);
   } else {
-    // V1 (0.4): open, but a tab already on an always-blocked site is reloaded into the block rule.
+    // V1 (0.4): open, but a tab already on an always-blocked site is reloaded into the block rule,
+    // once per tab and address: Chrome's block page keeps the URL, so the next poll would reload
+    // it again every 30 s.
     const tabs = await chrome.tabs.query({}).catch(() => []);
-    for (const id of planBlockedTabReloads(tabs, eff)) await chrome.tabs.reload(id).catch(() => undefined);
+    for (const id of planBlockedTabReloads(tabs, eff)) {
+      const tab = tabs.find((t) => t.id === id);
+      const key = tab?.pendingUrl || tab?.url || "";
+      if (reloadedBlocked.get(id) === key) continue;
+      reloadedBlocked.set(id, key);
+      await chrome.tabs.reload(id).catch(() => undefined);
+    }
   }
   await chrome.storage.local.set({ lastEffective: eff });
   await showBadge(eff);

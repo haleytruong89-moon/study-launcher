@@ -72,12 +72,10 @@ export async function GET(request: Request) {
     after(async () => {
       await admin
         .from("extension_devices")
-        .update({
-          last_seen_at: now.toISOString(),
-          ...(incognito === "1" || incognito === "0" ? { incognito_allowed: incognito === "1" } : {}),
-          ...(version ? { ext_version: version } : {}),
-        })
+        .update({ last_seen_at: now.toISOString(), ...(incognito === "1" || incognito === "0" ? { incognito_allowed: incognito === "1" } : {}) })
         .eq("id", device.id);
+      // Apart, so last_seen_at is still written if the 0031 column is missing.
+      if (version) await admin.from("extension_devices").update({ ext_version: version }).eq("id", device.id);
     });
     timer.mark("db");
     return NextResponse.json(body, { headers: { ...NO_STORE, "Server-Timing": timer.header() } });

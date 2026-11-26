@@ -68,7 +68,7 @@ describe("allowlist sent to the extension", () => {
     };
     const s = computeDayState(input, now);
     expect(extStateBody(s, [], "https://study-launcher-nine.vercel.app").blockAlways).toEqual(["translate.goog"]);
-    const body = extStateBody(s, ["archiveofourown.org"], "https://study-launcher-nine.vercel.app", false, ["Character.AI", "grok.com", "grok.com", "not a domain!"]);
+    const body = extStateBody(s, ["archiveofourown.org"], "https://study-launcher-nine.vercel.app", false, ["Character.AI", "grok.com", "www.grok.com", "not a domain!"]);
     expect(body.blockAlways).toEqual(["character.ai", "grok.com", "translate.goog"]);
     expect(body.allow).toContain("archiveofourown.org"); // both lists travel; the extension's block rule wins
     expect(parseExtStatePayload(JSON.parse(JSON.stringify(body)))?.blockAlways).toEqual(["character.ai", "grok.com", "translate.goog"]);

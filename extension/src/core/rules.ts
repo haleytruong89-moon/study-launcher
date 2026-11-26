@@ -9,10 +9,9 @@
  *   2. priority 2 — allow `main_frame` for `requestDomains` = allowlist + launcher.
  *   3. priority 3 — block `requestDomains` = blockAlways (incl. translate.goog),
  *      wins over the allow rule.
- * Open: only rule 3 (V1, 27/11/2026, extension 0.4) for the family's "Luôn chặn" domains, which
- *   stay blocked during free time, Tin tưởng, sick days and parent opens. The built-ins
- *   (translate.goog) are only a lock-time guard and stay open, as before. No rule when the
- *   family list is empty.
+ * Open: only rule 3 (V1, 27/11/2026, extension 0.4) when the family has "Luôn chặn" domains:
+ *   they stay blocked during free time, Tin tưởng, sick days and parent opens, together with
+ *   translate.goog (it would proxy them). No rule when the family list is empty, as before.
  *
  * Only `main_frame` is redirected, so images / scripts / CDN files used by allowed
  * pages are never blocked (SPEC 2.6). DNR: the highest priority matching rule
@@ -123,9 +122,14 @@ function blockAlwaysRule(domains: readonly string[]): DnrRule {
   };
 }
 
-/** Always-blocked domains that stay blocked while OPEN: everything but the built-ins. */
+/**
+ * Always-blocked domains that stay blocked while OPEN. With no family entry: none (as before
+ * 0.4, translate.goog is only a lock-time guard). With family entries: the whole list, built-ins
+ * included, because translate.goog would otherwise proxy a blocked site
+ * (e.g. archiveofourown-org.translate.goog).
+ */
 export function openBlockDomains(blockAlways: readonly string[]): string[] {
-  return blockAlways.filter((d) => !BUILTIN_BLOCK_ALWAYS.includes(d));
+  return blockAlways.some((d) => !BUILTIN_BLOCK_ALWAYS.includes(d)) ? [...blockAlways] : [];
 }
 
 /** The dynamic rule set for a state. Open -> only the family always-block rule (or []). */
