@@ -58,6 +58,7 @@ Bên trong ②, hai lựa chọn cách làm (quyết định của người thi�
 | D9 | **iPad:** Screen Time kiểu "chỉ mở trang đã duyệt" (giống laptop), **gỡ Chrome**, chỉ dùng Safari. "Luôn cho phép": Zalo (cả ngày), Tin nhắn, Điện thoại, **Spotify**, Launcher, app học, Google Docs/Drive/Meet. Trang truyện: giới hạn 1′/ngày, mở bằng ví. Tiêu ví theo **khối 15′**, bố mẹ duyệt "Xin thêm giờ" |
 | D10 | **Boox:** khóa hết, chỉ mở khi đã xong bài; tiêu ví qua Google Family Link (nếu Boox nhận) hoặc bố mẹ giữ máy |
 | D11 | **Character.ai và các trang chat nhân vật AI: chặn hẳn**, không mở bằng ví. Character.AI đã bỏ chat mở cho người dưới 18 từ 25/11/2025. Cùng nhóm: **JanitorAI** (chỉ cho 18+) |
+| D16 | Bố mẹ chốt 27/11 (01:08): **Grok chặn hẳn** (Common Sense Media 01/2026: không an toàn cho teen, có "bạn đồng hành" nội dung người lớn); **Gemini mở bằng ví**; **AO3 chặn hẳn**, thay bằng **FanFiction.net** (chỉ đọc truyện K–T) mở bằng ví |
 | D15 | **Giờ dừng chơi 23:00** (bố mẹ chốt 27/11, 00:57): sau 23:00 không tiêu ví được trên máy nào; lượt chơi laptop bị cắt lúc 23:00 |
 | D12 | **Spotify** luôn mở (iPad + laptop) để con nghe nhạc khi học. Không dùng YouTube / YouTube Music cho nhạc |
 | D13 | **Bắt đầu sau thi HK1.** Trước đó chỉ làm phần chặn Character.ai + Spotify (V1) và bản bấm thử cho 2 con |
@@ -138,7 +139,7 @@ Bên trong ②, hai lựa chọn cách làm (quyết định của người thi�
 
 ### 5.9 Chặn hẳn (Character.ai) và nhạc
 
-- Thêm danh sách **"Luôn chặn"** của gia đình (dữ liệu, bố mẹ sửa được). Mặc định: `character.ai`, `c.ai`, `janitorai.com` (+ các trang bố mẹ chốt ở O7). Builder đề xuất thêm vài trang chat nhân vật AI phổ biến vào PR để bố mẹ duyệt.
+- Thêm danh sách **"Luôn chặn"** của gia đình (dữ liệu, bố mẹ sửa được). Mặc định: `character.ai`, `c.ai`, `janitorai.com`, `grok.com`, `archiveofourown.org` (D11, D16). Builder đề xuất thêm vài trang chat nhân vật AI phổ biến vào PR để bố mẹ duyệt.
 - Extension chặn danh sách này **cả khi máy mở** (`PLAY`, Tin tưởng, ngày ốm, bố mẹ mở). Hiện nay extension chỉ chặn `translate.goog` khi khóa, còn lúc mở thì "không có luật nào" (`extension/src/core/rules.ts`), nên cần một bản extension mới (0.4).
 - Extension 0.4 gửi số phiên bản khi hỏi máy chủ. Trang **Thiết bị** của bố mẹ hiện dòng cảnh báo cho máy chạy bản cũ hoặc chưa rõ bản: "Extension cũ: lúc chơi chưa chặn Character.ai — cài lại bản mới". **Không** khóa máy chỉ vì extension cũ (không đổi luật khóa/mở); khoảng hở này chấp nhận đến khi bố mẹ cài lại.
 - Trang học (allowlist) có nút Thêm nhanh **Spotify** (trang nghe nhạc web). Không thêm YouTube / YouTube Music.
@@ -283,9 +284,9 @@ Giả định: ví bật, cài đặt mặc định, ngày thường (T3), ví �
 ## 11. Việc bố mẹ cài trên máy (không cần code)
 
 **iPad** (Screen Time, mỗi con):
-1. Nội dung & Quyền riêng tư → Nội dung web → **Chỉ trang web được phép**: chép danh sách Trang học của laptop + `google.com` + các trang mở bằng ví (`nettruyen…`, `poki.com`, và các trang theo O7).
+1. Nội dung & Quyền riêng tư → Nội dung web → **Chỉ trang web được phép**: chép danh sách Trang học của laptop + `google.com` + các trang mở bằng ví (`nettruyen…`, `poki.com`, `gemini.google.com`, `fanfiction.net`).
 2. Giới hạn ứng dụng → thêm các **trang mở bằng ví** (Safari) + app **Netflix** + nhóm Trò chơi / Giải trí: **1′/ngày**, bật **"Chặn khi hết giới hạn"** (không bật thì con bấm "Bỏ qua giới hạn" được; đây là lý do giới hạn Chrome 45′ cũ không chặn).
-3. **Không bao giờ cho phép**: `character.ai`, `c.ai`, `janitorai.com` và các trang theo O7.
+3. **Không bao giờ cho phép**: `character.ai`, `c.ai`, `janitorai.com`, `grok.com`, `archiveofourown.org`. Gỡ app Grok nếu có.
 4. **Luôn cho phép**: Zalo, Tin nhắn, Điện thoại, Spotify, Launcher (màn hình chính), Google Docs/Drive/Meet, Ghi chú, Camera, app học.
 5. Gỡ Chrome và trình duyệt khác; bật hỏi trước khi cài app để con không cài lại.
 6. Downtime đêm khớp giờ ngủ của con.
@@ -324,7 +325,6 @@ Giả định: ví bật, cài đặt mặc định, ngày thường (T3), ví �
 | O4 | Ngày thi HK1 của từng con (để đặt `enabled_from` và đợt ôn) | — |
 | O5 | "Làm được" một kỹ năng = đúng ở 2 ngày khác nhau? (Đợt 2) | Theo đề xuất của E |
 | O6 | Kết quả học Toán lâu dài lưu ở Launcher hay App Toán (Đợt 2) | Launcher cho HK2 |
-| O7 | Xếp **Grok**, **Gemini**, **AO3** vào nhóm nào: chặn hẳn, mở bằng ví, hay luôn mở? | Đề xuất: Grok chặn hẳn (Common Sense Media 01/2026: không an toàn cho teen, có "bạn đồng hành" nội dung người lớn); Gemini mở bằng ví; AO3 chặn hẳn, thay bằng FanFiction.net (lọc K–T) mở bằng ví — **chờ bố mẹ** |
 
 ## 14. Lát build
 
