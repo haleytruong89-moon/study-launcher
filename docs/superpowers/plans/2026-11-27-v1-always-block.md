@@ -17,7 +17,7 @@
 - `translate.goog` stays built-in in the extension, as today.
 - Old extensions (< 0.4.0) are **warned about, never locked** (C13).
 - Spotify domain: `spotify.com` (covers `open.spotify.com`, `accounts.spotify.com`). No YouTube / YouTube Music. *(Changed while building: D12 says "Spotify luôn mở", so 0031 also adds `spotify.com` as a default family-wide study site, like 0016; the quick-add stays.)*
-- Open state blocks only the **family** list; the built-in `translate.goog` stays a lock-time guard (an existing test pins that). *(Decided while building.)*
+- Open state: no rule when the family list is empty (as before); otherwise the whole list incl. `translate.goog`, which would proxy a blocked site. *(Decided after review.)*
 - UI text Vietnamese, code/comments/commits English. Buttons ≥ 44px.
 - `npm run typecheck && npm run lint && npm test` green before each commit.
 - One branch `feature/v1-luon-chan`, one PR into `main`. Do not merge.
