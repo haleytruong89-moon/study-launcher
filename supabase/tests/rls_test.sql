@@ -106,7 +106,7 @@ select test_helpers.expect_count('child1 sees only own homework',        (select
 select test_helpers.expect_count('child1 cannot see sibling day_session', (select count(*) from public.day_sessions where child_id = '00000000-0000-0000-0000-0000000000c2'), 0);
 select test_helpers.expect_count('child1 sees only own profile',          (select count(*) from public.profiles), 1);
 select test_helpers.expect_count('child1 sees only own app slot',         (select count(*) from public.app_slots), 1);
-select test_helpers.expect_count('child1 sees family allowlist (17, 0016)', (select count(*) from public.allowlist_entries), 17);
+select test_helpers.expect_count('child1 sees family allowlist (18: 0016 + spotify.com from 0031)', (select count(*) from public.allowlist_entries), 18);
 select test_helpers.expect_count('child1 sees family_settings',           (select count(*) from public.family_settings), 1);
 select test_helpers.expect_count('child1 sees no extension devices',      (select count(*) from public.extension_devices), 0);
 select test_helpers.expect_count('child1 sees no audit log',              (select count(*) from public.audit_log), 0);

@@ -11,7 +11,9 @@
 --      never read it; /api/ext/state reads it with service_role.
 --   2. The six default rows for every existing family (skips rows already there).
 --   3. seed_family_defaults (new families) also adds them. Body = 0016's, plus step 2's insert.
---   4. extension_devices.ext_version: the version the extension reports on each poll, so the
+--   4. Spotify (D12, "Spotify luôn mở"): spotify.com becomes a family-wide study site, like the
+--      0016 defaults (new + existing families; the parent can still remove it). No YouTube.
+--   5. extension_devices.ext_version: the version the extension reports on each poll, so the
 --      parent's Thiết bị page can warn about laptops on an extension older than 0.4.
 
 -- 1. Table ------------------------------------------------------------------------------------
@@ -88,6 +90,14 @@ begin
     );
   end loop;
 
+  -- 0031 (27/11/2026): Spotify open while studying (D12).
+  insert into public.allowlist_entries (family_id, child_id, domain, grp)
+  select p_family_id, null, 'spotify.com', 'external'
+  where not exists (
+    select 1 from public.allowlist_entries a
+    where a.family_id = p_family_id and a.child_id is null and a.domain = 'spotify.com'
+  );
+
   -- 0031 (27/11/2026): sites that stay blocked even while the laptop is open.
   insert into public.always_block_entries (family_id, domain)
   select p_family_id, v.domain
@@ -99,6 +109,15 @@ $$;
 revoke all on function public.seed_family_defaults(uuid, text) from public, anon, authenticated;
 grant execute on function public.seed_family_defaults(uuid, text) to service_role;
 
--- 4. Extension version per device ------------------------------------------------------------
+-- 4. Spotify for existing families ---------------------------------------------------------
+insert into public.allowlist_entries (family_id, child_id, domain, grp)
+select f.id, null, 'spotify.com', 'external'
+from public.families f
+where not exists (
+  select 1 from public.allowlist_entries a
+  where a.family_id = f.id and a.child_id is null and a.expires_at is null and a.domain = 'spotify.com'
+);
+
+-- 5. Extension version per device ------------------------------------------------------------
 alter table public.extension_devices add column if not exists ext_version text;
 grant select (ext_version) on public.extension_devices to authenticated;
