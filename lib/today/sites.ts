@@ -42,6 +42,7 @@ const PRESET_OPEN: Record<(typeof PRESETS)[number]["id"], { main: string; href: 
   notebooklm: { main: "notebooklm.google.com", href: "https://notebooklm.google.com" },
   gdocs: { main: "docs.google.com", href: "https://drive.google.com" },
   zalo: { main: "zalo.me", href: "https://chat.zalo.me" },
+  spotify: { main: "spotify.com", href: "https://open.spotify.com" },
 };
 
 const host = (d: string) => d.trim().toLowerCase().replace(/^\*\./, "");

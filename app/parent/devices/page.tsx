@@ -1,3 +1,4 @@
+import { isOutdatedExtension } from "@/lib/ext/version";
 import { loadChildren, requireParentPage } from "@/lib/admin/page";
 import { loadFreeHistory } from "@/lib/parent/freeHistoryLoad";
 import { localDate } from "@/lib/time";
@@ -39,6 +40,11 @@ export default async function DevicesPage() {
     .is("revoked_at", null)
     .order("created_at");
   const devices = (data ?? []) as DeviceRow[];
+  // V1 (0031): extension version per laptop. Read apart so the list still shows before the
+  // migration runs (the column is missing there and this read just fails).
+  const { data: versions } = await db.from("extension_devices").select("id, ext_version").is("revoked_at", null);
+  const versionOf = new Map(((versions ?? []) as { id: string; ext_version: string | null }[]).map((v) => [v.id, v.ext_version]));
+  const versionsKnown = versions !== null;
   // S6: last "extension bị gỡ" per laptop and "mở Launcher không có extension" per child.
   const { data: events } = await db
     .from("audit_log")
@@ -110,6 +116,11 @@ export default async function DevicesPage() {
                           {removed && (
                             <span className="text-xs font-semibold text-[#8A2B1F]">
                               Extension trên máy này đã bị gỡ ({whenText(removed.at, new Date(now))}). Cài lại và ghép lại với con, rồi bấm “Gỡ” cho dòng máy cũ này.
+                            </span>
+                          )}
+                          {versionsKnown && isOutdatedExtension(versionOf.get(d.id) ?? null) && (
+                            <span className="text-xs font-semibold text-[#8A2B1F]">
+                              Extension {versionOf.get(d.id) ?? "bản cũ"}: lúc máy mở chưa chặn các trang trong “Luôn chặn”. Tải bản mới trên trang này rồi cài lại trên laptop.
                             </span>
                           )}
                           {d.incognito_allowed === false && (

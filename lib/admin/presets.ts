@@ -6,7 +6,7 @@
  * Extra pieces a page turns out to need are found by the extension's blocked-frame report.
  */
 export interface Preset {
-  id: "meet" | "notebooklm" | "gdocs" | "zalo";
+  id: "meet" | "notebooklm" | "gdocs" | "zalo" | "spotify";
   label: string;
   sub: string;
   domains: readonly string[];
@@ -39,6 +39,14 @@ export const PRESETS: readonly Preset[] = [
     label: "Zalo",
     sub: "Nhắn thầy cô, nhận file bài tập qua Zalo trên web",
     domains: ["zalo.me"],
+  },
+  {
+    // 27/11/2026 (V1, D12): the children listen to music while studying. Spotify only:
+    // YouTube / YouTube Music have video and stay blocked.
+    id: "spotify",
+    label: "Spotify",
+    sub: "Nghe nhạc khi học (không có video)",
+    domains: ["spotify.com"],
   },
 ];
 

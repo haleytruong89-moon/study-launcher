@@ -3,7 +3,7 @@
   "name": "Study Launcher",
   "short_name": "Study Launcher",
   "description": "Học trước, web sau: giờ học chỉ mở trang học bố mẹ cho phép; xong bài tập + kỹ năng thì web mở giờ tự do.",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "minimum_chrome_version": "120",
   "permissions": [
     "declarativeNetRequest",

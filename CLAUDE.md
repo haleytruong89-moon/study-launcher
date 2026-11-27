@@ -42,6 +42,7 @@ Người dùng: 2 con (laptop Windows + iPhone/iPad), phụ huynh (iPhone). Ch�
 - *(R8a, 09/11/2026)* **Làm thêm**: bài bổ sung / kỹ năng đã xong bắt đầu lại được (lượt mới, không tối thiểu, không bắt buộc, không đổi xong/khóa/giờ tự do).
 - Giờ tự do **45'** (1 lần/ngày) · thẻ miễn 1/tuần.
 - Khi khóa: chỉ allowlist (app học + từ điển/dịch). **Không** Google Search, **không** YouTube. Luôn chặn `*.translate.goog`.
+- *(V1, 27/11/2026)* **Luôn chặn** (`always_block_entries`, SQL 0031; mặc định Character.ai, JanitorAI, Grok, AO3): extension ≥ 0.4 chặn **cả lúc máy mở**; bố mẹ sửa ở Trang học. Spotify mở mặc định. Hướng mới: **Ví giờ chơi** thay giờ tự do 45′ sau thi HK1 (`docs/superpowers/specs/2026-11-27-vi-gio-choi-design.md`, lát V2–V5 chưa làm).
 - *(12/11/2026)* Mặc định mở thêm: Google Meet, NotebookLM, Google Docs/Drive/Forms, Zalo (`zalo.me`) và file .html/.pdf trên máy (SQL 0016; bố mẹ vẫn gỡ được từng dòng).
 - Chế độ Tin tưởng: hệ thống **chỉ gợi ý**, phụ huynh xác nhận mới chuyển.
 - Mọi luật gia đình là dữ liệu trong `family_settings` / allowlist / mẫu việc — **không hard-code**.

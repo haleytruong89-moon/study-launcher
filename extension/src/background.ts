@@ -24,6 +24,7 @@ import {
   parseSyncState,
   planAlarms,
   planRuleUpdate,
+  planBlockedTabReloads,
   planTabSweep,
   planWarning,
   reduceSync,
@@ -83,6 +84,9 @@ async function hasHostAccess(): Promise<boolean> {
   return chrome.permissions.contains({ origins: ["<all_urls>"] }).catch(() => false);
 }
 
+/** Tabs already reloaded into the open-state block rule (tab id -> address). Lost on restart: fine. */
+const reloadedBlocked = new Map<number, string>();
+
 async function enforce(sync: SyncState): Promise<EffectiveState> {
   let eff = withHostAccess(effectiveState(sync, LAUNCHER_URL), await hasHostAccess());
   try {
@@ -97,6 +101,18 @@ async function enforce(sync: SyncState): Promise<EffectiveState> {
     // Idempotent: also catches tabs the network rules cannot see (file:, already open tabs).
     const tabs = await chrome.tabs.query({});
     for (const t of planTabSweep(tabs, eff)) await chrome.tabs.update(t.tabId, { url: t.url }).catch(() => undefined);
+  } else {
+    // V1 (0.4): open, but a tab already on an always-blocked site is reloaded into the block rule,
+    // once per tab and address: Chrome's block page keeps the URL, so the next poll would reload
+    // it again every 30 s.
+    const tabs = await chrome.tabs.query({}).catch(() => []);
+    for (const id of planBlockedTabReloads(tabs, eff)) {
+      const tab = tabs.find((t) => t.id === id);
+      const key = tab?.pendingUrl || tab?.url || "";
+      if (reloadedBlocked.get(id) === key) continue;
+      reloadedBlocked.set(id, key);
+      await chrome.tabs.reload(id).catch(() => undefined);
+    }
   }
   await chrome.storage.local.set({ lastEffective: eff });
   await showBadge(eff);
@@ -154,7 +170,12 @@ async function poll(): Promise<boolean> {
   try {
     const incognito = await chrome.extension.isAllowedIncognitoAccess().catch(() => null);
     const res = await fetch(`${LAUNCHER_URL}/api/ext/state`, {
-      headers: { Authorization: `Bearer ${token}`, ...(incognito === null ? {} : { "X-Incognito-Allowed": incognito ? "1" : "0" }) },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // V1 (0.4): the server stores it so the parent sees laptops still on an older extension.
+        "X-Extension-Version": chrome.runtime.getManifest().version,
+        ...(incognito === null ? {} : { "X-Incognito-Allowed": incognito ? "1" : "0" }),
+      },
       cache: "no-store",
       signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
     });

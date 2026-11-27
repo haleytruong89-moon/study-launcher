@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { requestSchema, requestUrl } from "@/lib/admin/allowlist";
+import { isBlockedHost } from "@/lib/admin/blocklist";
 import { hostnameOf } from "@/lib/admin/schemas";
 import { unlockReminderMessage, unlockRequestMessage } from "@/lib/push/messages";
 import { remindDue } from "@/lib/push/remind";
@@ -29,6 +30,12 @@ export async function POST(request: Request) {
 
   try {
     const admin = createAdminClient();
+    // V1 (0031): a site on the family's "Luôn chặn" list is refused at once; a request the
+    // parent might approve would still be blocked by the extension.
+    const blocked = await admin.from("always_block_entries").select("domain").eq("family_id", ctx.familyId);
+    if (!blocked.error && isBlockedHost(domain, (blocked.data ?? []).map((r) => r.domain as string))) {
+      return jsonError("Trang này bố mẹ đã chặn hẳn.", 400);
+    }
     const existing = await admin
       .from("unlock_requests")
       .select("id, status, created_at")

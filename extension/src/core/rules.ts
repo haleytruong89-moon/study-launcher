@@ -9,7 +9,9 @@
  *   2. priority 2 — allow `main_frame` for `requestDomains` = allowlist + launcher.
  *   3. priority 3 — block `requestDomains` = blockAlways (incl. translate.goog),
  *      wins over the allow rule.
- * Open: no rules at all.
+ * Open: only rule 3 (V1, 27/11/2026, extension 0.4) when the family has "Luôn chặn" domains:
+ *   they stay blocked during free time, Tin tưởng, sick days and parent opens, together with
+ *   translate.goog (it would proxy them). No rule when the family list is empty, as before.
  *
  * Only `main_frame` is redirected, so images / scripts / CDN files used by allowed
  * pages are never blocked (SPEC 2.6). DNR: the highest priority matching rule
@@ -26,6 +28,7 @@
  */
 
 import { BLOCKED_PATH, launcherOrigin } from "./blockedUrl";
+import { BUILTIN_BLOCK_ALWAYS } from "./domains";
 
 export type DnrResourceType =
   | "main_frame"
@@ -107,9 +110,34 @@ export interface RuleInput {
   hostAccess?: boolean;
 }
 
-/** The dynamic rule set for a state. Open -> []. */
+function blockAlwaysRule(domains: readonly string[]): DnrRule {
+  return {
+    id: RULE_IDS.blockAlways,
+    priority: 3,
+    action: { type: "block" },
+    condition: {
+      requestDomains: [...domains],
+      resourceTypes: [...ALL_RESOURCE_TYPES],
+    },
+  };
+}
+
+/**
+ * Always-blocked domains that stay blocked while OPEN. With no family entry: none (as before
+ * 0.4, translate.goog is only a lock-time guard). With family entries: the whole list, built-ins
+ * included, because translate.goog would otherwise proxy a blocked site
+ * (e.g. archiveofourown-org.translate.goog).
+ */
+export function openBlockDomains(blockAlways: readonly string[]): string[] {
+  return blockAlways.some((d) => !BUILTIN_BLOCK_ALWAYS.includes(d)) ? [...blockAlways] : [];
+}
+
+/** The dynamic rule set for a state. Open -> only the family always-block rule (or []). */
 export function buildRules(input: RuleInput): DnrRule[] {
-  if (!input.locked) return [];
+  if (!input.locked) {
+    const open = openBlockDomains(input.blockAlways);
+    return open.length > 0 ? [blockAlwaysRule(open)] : [];
+  }
   const origin = launcherOrigin(input.launcherUrl);
   if (origin === null) throw new Error(`invalid launcher URL: ${input.launcherUrl}`);
 
@@ -140,17 +168,7 @@ export function buildRules(input: RuleInput): DnrRule[] {
       condition: { requestDomains: allowDomains, resourceTypes: ["main_frame", "sub_frame"] },
     },
   ];
-  if (input.blockAlways.length > 0) {
-    rules.push({
-      id: RULE_IDS.blockAlways,
-      priority: 3,
-      action: { type: "block" },
-      condition: {
-        requestDomains: [...input.blockAlways],
-        resourceTypes: [...ALL_RESOURCE_TYPES],
-      },
-    });
-  }
+  if (input.blockAlways.length > 0) rules.push(blockAlwaysRule(input.blockAlways));
   return rules;
 }
 

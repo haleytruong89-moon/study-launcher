@@ -67,6 +67,9 @@ export const ACTION_GROUP: Readonly<Record<string, AuditGroup>> = {
   "allowlist.add": "request",
   "allowlist.remove": "request",
   "allowlist.preset": "request",
+  // V1 (27/11/2026, SQL 0031): "Luôn chặn".
+  "blocklist.add": "request",
+  "blocklist.remove": "request",
 
   "device.code": "device",
   "device.pair": "device",
@@ -307,6 +310,11 @@ export function auditText(entry: AuditEntry, names: Names): { text: string; grou
       const added = Array.isArray(p.added) ? p.added.length : null;
       return say(`Thêm nhanh ${preset?.label ?? "một nhóm trang"} cho cả nhà${added !== null ? ` (${added} trang mới)` : ""}`);
     }
+
+    case "blocklist.add":
+      return say(`Luôn chặn ${host(p.domain) ?? "một trang"} (cả lúc máy mở)`);
+    case "blocklist.remove":
+      return say(`Bỏ chặn ${host(p.domain) ?? "một trang"}`);
 
     // --- Thiết bị / extension -------------------------------------------------
     case "device.code":
