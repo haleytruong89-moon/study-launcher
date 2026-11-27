@@ -11,7 +11,8 @@
  */
 
 import { buildBlockedUrl } from "./blockedUrl";
-import { isAllowed } from "./domains";
+import { classifyUrl, hostMatchesAny, isAllowed } from "./domains";
+import { openBlockDomains } from "./rules";
 import type { EffectiveState } from "./sync";
 
 export interface TabLike {
@@ -60,4 +61,25 @@ export function shouldSweep(prev: EffectiveState | null, next: EffectiveState): 
     prev.blockAlways.join(",") !== next.blockAlways.join(",") ||
     prev.allowLocalFiles !== next.allowLocalFiles
   );
+}
+
+/**
+ * V1 (27/11/2026, extension 0.4): while OPEN, tabs already showing an always-blocked site
+ * (committed or pending URL) are reloaded, so the open-state block rule catches them too.
+ * Locked -> [] (planTabSweep already sends them to the lock page).
+ */
+export function planBlockedTabReloads(tabs: readonly TabLike[], state: EffectiveState): number[] {
+  const blocked = openBlockDomains(state.blockAlways);
+  if (state.locked || blocked.length === 0) return [];
+  const out: number[] = [];
+  for (const tab of tabs) {
+    if (tab.id === undefined) continue;
+    const hit = [tab.pendingUrl, tab.url].some((u) => {
+      if (!u) return false;
+      const c = classifyUrl(u);
+      return c.kind === "web" && hostMatchesAny(c.host, blocked);
+    });
+    if (hit) out.push(tab.id);
+  }
+  return out;
 }

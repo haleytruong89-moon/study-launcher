@@ -5,6 +5,7 @@ import { vnTime } from "@/lib/today/view";
 import { ParentHeader } from "../parent-header";
 import { PRESETS } from "@/lib/admin/presets";
 import { AllowAddForm, AllowRemoveButton } from "./allow-forms";
+import { BlockAddForm, BlockRemoveButton } from "./block-forms";
 import { PresetButtons } from "./preset-buttons";
 
 export const dynamic = "force-dynamic";
@@ -23,10 +24,13 @@ export default async function AllowlistPage() {
   const children = await loadChildren(db);
   // eslint-disable-next-line react-hooks/purity -- server component, rendered per request
   const now = Date.now();
-  const [{ data }, { data: slots }] = await Promise.all([
+  const [{ data }, { data: slots }, { data: blocked }] = await Promise.all([
     db.from("allowlist_entries").select("id, child_id, domain, grp, expires_at").order("domain"),
     db.from("app_slots").select("label, url, allow_domains, active, kind, child_id"),
+    // 0031 (V1). Before the migration the read fails and the section shows an empty list.
+    db.from("always_block_entries").select("id, domain").order("domain"),
   ]);
+  const blockRows = (blocked ?? []) as { id: string; domain: string }[];
   const rows = ((data ?? []) as Row[]).filter((r) => !r.expires_at || new Date(r.expires_at).getTime() > now);
   const who = (id: string | null) => (id === null ? "Cả 2 con" : (children.find((c) => c.id === id)?.display_name ?? "Con"));
   const slotDomains = (slots ?? [])
@@ -61,6 +65,22 @@ export default async function AllowlistPage() {
               </li>
             ))}
           </ul>
+        </section>
+
+        <section aria-labelledby="al-block" className="flex flex-col gap-2 rounded-2xl border border-[#8A2B1F]/25 bg-white p-4">
+          <h2 id="al-block" className="text-base font-bold">
+            Luôn chặn ({blockRows.length})
+          </h2>
+          <p className="text-xs text-ink/70">Chặn cả lúc máy đang mở (giờ tự do, Tin tưởng, ngày ốm). Cần extension 0.4 trở lên trên laptop của con.</p>
+          <ul className="flex flex-col gap-1">
+            {blockRows.map((r) => (
+              <li key={r.id} className="flex items-center gap-2 border-t border-ink/10 py-1 first:border-t-0" aria-label={r.domain}>
+                <span className="grow font-semibold break-all">{r.domain}</span>
+                <BlockRemoveButton id={r.id} domain={r.domain} />
+              </li>
+            ))}
+          </ul>
+          <BlockAddForm />
         </section>
 
         {slotDomains.length > 0 && (

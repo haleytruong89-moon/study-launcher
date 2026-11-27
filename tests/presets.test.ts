@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { permanentProblem } from "@/lib/admin/allowlist";
 import { normalizeDomain } from "@/lib/admin/schemas";
-import { PRESETS } from "@/lib/admin/presets";
+import { PRESETS, presetById } from "@/lib/admin/presets";
 import { normalizeDomainList } from "@/extension/src/core/domains";
 
 describe("Thêm nhanh bundles", () => {
@@ -21,5 +21,9 @@ describe("Thêm nhanh bundles", () => {
     for (const d of ["meet.google.com", "notebooklm.google.com", "docs.google.com", "drive.google.com", "forms.gle"]) expect(all).toContain(d);
     expect(all).not.toContain("google.com");
     expect(all).not.toContain("www.google.com");
+  });
+
+  it("Spotify (V1, D12): music while studying, the whole spotify.com, no video sites", () => {
+    expect(presetById("spotify")?.domains).toEqual(["spotify.com"]);
   });
 });

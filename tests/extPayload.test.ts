@@ -52,4 +52,25 @@ describe("allowlist sent to the extension", () => {
     expect(parsed?.blockAlways).toContain("translate.goog");
     expect(parsed?.pollSeconds).toBe(30);
   });
+
+  it("adds the family's always-block list (V1, 0031) to translate.goog, normalised, sorted, unique", () => {
+    const input: DayInput = {
+      settings: { breakMinutes: 10, freeMinutes: 45, extraMinMinutes: 20, skillMinMinutes: 20, passesPerWeek: 1, trustUpPct: 90, trustUpWeeks: 3, trustDownPct: 70, homeworkLookaheadDays: 1, homeworkMinUpcoming: 1 },
+      bedtime: "21:30",
+      trustMode: "lock",
+      sessions: [],
+      homework: [],
+      templates: [],
+      appSlots: [],
+      runs: [],
+      overrides: [],
+      breaks: [],
+    };
+    const s = computeDayState(input, now);
+    expect(extStateBody(s, [], "https://study-launcher-nine.vercel.app").blockAlways).toEqual(["translate.goog"]);
+    const body = extStateBody(s, ["archiveofourown.org"], "https://study-launcher-nine.vercel.app", false, ["Character.AI", "grok.com", "www.grok.com", "not a domain!"]);
+    expect(body.blockAlways).toEqual(["character.ai", "grok.com", "translate.goog"]);
+    expect(body.allow).toContain("archiveofourown.org"); // both lists travel; the extension's block rule wins
+    expect(parseExtStatePayload(JSON.parse(JSON.stringify(body)))?.blockAlways).toEqual(["character.ai", "grok.com", "translate.goog"]);
+  });
 });
